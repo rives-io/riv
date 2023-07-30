@@ -23,6 +23,7 @@ global RIV_DEVICE_MAGIC: [32]byte <const> = {
   0x8d, 0x45, 0x39, 0x62, 0x49, 0xb8, 0x15, 0x26
 }
 
+
 global riv_control_reason <using> = @enum(uint32) {
   RIV_CONTROL_UNKNOWN = 0,
   RIV_CONTROL_PRESENT,

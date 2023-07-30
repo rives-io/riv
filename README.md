@@ -217,8 +217,7 @@ RIV is divided in several components, a kernel, an operation system, an client s
 
 - `rom` - Cartesi Machine ROM used on boot
 - `kernel` - RIV Linux kernel, with custom configs for sandboxing games.
-- `rootfs` - RIV minimal operating system based on Alpine Linux where games are run.
-- `toolchain` - RISC-V toolchain based on Alpine Linux, required for building games for RIV.
+- `rootfs` - RIV minimal operating system based on Alpine Linux where games are run, it also builds a RISC-V toolchain compiling games for it.
 - `rivcm` - RIV Cartesi Machine, this is the emulator players use to run the game locally.
 - `libriv` - RIV middle-layers library that every game must use to exchange game graphics, audio and inputs.
 - `docs` - RIV documentation.
