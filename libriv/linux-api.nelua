@@ -1,0 +1,37 @@
+----------------------------------------------------------------------------------------------------
+-- Bindings
+
+global O_RDWR: int32 <cimport,cinclude'<fcntl.h>',const>
+global function open(file: cstring, oflag: int32, mode: cuint): int32 <cimport,cinclude'<fcntl.h>'> end
+global function close(fd: int32): int32 <cimport,cinclude'<unistd.h>'> end
+global function read(fd: int32, buf: pointer, n: usize): isize <cimport,cinclude'<unistd.h>'> end
+global function write(fd: int32, buf: pointer, n: usize): isize <cimport,cinclude'<unistd.h>'> end
+global function ioctl(fd: int32, request: usize, ...: cvarargs): int32  <cimport,cinclude'<sys/ioctl.h>'> end
+
+global PROT_READ: cint <cimport,cinclude'<sys/mman.h>'>
+global PROT_WRITE: cint <cimport,cinclude'<sys/mman.h>'>
+global MAP_ANONYMOUS: cint <cimport,cinclude'<sys/mman.h>'>
+global MAP_SHARED: cint <cimport,cinclude'<sys/mman.h>'>
+global MAP_FIXED_NOREPLACE: cint <cimport,cinclude'<sys/mman.h>'>
+global MAP_POPULATE: cint <cimport,cinclude'<sys/mman.h>'>
+global MAP_HUGETLB: cint <cimport,cinclude'<sys/mman.h>'>
+
+global function mmap(addr: pointer, len: csize, prot: cint, flags: cint, fd: cint, offset: clong): pointer <cimport,cinclude'<sys/mman.h>'> end
+global function munmap(addr: pointer, len: csize): cint <cimport,cinclude'<sys/mman.h>'> end
+global function exit(status: cint): void <cimport,cinclude'<stdlib.h>'> end
+
+----------------------------------------------------------------------------------------------------
+-- Utilities
+
+local strconv = require 'detail.strconv'
+
+global function get_free_hugepages(): integer
+  local fd = open('/sys/kernel/mm/hugepages/hugepages-2048kB/free_hugepages')
+  if fd < 0 then return 0 end
+  defer close(fd) end
+  local buf: [32]byte
+  local nread = read(fd, &buf, #buf)
+  if nread <= 0 then return 0 end
+  local ok, res = strconv.str2int((@cstring)(&buf[0]), 10)
+  return res
+end

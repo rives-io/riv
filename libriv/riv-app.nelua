@@ -1,0 +1,53 @@
+##[=[
+cflags '-march=rv64gc -O2 -ffast-math -flto=auto -ffunction-sections -fdata-sections -DNDEBUG'
+cflags '-fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables'
+cflags '-mno-save-restore -mstrict-align -mshorten-memrefs -msmall-data-limit=0'
+cflags '-mno-plt -fno-plt -fpie -pie -fno-semantic-interposition'
+ldflags '-Wl,-O1,-gc-sections,--as-needed,--no-eh-frame-hdr,--build-id=none,--hash-style=sysv'
+ldflags '-Wl,--relax,--sort-common,--sort-section=alignment,--spare-dynamic-tags=0'
+ldflags '-z norelro -z noseparate-code -z lazy'
+ldflags '-s'
+
+ldflags '-Wl,--dynamic-linker=/lib/ld.so'
+-- ldflags '-B/usr/lib/mold'
+
+linklib 'riv'
+
+RIV_BINDINGS = true
+]=]
+
+require '.riv'
+require '.riv_prng'
+
+## function nostartfiles(libc) cflags '-nostartfiles -Os'
+  local function _start(sp: pointer, argc: uint32, argv: *[0]cstring) <entrypoint,noreturn,cattribute'externally_visible,naked'>
+    ##[=[ cemit[[
+  asm volatile(
+    ".weak __global_pointer$;\n"
+    ".hidden __global_pointer$;\n" // don't export symbol
+    ".option push;\n"
+    ".option norelax;\n"
+    "la gp, __global_pointer$;\n"
+    "mv a0, sp;\n" // stack pointer
+    "lw a1, 0(sp);\n" // argc
+    "addi a2, sp, 8;\n" // argv
+    "andi sp, sp, -16;\n" // make stack 16-byte aligned
+    ".option pop;\n"
+  : : : "a6");
+]]]=]
+    local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl,noinline> end
+    ## if libc then
+      local function __libc_start_main(main: function(cint, *cstring): cint, argc: cint, argv: pointer, init: function(), fini: function(), rtld_fini: function(), stack_end: pointer) <cimport,noreturn> end
+      __libc_start_main(nelua_main, (@cint)(argc), argv, nilptr, nilptr, nilptr, sp)
+    ## else
+      local res: isize = (@isize)(nelua_main(argc, argv))
+      local function exit_syscall(status: int64): void <inline,noreturn>
+        local a0: int64 <register'a0',nodce> = status
+        ## cemit[[  asm volatile("li a7, 93; scall;" : : "r"(a0));]]
+        ## cemit[[__builtin_unreachable();]]
+      end
+      exit_syscall(res)
+    ## end
+    -- ## cemit[[  asm volatile("ebreak;");]]
+  end
+## end

@@ -1,0 +1,203 @@
+require 'riv'
+
+-- game types
+local Point2D = @record{x: int32, y: int32}
+local Direction = @enum(byte){NONE=0, UP, DOWN, RIGHT, LEFT}
+local Color = @byte
+
+-- game constants
+local TILE_SIZE <comptime> = 1
+local GRID_SIZE <comptime> = 16
+local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
+local MOVE_DELAY <comptime> = 8
+local COLOR_RED <comptime> = 8
+local COLOR_GREEN <comptime> = 11
+local COLOR_BACK <comptime> = 1
+
+-- game state variables
+local prng: riv_prng
+local riv: *riv_context
+local nextmove: uint64
+local headpos: Point2D, tailpos: Point2D, applepos: Point2D
+local score: uint32
+local movedir: Direction
+local tiles: [GRID_SIZE][GRID_SIZE]Direction
+
+local function move_point(pos: Point2D, dir: Direction)
+  switch dir
+  case Direction.UP then
+    pos.y = pos.y - 1
+  case Direction.DOWN then
+    pos.y = pos.y + 1
+  case Direction.RIGHT then
+    pos.x = pos.x + 1
+  case Direction.LEFT then
+    pos.x = pos.x - 1
+  end
+  return pos
+end
+
+local function set_tile(pos: Point2D, dir: Direction)
+  tiles[pos.x][pos.y] = dir
+end
+
+local function reset_tile(pos: Point2D)
+  tiles[pos.x][pos.y] = Direction.NONE
+end
+
+local function get_tile(pos: Point2D)
+  return tiles[pos.x][pos.y]
+end
+
+local function has_tile(pos: Point2D)
+  return tiles[pos.x][pos.y] ~= Direction.NONE
+end
+
+local function respawn_apple()
+  -- respawn until there is no collision with its body
+  repeat
+    applepos = Point2D{
+      x = prng:rand_uint(GRID_SIZE-1),
+      y = prng:rand_uint(GRID_SIZE-1)
+    }
+  until not has_tile(applepos)
+end
+
+local function init_game()
+  tiles = {}
+  headpos = Point2D{x=GRID_SIZE//2, y=GRID_SIZE//2}
+  tailpos = Point2D{x=headpos.x,    y=headpos.y+1}
+  movedir = Direction.UP
+  score = 0
+  nextmove = 0
+  set_tile(headpos, Direction.UP)
+  set_tile(tailpos, Direction.UP)
+  respawn_apple()
+  riv_printf('NEW GAME\n')
+end
+
+local function game_over()
+  riv_printf('GAME OVER\n')
+  init_game()
+end
+
+local function poll_events()
+  local headdir = get_tile(headpos)
+  local frame = riv.desc.frame
+  if riv.desc.keys[RIV_KEYCODE_UP].down_frame == frame then
+    if headdir ~= Direction.DOWN then
+      movedir = Direction.UP
+    end
+  elseif riv.desc.keys[RIV_KEYCODE_DOWN].down_frame == frame then
+    if headdir ~= Direction.UP then
+      movedir = Direction.DOWN
+    end
+  elseif riv.desc.keys[RIV_KEYCODE_RIGHT].down_frame == frame then
+    if headdir ~= Direction.LEFT then
+      movedir = Direction.RIGHT
+    end
+  elseif riv.desc.keys[RIV_KEYCODE_LEFT].down_frame == frame then
+    if headdir ~= Direction.RIGHT then
+      movedir = Direction.LEFT
+    end
+  end
+end
+
+local function poll_game()
+  local now = riv.desc.frame
+  if now < nextmove then return end
+  nextmove = now + MOVE_DELAY
+
+  -- move the head
+  set_tile(headpos, movedir)
+  headpos = move_point(headpos, movedir)
+
+  -- check collision with map boundaries
+  if headpos.x >= GRID_SIZE or headpos.y >= GRID_SIZE or
+     headpos.x < 0 or headpos.y < 0 then
+    game_over()
+    return
+  end
+
+  -- check collisions with its body
+  if has_tile(headpos) then
+    game_over()
+    return
+  end
+
+  -- place head on next tile
+  set_tile(headpos, movedir)
+
+  -- check collision with apple
+  if headpos.x == applepos.x and headpos.y == applepos.y then
+    respawn_apple()
+    score = score + 1
+    riv_printf('SCORE %u\n', score)
+  else
+    -- eat tail
+    local taildir = get_tile(tailpos)
+    reset_tile(tailpos)
+    tailpos = move_point(tailpos, taildir)
+  end
+end
+
+local function draw_background(color: Color)
+  local framebuffer: span(byte) = riv.framebuffer
+  for i=0,<riv.desc.framebuffer.width*riv.desc.framebuffer.height do
+    framebuffer[i] = color
+  end
+end
+
+local function draw_tile(pos: Point2D, color: Color)
+  local framebuffer: span(byte) = riv.framebuffer
+  local xoff, yoff = pos.x*TILE_SIZE, pos.y*TILE_SIZE
+  for y=yoff,<yoff+TILE_SIZE do
+    for x=xoff,<xoff+TILE_SIZE do
+      framebuffer[y*SCREEN_SIZE + x] = color
+    end
+  end
+end
+
+local function draw_apple()
+  draw_tile(applepos, COLOR_RED)
+end
+
+local function draw_snake()
+  for x=0,GRID_SIZE-1 do
+    for y=0,GRID_SIZE-1 do
+      local pos = Point2D{x=x,y=y}
+      if has_tile(pos) then -- snake is present at this tile
+        draw_tile(pos, COLOR_GREEN)
+      end
+    end
+  end
+end
+
+local function draw()
+  draw_background(COLOR_BACK)
+  draw_apple()
+  draw_snake()
+end
+
+local function frame(ctx: *riv_context)
+  riv = ctx
+  if riv.desc.frame == 0 then
+    prng:seed()
+    init_game()
+  end
+  poll_events()
+  poll_game()
+  draw()
+end
+
+riv_run(&(@riv_run_desc){
+  frame_cb = frame,
+  framebuffer = {
+    width = SCREEN_SIZE,
+    height = SCREEN_SIZE,
+    fps = 60,
+    pixel_format = RIV_PIXEL_FORMAT_PALETTE_256_BIT,
+  }
+})
+
+## nostartfiles()

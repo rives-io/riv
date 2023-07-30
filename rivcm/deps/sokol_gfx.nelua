@@ -1,0 +1,1026 @@
+##[[
+if not SOKOL_GFX_NO_IMPL then
+  cdefine 'SOKOL_GFX_API_DECL static'
+  cdefine 'SOKOL_GFX_IMPL'
+end
+if ccinfo.is_emscripten then
+  cdefine 'SOKOL_GLES2'
+else
+  cdefine 'SOKOL_GLCORE33'
+end
+cinclude 'sokol_gfx.h'
+if ccinfo.is_windows then
+  linklib 'gdi32'
+  linklib 'opengl32'
+else
+  linklib 'GL'
+end
+]]
+global sg_buffer: type <cimport,nodecl> = @record{
+  id: uint32
+}
+global sg_image: type <cimport,nodecl> = @record{
+  id: uint32
+}
+global sg_shader: type <cimport,nodecl> = @record{
+  id: uint32
+}
+global sg_pipeline: type <cimport,nodecl> = @record{
+  id: uint32
+}
+global sg_pass: type <cimport,nodecl> = @record{
+  id: uint32
+}
+global sg_context: type <cimport,nodecl> = @record{
+  id: uint32
+}
+global sg_range: type <cimport,nodecl> = @record{
+  ptr: pointer,
+  size: csize
+}
+global sg_color: type <cimport,nodecl> = @record{
+  r: float32,
+  g: float32,
+  b: float32,
+  a: float32
+}
+global sg_backend: type <cimport,nodecl,using> = @enum(cint){
+  SG_BACKEND_GLCORE33 = 0,
+  SG_BACKEND_GLES2 = 1,
+  SG_BACKEND_GLES3 = 2,
+  SG_BACKEND_D3D11 = 3,
+  SG_BACKEND_METAL_IOS = 4,
+  SG_BACKEND_METAL_MACOS = 5,
+  SG_BACKEND_METAL_SIMULATOR = 6,
+  SG_BACKEND_WGPU = 7,
+  SG_BACKEND_DUMMY = 8
+}
+global sg_pixel_format: type <cimport,nodecl,using> = @enum(cint){
+  _SG_PIXELFORMAT_DEFAULT = 0,
+  SG_PIXELFORMAT_NONE = 1,
+  SG_PIXELFORMAT_R8 = 2,
+  SG_PIXELFORMAT_R8SN = 3,
+  SG_PIXELFORMAT_R8UI = 4,
+  SG_PIXELFORMAT_R8SI = 5,
+  SG_PIXELFORMAT_R16 = 6,
+  SG_PIXELFORMAT_R16SN = 7,
+  SG_PIXELFORMAT_R16UI = 8,
+  SG_PIXELFORMAT_R16SI = 9,
+  SG_PIXELFORMAT_R16F = 10,
+  SG_PIXELFORMAT_RG8 = 11,
+  SG_PIXELFORMAT_RG8SN = 12,
+  SG_PIXELFORMAT_RG8UI = 13,
+  SG_PIXELFORMAT_RG8SI = 14,
+  SG_PIXELFORMAT_R32UI = 15,
+  SG_PIXELFORMAT_R32SI = 16,
+  SG_PIXELFORMAT_R32F = 17,
+  SG_PIXELFORMAT_RG16 = 18,
+  SG_PIXELFORMAT_RG16SN = 19,
+  SG_PIXELFORMAT_RG16UI = 20,
+  SG_PIXELFORMAT_RG16SI = 21,
+  SG_PIXELFORMAT_RG16F = 22,
+  SG_PIXELFORMAT_RGBA8 = 23,
+  SG_PIXELFORMAT_SRGB8A8 = 24,
+  SG_PIXELFORMAT_RGBA8SN = 25,
+  SG_PIXELFORMAT_RGBA8UI = 26,
+  SG_PIXELFORMAT_RGBA8SI = 27,
+  SG_PIXELFORMAT_BGRA8 = 28,
+  SG_PIXELFORMAT_RGB10A2 = 29,
+  SG_PIXELFORMAT_RG11B10F = 30,
+  SG_PIXELFORMAT_RG32UI = 31,
+  SG_PIXELFORMAT_RG32SI = 32,
+  SG_PIXELFORMAT_RG32F = 33,
+  SG_PIXELFORMAT_RGBA16 = 34,
+  SG_PIXELFORMAT_RGBA16SN = 35,
+  SG_PIXELFORMAT_RGBA16UI = 36,
+  SG_PIXELFORMAT_RGBA16SI = 37,
+  SG_PIXELFORMAT_RGBA16F = 38,
+  SG_PIXELFORMAT_RGBA32UI = 39,
+  SG_PIXELFORMAT_RGBA32SI = 40,
+  SG_PIXELFORMAT_RGBA32F = 41,
+  SG_PIXELFORMAT_DEPTH = 42,
+  SG_PIXELFORMAT_DEPTH_STENCIL = 43,
+  SG_PIXELFORMAT_BC1_RGBA = 44,
+  SG_PIXELFORMAT_BC2_RGBA = 45,
+  SG_PIXELFORMAT_BC3_RGBA = 46,
+  SG_PIXELFORMAT_BC4_R = 47,
+  SG_PIXELFORMAT_BC4_RSN = 48,
+  SG_PIXELFORMAT_BC5_RG = 49,
+  SG_PIXELFORMAT_BC5_RGSN = 50,
+  SG_PIXELFORMAT_BC6H_RGBF = 51,
+  SG_PIXELFORMAT_BC6H_RGBUF = 52,
+  SG_PIXELFORMAT_BC7_RGBA = 53,
+  SG_PIXELFORMAT_PVRTC_RGB_2BPP = 54,
+  SG_PIXELFORMAT_PVRTC_RGB_4BPP = 55,
+  SG_PIXELFORMAT_PVRTC_RGBA_2BPP = 56,
+  SG_PIXELFORMAT_PVRTC_RGBA_4BPP = 57,
+  SG_PIXELFORMAT_ETC2_RGB8 = 58,
+  SG_PIXELFORMAT_ETC2_RGB8A1 = 59,
+  SG_PIXELFORMAT_ETC2_RGBA8 = 60,
+  SG_PIXELFORMAT_ETC2_RG11 = 61,
+  SG_PIXELFORMAT_ETC2_RG11SN = 62,
+  SG_PIXELFORMAT_RGB9E5 = 63,
+  _SG_PIXELFORMAT_NUM = 64,
+  _SG_PIXELFORMAT_FORCE_U32 = 2147483647
+}
+global sg_pixelformat_info: type <cimport,nodecl> = @record{
+  sample: boolean,
+  filter: boolean,
+  render: boolean,
+  blend: boolean,
+  msaa: boolean,
+  depth: boolean
+}
+global sg_features: type <cimport,nodecl> = @record{
+  instancing: boolean,
+  origin_top_left: boolean,
+  multiple_render_targets: boolean,
+  msaa_render_targets: boolean,
+  imagetype_3d: boolean,
+  imagetype_array: boolean,
+  image_clamp_to_border: boolean,
+  mrt_independent_blend_state: boolean,
+  mrt_independent_write_mask: boolean
+}
+global sg_limits: type <cimport,nodecl> = @record{
+  max_image_size_2d: cint,
+  max_image_size_cube: cint,
+  max_image_size_3d: cint,
+  max_image_size_array: cint,
+  max_image_array_layers: cint,
+  max_vertex_attrs: cint,
+  gl_max_vertex_uniform_vectors: cint,
+  gl_max_combined_texture_image_units: cint
+}
+global sg_resource_state: type <cimport,nodecl,using> = @enum(cint){
+  SG_RESOURCESTATE_INITIAL = 0,
+  SG_RESOURCESTATE_ALLOC = 1,
+  SG_RESOURCESTATE_VALID = 2,
+  SG_RESOURCESTATE_FAILED = 3,
+  SG_RESOURCESTATE_INVALID = 4,
+  _SG_RESOURCESTATE_FORCE_U32 = 2147483647
+}
+global sg_usage: type <cimport,nodecl,using> = @enum(cint){
+  _SG_USAGE_DEFAULT = 0,
+  SG_USAGE_IMMUTABLE = 1,
+  SG_USAGE_DYNAMIC = 2,
+  SG_USAGE_STREAM = 3,
+  _SG_USAGE_NUM = 4,
+  _SG_USAGE_FORCE_U32 = 2147483647
+}
+global sg_buffer_type: type <cimport,nodecl,using> = @enum(cint){
+  _SG_BUFFERTYPE_DEFAULT = 0,
+  SG_BUFFERTYPE_VERTEXBUFFER = 1,
+  SG_BUFFERTYPE_INDEXBUFFER = 2,
+  _SG_BUFFERTYPE_NUM = 3,
+  _SG_BUFFERTYPE_FORCE_U32 = 2147483647
+}
+global sg_index_type: type <cimport,nodecl,using> = @enum(cint){
+  _SG_INDEXTYPE_DEFAULT = 0,
+  SG_INDEXTYPE_NONE = 1,
+  SG_INDEXTYPE_UINT16 = 2,
+  SG_INDEXTYPE_UINT32 = 3,
+  _SG_INDEXTYPE_NUM = 4,
+  _SG_INDEXTYPE_FORCE_U32 = 2147483647
+}
+global sg_image_type: type <cimport,nodecl,using> = @enum(cint){
+  _SG_IMAGETYPE_DEFAULT = 0,
+  SG_IMAGETYPE_2D = 1,
+  SG_IMAGETYPE_CUBE = 2,
+  SG_IMAGETYPE_3D = 3,
+  SG_IMAGETYPE_ARRAY = 4,
+  _SG_IMAGETYPE_NUM = 5,
+  _SG_IMAGETYPE_FORCE_U32 = 2147483647
+}
+global sg_sampler_type: type <cimport,nodecl,using> = @enum(cint){
+  _SG_SAMPLERTYPE_DEFAULT = 0,
+  SG_SAMPLERTYPE_FLOAT = 1,
+  SG_SAMPLERTYPE_SINT = 2,
+  SG_SAMPLERTYPE_UINT = 3
+}
+global sg_cube_face: type <cimport,nodecl,using> = @enum(cint){
+  SG_CUBEFACE_POS_X = 0,
+  SG_CUBEFACE_NEG_X = 1,
+  SG_CUBEFACE_POS_Y = 2,
+  SG_CUBEFACE_NEG_Y = 3,
+  SG_CUBEFACE_POS_Z = 4,
+  SG_CUBEFACE_NEG_Z = 5,
+  SG_CUBEFACE_NUM = 6,
+  _SG_CUBEFACE_FORCE_U32 = 2147483647
+}
+global sg_shader_stage: type <cimport,nodecl,using> = @enum(cint){
+  SG_SHADERSTAGE_VS = 0,
+  SG_SHADERSTAGE_FS = 1,
+  _SG_SHADERSTAGE_FORCE_U32 = 2147483647
+}
+global sg_primitive_type: type <cimport,nodecl,using> = @enum(cint){
+  _SG_PRIMITIVETYPE_DEFAULT = 0,
+  SG_PRIMITIVETYPE_POINTS = 1,
+  SG_PRIMITIVETYPE_LINES = 2,
+  SG_PRIMITIVETYPE_LINE_STRIP = 3,
+  SG_PRIMITIVETYPE_TRIANGLES = 4,
+  SG_PRIMITIVETYPE_TRIANGLE_STRIP = 5,
+  _SG_PRIMITIVETYPE_NUM = 6,
+  _SG_PRIMITIVETYPE_FORCE_U32 = 2147483647
+}
+global sg_filter: type <cimport,nodecl,using> = @enum(cint){
+  _SG_FILTER_DEFAULT = 0,
+  SG_FILTER_NEAREST = 1,
+  SG_FILTER_LINEAR = 2,
+  SG_FILTER_NEAREST_MIPMAP_NEAREST = 3,
+  SG_FILTER_NEAREST_MIPMAP_LINEAR = 4,
+  SG_FILTER_LINEAR_MIPMAP_NEAREST = 5,
+  SG_FILTER_LINEAR_MIPMAP_LINEAR = 6,
+  _SG_FILTER_NUM = 7,
+  _SG_FILTER_FORCE_U32 = 2147483647
+}
+global sg_wrap: type <cimport,nodecl,using> = @enum(cint){
+  _SG_WRAP_DEFAULT = 0,
+  SG_WRAP_REPEAT = 1,
+  SG_WRAP_CLAMP_TO_EDGE = 2,
+  SG_WRAP_CLAMP_TO_BORDER = 3,
+  SG_WRAP_MIRRORED_REPEAT = 4,
+  _SG_WRAP_NUM = 5,
+  _SG_WRAP_FORCE_U32 = 2147483647
+}
+global sg_border_color: type <cimport,nodecl,using> = @enum(cint){
+  _SG_BORDERCOLOR_DEFAULT = 0,
+  SG_BORDERCOLOR_TRANSPARENT_BLACK = 1,
+  SG_BORDERCOLOR_OPAQUE_BLACK = 2,
+  SG_BORDERCOLOR_OPAQUE_WHITE = 3,
+  _SG_BORDERCOLOR_NUM = 4,
+  _SG_BORDERCOLOR_FORCE_U32 = 2147483647
+}
+global sg_vertex_format: type <cimport,nodecl,using> = @enum(cint){
+  SG_VERTEXFORMAT_INVALID = 0,
+  SG_VERTEXFORMAT_FLOAT = 1,
+  SG_VERTEXFORMAT_FLOAT2 = 2,
+  SG_VERTEXFORMAT_FLOAT3 = 3,
+  SG_VERTEXFORMAT_FLOAT4 = 4,
+  SG_VERTEXFORMAT_BYTE4 = 5,
+  SG_VERTEXFORMAT_BYTE4N = 6,
+  SG_VERTEXFORMAT_UBYTE4 = 7,
+  SG_VERTEXFORMAT_UBYTE4N = 8,
+  SG_VERTEXFORMAT_SHORT2 = 9,
+  SG_VERTEXFORMAT_SHORT2N = 10,
+  SG_VERTEXFORMAT_USHORT2N = 11,
+  SG_VERTEXFORMAT_SHORT4 = 12,
+  SG_VERTEXFORMAT_SHORT4N = 13,
+  SG_VERTEXFORMAT_USHORT4N = 14,
+  SG_VERTEXFORMAT_UINT10_N2 = 15,
+  SG_VERTEXFORMAT_HALF2 = 16,
+  SG_VERTEXFORMAT_HALF4 = 17,
+  _SG_VERTEXFORMAT_NUM = 18,
+  _SG_VERTEXFORMAT_FORCE_U32 = 2147483647
+}
+global sg_vertex_step: type <cimport,nodecl,using> = @enum(cint){
+  _SG_VERTEXSTEP_DEFAULT = 0,
+  SG_VERTEXSTEP_PER_VERTEX = 1,
+  SG_VERTEXSTEP_PER_INSTANCE = 2,
+  _SG_VERTEXSTEP_NUM = 3,
+  _SG_VERTEXSTEP_FORCE_U32 = 2147483647
+}
+global sg_uniform_type: type <cimport,nodecl,using> = @enum(cint){
+  SG_UNIFORMTYPE_INVALID = 0,
+  SG_UNIFORMTYPE_FLOAT = 1,
+  SG_UNIFORMTYPE_FLOAT2 = 2,
+  SG_UNIFORMTYPE_FLOAT3 = 3,
+  SG_UNIFORMTYPE_FLOAT4 = 4,
+  SG_UNIFORMTYPE_INT = 5,
+  SG_UNIFORMTYPE_INT2 = 6,
+  SG_UNIFORMTYPE_INT3 = 7,
+  SG_UNIFORMTYPE_INT4 = 8,
+  SG_UNIFORMTYPE_MAT4 = 9,
+  _SG_UNIFORMTYPE_NUM = 10,
+  _SG_UNIFORMTYPE_FORCE_U32 = 2147483647
+}
+global sg_uniform_layout: type <cimport,nodecl,using> = @enum(cint){
+  _SG_UNIFORMLAYOUT_DEFAULT = 0,
+  SG_UNIFORMLAYOUT_NATIVE = 1,
+  SG_UNIFORMLAYOUT_STD140 = 2,
+  _SG_UNIFORMLAYOUT_NUM = 3,
+  _SG_UNIFORMLAYOUT_FORCE_U32 = 2147483647
+}
+global sg_cull_mode: type <cimport,nodecl,using> = @enum(cint){
+  _SG_CULLMODE_DEFAULT = 0,
+  SG_CULLMODE_NONE = 1,
+  SG_CULLMODE_FRONT = 2,
+  SG_CULLMODE_BACK = 3,
+  _SG_CULLMODE_NUM = 4,
+  _SG_CULLMODE_FORCE_U32 = 2147483647
+}
+global sg_face_winding: type <cimport,nodecl,using> = @enum(cint){
+  _SG_FACEWINDING_DEFAULT = 0,
+  SG_FACEWINDING_CCW = 1,
+  SG_FACEWINDING_CW = 2,
+  _SG_FACEWINDING_NUM = 3,
+  _SG_FACEWINDING_FORCE_U32 = 2147483647
+}
+global sg_compare_func: type <cimport,nodecl,using> = @enum(cint){
+  _SG_COMPAREFUNC_DEFAULT = 0,
+  SG_COMPAREFUNC_NEVER = 1,
+  SG_COMPAREFUNC_LESS = 2,
+  SG_COMPAREFUNC_EQUAL = 3,
+  SG_COMPAREFUNC_LESS_EQUAL = 4,
+  SG_COMPAREFUNC_GREATER = 5,
+  SG_COMPAREFUNC_NOT_EQUAL = 6,
+  SG_COMPAREFUNC_GREATER_EQUAL = 7,
+  SG_COMPAREFUNC_ALWAYS = 8,
+  _SG_COMPAREFUNC_NUM = 9,
+  _SG_COMPAREFUNC_FORCE_U32 = 2147483647
+}
+global sg_stencil_op: type <cimport,nodecl,using> = @enum(cint){
+  _SG_STENCILOP_DEFAULT = 0,
+  SG_STENCILOP_KEEP = 1,
+  SG_STENCILOP_ZERO = 2,
+  SG_STENCILOP_REPLACE = 3,
+  SG_STENCILOP_INCR_CLAMP = 4,
+  SG_STENCILOP_DECR_CLAMP = 5,
+  SG_STENCILOP_INVERT = 6,
+  SG_STENCILOP_INCR_WRAP = 7,
+  SG_STENCILOP_DECR_WRAP = 8,
+  _SG_STENCILOP_NUM = 9,
+  _SG_STENCILOP_FORCE_U32 = 2147483647
+}
+global sg_blend_factor: type <cimport,nodecl,using> = @enum(cint){
+  _SG_BLENDFACTOR_DEFAULT = 0,
+  SG_BLENDFACTOR_ZERO = 1,
+  SG_BLENDFACTOR_ONE = 2,
+  SG_BLENDFACTOR_SRC_COLOR = 3,
+  SG_BLENDFACTOR_ONE_MINUS_SRC_COLOR = 4,
+  SG_BLENDFACTOR_SRC_ALPHA = 5,
+  SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA = 6,
+  SG_BLENDFACTOR_DST_COLOR = 7,
+  SG_BLENDFACTOR_ONE_MINUS_DST_COLOR = 8,
+  SG_BLENDFACTOR_DST_ALPHA = 9,
+  SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA = 10,
+  SG_BLENDFACTOR_SRC_ALPHA_SATURATED = 11,
+  SG_BLENDFACTOR_BLEND_COLOR = 12,
+  SG_BLENDFACTOR_ONE_MINUS_BLEND_COLOR = 13,
+  SG_BLENDFACTOR_BLEND_ALPHA = 14,
+  SG_BLENDFACTOR_ONE_MINUS_BLEND_ALPHA = 15,
+  _SG_BLENDFACTOR_NUM = 16,
+  _SG_BLENDFACTOR_FORCE_U32 = 2147483647
+}
+global sg_blend_op: type <cimport,nodecl,using> = @enum(cint){
+  _SG_BLENDOP_DEFAULT = 0,
+  SG_BLENDOP_ADD = 1,
+  SG_BLENDOP_SUBTRACT = 2,
+  SG_BLENDOP_REVERSE_SUBTRACT = 3,
+  _SG_BLENDOP_NUM = 4,
+  _SG_BLENDOP_FORCE_U32 = 2147483647
+}
+global sg_color_mask: type <cimport,nodecl,using> = @enum(cint){
+  _SG_COLORMASK_DEFAULT = 0,
+  SG_COLORMASK_NONE = 16,
+  SG_COLORMASK_R = 1,
+  SG_COLORMASK_G = 2,
+  SG_COLORMASK_RG = 3,
+  SG_COLORMASK_B = 4,
+  SG_COLORMASK_RB = 5,
+  SG_COLORMASK_GB = 6,
+  SG_COLORMASK_RGB = 7,
+  SG_COLORMASK_A = 8,
+  SG_COLORMASK_RA = 9,
+  SG_COLORMASK_GA = 10,
+  SG_COLORMASK_RGA = 11,
+  SG_COLORMASK_BA = 12,
+  SG_COLORMASK_RBA = 13,
+  SG_COLORMASK_GBA = 14,
+  SG_COLORMASK_RGBA = 15,
+  _SG_COLORMASK_FORCE_U32 = 2147483647
+}
+global sg_action: type <cimport,nodecl,using> = @enum(cint){
+  _SG_ACTION_DEFAULT = 0,
+  SG_ACTION_CLEAR = 1,
+  SG_ACTION_LOAD = 2,
+  SG_ACTION_DONTCARE = 3,
+  _SG_ACTION_NUM = 4,
+  _SG_ACTION_FORCE_U32 = 2147483647
+}
+global sg_color_attachment_action: type <cimport,nodecl> = @record{
+  action: sg_action,
+  value: sg_color
+}
+global sg_depth_attachment_action: type <cimport,nodecl> = @record{
+  action: sg_action,
+  value: float32
+}
+global sg_stencil_attachment_action: type <cimport,nodecl> = @record{
+  action: sg_action,
+  value: uint8
+}
+global sg_pass_action: type <cimport,nodecl> = @record{
+  _start_canary: uint32,
+  colors: [4]sg_color_attachment_action,
+  depth: sg_depth_attachment_action,
+  stencil: sg_stencil_attachment_action,
+  _end_canary: uint32
+}
+global sg_bindings: type <cimport,nodecl> = @record{
+  _start_canary: uint32,
+  vertex_buffers: [8]sg_buffer,
+  vertex_buffer_offsets: [8]cint,
+  index_buffer: sg_buffer,
+  index_buffer_offset: cint,
+  vs_images: [12]sg_image,
+  fs_images: [12]sg_image,
+  _end_canary: uint32
+}
+global sg_buffer_desc: type <cimport,nodecl> = @record{
+  _start_canary: uint32,
+  size: csize,
+  type: sg_buffer_type,
+  usage: sg_usage,
+  data: sg_range,
+  label: cstring,
+  gl_buffers: [2]uint32,
+  mtl_buffers: [2]pointer,
+  d3d11_buffer: pointer,
+  wgpu_buffer: pointer,
+  _end_canary: uint32
+}
+global sg_image_data: type <cimport,nodecl> = @record{
+  subimage: [6][16]sg_range
+}
+global sg_image_desc: type <cimport,nodecl> = @record{
+  _start_canary: uint32,
+  type: sg_image_type,
+  render_target: boolean,
+  width: cint,
+  height: cint,
+  num_slices: cint,
+  num_mipmaps: cint,
+  usage: sg_usage,
+  pixel_format: sg_pixel_format,
+  sample_count: cint,
+  min_filter: sg_filter,
+  mag_filter: sg_filter,
+  wrap_u: sg_wrap,
+  wrap_v: sg_wrap,
+  wrap_w: sg_wrap,
+  border_color: sg_border_color,
+  max_anisotropy: uint32,
+  min_lod: float32,
+  max_lod: float32,
+  data: sg_image_data,
+  label: cstring,
+  gl_textures: [2]uint32,
+  gl_texture_target: uint32,
+  mtl_textures: [2]pointer,
+  d3d11_texture: pointer,
+  d3d11_shader_resource_view: pointer,
+  wgpu_texture: pointer,
+  _end_canary: uint32
+}
+global sg_shader_attr_desc: type <cimport,nodecl> = @record{
+  name: cstring,
+  sem_name: cstring,
+  sem_index: cint
+}
+global sg_shader_uniform_desc: type <cimport,nodecl> = @record{
+  name: cstring,
+  type: sg_uniform_type,
+  array_count: cint
+}
+global sg_shader_uniform_block_desc: type <cimport,nodecl> = @record{
+  size: csize,
+  layout: sg_uniform_layout,
+  uniforms: [16]sg_shader_uniform_desc
+}
+global sg_shader_image_desc: type <cimport,nodecl> = @record{
+  name: cstring,
+  image_type: sg_image_type,
+  sampler_type: sg_sampler_type
+}
+global sg_shader_stage_desc: type <cimport,nodecl> = @record{
+  source: cstring,
+  bytecode: sg_range,
+  entry: cstring,
+  d3d11_target: cstring,
+  uniform_blocks: [4]sg_shader_uniform_block_desc,
+  images: [12]sg_shader_image_desc
+}
+global sg_shader_desc: type <cimport,nodecl> = @record{
+  _start_canary: uint32,
+  attrs: [16]sg_shader_attr_desc,
+  vs: sg_shader_stage_desc,
+  fs: sg_shader_stage_desc,
+  label: cstring,
+  _end_canary: uint32
+}
+global sg_buffer_layout_desc: type <cimport,nodecl> = @record{
+  stride: cint,
+  step_func: sg_vertex_step,
+  step_rate: cint
+}
+global sg_vertex_attr_desc: type <cimport,nodecl> = @record{
+  buffer_index: cint,
+  offset: cint,
+  format: sg_vertex_format
+}
+global sg_layout_desc: type <cimport,nodecl> = @record{
+  buffers: [8]sg_buffer_layout_desc,
+  attrs: [16]sg_vertex_attr_desc
+}
+global sg_stencil_face_state: type <cimport,nodecl> = @record{
+  compare: sg_compare_func,
+  fail_op: sg_stencil_op,
+  depth_fail_op: sg_stencil_op,
+  pass_op: sg_stencil_op
+}
+global sg_stencil_state: type <cimport,nodecl> = @record{
+  enabled: boolean,
+  front: sg_stencil_face_state,
+  back: sg_stencil_face_state,
+  read_mask: uint8,
+  write_mask: uint8,
+  ref: uint8
+}
+global sg_depth_state: type <cimport,nodecl> = @record{
+  pixel_format: sg_pixel_format,
+  compare: sg_compare_func,
+  write_enabled: boolean,
+  bias: float32,
+  bias_slope_scale: float32,
+  bias_clamp: float32
+}
+global sg_blend_state: type <cimport,nodecl> = @record{
+  enabled: boolean,
+  src_factor_rgb: sg_blend_factor,
+  dst_factor_rgb: sg_blend_factor,
+  op_rgb: sg_blend_op,
+  src_factor_alpha: sg_blend_factor,
+  dst_factor_alpha: sg_blend_factor,
+  op_alpha: sg_blend_op
+}
+global sg_color_state: type <cimport,nodecl> = @record{
+  pixel_format: sg_pixel_format,
+  write_mask: sg_color_mask,
+  blend: sg_blend_state
+}
+global sg_pipeline_desc: type <cimport,nodecl> = @record{
+  _start_canary: uint32,
+  shader: sg_shader,
+  layout: sg_layout_desc,
+  depth: sg_depth_state,
+  stencil: sg_stencil_state,
+  color_count: cint,
+  colors: [4]sg_color_state,
+  primitive_type: sg_primitive_type,
+  index_type: sg_index_type,
+  cull_mode: sg_cull_mode,
+  face_winding: sg_face_winding,
+  sample_count: cint,
+  blend_color: sg_color,
+  alpha_to_coverage_enabled: boolean,
+  label: cstring,
+  _end_canary: uint32
+}
+global sg_pass_attachment_desc: type <cimport,nodecl> = @record{
+  image: sg_image,
+  mip_level: cint,
+  slice: cint
+}
+global sg_pass_desc: type <cimport,nodecl> = @record{
+  _start_canary: uint32,
+  color_attachments: [4]sg_pass_attachment_desc,
+  depth_stencil_attachment: sg_pass_attachment_desc,
+  label: cstring,
+  _end_canary: uint32
+}
+global sg_trace_hooks: type <cimport,nodecl> = @record{
+  user_data: pointer,
+  reset_state_cache: function(pointer): void,
+  make_buffer: function(*sg_buffer_desc, sg_buffer, pointer): void,
+  make_image: function(*sg_image_desc, sg_image, pointer): void,
+  make_shader: function(*sg_shader_desc, sg_shader, pointer): void,
+  make_pipeline: function(*sg_pipeline_desc, sg_pipeline, pointer): void,
+  make_pass: function(*sg_pass_desc, sg_pass, pointer): void,
+  destroy_buffer: function(sg_buffer, pointer): void,
+  destroy_image: function(sg_image, pointer): void,
+  destroy_shader: function(sg_shader, pointer): void,
+  destroy_pipeline: function(sg_pipeline, pointer): void,
+  destroy_pass: function(sg_pass, pointer): void,
+  update_buffer: function(sg_buffer, *sg_range, pointer): void,
+  update_image: function(sg_image, *sg_image_data, pointer): void,
+  append_buffer: function(sg_buffer, *sg_range, cint, pointer): void,
+  begin_default_pass: function(*sg_pass_action, cint, cint, pointer): void,
+  begin_pass: function(sg_pass, *sg_pass_action, pointer): void,
+  apply_viewport: function(cint, cint, cint, cint, boolean, pointer): void,
+  apply_scissor_rect: function(cint, cint, cint, cint, boolean, pointer): void,
+  apply_pipeline: function(sg_pipeline, pointer): void,
+  apply_bindings: function(*sg_bindings, pointer): void,
+  apply_uniforms: function(sg_shader_stage, cint, *sg_range, pointer): void,
+  draw: function(cint, cint, cint, pointer): void,
+  end_pass: function(pointer): void,
+  commit: function(pointer): void,
+  alloc_buffer: function(sg_buffer, pointer): void,
+  alloc_image: function(sg_image, pointer): void,
+  alloc_shader: function(sg_shader, pointer): void,
+  alloc_pipeline: function(sg_pipeline, pointer): void,
+  alloc_pass: function(sg_pass, pointer): void,
+  dealloc_buffer: function(sg_buffer, pointer): void,
+  dealloc_image: function(sg_image, pointer): void,
+  dealloc_shader: function(sg_shader, pointer): void,
+  dealloc_pipeline: function(sg_pipeline, pointer): void,
+  dealloc_pass: function(sg_pass, pointer): void,
+  init_buffer: function(sg_buffer, *sg_buffer_desc, pointer): void,
+  init_image: function(sg_image, *sg_image_desc, pointer): void,
+  init_shader: function(sg_shader, *sg_shader_desc, pointer): void,
+  init_pipeline: function(sg_pipeline, *sg_pipeline_desc, pointer): void,
+  init_pass: function(sg_pass, *sg_pass_desc, pointer): void,
+  uninit_buffer: function(sg_buffer, pointer): void,
+  uninit_image: function(sg_image, pointer): void,
+  uninit_shader: function(sg_shader, pointer): void,
+  uninit_pipeline: function(sg_pipeline, pointer): void,
+  uninit_pass: function(sg_pass, pointer): void,
+  fail_buffer: function(sg_buffer, pointer): void,
+  fail_image: function(sg_image, pointer): void,
+  fail_shader: function(sg_shader, pointer): void,
+  fail_pipeline: function(sg_pipeline, pointer): void,
+  fail_pass: function(sg_pass, pointer): void,
+  push_debug_group: function(cstring, pointer): void,
+  pop_debug_group: function(pointer): void,
+  err_buffer_pool_exhausted: function(pointer): void,
+  err_image_pool_exhausted: function(pointer): void,
+  err_shader_pool_exhausted: function(pointer): void,
+  err_pipeline_pool_exhausted: function(pointer): void,
+  err_pass_pool_exhausted: function(pointer): void,
+  err_context_mismatch: function(pointer): void,
+  err_pass_invalid: function(pointer): void,
+  err_draw_invalid: function(pointer): void,
+  err_bindings_invalid: function(pointer): void
+}
+global sg_slot_info: type <cimport,nodecl> = @record{
+  state: sg_resource_state,
+  res_id: uint32,
+  ctx_id: uint32
+}
+global sg_buffer_info: type <cimport,nodecl> = @record{
+  slot: sg_slot_info,
+  update_frame_index: uint32,
+  append_frame_index: uint32,
+  append_pos: cint,
+  append_overflow: boolean,
+  num_slots: cint,
+  active_slot: cint
+}
+global sg_image_info: type <cimport,nodecl> = @record{
+  slot: sg_slot_info,
+  upd_frame_index: uint32,
+  num_slots: cint,
+  active_slot: cint
+}
+global sg_shader_info: type <cimport,nodecl> = @record{
+  slot: sg_slot_info
+}
+global sg_pipeline_info: type <cimport,nodecl> = @record{
+  slot: sg_slot_info
+}
+global sg_pass_info: type <cimport,nodecl> = @record{
+  slot: sg_slot_info
+}
+global sg_log_item: type <cimport,nodecl,using> = @enum(cint){
+  SG_LOGITEM_OK = 0,
+  SG_LOGITEM_MALLOC_FAILED = 1,
+  SG_LOGITEM_GL_TEXTURE_FORMAT_NOT_SUPPORTED = 2,
+  SG_LOGITEM_GL_3D_TEXTURES_NOT_SUPPORTED = 3,
+  SG_LOGITEM_GL_ARRAY_TEXTURES_NOT_SUPPORTED = 4,
+  SG_LOGITEM_GL_SHADER_COMPILATION_FAILED = 5,
+  SG_LOGITEM_GL_SHADER_LINKING_FAILED = 6,
+  SG_LOGITEM_GL_VERTEX_ATTRIBUTE_NOT_FOUND_IN_SHADER = 7,
+  SG_LOGITEM_GL_FRAMEBUFFER_INCOMPLETE = 8,
+  SG_LOGITEM_GL_MSAA_FRAMEBUFFER_INCOMPLETE = 9,
+  SG_LOGITEM_D3D11_CREATE_BUFFER_FAILED = 10,
+  SG_LOGITEM_D3D11_CREATE_DEPTH_TEXTURE_UNSUPPORTED_PIXEL_FORMAT = 11,
+  SG_LOGITEM_D3D11_CREATE_DEPTH_TEXTURE_FAILED = 12,
+  SG_LOGITEM_D3D11_CREATE_2D_TEXTURE_UNSUPPORTED_PIXEL_FORMAT = 13,
+  SG_LOGITEM_D3D11_CREATE_2D_TEXTURE_FAILED = 14,
+  SG_LOGITEM_D3D11_CREATE_2D_SRV_FAILED = 15,
+  SG_LOGITEM_D3D11_CREATE_3D_TEXTURE_UNSUPPORTED_PIXEL_FORMAT = 16,
+  SG_LOGITEM_D3D11_CREATE_3D_TEXTURE_FAILED = 17,
+  SG_LOGITEM_D3D11_CREATE_3D_SRV_FAILED = 18,
+  SG_LOGITEM_D3D11_CREATE_MSAA_TEXTURE_FAILED = 19,
+  SG_LOGITEM_D3D11_CREATE_SAMPLER_STATE_FAILED = 20,
+  SG_LOGITEM_D3D11_LOAD_D3DCOMPILER_47_DLL_FAILED = 21,
+  SG_LOGITEM_D3D11_SHADER_COMPILATION_FAILED = 22,
+  SG_LOGITEM_D3D11_SHADER_COMPILATION_OUTPUT = 23,
+  SG_LOGITEM_D3D11_CREATE_CONSTANT_BUFFER_FAILED = 24,
+  SG_LOGITEM_D3D11_CREATE_INPUT_LAYOUT_FAILED = 25,
+  SG_LOGITEM_D3D11_CREATE_RASTERIZER_STATE_FAILED = 26,
+  SG_LOGITEM_D3D11_CREATE_DEPTH_STENCIL_STATE_FAILED = 27,
+  SG_LOGITEM_D3D11_CREATE_BLEND_STATE_FAILED = 28,
+  SG_LOGITEM_D3D11_CREATE_RTV_FAILED = 29,
+  SG_LOGITEM_D3D11_CREATE_DSV_FAILED = 30,
+  SG_LOGITEM_D3D11_MAP_FOR_UPDATE_BUFFER_FAILED = 31,
+  SG_LOGITEM_D3D11_MAP_FOR_APPEND_BUFFER_FAILED = 32,
+  SG_LOGITEM_D3D11_MAP_FOR_UPDATE_IMAGE_FAILED = 33,
+  SG_LOGITEM_METAL_TEXTURE_FORMAT_NOT_SUPPORTED = 34,
+  SG_LOGITEM_METAL_SHADER_COMPILATION_FAILED = 35,
+  SG_LOGITEM_METAL_SHADER_CREATION_FAILED = 36,
+  SG_LOGITEM_METAL_SHADER_COMPILATION_OUTPUT = 37,
+  SG_LOGITEM_METAL_VERTEX_SHADER_ENTRY_NOT_FOUND = 38,
+  SG_LOGITEM_METAL_FRAGMENT_SHADER_ENTRY_NOT_FOUND = 39,
+  SG_LOGITEM_METAL_CREATE_RPS_FAILED = 40,
+  SG_LOGITEM_METAL_CREATE_RPS_OUTPUT = 41,
+  SG_LOGITEM_WGPU_MAP_UNIFORM_BUFFER_FAILED = 42,
+  SG_LOGITEM_WGPU_STAGING_BUFFER_FULL_COPY_TO_BUFFER = 43,
+  SG_LOGITEM_WGPU_STAGING_BUFFER_FULL_COPY_TO_TEXTURE = 44,
+  SG_LOGITEM_WGPU_RESET_STATE_CACHE_FIXME = 45,
+  SG_LOGITEM_WGPU_ACTIVATE_CONTEXT_FIXME = 46,
+  SG_LOGITEM_UNINIT_BUFFER_ACTIVE_CONTEXT_MISMATCH = 47,
+  SG_LOGITEM_UNINIT_IMAGE_ACTIVE_CONTEXT_MISMATCH = 48,
+  SG_LOGITEM_UNINIT_SHADER_ACTIVE_CONTEXT_MISMATCH = 49,
+  SG_LOGITEM_UNINIT_PIPELINE_ACTIVE_CONTEXT_MISMATCH = 50,
+  SG_LOGITEM_UNINIT_PASS_ACTIVE_CONTEXT_MISMATCH = 51,
+  SG_LOGITEM_IDENTICAL_COMMIT_LISTENER = 52,
+  SG_LOGITEM_COMMIT_LISTENER_ARRAY_FULL = 53,
+  SG_LOGITEM_TRACE_HOOKS_NOT_ENABLED = 54,
+  SG_LOGITEM_DEALLOC_BUFFER_INVALID_STATE = 55,
+  SG_LOGITEM_DEALLOC_IMAGE_INVALID_STATE = 56,
+  SG_LOGITEM_DEALLOC_SHADER_INVALID_STATE = 57,
+  SG_LOGITEM_DEALLOC_PIPELINE_INVALID_STATE = 58,
+  SG_LOGITEM_DEALLOC_PASS_INVALID_STATE = 59,
+  SG_LOGITEM_INIT_BUFFER_INVALID_STATE = 60,
+  SG_LOGITEM_INIT_IMAGE_INVALID_STATE = 61,
+  SG_LOGITEM_INIT_SHADER_INVALID_STATE = 62,
+  SG_LOGITEM_INIT_PIPELINE_INVALID_STATE = 63,
+  SG_LOGITEM_INIT_PASS_INVALID_STATE = 64,
+  SG_LOGITEM_UNINIT_BUFFER_INVALID_STATE = 65,
+  SG_LOGITEM_UNINIT_IMAGE_INVALID_STATE = 66,
+  SG_LOGITEM_UNINIT_SHADER_INVALID_STATE = 67,
+  SG_LOGITEM_UNINIT_PIPELINE_INVALID_STATE = 68,
+  SG_LOGITEM_UNINIT_PASS_INVALID_STATE = 69,
+  SG_LOGITEM_FAIL_BUFFER_INVALID_STATE = 70,
+  SG_LOGITEM_FAIL_IMAGE_INVALID_STATE = 71,
+  SG_LOGITEM_FAIL_SHADER_INVALID_STATE = 72,
+  SG_LOGITEM_FAIL_PIPELINE_INVALID_STATE = 73,
+  SG_LOGITEM_FAIL_PASS_INVALID_STATE = 74,
+  SG_LOGITEM_BUFFER_POOL_EXHAUSTED = 75,
+  SG_LOGITEM_IMAGE_POOL_EXHAUSTED = 76,
+  SG_LOGITEM_SHADER_POOL_EXHAUSTED = 77,
+  SG_LOGITEM_PIPELINE_POOL_EXHAUSTED = 78,
+  SG_LOGITEM_PASS_POOL_EXHAUSTED = 79,
+  SG_LOGITEM_DRAW_WITHOUT_BINDINGS = 80,
+  SG_LOGITEM_VALIDATE_BUFFERDESC_CANARY = 81,
+  SG_LOGITEM_VALIDATE_BUFFERDESC_SIZE = 82,
+  SG_LOGITEM_VALIDATE_BUFFERDESC_DATA = 83,
+  SG_LOGITEM_VALIDATE_BUFFERDESC_DATA_SIZE = 84,
+  SG_LOGITEM_VALIDATE_BUFFERDESC_NO_DATA = 85,
+  SG_LOGITEM_VALIDATE_IMAGEDATA_NODATA = 86,
+  SG_LOGITEM_VALIDATE_IMAGEDATA_DATA_SIZE = 87,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_CANARY = 88,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_WIDTH = 89,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_HEIGHT = 90,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_RT_PIXELFORMAT = 91,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_NONRT_PIXELFORMAT = 92,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_MSAA_BUT_NO_RT = 93,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_NO_MSAA_RT_SUPPORT = 94,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_RT_IMMUTABLE = 95,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_RT_NO_DATA = 96,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_INJECTED_NO_DATA = 97,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_DYNAMIC_NO_DATA = 98,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_COMPRESSED_IMMUTABLE = 99,
+  SG_LOGITEM_VALIDATE_SHADERDESC_CANARY = 100,
+  SG_LOGITEM_VALIDATE_SHADERDESC_SOURCE = 101,
+  SG_LOGITEM_VALIDATE_SHADERDESC_BYTECODE = 102,
+  SG_LOGITEM_VALIDATE_SHADERDESC_SOURCE_OR_BYTECODE = 103,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_BYTECODE_SIZE = 104,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_UBS = 105,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_UB_MEMBERS = 106,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_UB_MEMBERS = 107,
+  SG_LOGITEM_VALIDATE_SHADERDESC_UB_MEMBER_NAME = 108,
+  SG_LOGITEM_VALIDATE_SHADERDESC_UB_SIZE_MISMATCH = 109,
+  SG_LOGITEM_VALIDATE_SHADERDESC_UB_ARRAY_COUNT = 110,
+  SG_LOGITEM_VALIDATE_SHADERDESC_UB_STD140_ARRAY_TYPE = 111,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_IMGS = 112,
+  SG_LOGITEM_VALIDATE_SHADERDESC_IMG_NAME = 113,
+  SG_LOGITEM_VALIDATE_SHADERDESC_ATTR_NAMES = 114,
+  SG_LOGITEM_VALIDATE_SHADERDESC_ATTR_SEMANTICS = 115,
+  SG_LOGITEM_VALIDATE_SHADERDESC_ATTR_STRING_TOO_LONG = 116,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_CANARY = 117,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_SHADER = 118,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_NO_ATTRS = 119,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_LAYOUT_STRIDE4 = 120,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_ATTR_NAME = 121,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_ATTR_SEMANTICS = 122,
+  SG_LOGITEM_VALIDATE_PASSDESC_CANARY = 123,
+  SG_LOGITEM_VALIDATE_PASSDESC_NO_COLOR_ATTS = 124,
+  SG_LOGITEM_VALIDATE_PASSDESC_NO_CONT_COLOR_ATTS = 125,
+  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE = 126,
+  SG_LOGITEM_VALIDATE_PASSDESC_MIPLEVEL = 127,
+  SG_LOGITEM_VALIDATE_PASSDESC_FACE = 128,
+  SG_LOGITEM_VALIDATE_PASSDESC_LAYER = 129,
+  SG_LOGITEM_VALIDATE_PASSDESC_SLICE = 130,
+  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE_NO_RT = 131,
+  SG_LOGITEM_VALIDATE_PASSDESC_COLOR_INV_PIXELFORMAT = 132,
+  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_INV_PIXELFORMAT = 133,
+  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE_SIZES = 134,
+  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE_SAMPLE_COUNTS = 135,
+  SG_LOGITEM_VALIDATE_BEGINPASS_PASS = 136,
+  SG_LOGITEM_VALIDATE_BEGINPASS_IMAGE = 137,
+  SG_LOGITEM_VALIDATE_APIP_PIPELINE_VALID_ID = 138,
+  SG_LOGITEM_VALIDATE_APIP_PIPELINE_EXISTS = 139,
+  SG_LOGITEM_VALIDATE_APIP_PIPELINE_VALID = 140,
+  SG_LOGITEM_VALIDATE_APIP_SHADER_EXISTS = 141,
+  SG_LOGITEM_VALIDATE_APIP_SHADER_VALID = 142,
+  SG_LOGITEM_VALIDATE_APIP_ATT_COUNT = 143,
+  SG_LOGITEM_VALIDATE_APIP_COLOR_FORMAT = 144,
+  SG_LOGITEM_VALIDATE_APIP_DEPTH_FORMAT = 145,
+  SG_LOGITEM_VALIDATE_APIP_SAMPLE_COUNT = 146,
+  SG_LOGITEM_VALIDATE_ABND_PIPELINE = 147,
+  SG_LOGITEM_VALIDATE_ABND_PIPELINE_EXISTS = 148,
+  SG_LOGITEM_VALIDATE_ABND_PIPELINE_VALID = 149,
+  SG_LOGITEM_VALIDATE_ABND_VBS = 150,
+  SG_LOGITEM_VALIDATE_ABND_VB_EXISTS = 151,
+  SG_LOGITEM_VALIDATE_ABND_VB_TYPE = 152,
+  SG_LOGITEM_VALIDATE_ABND_VB_OVERFLOW = 153,
+  SG_LOGITEM_VALIDATE_ABND_NO_IB = 154,
+  SG_LOGITEM_VALIDATE_ABND_IB = 155,
+  SG_LOGITEM_VALIDATE_ABND_IB_EXISTS = 156,
+  SG_LOGITEM_VALIDATE_ABND_IB_TYPE = 157,
+  SG_LOGITEM_VALIDATE_ABND_IB_OVERFLOW = 158,
+  SG_LOGITEM_VALIDATE_ABND_VS_IMGS = 159,
+  SG_LOGITEM_VALIDATE_ABND_VS_IMG_EXISTS = 160,
+  SG_LOGITEM_VALIDATE_ABND_VS_IMG_TYPES = 161,
+  SG_LOGITEM_VALIDATE_ABND_FS_IMGS = 162,
+  SG_LOGITEM_VALIDATE_ABND_FS_IMG_EXISTS = 163,
+  SG_LOGITEM_VALIDATE_ABND_FS_IMG_TYPES = 164,
+  SG_LOGITEM_VALIDATE_AUB_NO_PIPELINE = 165,
+  SG_LOGITEM_VALIDATE_AUB_NO_UB_AT_SLOT = 166,
+  SG_LOGITEM_VALIDATE_AUB_SIZE = 167,
+  SG_LOGITEM_VALIDATE_UPDATEBUF_USAGE = 168,
+  SG_LOGITEM_VALIDATE_UPDATEBUF_SIZE = 169,
+  SG_LOGITEM_VALIDATE_UPDATEBUF_ONCE = 170,
+  SG_LOGITEM_VALIDATE_UPDATEBUF_APPEND = 171,
+  SG_LOGITEM_VALIDATE_APPENDBUF_USAGE = 172,
+  SG_LOGITEM_VALIDATE_APPENDBUF_SIZE = 173,
+  SG_LOGITEM_VALIDATE_APPENDBUF_UPDATE = 174,
+  SG_LOGITEM_VALIDATE_UPDIMG_USAGE = 175,
+  SG_LOGITEM_VALIDATE_UPDIMG_ONCE = 176,
+  SG_LOGITEM_VALIDATION_FAILED = 177
+}
+global sg_gl_context_desc: type <cimport,nodecl> = @record{
+  force_gles2: boolean
+}
+global sg_metal_context_desc: type <cimport,nodecl> = @record{
+  device: pointer,
+  renderpass_descriptor_cb: function(): pointer,
+  renderpass_descriptor_userdata_cb: function(pointer): pointer,
+  drawable_cb: function(): pointer,
+  drawable_userdata_cb: function(pointer): pointer,
+  user_data: pointer
+}
+global sg_d3d11_context_desc: type <cimport,nodecl> = @record{
+  device: pointer,
+  device_context: pointer,
+  render_target_view_cb: function(): pointer,
+  render_target_view_userdata_cb: function(pointer): pointer,
+  depth_stencil_view_cb: function(): pointer,
+  depth_stencil_view_userdata_cb: function(pointer): pointer,
+  user_data: pointer
+}
+global sg_wgpu_context_desc: type <cimport,nodecl> = @record{
+  device: pointer,
+  render_view_cb: function(): pointer,
+  render_view_userdata_cb: function(pointer): pointer,
+  resolve_view_cb: function(): pointer,
+  resolve_view_userdata_cb: function(pointer): pointer,
+  depth_stencil_view_cb: function(): pointer,
+  depth_stencil_view_userdata_cb: function(pointer): pointer,
+  user_data: pointer
+}
+global sg_context_desc: type <cimport,nodecl> = @record{
+  color_format: sg_pixel_format,
+  depth_format: sg_pixel_format,
+  sample_count: cint,
+  gl: sg_gl_context_desc,
+  metal: sg_metal_context_desc,
+  d3d11: sg_d3d11_context_desc,
+  wgpu: sg_wgpu_context_desc
+}
+global sg_commit_listener: type <cimport,nodecl> = @record{
+  func: function(pointer): void,
+  user_data: pointer
+}
+global sg_allocator: type <cimport,nodecl> = @record{
+  alloc: function(csize, pointer): pointer,
+  free: function(pointer, pointer): void,
+  user_data: pointer
+}
+global sg_logger: type <cimport,nodecl> = @record{
+  func: function(cstring, uint32, uint32, cstring, uint32, cstring, pointer): void,
+  user_data: pointer
+}
+global sg_desc: type <cimport,nodecl> = @record{
+  _start_canary: uint32,
+  buffer_pool_size: cint,
+  image_pool_size: cint,
+  shader_pool_size: cint,
+  pipeline_pool_size: cint,
+  pass_pool_size: cint,
+  context_pool_size: cint,
+  uniform_buffer_size: cint,
+  staging_buffer_size: cint,
+  sampler_cache_size: cint,
+  max_commit_listeners: cint,
+  disable_validation: boolean,
+  allocator: sg_allocator,
+  logger: sg_logger,
+  context: sg_context_desc,
+  _end_canary: uint32
+}
+global function sg_setup(desc: *sg_desc): void <cimport,nodecl> end
+global function sg_shutdown(): void <cimport,nodecl> end
+global function sg_isvalid(): boolean <cimport,nodecl> end
+global function sg_reset_state_cache(): void <cimport,nodecl> end
+global function sg_install_trace_hooks(trace_hooks: *sg_trace_hooks): sg_trace_hooks <cimport,nodecl> end
+global function sg_push_debug_group(name: cstring): void <cimport,nodecl> end
+global function sg_pop_debug_group(): void <cimport,nodecl> end
+global function sg_add_commit_listener(listener: sg_commit_listener): boolean <cimport,nodecl> end
+global function sg_remove_commit_listener(listener: sg_commit_listener): boolean <cimport,nodecl> end
+global function sg_make_buffer(desc: *sg_buffer_desc): sg_buffer <cimport,nodecl> end
+global function sg_make_image(desc: *sg_image_desc): sg_image <cimport,nodecl> end
+global function sg_make_shader(desc: *sg_shader_desc): sg_shader <cimport,nodecl> end
+global function sg_make_pipeline(desc: *sg_pipeline_desc): sg_pipeline <cimport,nodecl> end
+global function sg_make_pass(desc: *sg_pass_desc): sg_pass <cimport,nodecl> end
+global function sg_destroy_buffer(buf: sg_buffer): void <cimport,nodecl> end
+global function sg_destroy_image(img: sg_image): void <cimport,nodecl> end
+global function sg_destroy_shader(shd: sg_shader): void <cimport,nodecl> end
+global function sg_destroy_pipeline(pip: sg_pipeline): void <cimport,nodecl> end
+global function sg_destroy_pass(pass: sg_pass): void <cimport,nodecl> end
+global function sg_update_buffer(buf: sg_buffer, data: *sg_range): void <cimport,nodecl> end
+global function sg_update_image(img: sg_image, data: *sg_image_data): void <cimport,nodecl> end
+global function sg_append_buffer(buf: sg_buffer, data: *sg_range): cint <cimport,nodecl> end
+global function sg_query_buffer_overflow(buf: sg_buffer): boolean <cimport,nodecl> end
+global function sg_query_buffer_will_overflow(buf: sg_buffer, size: csize): boolean <cimport,nodecl> end
+global function sg_begin_default_pass(pass_action: *sg_pass_action, width: cint, height: cint): void <cimport,nodecl> end
+global function sg_begin_default_passf(pass_action: *sg_pass_action, width: float32, height: float32): void <cimport,nodecl> end
+global function sg_begin_pass(pass: sg_pass, pass_action: *sg_pass_action): void <cimport,nodecl> end
+global function sg_apply_viewport(x: cint, y: cint, width: cint, height: cint, origin_top_left: boolean): void <cimport,nodecl> end
+global function sg_apply_viewportf(x: float32, y: float32, width: float32, height: float32, origin_top_left: boolean): void <cimport,nodecl> end
+global function sg_apply_scissor_rect(x: cint, y: cint, width: cint, height: cint, origin_top_left: boolean): void <cimport,nodecl> end
+global function sg_apply_scissor_rectf(x: float32, y: float32, width: float32, height: float32, origin_top_left: boolean): void <cimport,nodecl> end
+global function sg_apply_pipeline(pip: sg_pipeline): void <cimport,nodecl> end
+global function sg_apply_bindings(bindings: *sg_bindings): void <cimport,nodecl> end
+global function sg_apply_uniforms(stage: sg_shader_stage, ub_index: cint, data: *sg_range): void <cimport,nodecl> end
+global function sg_draw(base_element: cint, num_elements: cint, num_instances: cint): void <cimport,nodecl> end
+global function sg_end_pass(): void <cimport,nodecl> end
+global function sg_commit(): void <cimport,nodecl> end
+global function sg_query_desc(): sg_desc <cimport,nodecl> end
+global function sg_query_backend(): sg_backend <cimport,nodecl> end
+global function sg_query_features(): sg_features <cimport,nodecl> end
+global function sg_query_limits(): sg_limits <cimport,nodecl> end
+global function sg_query_pixelformat(fmt: sg_pixel_format): sg_pixelformat_info <cimport,nodecl> end
+global function sg_query_buffer_state(buf: sg_buffer): sg_resource_state <cimport,nodecl> end
+global function sg_query_image_state(img: sg_image): sg_resource_state <cimport,nodecl> end
+global function sg_query_shader_state(shd: sg_shader): sg_resource_state <cimport,nodecl> end
+global function sg_query_pipeline_state(pip: sg_pipeline): sg_resource_state <cimport,nodecl> end
+global function sg_query_pass_state(pass: sg_pass): sg_resource_state <cimport,nodecl> end
+global function sg_query_buffer_info(buf: sg_buffer): sg_buffer_info <cimport,nodecl> end
+global function sg_query_image_info(img: sg_image): sg_image_info <cimport,nodecl> end
+global function sg_query_shader_info(shd: sg_shader): sg_shader_info <cimport,nodecl> end
+global function sg_query_pipeline_info(pip: sg_pipeline): sg_pipeline_info <cimport,nodecl> end
+global function sg_query_pass_info(pass: sg_pass): sg_pass_info <cimport,nodecl> end
+global function sg_query_buffer_desc(buf: sg_buffer): sg_buffer_desc <cimport,nodecl> end
+global function sg_query_image_desc(img: sg_image): sg_image_desc <cimport,nodecl> end
+global function sg_query_shader_desc(shd: sg_shader): sg_shader_desc <cimport,nodecl> end
+global function sg_query_pipeline_desc(pip: sg_pipeline): sg_pipeline_desc <cimport,nodecl> end
+global function sg_query_pass_desc(pass: sg_pass): sg_pass_desc <cimport,nodecl> end
+global function sg_query_buffer_defaults(desc: *sg_buffer_desc): sg_buffer_desc <cimport,nodecl> end
+global function sg_query_image_defaults(desc: *sg_image_desc): sg_image_desc <cimport,nodecl> end
+global function sg_query_shader_defaults(desc: *sg_shader_desc): sg_shader_desc <cimport,nodecl> end
+global function sg_query_pipeline_defaults(desc: *sg_pipeline_desc): sg_pipeline_desc <cimport,nodecl> end
+global function sg_query_pass_defaults(desc: *sg_pass_desc): sg_pass_desc <cimport,nodecl> end
+global function sg_alloc_buffer(): sg_buffer <cimport,nodecl> end
+global function sg_alloc_image(): sg_image <cimport,nodecl> end
+global function sg_alloc_shader(): sg_shader <cimport,nodecl> end
+global function sg_alloc_pipeline(): sg_pipeline <cimport,nodecl> end
+global function sg_alloc_pass(): sg_pass <cimport,nodecl> end
+global function sg_dealloc_buffer(buf: sg_buffer): void <cimport,nodecl> end
+global function sg_dealloc_image(img: sg_image): void <cimport,nodecl> end
+global function sg_dealloc_shader(shd: sg_shader): void <cimport,nodecl> end
+global function sg_dealloc_pipeline(pip: sg_pipeline): void <cimport,nodecl> end
+global function sg_dealloc_pass(pass: sg_pass): void <cimport,nodecl> end
+global function sg_init_buffer(buf: sg_buffer, desc: *sg_buffer_desc): void <cimport,nodecl> end
+global function sg_init_image(img: sg_image, desc: *sg_image_desc): void <cimport,nodecl> end
+global function sg_init_shader(shd: sg_shader, desc: *sg_shader_desc): void <cimport,nodecl> end
+global function sg_init_pipeline(pip: sg_pipeline, desc: *sg_pipeline_desc): void <cimport,nodecl> end
+global function sg_init_pass(pass: sg_pass, desc: *sg_pass_desc): void <cimport,nodecl> end
+global function sg_uninit_buffer(buf: sg_buffer): void <cimport,nodecl> end
+global function sg_uninit_image(img: sg_image): void <cimport,nodecl> end
+global function sg_uninit_shader(shd: sg_shader): void <cimport,nodecl> end
+global function sg_uninit_pipeline(pip: sg_pipeline): void <cimport,nodecl> end
+global function sg_uninit_pass(pass: sg_pass): void <cimport,nodecl> end
+global function sg_fail_buffer(buf: sg_buffer): void <cimport,nodecl> end
+global function sg_fail_image(img: sg_image): void <cimport,nodecl> end
+global function sg_fail_shader(shd: sg_shader): void <cimport,nodecl> end
+global function sg_fail_pipeline(pip: sg_pipeline): void <cimport,nodecl> end
+global function sg_fail_pass(pass: sg_pass): void <cimport,nodecl> end
+global function sg_setup_context(): sg_context <cimport,nodecl> end
+global function sg_activate_context(ctx_id: sg_context): void <cimport,nodecl> end
+global function sg_discard_context(ctx_id: sg_context): void <cimport,nodecl> end
+global function sg_d3d11_device(): pointer <cimport,nodecl> end
+global function sg_mtl_device(): pointer <cimport,nodecl> end
+global function sg_mtl_render_command_encoder(): pointer <cimport,nodecl> end

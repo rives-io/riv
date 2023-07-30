@@ -1,0 +1,291 @@
+## DEBUG = false
+
+require 'string'
+require 'io'
+require 'os'
+require 'math'
+require 'arg'
+require 'memory'
+require 'sokol_app'
+require 'sokol_gfx'
+require 'sokol_glue'
+require 'sokol_gp'
+require 'miniaudio'
+require 'fs'
+require 'cartesi-utils'
+require 'libriv'
+
+local MACHINE_MEM_BASE_PADDR <comptime> = 0x80000000
+local MACHINE_HUGE_PAGE_PADDR <comptime> = 0x81600000
+local MACHINE_OUTPUT_PADDR <comptime> = 0x90000000000000
+local MACHINE_OUTPUT_SIZE <comptime> = 0x200000
+local MACHINE_RAM_SIZE <comptime> = 128*1024*1024
+
+local bootargs: string = "console=hvc0 \z
+  rootfstype=ext2 \z
+  root=/dev/mtdblock0 \z
+  rw quiet \z
+  swiotlb=noforce \z
+  mtdparts=flash.0:-(root) \z
+  hugepagesz=2M hugepages=1 -- "..string.concat(arg, " ")
+
+local rootfs_length = fs.stat("./rootfs/rootfs.ext2").size
+if rootfs_length == 0 then
+  error './rootfs/rootfs.ext2 not found'
+end
+
+local machine: CartesiMachine = CartesiMachine.create{
+  ram = {
+    image_filename = './kernel/linux.bin',
+    length = MACHINE_RAM_SIZE
+  },
+  rom = {
+    image_filename = './rom/rom.bin',
+    bootargs = bootargs
+  },
+  htif = {
+    yield_automatic = true,
+  },
+  flash_drive = {count = 2, entry = {
+    {
+      start = 0x80000000000000,
+      length = rootfs_length,
+      image_filename = "./rootfs/rootfs.ext2",
+    },
+    {
+      start = MACHINE_OUTPUT_PADDR,
+      length = MACHINE_OUTPUT_SIZE,
+    }
+  }}
+}
+
+local audio_engine: ma_engine
+local framebuffer: [RIV_FRAMEBUFFER_SIZE]byte
+local audiobuffer: [RIV_AUDIOBUFFER_SIZE]byte
+local framebuffer_rgba: [RIV_FRAMEBUFFER_SIZE]uint32
+local lastfb_desc: riv_framebuffer_desc
+local fb_image: sg_image
+local desc: riv_desc
+local frame_count: uint64 = 0
+local next_frame_time: number = 0
+local last_frame_time: number = 0
+local machine_output: [MACHINE_OUTPUT_SIZE]byte
+
+local function refresh_riv_desc()
+  machine:read_memory(MACHINE_HUGE_PAGE_PADDR, (@span(byte)){data=(@*[0]byte)(&desc),size=#@riv_desc})
+end
+
+local function present()
+  local fb_pixel_count = desc.framebuffer.width * desc.framebuffer.height
+  machine:read_memory(MACHINE_HUGE_PAGE_PADDR + RIV_FRAMEBUFFER_OFFSET, (@span(byte)){data=&framebuffer,size=fb_pixel_count})
+
+  -- Recreate framebuffer image
+  if lastfb_desc.width ~= desc.framebuffer.width or
+     lastfb_desc.height ~= desc.framebuffer.height then
+    if sg_query_image_state(fb_image) == SG_RESOURCESTATE_VALID then
+      sg_destroy_image(fb_image)
+    end
+    if fb_pixel_count > 0 then
+      fb_image = sg_make_image(&(@sg_image_desc){
+        usage = SG_USAGE_STREAM,
+        width = desc.framebuffer.width,
+        height = desc.framebuffer.height,
+        min_filter = SG_FILTER_NEAREST,
+        mag_filter = SG_FILTER_NEAREST,
+        wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+        wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+      })
+      assert(sg_query_image_state(fb_image) == SG_RESOURCESTATE_VALID, "failed to create frame buffer image")
+    end
+  end
+  lastfb_desc = desc.framebuffer
+end
+
+-- Macro for quick error handling miniaudio errors.
+## local function ma_assert(expr)
+  local result: ma_result = #[expr]#
+  if result ~= MA_SUCCESS then
+    error(ma_result_description(result))
+  end
+## end
+
+local function audio_ctl()
+  local data: span(byte) = {data=&audiobuffer[0],size=desc.audio_ctl.data_size}
+  machine:read_memory(MACHINE_HUGE_PAGE_PADDR + RIV_AUDIOBUFFER_OFFSET, data)
+  switch desc.audio_ctl.command do
+  case RIV_AUDIO_COMMAND_SOUND_PLAY then
+    -- FIXME: collect audio buffers when sound stops
+    local sound = new(@ma_sound)
+    local audio_buffer = new(@ma_audio_buffer)
+    local config: ma_audio_buffer_config = ma_audio_buffer_config_init(ma_format_u8, 1, data.size, data.data, nilptr)
+    config.sampleRate = 11025
+    ma_assert!(ma_audio_buffer_init_copy(&config, audio_buffer))
+    local flags: uint32 = MA_SOUND_FLAG_NO_SPATIALIZATION
+    ma_assert!(ma_sound_init_from_data_source(&audio_engine, &audio_buffer.ref.ds, flags, nilptr, sound))
+    ma_sound_set_volume(sound, 0.2)
+    ma_assert!(ma_sound_start(sound))
+  case RIV_AUDIO_COMMAND_SOUND_STOP then
+    -- TODO
+  else
+    error 'unknown audio command'
+  end
+end
+
+local function limit_fps()
+  if desc.framebuffer.fps == 0 then return end
+  local frame_delay: number = 1.0/desc.framebuffer.fps
+  local now: number = os.now()
+  if next_frame_time > now then
+    local delay: number = next_frame_time - now
+    os.sleep(delay)
+    next_frame_time = next_frame_time + frame_delay
+  else
+    next_frame_time = now + frame_delay
+  end
+end
+
+local function machine_poll()
+  while true do
+    local break_reason: CM_BREAK_REASON = machine:run()
+    if break_reason == CM_BREAK_REASON_HALTED then
+      io.printf('Machine HALTED\n')
+      machine:read_memory(MACHINE_OUTPUT_PADDR, (@span(byte)){data=&machine_output,size=MACHINE_OUTPUT_SIZE})
+      local output: string = (@string)((@cstring)(&machine_output[0]))
+      sapp_quit()
+      if #output > 0 then
+        print('==== MACHINE OUTPUT ====')
+        print(output)
+      end
+      return
+    elseif break_reason ~= CM_BREAK_REASON_YIELDED_AUTOMATICALLY then
+      io.printf('unexpected break reason\n')
+      sapp_quit()
+      return
+    end
+    refresh_riv_desc()
+    local yield_reason = machine:read_yield_reason()
+    switch yield_reason do
+    case RIV_CONTROL_PRESENT then
+      -- should present next frame, poll finished
+      present()
+      return
+    case RIV_CONTROL_AUDIO then
+      audio_ctl()
+    else
+      error 'unknown yield reason'
+    end
+  end
+end
+
+local function machine_frame_poll()
+  local mcycle_start: uint64 = machine:read_mcycle()
+  local time_start: number = os.now()
+  machine_poll()
+  local mcycle_end: uint64 = machine:read_mcycle()
+  local time_end: number = os.now()
+  ## if DEBUG then
+    local fps: number = 1.0/(time_end - last_frame_time)
+    local cpf = mcycle_end - mcycle_start
+    local elapsed = time_end - time_start
+    local pfps = 1.0/elapsed
+    local mips = (cpf / (elapsed * 1000000.0))
+    local cpp = cpf/(desc.framebuffer.height*desc.framebuffer.width)
+    local cpu_usage = 100.0 * (desc.framebuffer.fps * cpf) / (mips * 1000000.0)
+    io.printf('frame=%d elapsed=%.2fms mips=%.2f cpf=%d pfps=%.2f fps=%.2f cpu_usage=%.2f%%\n',
+      frame_count, elapsed * 1000.0, mips, cpf, pfps, fps, cpu_usage)
+  ## end
+  frame_count = frame_count + 1
+  last_frame_time = time_end
+end
+
+local function event(event: *sapp_event)
+  local update = false
+  if not event.key_repeat then
+    if event.type == SAPP_EVENTTYPE_KEY_DOWN then
+      desc.keys[event.key_code].down_frame = desc.frame + 1
+      update = true
+    elseif event.type == SAPP_EVENTTYPE_KEY_UP then
+      desc.keys[event.key_code].up_frame = desc.frame + 1
+      update = true
+    end
+  end
+
+  if update then
+    machine:write_memory(MACHINE_HUGE_PAGE_PADDR, (@span(byte)){data=(@*byte)(&desc),size=#@riv_desc})
+  end
+end
+
+local function frame()
+  -- Poll virtual machine
+  machine_frame_poll()
+
+  -- Prepare for drawing
+  local app_width, app_height = sapp_width(), sapp_height()
+  sgp_begin(app_width, app_height)
+  sgp_viewport(0, 0, app_width, app_height)
+  sgp_project(0, app_width, 0, app_height)
+
+  local fb_height: int64, fb_width: int64 = desc.framebuffer.height, desc.framebuffer.width
+  local fb_pixel_count: int64 = fb_height*fb_width
+  if fb_pixel_count > 0 then
+    -- Update framebuffer
+    for i=0,<fb_pixel_count do
+      framebuffer_rgba[i] = desc.palette[framebuffer[i]]
+    end
+    sg_update_image(fb_image, &(@sg_image_data){{{{ptr=&framebuffer_rgba[0], size=fb_pixel_count*4}}}})
+
+    -- Draw the frame buffer
+    local scale: number
+    if fb_height*app_width >= fb_width*app_height then -- full vertical
+      scale = (app_height >= fb_height) and (app_height // fb_height) or (app_height / fb_height)
+    else -- full horizontal
+      scale = (app_width >= fb_width) and (app_width // fb_width) or (app_width / fb_width)
+    end
+    local height: int64, width: int64 = math.ifloor(fb_height * scale), math.ifloor(fb_width * scale)
+    local x: int64, y: int64 = (app_width - width) // 2, (app_height - height) // 2
+    sgp_set_image(0, fb_image)
+    sgp_draw_textured_rect(x, y, width, height)
+    sgp_reset_image(0)
+  end
+
+  -- Dispatch draw commands
+  sg_begin_default_pass(&(@sg_pass_action){
+    colors={{action=SG_ACTION_CLEAR, value={r=0,g=0,b=0,a=1}}},
+    depth={action=SG_ACTION_DONTCARE},
+    stencil={action=SG_ACTION_DONTCARE}
+  }, app_width, app_height)
+  sgp_flush()
+  sgp_end()
+  sg_end_pass()
+  sg_commit()
+
+  -- Limit FPS
+  limit_fps()
+end
+
+local function init()
+  -- Initialize Audio
+  ma_assert!(ma_engine_init(nilptr, &audio_engine))
+  -- Initialize Sokol
+  sg_setup(&(@sg_desc){context = sapp_sgcontext()})
+  -- Initialize SGP
+  sgp_setup((@sgp_desc){})
+end
+
+local function cleanup()
+  sg_destroy_image(fb_image)
+  sgp_shutdown()
+  sg_shutdown()
+  ma_engine_uninit(&audio_engine)
+end
+
+local app_desc: sapp_desc = {
+  init_cb = init,
+  frame_cb = frame,
+  cleanup_cb = cleanup,
+  event_cb = event,
+  width = 320,
+  height = 240,
+  window_title = "DOOM",
+}
+sapp_run(&app_desc)

@@ -1,0 +1,63 @@
+#!/bin/sh
+source /etc/bwrapbox-run-limits
+exec bwrapbox \
+  --cgroup $BWRAPBOX_USER.bwrapbox \
+  --cgroup-overwrite \
+  --climit cgroup.max.descendants $BWRAPBOX_CLIMIT_CGROUP_MAX_DESCENDANTS \
+  --climit cgroup.max.depth $BWRAPBOX_CLIMIT_CGROUP_MAX_DEPTH \
+  --climit pids.max $BWRAPBOX_CLIMIT_PIDS_MAX \
+  --climit cpu.weight.nice $BWRAPBOX_CLIMIT_CPU_WEIGHT_NICE \
+  --climit memory.swap.max $BWRAPBOX_CLIMIT_MEMORY_SWAP_MAX \
+  --climit memory.high $BWRAPBOX_CLIMIT_MEMORY_HIGH \
+  --climit memory.max $BWRAPBOX_CLIMIT_MEMORY_MAX \
+  --climit time.high $BWRAPBOX_CLIMIT_TIME_HIGH \
+  --climit time.max $BWRAPBOX_CLIMIT_TIME_MAX \
+  --rlimit cpu.max $BWRAPBOX_RLIMIT_CPU_MAX \
+  --rlimit fsize.max $BWRAPBOX_RLIMIT_FSIZE_MAX \
+  --rlimit data.max $BWRAPBOX_RLIMIT_DATA_MAX \
+  --rlimit stack.max $BWRAPBOX_RLIMIT_STACK_MAX \
+  --rlimit core.max $BWRAPBOX_RLIMIT_CORE_MAX \
+  --rlimit nproc.max $BWRAPBOX_RLIMIT_NPROC_MAX \
+  --rlimit nofile.max $BWRAPBOX_RLIMIT_NOFILE_MAX \
+  --rlimit memlock.max $BWRAPBOX_RLIMIT_MEMLOCK_MAX \
+  --rlimit as.high $BWRAPBOX_RLIMIT_AS_HIGH \
+  --rlimit as.max $BWRAPBOX_RLIMIT_AS_MAX \
+  --rlimit sigpending.max $BWRAPBOX_RLIMIT_SIGPENDING_MAX \
+  --rlimit msgqueue.max $BWRAPBOX_RLIMIT_MSGQUEUE_MAX \
+  --rlimit nice.max $BWRAPBOX_RLIMIT_NICE_MAX \
+  --rlimit rtprio.max $BWRAPBOX_RLIMIT_RTPRIO_MAX \
+  --rlimit rttime.max $BWRAPBOX_RLIMIT_RTTIME_MAX \
+  --setuid $(id -u $BWRAPBOX_USER) \
+  --setgid $(id -g $BWRAPBOX_USER) \
+  --size $BWRAPBOX_ROOT_SIZE --tmpfs / \
+  --dev /dev \
+  --proc /proc \
+  --dev-bind /dev/yield /dev/yield \
+  --ro-bind /usr /usr \
+  --ro-bind /etc /etc \
+  --ro-bind /sys /sys \
+  --ro-bind "$BWRAPBOX_HOME" "$BWRAPBOX_HOME" \
+  --perms 1777 --size $BWRAPBOX_TMP_SIZE --tmpfs /tmp \
+  --dir /run \
+  --symlink /usr/lib /lib \
+  --symlink /usr/bin /bin \
+  --symlink /run /var/run \
+  --remount-ro / \
+  --unshare-ipc \
+  --unshare-pid \
+  --unshare-net \
+  --unshare-uts \
+  --unshare-user \
+  --clearenv \
+  --setenv TERM $TERM \
+  --setenv SHELL "$BWRAPBOX_SHELL" \
+  --setenv PATH "$BWRAPBOX_PATH" \
+  --setenv HOME "$BWRAPBOX_HOME" \
+  --setenv USER $BWRAPBOX_USER \
+  --setenv LOGNAME $BWRAPBOX_USER \
+  --chdir $BWRAPBOX_WORKDIR \
+  --die-with-parent \
+  --as-pid-1 \
+  --new-session \
+  --seccomp 10 10<"$BWRAPBOX_SECCOMP_FILTER" \
+  -- "$@"

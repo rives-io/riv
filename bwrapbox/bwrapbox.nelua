@@ -1,0 +1,368 @@
+require '.bwrapbox-bindings'
+require 'io'
+require 'arg'
+require 'hashmap'
+require 'sequence'
+
+------------------
+-- constants
+
+local rlimit_map: hashmap(string, cint)
+rlimit_map["cpu"] = 0         -- max CPU time in sec
+rlimit_map["fsize"] = 1       -- max file size
+rlimit_map["data"] = 2        -- max data size
+rlimit_map["stack"] = 3       -- max stack size
+rlimit_map["core"] = 4        -- max core file size
+rlimit_map["rss"] = 5         -- max resident set size
+rlimit_map["nproc"] = 6       -- max number of processes
+rlimit_map["nofile"] = 7      -- max number of open files
+rlimit_map["memlock"] = 8     -- max locked-in-memory address space
+rlimit_map["as"] = 9          -- max memory address space limit
+rlimit_map["locks"] = 10      -- max file locks held
+rlimit_map["sigpending"] = 11 -- max number of pending signals
+rlimit_map["msgqueue"] = 12   -- max bytes in POSIX mqueues
+rlimit_map["nice"] = 13       -- max nice prio allowed to raise
+rlimit_map["rtprio"] = 14     -- max realtime priority
+rlimit_map["rttime"] = 15     -- max time for RT tasks in us
+
+------------------
+-- utilities
+
+local is_child: boolean = false
+local function fail(msg: string, ...: varargs): void
+  io.stderr:writef(msg, ...)
+  io.stderr:write('\n')
+  io.stderr:flush()
+  if is_child then
+    _exit(-1)
+  else
+    exit(-1)
+  end
+end
+
+local function usleep(usecs: integer): void
+  if usecs <= 0 then return end
+  nanosleep(&(@timespec_t){
+    tv_sec=usecs // 1000000,
+    tv_nsec=(usecs % 1000000)*1000
+  }, nilptr)
+end
+
+local function wait_child_pid(pid: cint): (cint, string)
+  local status: cint
+  if waitpid(pid, &status, 0) ~= pid then
+    fail('failed to wait child pid')
+  end
+  if WIFEXITED(status) then
+    status = WEXITSTATUS(status)
+    return status, 'exited'
+  elseif WIFSIGNALED(status) then
+    status = WTERMSIG(status)
+    return status, 'killed'
+  elseif WIFSTOPPED(status) then
+    status = WSTOPSIG(status)
+    return status, 'stopped'
+  else
+    fail('unhandled wait status %d', status)
+    return -1, ''
+  end
+end
+
+local function isdir(path: string): boolean
+  local st: stat_t
+  return stat(path, &st) == 0 and S_ISDIR(st.st_mode)
+end
+
+local function result_from_errno(ok: boolean): (boolean, string, integer)
+  if not ok then
+    return false, strerror(errno), errno
+  end
+  return true, (@string){}, 0
+end
+
+local function fs_mkdir(path: string): (boolean, string, integer)
+  local mode: cuint = S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IWGRP|S_IXGRP|S_IROTH|S_IXOTH
+  return result_from_errno(mkdir(path, mode) == 0)
+end
+
+local function fs_rmdir(path: string): (boolean, string, integer)
+  return result_from_errno(rmdir(path) == 0)
+end
+
+local function fs_mkfile(path: string, contents: string): (boolean, string, integer)
+  local file: filestream <close>, err: string, errcode: integer = io.open(path, 'wb')
+  if #err > 0 then return false, err, errcode end
+  local ok: boolean
+  ok, err, errcode = file:write(contents)
+  if not ok then return false, err, errcode end
+  ok, err, errcode = file:close()
+  if not ok then return false, err, errcode end
+  return true, string{}, 0
+end
+
+local function fs_readfile(path: string): (string, string, integer)
+  local file: filestream <close>, err: string, errcode: integer = io.open(path, 'rb')
+  if #err > 0 then return '', err, errcode end
+  local contents: string
+  contents, err, errcode = file:read('a')
+  if #err > 0 then return string{}, err, errcode end
+  return contents, string{}, 0
+end
+
+local limit_pair: type = @record{
+  name: string,
+  value: integer
+}
+
+------------------
+-- cgroup
+
+local function cgroup_create(cgroup_path: string): void
+  local ok: boolean, err: string = fs_mkdir(cgroup_path)
+  if not ok then
+    fail("failed to create cgroup '%s': %s", cgroup_path, err)
+  end
+end
+
+local function cgroup_kill_and_destroy(cgroup_path: string): void
+  if isdir(cgroup_path) then
+    -- kill cgroup before destroying it
+    local kill_path: string <close> = cgroup_path..'/cgroup.kill'
+    fs_mkfile(kill_path, '1')
+    -- wait cgroup processes to be killed
+    local procs_path: string <close> = cgroup_path..'/cgroup.procs'
+    repeat
+      local contents: string <close> = fs_readfile(procs_path)
+    until #contents == 0
+    -- deleting cgroup directory
+    local ok: boolean, err: string = fs_rmdir(cgroup_path)
+    if not ok then
+      fail("failed to destroy cgroup '%s': %s", cgroup_path, err)
+    end
+  end
+end
+
+local function cgroup_set_limits(cgroup_path: string, limits: sequence(limit_pair)): void
+  for i,limit in ipairs(limits) do
+    local path: string <close> = string.concat{cgroup_path,'/',limit.name}
+    local content: string <close> = tostring(limit.value)
+    local ok: boolean, err: string = fs_mkfile(path, content)
+    if not ok then
+      fail("failed to set cgroup '%s' limit '%s': %s", cgroup_path, limit.name, err)
+    end
+  end
+end
+
+local function cgroup_migrate_pid(cgroup_path: string, pid: cint): void
+  local procs_path: string <close> = cgroup_path..'/cgroup.procs'
+  local content: string <close> = string.format('%d\n', pid)
+  local ok: boolean, err: string = fs_mkfile(procs_path, content)
+  if not ok then
+    fail("failed to migrate pid %d to create cgroup '%s': %s", pid, cgroup_path, err)
+  end
+end
+
+local function cgroup_cputime_usecs(cgroup_path: string): integer
+  local path: string <close> = cgroup_path..'/cpu.stat'
+  local contents: string <close> = fs_readfile(path)
+  if #contents == 0 then return -1 end
+  local usecs: string <close> = contents:gsub('^usage_usec ([0-9]+).*$', '%1')
+  return tointeger(usecs)
+end
+
+---------------------
+-- bwrapbox
+
+local cgroup_enabled: boolean
+local cgroup_overwrite: boolean
+local cgroup_path: string
+local cgroup_limits: sequence(limit_pair)
+local cgroup_high_usecs: integer = -1
+local cgroup_max_usecs: integer = -1
+local exec_uid: uint32 = 0xffffffff
+local exec_gid: uint32 = 0xffffffff
+local exec_limits: sequence(limit_pair)
+
+local function parse_args(): sequence(cstring)
+  local bwrap_args: sequence(cstring)
+  bwrap_args[0] = 'bwrap'
+  local i: integer = 1
+  while i <= #arg do
+    if arg[i] == '--cgroup' then
+      cgroup_path = arg[i+1]
+      if #cgroup_path > 0 and cgroup_path[1] ~= '/'_byte then
+        cgroup_path = '/sys/fs/cgroup/'..cgroup_path
+      end
+      i = i + 1
+      cgroup_enabled = true
+    elseif arg[i] == '--cgroup-overwrite' then
+      cgroup_overwrite = true
+    elseif arg[i] == '--climit' then
+      local name: string = arg[i+1]
+      local value: integer = tointeger(arg[i+2])
+      if name == 'time.high' then
+        cgroup_high_usecs = value
+      elseif name == 'time.max' then
+        cgroup_max_usecs = value
+      else
+        cgroup_limits:push{=name, =value}
+      end
+      i = i + 2
+    elseif arg[i] == '--rlimit' then
+      exec_limits:push{name = arg[i+1], value = tointeger(arg[i+2])}
+      i = i + 2
+    elseif arg[i] == '--setuid' then
+      exec_uid = tointeger(arg[i+1])
+      i = i + 1
+    elseif arg[i] == '--setgid' then
+      exec_gid = tointeger(arg[i+1])
+      i = i + 1
+    else -- bwrap arg
+      bwrap_args:push(arg[i])
+    end
+    i = i + 1
+  end
+  bwrap_args:push(nilptr)
+  return bwrap_args
+end
+
+local function set_rlimits(limits: sequence(limit_pair)): void
+  for i,limit in ipairs(limits) do
+    local dotpos: isize = limit.name:find('.', 1, true)
+    if dotpos <= 0 then
+      fail("invalid rlimit '%s'", limit.name)
+    end
+    local name: string = limit.name:subview(1, dotpos-1)
+    local suffix: string = limit.name:subview(dotpos+1, -1)
+    if not rlimit_map:has(name) or not (suffix == 'high' or suffix == 'max') then
+      fail("invalid rlimit '%s'", limit.name)
+    end
+    local resid: cint = rlimit_map[name]
+    local rlim: rlimit_t
+    if getrlimit(resid, &rlim) < 0 then
+      fail("failed to get rlimit '%s'", name)
+    end
+    local value: culong = (@culong)(limit.value)
+    if suffix == 'high' then
+      rlim.rlim_cur = value
+    else -- max
+      rlim.rlim_max = value
+      if rlim.rlim_cur > rlim.rlim_max then
+        rlim.rlim_cur = rlim.rlim_max
+      end
+    end
+    if setrlimit(resid, &rlim) < 0 then
+      fail("failed to set rlim '%s' to %d", name, limit.value)
+    end
+  end
+end
+
+local function bwrap_exec(args: sequence(cstring), rlimits: sequence(limit_pair), uid: uint32, gid: uint32): void <noreturn>
+  set_rlimits(rlimits)
+  if gid ~= 0xffffffff and getgid() ~= gid then
+    if setgid((@cuint)(gid)) < 0 then
+      fail('setgid failed')
+    end
+  end
+  if uid ~= 0xffffffff and getuid() ~= uid then
+    if setuid((@cuint)(uid)) < 0 then
+      fail('setuid failed')
+    end
+  end
+  if execvp(args[0], &args[0]) < 0 then
+    fail('failed to exec bwrap')
+  end
+  panic() -- unreachable
+end
+
+local function cgroup_wait_cputime_and_kill(cgroup_path: string, max_usecs: integer, pid: cint, sig: cint)
+  while true do
+    local usage_usec = cgroup_cputime_usecs(cgroup_path)
+    if usage_usec < 0 then -- cgroup unavailable
+      return
+    elseif usage_usec >= max_usecs then -- time exceeded
+      kill(pid, sig)
+      return
+    else
+      usleep(max_usecs - usage_usec)
+    end
+  end
+end
+
+local function after_fork()
+  if prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) ~= 0 then
+    fail('prctl() with PR_SET_PDEATHSIG failed')
+  end
+end
+
+local function fork_cgroup_time_limiter(cgroup_path: string, high_usecs: integer, max_usecs: integer, kill_pid: cint): cint
+  if high_usecs < 0 and max_usecs < 0 then
+    return -1
+  end
+  local pid: cint = fork()
+  if pid == 0 then
+    is_child = true
+    after_fork()
+    if high_usecs >= 0 then
+      cgroup_wait_cputime_and_kill(cgroup_path, high_usecs, kill_pid, SIGXCPU)
+    end
+    if max_usecs >= 0 then
+      cgroup_wait_cputime_and_kill(cgroup_path, max_usecs, kill_pid, SIGKILL)
+    end
+    _exit(0)
+  elseif pid < 0 then
+    fail('limiter fork() failed')
+  end
+  return pid
+end
+
+local function fork_cgroup_bwrap_exec(cgroup_path: string, args: sequence(cstring), rlimits: sequence(limit_pair), uid: uint32, gid: uint32): cint
+  local pid: cint = fork()
+  if pid == 0 then
+    is_child = true
+    after_fork()
+    cgroup_migrate_pid(cgroup_path, getpid())
+    bwrap_exec(args, rlimits, uid, gid)
+  elseif pid < 0 then
+    fail('bwrap fork() failed')
+  end
+  return pid
+end
+
+local function cleanup_cgroup(): void
+  cgroup_kill_and_destroy(cgroup_path)
+end
+
+local function signal_handler(signum: cint): void
+  cleanup_cgroup()
+end
+
+local bwrap_args: sequence(cstring) = parse_args()
+if cgroup_enabled then
+  if cgroup_overwrite then
+    cgroup_kill_and_destroy(cgroup_path)
+  end
+  -- setup normal exit handler
+  atexit(cleanup_cgroup)
+  -- create cgroup and set its limits
+  cgroup_create(cgroup_path)
+  cgroup_set_limits(cgroup_path, cgroup_limits)
+  -- start bwrap process
+  local bwrap_pid: cint = fork_cgroup_bwrap_exec(cgroup_path, bwrap_args, exec_limits, exec_uid, exec_gid)
+  -- start limiter process
+  local limiter_pid: cint = fork_cgroup_time_limiter(cgroup_path, cgroup_high_usecs, cgroup_max_usecs, bwrap_pid)
+  -- setup abnormal exit handler
+  sigaction(SIGTERM, &sigaction_t{sa_handler = signal_handler}, nilptr)
+  sigaction(SIGINT, &sigaction_t{sa_handler = signal_handler}, nilptr)
+  -- wait bwrap
+  local status: cint, reason: string = wait_child_pid(bwrap_pid)
+  local cputime_usec: integer = cgroup_cputime_usecs(cgroup_path)
+  if reason == 'killed' and status == SIGXCPU then
+    io.stderr:printf("application CPU time exceeded (%d usecs)\n", cputime_usec)
+  else
+    io.stderr:printf("application %s with status %d after %d usecs\n", reason, status, cputime_usec)
+  end
+  exit(status)
+else
+  bwrap_exec(bwrap_args, exec_limits, exec_uid, exec_gid)
+end

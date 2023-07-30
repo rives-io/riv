@@ -1,0 +1,465 @@
+##[[
+if not SOKOL_APP_NO_IMPL then
+  cdefine 'SOKOL_APP_API_DECL static'
+  cdefine 'SOKOL_APP_IMPL'
+end
+cdefine 'SOKOL_NO_ENTRY'
+if ccinfo.is_emscripten then
+  cdefine 'SOKOL_GLES2'
+else
+  cdefine 'SOKOL_GLCORE33'
+end
+cinclude 'sokol_app.h'
+if ccinfo.is_linux then
+  linklib 'X11'
+  linklib 'Xi'
+  linklib 'Xcursor'
+  linklib 'dl'
+  cflags '-pthread'
+elseif ccinfo.is_windows then
+  linklib 'kernel32'
+  linklib 'user32'
+  linklib 'shell32'
+end
+]]
+global SAPP_MAX_TOUCHPOINTS: cint <comptime> = 8
+global SAPP_MAX_MOUSEBUTTONS: cint <comptime> = 3
+global SAPP_MAX_KEYCODES: cint <comptime> = 512
+global SAPP_MAX_ICONIMAGES: cint <comptime> = 8
+global sapp_event_type: type <cimport,nodecl,using> = @enum(cint){
+  SAPP_EVENTTYPE_INVALID = 0,
+  SAPP_EVENTTYPE_KEY_DOWN = 1,
+  SAPP_EVENTTYPE_KEY_UP = 2,
+  SAPP_EVENTTYPE_CHAR = 3,
+  SAPP_EVENTTYPE_MOUSE_DOWN = 4,
+  SAPP_EVENTTYPE_MOUSE_UP = 5,
+  SAPP_EVENTTYPE_MOUSE_SCROLL = 6,
+  SAPP_EVENTTYPE_MOUSE_MOVE = 7,
+  SAPP_EVENTTYPE_MOUSE_ENTER = 8,
+  SAPP_EVENTTYPE_MOUSE_LEAVE = 9,
+  SAPP_EVENTTYPE_TOUCHES_BEGAN = 10,
+  SAPP_EVENTTYPE_TOUCHES_MOVED = 11,
+  SAPP_EVENTTYPE_TOUCHES_ENDED = 12,
+  SAPP_EVENTTYPE_TOUCHES_CANCELLED = 13,
+  SAPP_EVENTTYPE_RESIZED = 14,
+  SAPP_EVENTTYPE_ICONIFIED = 15,
+  SAPP_EVENTTYPE_RESTORED = 16,
+  SAPP_EVENTTYPE_FOCUSED = 17,
+  SAPP_EVENTTYPE_UNFOCUSED = 18,
+  SAPP_EVENTTYPE_SUSPENDED = 19,
+  SAPP_EVENTTYPE_RESUMED = 20,
+  SAPP_EVENTTYPE_QUIT_REQUESTED = 21,
+  SAPP_EVENTTYPE_CLIPBOARD_PASTED = 22,
+  SAPP_EVENTTYPE_FILES_DROPPED = 23,
+  _SAPP_EVENTTYPE_NUM = 24,
+  _SAPP_EVENTTYPE_FORCE_U32 = 2147483647
+}
+global sapp_keycode: type <cimport,nodecl,using> = @enum(cint){
+  SAPP_KEYCODE_INVALID = 0,
+  SAPP_KEYCODE_SPACE = 32,
+  SAPP_KEYCODE_APOSTROPHE = 39,
+  SAPP_KEYCODE_COMMA = 44,
+  SAPP_KEYCODE_MINUS = 45,
+  SAPP_KEYCODE_PERIOD = 46,
+  SAPP_KEYCODE_SLASH = 47,
+  SAPP_KEYCODE_0 = 48,
+  SAPP_KEYCODE_1 = 49,
+  SAPP_KEYCODE_2 = 50,
+  SAPP_KEYCODE_3 = 51,
+  SAPP_KEYCODE_4 = 52,
+  SAPP_KEYCODE_5 = 53,
+  SAPP_KEYCODE_6 = 54,
+  SAPP_KEYCODE_7 = 55,
+  SAPP_KEYCODE_8 = 56,
+  SAPP_KEYCODE_9 = 57,
+  SAPP_KEYCODE_SEMICOLON = 59,
+  SAPP_KEYCODE_EQUAL = 61,
+  SAPP_KEYCODE_A = 65,
+  SAPP_KEYCODE_B = 66,
+  SAPP_KEYCODE_C = 67,
+  SAPP_KEYCODE_D = 68,
+  SAPP_KEYCODE_E = 69,
+  SAPP_KEYCODE_F = 70,
+  SAPP_KEYCODE_G = 71,
+  SAPP_KEYCODE_H = 72,
+  SAPP_KEYCODE_I = 73,
+  SAPP_KEYCODE_J = 74,
+  SAPP_KEYCODE_K = 75,
+  SAPP_KEYCODE_L = 76,
+  SAPP_KEYCODE_M = 77,
+  SAPP_KEYCODE_N = 78,
+  SAPP_KEYCODE_O = 79,
+  SAPP_KEYCODE_P = 80,
+  SAPP_KEYCODE_Q = 81,
+  SAPP_KEYCODE_R = 82,
+  SAPP_KEYCODE_S = 83,
+  SAPP_KEYCODE_T = 84,
+  SAPP_KEYCODE_U = 85,
+  SAPP_KEYCODE_V = 86,
+  SAPP_KEYCODE_W = 87,
+  SAPP_KEYCODE_X = 88,
+  SAPP_KEYCODE_Y = 89,
+  SAPP_KEYCODE_Z = 90,
+  SAPP_KEYCODE_LEFT_BRACKET = 91,
+  SAPP_KEYCODE_BACKSLASH = 92,
+  SAPP_KEYCODE_RIGHT_BRACKET = 93,
+  SAPP_KEYCODE_GRAVE_ACCENT = 96,
+  SAPP_KEYCODE_WORLD_1 = 161,
+  SAPP_KEYCODE_WORLD_2 = 162,
+  SAPP_KEYCODE_ESCAPE = 256,
+  SAPP_KEYCODE_ENTER = 257,
+  SAPP_KEYCODE_TAB = 258,
+  SAPP_KEYCODE_BACKSPACE = 259,
+  SAPP_KEYCODE_INSERT = 260,
+  SAPP_KEYCODE_DELETE = 261,
+  SAPP_KEYCODE_RIGHT = 262,
+  SAPP_KEYCODE_LEFT = 263,
+  SAPP_KEYCODE_DOWN = 264,
+  SAPP_KEYCODE_UP = 265,
+  SAPP_KEYCODE_PAGE_UP = 266,
+  SAPP_KEYCODE_PAGE_DOWN = 267,
+  SAPP_KEYCODE_HOME = 268,
+  SAPP_KEYCODE_END = 269,
+  SAPP_KEYCODE_CAPS_LOCK = 280,
+  SAPP_KEYCODE_SCROLL_LOCK = 281,
+  SAPP_KEYCODE_NUM_LOCK = 282,
+  SAPP_KEYCODE_PRINT_SCREEN = 283,
+  SAPP_KEYCODE_PAUSE = 284,
+  SAPP_KEYCODE_F1 = 290,
+  SAPP_KEYCODE_F2 = 291,
+  SAPP_KEYCODE_F3 = 292,
+  SAPP_KEYCODE_F4 = 293,
+  SAPP_KEYCODE_F5 = 294,
+  SAPP_KEYCODE_F6 = 295,
+  SAPP_KEYCODE_F7 = 296,
+  SAPP_KEYCODE_F8 = 297,
+  SAPP_KEYCODE_F9 = 298,
+  SAPP_KEYCODE_F10 = 299,
+  SAPP_KEYCODE_F11 = 300,
+  SAPP_KEYCODE_F12 = 301,
+  SAPP_KEYCODE_F13 = 302,
+  SAPP_KEYCODE_F14 = 303,
+  SAPP_KEYCODE_F15 = 304,
+  SAPP_KEYCODE_F16 = 305,
+  SAPP_KEYCODE_F17 = 306,
+  SAPP_KEYCODE_F18 = 307,
+  SAPP_KEYCODE_F19 = 308,
+  SAPP_KEYCODE_F20 = 309,
+  SAPP_KEYCODE_F21 = 310,
+  SAPP_KEYCODE_F22 = 311,
+  SAPP_KEYCODE_F23 = 312,
+  SAPP_KEYCODE_F24 = 313,
+  SAPP_KEYCODE_F25 = 314,
+  SAPP_KEYCODE_KP_0 = 320,
+  SAPP_KEYCODE_KP_1 = 321,
+  SAPP_KEYCODE_KP_2 = 322,
+  SAPP_KEYCODE_KP_3 = 323,
+  SAPP_KEYCODE_KP_4 = 324,
+  SAPP_KEYCODE_KP_5 = 325,
+  SAPP_KEYCODE_KP_6 = 326,
+  SAPP_KEYCODE_KP_7 = 327,
+  SAPP_KEYCODE_KP_8 = 328,
+  SAPP_KEYCODE_KP_9 = 329,
+  SAPP_KEYCODE_KP_DECIMAL = 330,
+  SAPP_KEYCODE_KP_DIVIDE = 331,
+  SAPP_KEYCODE_KP_MULTIPLY = 332,
+  SAPP_KEYCODE_KP_SUBTRACT = 333,
+  SAPP_KEYCODE_KP_ADD = 334,
+  SAPP_KEYCODE_KP_ENTER = 335,
+  SAPP_KEYCODE_KP_EQUAL = 336,
+  SAPP_KEYCODE_LEFT_SHIFT = 340,
+  SAPP_KEYCODE_LEFT_CONTROL = 341,
+  SAPP_KEYCODE_LEFT_ALT = 342,
+  SAPP_KEYCODE_LEFT_SUPER = 343,
+  SAPP_KEYCODE_RIGHT_SHIFT = 344,
+  SAPP_KEYCODE_RIGHT_CONTROL = 345,
+  SAPP_KEYCODE_RIGHT_ALT = 346,
+  SAPP_KEYCODE_RIGHT_SUPER = 347,
+  SAPP_KEYCODE_MENU = 348
+}
+global sapp_android_tooltype: type <cimport,nodecl,using> = @enum(cint){
+  SAPP_ANDROIDTOOLTYPE_UNKNOWN = 0,
+  SAPP_ANDROIDTOOLTYPE_FINGER = 1,
+  SAPP_ANDROIDTOOLTYPE_STYLUS = 2,
+  SAPP_ANDROIDTOOLTYPE_MOUSE = 3
+}
+global sapp_touchpoint: type <cimport,nodecl> = @record{
+  identifier: usize,
+  pos_x: float32,
+  pos_y: float32,
+  android_tooltype: sapp_android_tooltype,
+  changed: boolean
+}
+global sapp_mousebutton: type <cimport,nodecl,using> = @enum(cint){
+  SAPP_MOUSEBUTTON_LEFT = 0,
+  SAPP_MOUSEBUTTON_RIGHT = 1,
+  SAPP_MOUSEBUTTON_MIDDLE = 2,
+  SAPP_MOUSEBUTTON_INVALID = 256
+}
+global SAPP_MODIFIER_SHIFT: cint <comptime> = 1
+global SAPP_MODIFIER_CTRL: cint <comptime> = 2
+global SAPP_MODIFIER_ALT: cint <comptime> = 4
+global SAPP_MODIFIER_SUPER: cint <comptime> = 8
+global SAPP_MODIFIER_LMB: cint <comptime> = 256
+global SAPP_MODIFIER_RMB: cint <comptime> = 512
+global SAPP_MODIFIER_MMB: cint <comptime> = 1024
+global sapp_event: type <cimport,nodecl> = @record{
+  frame_count: uint64,
+  type: sapp_event_type,
+  key_code: sapp_keycode,
+  char_code: uint32,
+  key_repeat: boolean,
+  modifiers: uint32,
+  mouse_button: sapp_mousebutton,
+  mouse_x: float32,
+  mouse_y: float32,
+  mouse_dx: float32,
+  mouse_dy: float32,
+  scroll_x: float32,
+  scroll_y: float32,
+  num_touches: cint,
+  touches: [8]sapp_touchpoint,
+  window_width: cint,
+  window_height: cint,
+  framebuffer_width: cint,
+  framebuffer_height: cint
+}
+global sapp_range: type <cimport,nodecl> = @record{
+  ptr: pointer,
+  size: csize
+}
+global sapp_image_desc: type <cimport,nodecl> = @record{
+  width: cint,
+  height: cint,
+  pixels: sapp_range
+}
+global sapp_icon_desc: type <cimport,nodecl> = @record{
+  sokol_default: boolean,
+  images: [8]sapp_image_desc
+}
+global sapp_allocator: type <cimport,nodecl> = @record{
+  alloc: function(csize, pointer): pointer,
+  free: function(pointer, pointer): void,
+  user_data: pointer
+}
+global sapp_log_item: type <cimport,nodecl,using> = @enum(cint){
+  SAPP_LOGITEM_OK = 0,
+  SAPP_LOGITEM_MALLOC_FAILED = 1,
+  SAPP_LOGITEM_MACOS_INVALID_NSOPENGL_PROFILE = 2,
+  SAPP_LOGITEM_WIN32_LOAD_OPENGL32_DLL_FAILED = 3,
+  SAPP_LOGITEM_WIN32_CREATE_HELPER_WINDOW_FAILED = 4,
+  SAPP_LOGITEM_WIN32_HELPER_WINDOW_GETDC_FAILED = 5,
+  SAPP_LOGITEM_WIN32_DUMMY_CONTEXT_SET_PIXELFORMAT_FAILED = 6,
+  SAPP_LOGITEM_WIN32_CREATE_DUMMY_CONTEXT_FAILED = 7,
+  SAPP_LOGITEM_WIN32_DUMMY_CONTEXT_MAKE_CURRENT_FAILED = 8,
+  SAPP_LOGITEM_WIN32_GET_PIXELFORMAT_ATTRIB_FAILED = 9,
+  SAPP_LOGITEM_WIN32_WGL_FIND_PIXELFORMAT_FAILED = 10,
+  SAPP_LOGITEM_WIN32_WGL_DESCRIBE_PIXELFORMAT_FAILED = 11,
+  SAPP_LOGITEM_WIN32_WGL_SET_PIXELFORMAT_FAILED = 12,
+  SAPP_LOGITEM_WIN32_WGL_ARB_CREATE_CONTEXT_REQUIRED = 13,
+  SAPP_LOGITEM_WIN32_WGL_ARB_CREATE_CONTEXT_PROFILE_REQUIRED = 14,
+  SAPP_LOGITEM_WIN32_WGL_OPENGL_3_2_NOT_SUPPORTED = 15,
+  SAPP_LOGITEM_WIN32_WGL_OPENGL_PROFILE_NOT_SUPPORTED = 16,
+  SAPP_LOGITEM_WIN32_WGL_INCOMPATIBLE_DEVICE_CONTEXT = 17,
+  SAPP_LOGITEM_WIN32_WGL_CREATE_CONTEXT_ATTRIBS_FAILED_OTHER = 18,
+  SAPP_LOGITEM_WIN32_D3D11_CREATE_DEVICE_AND_SWAPCHAIN_WITH_DEBUG_FAILED = 19,
+  SAPP_LOGITEM_WIN32_D3D11_GET_IDXGIFACTORY_FAILED = 20,
+  SAPP_LOGITEM_WIN32_D3D11_GET_IDXGIADAPTER_FAILED = 21,
+  SAPP_LOGITEM_WIN32_D3D11_QUERY_INTERFACE_IDXGIDEVICE1_FAILED = 22,
+  SAPP_LOGITEM_WIN32_REGISTER_RAW_INPUT_DEVICES_FAILED_MOUSE_LOCK = 23,
+  SAPP_LOGITEM_WIN32_REGISTER_RAW_INPUT_DEVICES_FAILED_MOUSE_UNLOCK = 24,
+  SAPP_LOGITEM_WIN32_GET_RAW_INPUT_DATA_FAILED = 25,
+  SAPP_LOGITEM_LINUX_GLX_LOAD_LIBGL_FAILED = 26,
+  SAPP_LOGITEM_LINUX_GLX_LOAD_ENTRY_POINTS_FAILED = 27,
+  SAPP_LOGITEM_LINUX_GLX_EXTENSION_NOT_FOUND = 28,
+  SAPP_LOGITEM_LINUX_GLX_QUERY_VERSION_FAILED = 29,
+  SAPP_LOGITEM_LINUX_GLX_VERSION_TOO_LOW = 30,
+  SAPP_LOGITEM_LINUX_GLX_NO_GLXFBCONFIGS = 31,
+  SAPP_LOGITEM_LINUX_GLX_NO_SUITABLE_GLXFBCONFIG = 32,
+  SAPP_LOGITEM_LINUX_GLX_GET_VISUAL_FROM_FBCONFIG_FAILED = 33,
+  SAPP_LOGITEM_LINUX_GLX_REQUIRED_EXTENSIONS_MISSING = 34,
+  SAPP_LOGITEM_LINUX_GLX_CREATE_CONTEXT_FAILED = 35,
+  SAPP_LOGITEM_LINUX_GLX_CREATE_WINDOW_FAILED = 36,
+  SAPP_LOGITEM_LINUX_X11_CREATE_WINDOW_FAILED = 37,
+  SAPP_LOGITEM_LINUX_EGL_BIND_OPENGL_API_FAILED = 38,
+  SAPP_LOGITEM_LINUX_EGL_BIND_OPENGL_ES_API_FAILED = 39,
+  SAPP_LOGITEM_LINUX_EGL_GET_DISPLAY_FAILED = 40,
+  SAPP_LOGITEM_LINUX_EGL_INITIALIZE_FAILED = 41,
+  SAPP_LOGITEM_LINUX_EGL_NO_CONFIGS = 42,
+  SAPP_LOGITEM_LINUX_EGL_NO_NATIVE_VISUAL = 43,
+  SAPP_LOGITEM_LINUX_EGL_GET_VISUAL_INFO_FAILED = 44,
+  SAPP_LOGITEM_LINUX_EGL_CREATE_WINDOW_SURFACE_FAILED = 45,
+  SAPP_LOGITEM_LINUX_EGL_CREATE_CONTEXT_FAILED = 46,
+  SAPP_LOGITEM_LINUX_EGL_MAKE_CURRENT_FAILED = 47,
+  SAPP_LOGITEM_LINUX_X11_OPEN_DISPLAY_FAILED = 48,
+  SAPP_LOGITEM_LINUX_X11_QUERY_SYSTEM_DPI_FAILED = 49,
+  SAPP_LOGITEM_LINUX_X11_DROPPED_FILE_URI_WRONG_SCHEME = 50,
+  SAPP_LOGITEM_ANDROID_UNSUPPORTED_INPUT_EVENT_INPUT_CB = 51,
+  SAPP_LOGITEM_ANDROID_UNSUPPORTED_INPUT_EVENT_MAIN_CB = 52,
+  SAPP_LOGITEM_ANDROID_READ_MSG_FAILED = 53,
+  SAPP_LOGITEM_ANDROID_WRITE_MSG_FAILED = 54,
+  SAPP_LOGITEM_ANDROID_MSG_CREATE = 55,
+  SAPP_LOGITEM_ANDROID_MSG_RESUME = 56,
+  SAPP_LOGITEM_ANDROID_MSG_PAUSE = 57,
+  SAPP_LOGITEM_ANDROID_MSG_FOCUS = 58,
+  SAPP_LOGITEM_ANDROID_MSG_NO_FOCUS = 59,
+  SAPP_LOGITEM_ANDROID_MSG_SET_NATIVE_WINDOW = 60,
+  SAPP_LOGITEM_ANDROID_MSG_SET_INPUT_QUEUE = 61,
+  SAPP_LOGITEM_ANDROID_MSG_DESTROY = 62,
+  SAPP_LOGITEM_ANDROID_UNKNOWN_MSG = 63,
+  SAPP_LOGITEM_ANDROID_LOOP_THREAD_STARTED = 64,
+  SAPP_LOGITEM_ANDROID_LOOP_THREAD_DONE = 65,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONSTART = 66,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONRESUME = 67,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONSAVEINSTANCESTATE = 68,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONWINDOWFOCUSCHANGED = 69,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONPAUSE = 70,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONSTOP = 71,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONNATIVEWINDOWCREATED = 72,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONNATIVEWINDOWDESTROYED = 73,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONINPUTQUEUECREATED = 74,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONINPUTQUEUEDESTROYED = 75,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONCONFIGURATIONCHANGED = 76,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONLOWMEMORY = 77,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONDESTROY = 78,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_DONE = 79,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONCREATE = 80,
+  SAPP_LOGITEM_ANDROID_CREATE_THREAD_PIPE_FAILED = 81,
+  SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_CREATE_SUCCESS = 82,
+  SAPP_LOGITEM_IMAGE_DATA_SIZE_MISMATCH = 83,
+  SAPP_LOGITEM_DROPPED_FILE_PATH_TOO_LONG = 84,
+  SAPP_LOGITEM_CLIPBOARD_STRING_TOO_BIG = 85
+}
+global sapp_logger: type <cimport,nodecl> = @record{
+  func: function(cstring, uint32, uint32, cstring, uint32, cstring, pointer): void,
+  user_data: pointer
+}
+global sapp_desc: type <cimport,nodecl> = @record{
+  init_cb: function(): void,
+  frame_cb: function(): void,
+  cleanup_cb: function(): void,
+  event_cb: function(*sapp_event): void,
+  user_data: pointer,
+  init_userdata_cb: function(pointer): void,
+  frame_userdata_cb: function(pointer): void,
+  cleanup_userdata_cb: function(pointer): void,
+  event_userdata_cb: function(*sapp_event, pointer): void,
+  width: cint,
+  height: cint,
+  sample_count: cint,
+  swap_interval: cint,
+  high_dpi: boolean,
+  fullscreen: boolean,
+  alpha: boolean,
+  window_title: cstring,
+  enable_clipboard: boolean,
+  clipboard_size: cint,
+  enable_dragndrop: boolean,
+  max_dropped_files: cint,
+  max_dropped_file_path_length: cint,
+  icon: sapp_icon_desc,
+  allocator: sapp_allocator,
+  logger: sapp_logger,
+  gl_force_gles2: boolean,
+  gl_major_version: cint,
+  gl_minor_version: cint,
+  win32_console_utf8: boolean,
+  win32_console_create: boolean,
+  win32_console_attach: boolean,
+  html5_canvas_name: cstring,
+  html5_canvas_resize: boolean,
+  html5_preserve_drawing_buffer: boolean,
+  html5_premultiplied_alpha: boolean,
+  html5_ask_leave_site: boolean,
+  ios_keyboard_resizes_canvas: boolean
+}
+global sapp_html5_fetch_error: type <cimport,nodecl,using> = @enum(cint){
+  SAPP_HTML5_FETCH_ERROR_NO_ERROR = 0,
+  SAPP_HTML5_FETCH_ERROR_BUFFER_TOO_SMALL = 1,
+  SAPP_HTML5_FETCH_ERROR_OTHER = 2
+}
+global sapp_html5_fetch_response: type <cimport,nodecl> = @record{
+  succeeded: boolean,
+  error_code: sapp_html5_fetch_error,
+  file_index: cint,
+  data: sapp_range,
+  buffer: sapp_range,
+  user_data: pointer
+}
+global sapp_html5_fetch_request: type <cimport,nodecl> = @record{
+  dropped_file_index: cint,
+  callback: function(*sapp_html5_fetch_response): void,
+  buffer: sapp_range,
+  user_data: pointer
+}
+global sapp_mouse_cursor: type <cimport,nodecl,using> = @enum(cint){
+  SAPP_MOUSECURSOR_DEFAULT = 0,
+  SAPP_MOUSECURSOR_ARROW = 1,
+  SAPP_MOUSECURSOR_IBEAM = 2,
+  SAPP_MOUSECURSOR_CROSSHAIR = 3,
+  SAPP_MOUSECURSOR_POINTING_HAND = 4,
+  SAPP_MOUSECURSOR_RESIZE_EW = 5,
+  SAPP_MOUSECURSOR_RESIZE_NS = 6,
+  SAPP_MOUSECURSOR_RESIZE_NWSE = 7,
+  SAPP_MOUSECURSOR_RESIZE_NESW = 8,
+  SAPP_MOUSECURSOR_RESIZE_ALL = 9,
+  SAPP_MOUSECURSOR_NOT_ALLOWED = 10,
+  _SAPP_MOUSECURSOR_NUM = 11
+}
+global function sapp_isvalid(): boolean <cimport,nodecl> end
+global function sapp_width(): cint <cimport,nodecl> end
+global function sapp_widthf(): float32 <cimport,nodecl> end
+global function sapp_height(): cint <cimport,nodecl> end
+global function sapp_heightf(): float32 <cimport,nodecl> end
+global function sapp_color_format(): cint <cimport,nodecl> end
+global function sapp_depth_format(): cint <cimport,nodecl> end
+global function sapp_sample_count(): cint <cimport,nodecl> end
+global function sapp_high_dpi(): boolean <cimport,nodecl> end
+global function sapp_dpi_scale(): float32 <cimport,nodecl> end
+global function sapp_show_keyboard(show: boolean): void <cimport,nodecl> end
+global function sapp_keyboard_shown(): boolean <cimport,nodecl> end
+global function sapp_is_fullscreen(): boolean <cimport,nodecl> end
+global function sapp_toggle_fullscreen(): void <cimport,nodecl> end
+global function sapp_show_mouse(show: boolean): void <cimport,nodecl> end
+global function sapp_mouse_shown(): boolean <cimport,nodecl> end
+global function sapp_lock_mouse(lock: boolean): void <cimport,nodecl> end
+global function sapp_mouse_locked(): boolean <cimport,nodecl> end
+global function sapp_set_mouse_cursor(cursor: sapp_mouse_cursor): void <cimport,nodecl> end
+global function sapp_get_mouse_cursor(): sapp_mouse_cursor <cimport,nodecl> end
+global function sapp_userdata(): pointer <cimport,nodecl> end
+global function sapp_query_desc(): sapp_desc <cimport,nodecl> end
+global function sapp_request_quit(): void <cimport,nodecl> end
+global function sapp_cancel_quit(): void <cimport,nodecl> end
+global function sapp_quit(): void <cimport,nodecl> end
+global function sapp_consume_event(): void <cimport,nodecl> end
+global function sapp_frame_count(): uint64 <cimport,nodecl> end
+global function sapp_frame_duration(): float64 <cimport,nodecl> end
+global function sapp_set_clipboard_string(str: cstring): void <cimport,nodecl> end
+global function sapp_get_clipboard_string(): cstring <cimport,nodecl> end
+global function sapp_set_window_title(str: cstring): void <cimport,nodecl> end
+global function sapp_set_icon(icon_desc: *sapp_icon_desc): void <cimport,nodecl> end
+global function sapp_get_num_dropped_files(): cint <cimport,nodecl> end
+global function sapp_get_dropped_file_path(index: cint): cstring <cimport,nodecl> end
+global function sapp_run(desc: *sapp_desc): void <cimport,nodecl> end
+global function sapp_egl_get_display(): pointer <cimport,nodecl> end
+global function sapp_egl_get_context(): pointer <cimport,nodecl> end
+global function sapp_gles2(): boolean <cimport,nodecl> end
+global function sapp_html5_ask_leave_site(ask: boolean): void <cimport,nodecl> end
+global function sapp_html5_get_dropped_file_size(index: cint): uint32 <cimport,nodecl> end
+global function sapp_html5_fetch_dropped_file(request: *sapp_html5_fetch_request): void <cimport,nodecl> end
+global function sapp_metal_get_device(): pointer <cimport,nodecl> end
+global function sapp_metal_get_renderpass_descriptor(): pointer <cimport,nodecl> end
+global function sapp_metal_get_drawable(): pointer <cimport,nodecl> end
+global function sapp_macos_get_window(): pointer <cimport,nodecl> end
+global function sapp_ios_get_window(): pointer <cimport,nodecl> end
+global function sapp_d3d11_get_device(): pointer <cimport,nodecl> end
+global function sapp_d3d11_get_device_context(): pointer <cimport,nodecl> end
+global function sapp_d3d11_get_swap_chain(): pointer <cimport,nodecl> end
+global function sapp_d3d11_get_render_target_view(): pointer <cimport,nodecl> end
+global function sapp_d3d11_get_depth_stencil_view(): pointer <cimport,nodecl> end
+global function sapp_win32_get_hwnd(): pointer <cimport,nodecl> end
+global function sapp_wgpu_get_device(): pointer <cimport,nodecl> end
+global function sapp_wgpu_get_render_view(): pointer <cimport,nodecl> end
+global function sapp_wgpu_get_resolve_view(): pointer <cimport,nodecl> end
+global function sapp_wgpu_get_depth_stencil_view(): pointer <cimport,nodecl> end
+global function sapp_android_get_native_activity(): pointer <cimport,nodecl> end

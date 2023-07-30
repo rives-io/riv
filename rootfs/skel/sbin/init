@@ -1,0 +1,47 @@
+#!/bin/busybox sh
+
+# path
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+# mount
+busybox mkdir -p /proc /sys /dev/pts /dev/shm /run /cartridge
+busybox mountpoint -q /proc    || busybox mount -o nosuid,nodev,noexec -t proc proc /proc
+busybox mountpoint -q /sys     || busybox mount -o nosuid,nodev,noexec -t sysfs sys /sys
+busybox mountpoint -q /dev/pts || busybox mount -o nosuid,noexec,mode=620,gid=5 -t devpts devpts /dev/pts
+busybox mountpoint -q /dev/shm || busybox mount -o nosuid,nodev,mode=1777,inode64 -t tmpfs tmpfs /dev/shm
+busybox mountpoint -q /run     || busybox mount -o nosuid,nodev,mode=0755,inode64 -t tmpfs tmpfs /run
+busybox grep -Fq cgroup2 /proc/filesystems && busybox mountpoint -q /sys/fs/cgroup || busybox mount -o nosuid,nodev,noexec -t cgroup2 cgroup2 /sys/fs/cgroup
+busybox mount -o noatime,nosuid,remount /
+busybox mount -o nosuid,remount /dev
+
+# initialize
+[ -d /sys/fs/cgroup ] && echo "+cpu +pids +memory" > /sys/fs/cgroup/cgroup.subtree_control
+[ -f /etc/sysctl.conf ] && busybox sysctl -pq
+[ -c /dev/yield       ] && busybox chmod 660 /dev/yield && busybox chown root:cartridge /dev/yield
+[ -c /dev/rollup      ] && busybox chmod 660 /dev/rollup && busybox chown root:cartridge /dev/rollup
+[ -f /etc/hostname    ] && busybox hostname -F /etc/hostname
+[ ! -z "$LINES" ] && [ ! -z "$COLUMNS" ] && busybox stty rows $LINES cols $COLUMNS
+
+# echo '
+#          .
+#         / \
+#       /    \
+# \---/---\  /----\
+#  \       X       \
+#   \----/  \---/---\
+#        \    / CARTESI
+#         \ /   MACHINE
+#          '"'"'
+# '
+
+# run
+if [ -n "$*" ]; then
+  busybox setsid busybox cttyhack su -c "$*"
+else
+  echo "Nothing to do."
+fi
+
+# shutdown
+busybox mount -o ro,remount /
+busybox umount -af
+busybox poweroff -f

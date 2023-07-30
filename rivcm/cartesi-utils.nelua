@@ -1,0 +1,80 @@
+require 'cartesi'
+require 'span'
+
+## function cm_check(a)
+  do
+    local errmsg: cstring
+    ## a = a:clone()
+    ## table.insert(a[1], aster.UnaryOp{"ref", aster.Id{"errmsg"}})
+    local result = #[a]#
+    if errmsg then
+      error(errmsg)
+    end
+    assert(result == 0, 'cartesi machine API error')
+  end
+## end
+
+global CartesiMachine = @record{
+  machine: *cm_machine,
+}
+
+function CartesiMachine.create(config: cm_machine_config): CartesiMachine
+  local defconfig: *cm_machine_config
+  cm_check!(cm_get_default_config(&defconfig))
+  defer cm_delete_machine_config(defconfig) end
+  local mergedconfig: cm_machine_config = $defconfig
+  local runconfig: cm_machine_runtime_config
+  if config.ram ~= (@cm_ram_config)() then
+    mergedconfig.ram = config.ram
+  end
+  if config.rom ~= (@cm_ram_config)() then
+    mergedconfig.rom = config.rom
+  end
+  if config.htif ~= (@cm_htif_config)() then
+    mergedconfig.htif = config.htif
+  end
+  if config.flash_drive ~= (@cm_memory_range_config_array)() then
+    mergedconfig.flash_drive = config.flash_drive
+  end
+  local self: CartesiMachine
+  cm_check!(cm_create_machine(&mergedconfig, &runconfig, &self.machine))
+  return self
+end
+
+function CartesiMachine:destroy()
+  cm_delete_machine(self.machine)
+  $self = {}
+end
+
+function CartesiMachine:__close()
+  self:destroy()
+end
+
+function CartesiMachine:run(mcycle_end: facultative(uint64)): CM_BREAK_REASON
+  ## if mcycle_end.type.is_niltype then
+  local mcycle_end: uint64 = (@uint64)(-1)
+  ## end
+  local break_reason: CM_BREAK_REASON
+  cm_check!(cm_machine_run(self.machine, mcycle_end, &break_reason))
+  return break_reason
+end
+
+function CartesiMachine:read_yield_reason(): uint32
+  local data: uint64
+  cm_check!(cm_read_htif_tohost_data(self.machine, &data))
+  return data >> 32
+end
+
+function CartesiMachine:read_memory(paddr: uint64, dest: span(byte))
+  cm_check!(cm_read_memory(self.machine, paddr, dest.data, dest.size))
+end
+
+function CartesiMachine:write_memory(paddr: uint64, dest: span(byte))
+  cm_check!(cm_write_memory(self.machine, paddr, dest.data, dest.size))
+end
+
+function CartesiMachine:read_mcycle(): uint64
+  local mcycle: uint64
+  cm_check!(cm_read_mcycle(self.machine, &mcycle))
+  return mcycle
+end

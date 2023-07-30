@@ -1,0 +1,23 @@
+*.bin
+*.sqfs
+*.ext2
+*.xz
+*.tar
+*.gz
+*.txt
+*.elf
+*.so
+*.dump
+*.out
+*.TODO
+
+# ignore generated binaries
+/rivcm/rivcm
+/bwrapbox/bwrapbox
+/bwrapbox/seccomp-filter
+/bwrapbox/seccomp-filter.bpf
+
+# ignore generated C sources
+/rivcm/rivcm.c
+/libriv/libriv.c
+/bwrapbox/bwrapbox.c
