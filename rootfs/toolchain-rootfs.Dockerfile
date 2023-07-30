@@ -12,7 +12,7 @@ RUN apk update && apk upgrade
 RUN apk add bash gcc g++ git libc-dev make cmake pkgconfig automake autoconf
 
 # Install other utilities
-RUN apk add squashfs-tools
+RUN apk add squashfs-tools su-exec
 
 # Build other packages inside /root
 WORKDIR /root
@@ -30,13 +30,22 @@ RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarba
 RUN apk add libarchive-dev
 RUN wget -O genext2fs-1.5.2.tar.gz https://github.com/cartesi/genext2fs/archive/refs/tags/v1.5.2.tar.gz && \
     tar -xzf genext2fs-1.5.2.tar.gz && \
-    cd genext2fs-1.5.2 && \
+    cd genext2fs-* && \
     ./autogen.sh && \
     ./configure && \
     make PREFIX=/usr && \
     make install PREFIX=/usr && \
     cd .. && \
-    rm -rf genext2fs*
+    rm -rf genext2fs-*
+
+# Install elfkickers
+RUN wget -O BR903-ELFkickers.tar.gz https://github.com/BR903/ELFkickers/tarball/master && \
+    tar -xzf BR903-ELFkickers.tar.gz && \
+    cd BR903-ELFkickers-*  && \
+    make -j4 && \
+    make install prefix=/usr && \
+    cd .. && \
+    rm -rf BR903-ELFkickers-*
 
 # Install linux headers
 COPY kernel/linux-headers-5.15.63-ctsi-2.tar.xz linux-headers-5.15.63-ctsi-2.tar.xz
@@ -58,9 +67,8 @@ RUN make -C bwrapbox install PREFIX=/usr
 COPY libriv libriv
 RUN make -C libriv install PREFIX=/usr
 
-
 ################################
-# Build /rootfs
+# Build rootfs
 
 # Create Linux filesystem hierarchy
 WORKDIR /rootfs
@@ -95,14 +103,14 @@ RUN make -C /root/bwrapbox install PREFIX=/usr DESTDIR=/rootfs
 RUN make -C /root/libriv install PREFIX=/usr DESTDIR=/rootfs
 
 # Install system configs
-COPY rootfs/skel/etc /rootfs/etc
+COPY rootfs/skel/etc etc
 COPY rootfs/skel/usr usr
 RUN ln -s ../proc/mounts etc/mtab && \
     chmod 600 etc/shadow && \
     sed -i '/^ *# /d' etc/sysctl.conf
 
 # Install init
-COPY --chmod=755 rootfs/skel/sbin/init sbin/init
+COPY rootfs/skel/sbin sbin
 RUN sed -i '/^ *# /d;/^$/d' sbin/init
 
 # Generate rootfs
@@ -111,3 +119,10 @@ RUN genext2fs \
     --block-size 4096 \
     --readjustment +0 \
     --root /rootfs /rootfs.ext2
+
+# Install workaround to run env as current user
+RUN adduser -D -u 500 cartridge cartridge
+COPY --chmod=755 rootfs/toolchain-entrypoint.sh /usr/local/bin/toolchain-entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/toolchain-entrypoint.sh"]
+
+CMD ["/bin/bash", "-l"]

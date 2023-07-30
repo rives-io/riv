@@ -1,0 +1,88 @@
+## pragmas.unitname = ''
+
+-- This module uses an algorithm based on *xoshiro256* to produce pseudo-random 64-bit integers.
+
+-- Random pseudo random number generator.
+global riv_prng: type = @record{
+  state: [4]uint64
+}
+
+## if RIV_IMPLEMENTATION then
+
+-- Left bit rotation utility.
+## local function rotl(x, n)
+  in (#[x]# << #[n]#) | (#[x]# >> (64 - #[n]#))
+## end
+
+-- Generates a random unsigned integer in interval [0, UINT64_MAX].
+function riv_prng:rand(): uint64 <cexport'riv_rand'>
+  local state: [4]uint64 = {
+    self.state[0],
+    self.state[1],
+    self.state[2] ~ self.state[0],
+    self.state[3] ~ self.state[1]
+  }
+  local res: uint64 = #[rotl]#(state[1] * 5, 7) * 9
+  self.state[0] = state[0] ~ state[3]
+  self.state[1] = state[1] ~ state[2]
+  self.state[2] = state[2] ~ (state[1] << 17)
+  self.state[3] = #[rotl]#(state[3], 45)
+  return res
+end
+
+-- Generates a random unsigned integer in interval [0, `high`].
+function riv_prng:rand_uint(high: uint64): uint64 <cexport'riv_rand_uint'>
+  local x: uint64 = self:rand()
+  if high & (high + 1) == 0 then -- is 'high + 1' a power of 2?
+    x = x & high -- no bias
+  else -- project the random integer in interval is a power of 2 to maintain uniform property
+    -- compute the smallest (2^b - 1) not smaller than 'high'
+    local lim: uint64 = high
+    lim = lim | (lim >> 1)
+    lim = lim | (lim >> 2)
+    lim = lim | (lim >> 4)
+    lim = lim | (lim >> 8)
+    lim = lim | (lim >> 16)
+    lim = lim | (lim >> 32)
+    -- project 'x' into [0..lim]
+    x = x & lim
+    -- check((lim & (lim + 1)) == 0 and lim >= high and (lim >> 1) < high)
+    while x > high do -- not inside [0..n]? try again
+      x = self:rand() & lim
+    end
+  end
+  return x
+end
+
+-- Returns a pseudo-random integer with uniform distribution in the range [`low`, `high`].
+function riv_prng:rand_int(low: int64, high: int64): int64 <cexport'riv_rand_int'>
+  assert(low <= high, "interval is empty")
+  return (@int64)(self:rand_uint((@uint64)(high) - (@uint64)(low)) + (@uint64)(low))
+end
+
+-- Generates a random floating-point number in interval [0, 1).
+function riv_prng:rand_float(): float64 <cexport>
+  ## local FIGS = math.min(primtypes.float64.mantdigits, 64)
+  return (self:rand() >> #[64 - FIGS]#) * (0.5_f64 / (1_u64 << #[FIGS-1]#))
+end
+
+-- Reinitialize the generator seed.
+function riv_prng:seed(a: uint64, b: uint64): void <cexport'riv_seed'>
+  self.state[0] = a
+  self.state[1] = 0xff
+  self.state[2] = b
+  self.state[3] = 0
+  for i:usize=0,<16 do
+    self:rand()
+  end
+end
+
+## elseif RIV_BINDINGS then
+
+function riv_prng:rand(): uint64 <cimport'riv_rand'> end
+function riv_prng:rand_uint(high: uint64): uint64 <cimport'riv_rand_uint'> end
+function riv_prng:rand_int(low: int64, high: int64): int64 <cimport'riv_rand_int'> end
+function riv_prng:rand_float(): float64 <cimport'riv_rand_float'> end
+function riv_prng:seed(a: uint64, b: uint64): void <cimport'riv_seed'> end
+
+## end

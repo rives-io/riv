@@ -1,12 +1,12 @@
-all: rootfs rivcm
+all: rootfs rivcm demos
 
 rootfs rivcm:
 	$(MAKE) -C $@
 
-libriv bwrapbox:
-	$(MAKE) toolchain-exec COMMAND="make -C $@"
+libriv bwrapbox demos:
+	$(MAKE) -C rootfs toolchain-exec COMMAND="make -C $@"
 
-rootfs-env toolchain-env toolchain-exec:
+shell toolchain toolchain-exec toolchain-env toolchain-env-asroot:
 	$(MAKE) -C rootfs $@
 
 clean:
@@ -16,4 +16,4 @@ clean:
 	$(MAKE) -C rivcm clean
 	$(MAKE) -C demos clean
 
-.PHONY: rootfs libriv bwrapbox
+.PHONY: rootfs rivcm libriv bwrapbox demos

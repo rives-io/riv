@@ -13,13 +13,15 @@ require 'sokol_gp'
 require 'miniaudio'
 require 'fs'
 require 'cartesi-utils'
-require 'libriv'
+require 'riv'
 
 local MACHINE_MEM_BASE_PADDR <comptime> = 0x80000000
-local MACHINE_HUGE_PAGE_PADDR <comptime> = 0x81600000
-local MACHINE_OUTPUT_PADDR <comptime> = 0x90000000000000
+local MACHINE_OUTPUT_PADDR <comptime> = 0xa0000000000000
 local MACHINE_OUTPUT_SIZE <comptime> = 0x200000
-local MACHINE_RAM_SIZE <comptime> = 128*1024*1024
+local HUGE_PAGE_SIZE <comptime> = 2*1024*1024
+local MACHINE_MEM_SIZE <comptime> = 128*1024*1024
+
+local debug_fps: boolean = true
 
 local bootargs: string = "console=hvc0 \z
   rootfstype=ext2 \z
@@ -27,7 +29,7 @@ local bootargs: string = "console=hvc0 \z
   rw quiet \z
   swiotlb=noforce \z
   mtdparts=flash.0:-(root) \z
-  hugepagesz=2M hugepages=1 -- "..string.concat(arg, " ")
+  hugepagesz=2M hugepages=1 -- cartridge-run "..string.concat(arg, " ")
 
 local rootfs_length = fs.stat("./rootfs/rootfs.ext2").size
 if rootfs_length == 0 then
@@ -37,20 +39,25 @@ end
 local machine: CartesiMachine = CartesiMachine.create{
   ram = {
     image_filename = './kernel/linux.bin',
-    length = MACHINE_RAM_SIZE
+    length = MACHINE_MEM_SIZE
   },
   rom = {
-    image_filename = './rom/rom.bin',
+    image_filename = './kernel/rom.bin',
     bootargs = bootargs
   },
   htif = {
     yield_automatic = true,
   },
-  flash_drive = {count = 2, entry = {
+  flash_drive = {count = 3, entry = {
     {
       start = 0x80000000000000,
       length = rootfs_length,
       image_filename = "./rootfs/rootfs.ext2",
+    },
+    {
+      start = RIV_CARTRIDGE_BASE_PADDR,
+      length = fs.stat("./demos/snake.sqfs").size,
+      image_filename = "./demos/snake.sqfs",
     },
     {
       start = MACHINE_OUTPUT_PADDR,
@@ -65,19 +72,39 @@ local audiobuffer: [RIV_AUDIOBUFFER_SIZE]byte
 local framebuffer_rgba: [RIV_FRAMEBUFFER_SIZE]uint32
 local lastfb_desc: riv_framebuffer_desc
 local fb_image: sg_image
+local riv_base_paddr: uint64
 local desc: riv_desc
 local frame_count: uint64 = 0
 local next_frame_time: number = 0
-local last_frame_time: number = 0
 local machine_output: [MACHINE_OUTPUT_SIZE]byte
 
+local function find_riv_base_paddr()
+  local magic: [32]byte
+  if riv_base_paddr ~= 0 then
+    machine:read_memory(riv_base_paddr, &magic)
+    if magic == RIV_DEVICE_MAGIC then -- still the same
+      return
+    end
+  end
+  riv_base_paddr = 0
+  for paddr=MACHINE_MEM_BASE_PADDR,MACHINE_MEM_BASE_PADDR+MACHINE_MEM_SIZE-1,HUGE_PAGE_SIZE do
+    machine:read_memory(paddr, &magic)
+    if magic == RIV_DEVICE_MAGIC then
+      riv_base_paddr = paddr
+      break
+    end
+  end
+  assert(riv_base_paddr ~= 0)
+end
+
 local function refresh_riv_desc()
-  machine:read_memory(MACHINE_HUGE_PAGE_PADDR, (@span(byte)){data=(@*[0]byte)(&desc),size=#@riv_desc})
+  find_riv_base_paddr()
+  machine:read_memory(riv_base_paddr, (@span(byte)){data=(@*[0]byte)(&desc),size=#@riv_desc})
 end
 
 local function present()
   local fb_pixel_count = desc.framebuffer.width * desc.framebuffer.height
-  machine:read_memory(MACHINE_HUGE_PAGE_PADDR + RIV_FRAMEBUFFER_OFFSET, (@span(byte)){data=&framebuffer,size=fb_pixel_count})
+  machine:read_memory(riv_base_paddr + RIV_FRAMEBUFFER_OFFSET, (@span(byte)){data=&framebuffer,size=fb_pixel_count})
 
   -- Recreate framebuffer image
   if lastfb_desc.width ~= desc.framebuffer.width or
@@ -111,7 +138,7 @@ end
 
 local function audio_ctl()
   local data: span(byte) = {data=&audiobuffer[0],size=desc.audio_ctl.data_size}
-  machine:read_memory(MACHINE_HUGE_PAGE_PADDR + RIV_AUDIOBUFFER_OFFSET, data)
+  machine:read_memory(riv_base_paddr + RIV_AUDIOBUFFER_OFFSET, data)
   switch desc.audio_ctl.command do
   case RIV_AUDIO_COMMAND_SOUND_PLAY then
     -- FIXME: collect audio buffers when sound stops
@@ -144,18 +171,18 @@ local function limit_fps()
   end
 end
 
+local halted: boolean
+
 local function machine_poll()
   while true do
     local break_reason: CM_BREAK_REASON = machine:run()
     if break_reason == CM_BREAK_REASON_HALTED then
-      io.printf('Machine HALTED\n')
+      halted = true
+      io.printf('Halted\n')
+      io.printf('Cycles: %d\n', machine:read_mcycle())
       machine:read_memory(MACHINE_OUTPUT_PADDR, (@span(byte)){data=&machine_output,size=MACHINE_OUTPUT_SIZE})
       local output: string = (@string)((@cstring)(&machine_output[0]))
       sapp_quit()
-      if #output > 0 then
-        print('==== MACHINE OUTPUT ====')
-        print(output)
-      end
       return
     elseif break_reason ~= CM_BREAK_REASON_YIELDED_AUTOMATICALLY then
       io.printf('unexpected break reason\n')
@@ -177,25 +204,46 @@ local function machine_poll()
   end
 end
 
+local time_elapsed_sum: float64 = 0
+local mcycle_elapsed_sum: uint64 = 0
+local fps: uint64
+local mcycle_sum: uint64
+local last_time: float64 = 0
+
 local function machine_frame_poll()
   local mcycle_start: uint64 = machine:read_mcycle()
-  local time_start: number = os.now()
+  local time_start: float64 = os.now()
   machine_poll()
   local mcycle_end: uint64 = machine:read_mcycle()
-  local time_end: number = os.now()
-  ## if DEBUG then
-    local fps: number = 1.0/(time_end - last_frame_time)
-    local cpf = mcycle_end - mcycle_start
-    local elapsed = time_end - time_start
-    local pfps = 1.0/elapsed
-    local mips = (cpf / (elapsed * 1000000.0))
-    local cpp = cpf/(desc.framebuffer.height*desc.framebuffer.width)
-    local cpu_usage = 100.0 * (desc.framebuffer.fps * cpf) / (mips * 1000000.0)
-    io.printf('frame=%d elapsed=%.2fms mips=%.2f cpf=%d pfps=%.2f fps=%.2f cpu_usage=%.2f%%\n',
-      frame_count, elapsed * 1000.0, mips, cpf, pfps, fps, cpu_usage)
-  ## end
+  local time_end: float64 = os.now()
+  fps = fps + 1
+  time_elapsed_sum = time_elapsed_sum + (time_end - time_start)
+  mcycle_elapsed_sum = mcycle_elapsed_sum + (mcycle_end - mcycle_start)
+  local last_time_elapsed = time_end - last_time
+  if last_time_elapsed >= 1.0 then
+    if debug_fps and not halted then
+      local mips: float64 = mcycle_elapsed_sum / (time_elapsed_sum * 1000000.0)
+      local cpu_usage: float64 = (time_elapsed_sum * 100.0) / last_time_elapsed
+      io.printf('frame=%d fps=%.2f guest_cpu_clock=%.2fMHz host_cpu_usage=%.2f%%\n',
+        frame_count, fps / last_time_elapsed, mips, cpu_usage)
+    end
+    fps = 0
+    last_time = time_end
+    time_elapsed_sum = 0
+    mcycle_elapsed_sum = 0
+  end
   frame_count = frame_count + 1
-  last_frame_time = time_end
+  -- ## if DEBUG then
+  --   local fps: number = 1.0/(time_end - last_time)
+  --   local cpf = mcycle_end - mcycle_start
+  --   local elapsed = time_end - time_start
+  --   local pfps = 1.0/elapsed
+  --   local mips = (cpf / (elapsed * 1000000.0))
+  --   local cpp = cpf/(desc.framebuffer.height*desc.framebuffer.width)
+  --   local cpu_usage = 100.0 * (desc.framebuffer.fps * cpf) / (mips * 1000000.0)
+  --   io.printf('frame=%d elapsed=%.2fms mips=%.2f cpf=%d pfps=%.2f fps=%.2f cpu_usage=%.2f%%\n',
+  --     frame_count, elapsed * 1000.0, mips, cpf, pfps, fps, cpu_usage)
+  -- ## end
 end
 
 local function event(event: *sapp_event)
@@ -211,7 +259,11 @@ local function event(event: *sapp_event)
   end
 
   if update then
-    machine:write_memory(MACHINE_HUGE_PAGE_PADDR, (@span(byte)){data=(@*byte)(&desc),size=#@riv_desc})
+    find_riv_base_paddr()
+    if riv_base_paddr > 0 then
+      -- TODO: write only the necessary
+      machine:write_memory(riv_base_paddr, (@span(byte)){data=(@*byte)(&desc),size=#@riv_desc})
+    end
   end
 end
 

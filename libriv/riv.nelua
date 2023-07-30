@@ -1,0 +1,296 @@
+## pragmas.unitname = ''
+
+require 'span'
+
+global RIV_FRAMEBUFFER_SIZE <comptime> = 1024*1024
+global RIV_AUDIOBUFFER_SIZE <comptime> = 512*1024
+global RIV_CARTRIDGE_SIZE <comptime> = 16*1024*1024
+global RIV_MMAP_SIZE <comptime> = 2*1024*1024
+
+global RIV_VERSION: uint64 <comptime> = 000001000
+global RIV_CARTRIDGE_BASE_PADDR: uint64 <comptime> = 0x90000000000000
+
+global RIV_BASE_VADDR: uint64 <comptime> = 0x10000000
+global RIV_DESC_VADDR: uint64 <comptime> = RIV_BASE_VADDR
+global RIV_FRAMEBUFFER_OFFSET: uint64 <comptime> = 1024*1024
+global RIV_AUDIOBUFFER_OFFSET: uint64 <comptime> = 512*1024
+global RIV_AUDIOBUFFER_VADDR: uint64 <comptime> = RIV_BASE_VADDR + RIV_AUDIOBUFFER_OFFSET
+global RIV_FRAMEBUFFER_VADDR: uint64 <comptime> = RIV_BASE_VADDR + RIV_FRAMEBUFFER_OFFSET
+
+global RIV_MAX_CYCLES_PER_SECOND: uint64 <comptime> = 30000000
+
+global RIV_DEVICE_MAGIC: [32]byte <const> = {
+  0x3f, 0xdf, 0x37, 0x1e, 0xc0, 0xfc, 0xd1, 0xba,
+  0xec, 0xe9, 0x72, 0xa1, 0xf5, 0x89, 0x87, 0xc5,
+  0x70, 0xfd, 0xbe, 0xc0, 0xce, 0xcc, 0x2d, 0x74,
+  0x8d, 0x45, 0x39, 0x62, 0x49, 0xb8, 0x15, 0x26
+}
+
+global riv_control_reason <using> = @enum(uint32) {
+  RIV_CONTROL_UNKNOWN = 0,
+  RIV_CONTROL_PRESENT,
+  RIV_CONTROL_AUDIO,
+}
+
+global riv_pixel_format <using> = @enum(uint32) {
+  RIV_PIXEL_FORMAT_UNKNOWN = 0,
+  RIV_PIXEL_FORMAT_PALETTE_256_BIT,
+  RIV_PIXEL_FORMAT_RGB8,
+  RIV_PIXEL_FORMAT_RGB32F,
+}
+
+global riv_audio_command <using> = @enum(uint32) {
+  RIV_AUDIO_COMMAND_NONE = 0,
+  RIV_AUDIO_COMMAND_SOUND_PLAY,
+  RIV_AUDIO_COMMAND_SOUND_STOP,
+}
+
+global riv_keycode <using> = @enum(uint32) {
+  RIV_KEYCODE_RIGHT = 262,
+  RIV_KEYCODE_LEFT = 263,
+  RIV_KEYCODE_DOWN = 264,
+  RIV_KEYCODE_UP = 265,
+}
+
+global RIV_DEFAULT_WIDTH: uint32 <comptime> = 256
+global RIV_DEFAULT_HEIGHT: uint32 <comptime> = 256
+global RIV_DEFAULT_FPS: uint32 <comptime> = 60
+global RIV_UNLIMITED_FPS: uint32 <comptime> = 0xffffffff
+global RIV_DEFAULT_PIXEL_FORMAT: riv_pixel_format <comptime> = RIV_PIXEL_FORMAT_PALETTE_256_BIT
+
+local riv_handle_id: type = @uint64
+
+global riv_framebuffer_desc = @record{
+  height: uint32,
+  width: uint32,
+  fps: uint32,
+  pixel_format: uint32,
+}
+
+global riv_audio_ctl_desc = @record{
+  command: riv_audio_command,
+  handle_id: uint32,
+  data_size: uint32,
+  volume: uint32,
+}
+
+global riv_keystate = @record{
+  down_frame: uint64,
+  up_frame: uint64,
+}
+
+global riv_desc = @record{
+  magic: [32]byte,
+  version: uint32,
+  frame: uint64,
+  audio_ctl: riv_audio_ctl_desc,
+  framebuffer: riv_framebuffer_desc,
+  keys: [512]riv_keystate,
+  palette: [256]uint32,
+}
+
+global riv_context = @record{
+  desc: *riv_desc,
+  running: boolean,
+  yield_fd: int32,
+  audiobuffer: span(byte),
+  framebuffer: span(byte),
+}
+
+global riv_run_desc = @record{
+  init_cb: function(*riv_context),
+  cleanup_cb: function(*riv_context),
+  frame_cb: function(*riv_context),
+  framebuffer: riv_framebuffer_desc,
+}
+
+## if RIV_IMPLEMENTATION then
+
+require '.linux-api'
+require 'memory'
+local strconv = require 'detail.strconv'
+
+local riv_yield_request = @record{
+  dev: uint8,
+  mode: uint8,
+  reason: uint16,
+  data: uint32,
+}
+
+local function get_free_hugepages(): integer
+  local fd = open('/sys/kernel/mm/hugepages/hugepages-2048kB/free_hugepages')
+  if fd < 0 then return 0 end
+  defer close(fd) end
+  local buf: [32]byte
+  local nread = read(fd, &buf, #buf)
+  if nread <= 0 then return 0 end
+  local ok, res = strconv.str2int((@cstring)(&buf[0]), 10)
+  return res
+end
+
+global function riv_version(): uint64 <cexport'riv_version'>
+  return RIV_VERSION
+end
+
+local function init_default_palette(self: *riv_context): void
+  self.desc.palette[0] = 0x000000
+  self.desc.palette[1] = 0x532B1D
+  self.desc.palette[2] = 0x53257E
+  self.desc.palette[3] = 0x518700
+  self.desc.palette[4] = 0x3652AB
+  self.desc.palette[5] = 0x4F575F
+  self.desc.palette[6] = 0xC7C3C2
+  self.desc.palette[7] = 0xE8F1FF
+  self.desc.palette[8] = 0x4D00FF
+  self.desc.palette[9] = 0x00A3FF
+  self.desc.palette[10] = 0x27ECFF
+  self.desc.palette[11] = 0x36E400
+  self.desc.palette[12] = 0xFFAD29
+  self.desc.palette[13] = 0x9C7683
+  self.desc.palette[14] = 0xA877FF
+  self.desc.palette[15] = 0xAACCFF
+end
+
+function riv_context:init(): void <cexport'riv_init'>
+  assert(not self.desc, 'riv already initialized')
+  -- yield
+  self.yield_fd = open("/dev/yield", O_RDWR, 0)
+  assert(self.yield_fd > 0, 'open yield device failed')
+  -- map memory
+  assert(get_free_hugepages() == 1, 'no free hugepage')
+  local prot: cint = PROT_READ | PROT_WRITE
+  local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE | MAP_HUGETLB
+  local riv_base: pointer = (@pointer)(RIV_BASE_VADDR)
+  assert(mmap(riv_base, RIV_MMAP_SIZE, prot, flags, -1, 0) == riv_base, 'mmap failed')
+  assert(get_free_hugepages() == 0, 'no used hugepage')
+  -- initialize device
+  memory.zero(riv_base, RIV_MMAP_SIZE)
+  self.desc = (@*riv_desc)(RIV_BASE_VADDR)
+  self.desc.magic = RIV_DEVICE_MAGIC
+  self.desc.version = RIV_VERSION
+  self.desc.framebuffer = {
+    width = RIV_DEFAULT_WIDTH,
+    height = RIV_DEFAULT_HEIGHT,
+    fps = RIV_DEFAULT_FPS,
+    pixel_format = RIV_DEFAULT_PIXEL_FORMAT,
+  }
+  init_default_palette(self)
+  self.audiobuffer = {
+    data=(@*[0]byte)(RIV_AUDIOBUFFER_VADDR),
+    size=RIV_AUDIOBUFFER_SIZE
+  }
+  self.framebuffer = {
+    data=(@*[0]byte)(RIV_FRAMEBUFFER_VADDR),
+    size=RIV_FRAMEBUFFER_SIZE
+  }
+end
+
+function riv_context:uninit(): void <cexport'riv_uninit'>
+  assert(self.desc, 'riv not initialized')
+  local riv_base: pointer = (@pointer)(RIV_BASE_VADDR)
+  memory.zero(riv_base, RIV_MMAP_SIZE)
+  assert(munmap(riv_base, RIV_MMAP_SIZE) == 0, 'munmap failed')
+  assert(get_free_hugepages() == 1, 'no freed hugepage')
+  if self.yield_fd > 0 then
+    assert(close(self.yield_fd) >= 0, 'close yield fd failed')
+  end
+  $self = {}
+end
+
+function riv_context:ctl(reason: riv_control_reason): void <cexport'riv_ctl'>
+  assert(self.desc, 'riv not initialized')
+  local IOCTL_YIELD: usize <comptime> = 0xc008d100
+  local HTIF_DEVICE_YIELD: uint8 <comptime> = 2
+  local HTIF_YIELD_AUTOMATIC: uint8 <comptime> = 0
+  local swap_yield_req: riv_yield_request = {
+    dev = HTIF_DEVICE_YIELD,
+    mode = HTIF_YIELD_AUTOMATIC,
+    reason = reason,
+    data = 0,
+  }
+  assert(ioctl(self.yield_fd, IOCTL_YIELD, (@usize)(&swap_yield_req)) == 0, 'yield ioctl failed')
+end
+
+function riv_context:present(): void <cexport'riv_present'>
+  self:ctl(RIV_CONTROL_PRESENT)
+  self.desc.frame = self.desc.frame + 1
+end
+
+function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cexport'riv_loop'>
+  assert(self.desc, 'riv not initialized')
+  self.running = true
+  while self.running do
+    frame_cb(self)
+    self:present()
+  end
+end
+
+global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>
+  local self: riv_context
+  if run_desc.framebuffer.width == 0 then run_desc.framebuffer.width = RIV_DEFAULT_WIDTH end
+  if run_desc.framebuffer.height == 0 then run_desc.framebuffer.height = RIV_DEFAULT_HEIGHT end
+  if run_desc.framebuffer.fps == 0 then run_desc.framebuffer.fps = RIV_DEFAULT_FPS end
+  if run_desc.framebuffer.pixel_format == 0 then run_desc.framebuffer.pixel_format = RIV_DEFAULT_PIXEL_FORMAT end
+  if not self.desc then
+    self:init()
+  end
+  if run_desc.init_cb then
+    run_desc.init_cb(self)
+  end
+  self.desc.framebuffer = run_desc.framebuffer
+  if run_desc.frame_cb then
+    self:loop(run_desc.frame_cb)
+  end
+  if run_desc.cleanup_cb then
+    run_desc.cleanup_cb(self)
+  end
+  self:uninit()
+  exit(0)
+end
+
+global function riv_stdrun(frame_cb: function(riv: *riv_context)): void <cexport'riv_stdrun'>
+  riv_run(&(@riv_run_desc){frame_cb=frame_cb})
+end
+
+require 'C.stdio'
+require 'C.stdarg'
+
+global function riv_printf(format: cstring, ...: cvarargs): int32 <cexport'riv_printf'>
+  local args: cvalist
+  C.va_start(args, format)
+  local ret: cint = C.vprintf(format, args)
+  C.va_end(args)
+  return ret
+end
+
+local handle_counter: uint64 = 0
+function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): riv_handle_id <cexport'riv_sound_play_from_memory'>
+  handle_counter = handle_counter + 1
+  local id: riv_handle_id = handle_counter
+  memory.spancopy(self.audiobuffer, data)
+  self.desc.audio_ctl = {command=RIV_AUDIO_COMMAND_SOUND_PLAY, handle_id=id, data_size=#data}
+  self:ctl(RIV_CONTROL_AUDIO)
+  return id
+end
+
+function riv_context:sound_stop(sound_id: riv_handle_id): void <cexport'riv_sound_stop'>
+  self.desc.audio_ctl = {command=RIV_AUDIO_COMMAND_SOUND_STOP, handle_id=sound_id}
+  self:ctl(RIV_CONTROL_AUDIO)
+end
+
+## elseif RIV_BINDINGS then
+
+function riv_context:init(): void <cimport'riv_init'> end
+function riv_context:uninit(): void <cimport'riv_uninit'> end
+function riv_context:present(): void <cimport'riv_present'> end
+function riv_context:ctl(reason: riv_control_reason): void <cimport'riv_ctl'> end
+function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cimport'riv_loop'> end
+function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): riv_handle_id <cimport'riv_sound_play_from_memory'> end
+function riv_context:sound_stop(source: riv_handle_id): void <cimport'riv_sound_stop'> end
+
+global function riv_version(): uint64 <cimport'riv_version'> end
+global function riv_run(run_desc: *riv_run_desc): void <cimport'riv_run'> end
+global function riv_stdrun(frame_cb: function(riv: *riv_context)): void <cimport'riv_stdrun'> end
+global function riv_printf(format: cstring, ...: cvarargs): int32 <cimport'riv_printf'> end
+
+## end

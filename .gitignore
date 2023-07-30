@@ -10,6 +10,8 @@
 *.dump
 *.out
 *.TODO
+*.fs
+*.elftoc.c
 
 # ignore generated binaries
 /rivcm/rivcm
@@ -21,3 +23,5 @@
 /rivcm/rivcm.c
 /libriv/libriv.c
 /bwrapbox/bwrapbox.c
+/demos/*.c
+

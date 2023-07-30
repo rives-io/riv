@@ -1,8 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -Werror
 LDFLAGS=-Wl,-O1,--sort-common,--build-id=none -z relro -z now
-STRIPFLAGS=--strip-unneeded --remove-section=.comment
-NELUA_FLAGS=-Pnogc -Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
+NELUA_FLAGS=-Pnogc --verbose
 PREFIX=/usr/local
 
 CARTESI_MACHINE_PREFIX=/opt/cartesi
@@ -13,13 +12,14 @@ INCS=-I"$(CARTESI_MACHINE_INC_DIR)"
 LIBS=-L"$(CARTESI_MACHINE_LIB_DIR)" -Wl,-rpath,"$(CARTESI_MACHINE_LIB_DIR)"
 NELUA_LIBS=-L../libriv -L./deps
 
+# release info
+# NELUA_FLAGS+= -Pnochecks -Pnoassertloc -Pnocstaticassert --release
+
 rivcm: rivcm.nelua *.nelua
 	nelua $(NELUA_FLAGS) $(NELUA_LIBS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS) $(INCS)" \
 		--ldflags="$(LDFLAGS) $(LIBS)" \
-		--strip-bin \
-		--stripflags="$(STRIPFLAGS)" \
 		--cache-dir . \
 		--output $@ $<
 
