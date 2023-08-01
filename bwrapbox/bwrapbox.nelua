@@ -90,23 +90,48 @@ local function fs_rmdir(path: string): (boolean, string, integer)
 end
 
 local function fs_mkfile(path: string, contents: string): (boolean, string, integer)
-  local file: filestream <close>, err: string, errcode: integer = io.open(path, 'wb')
-  if #err > 0 then return false, err, errcode end
-  local ok: boolean
-  ok, err, errcode = file:write(contents)
-  if not ok then return false, err, errcode end
-  ok, err, errcode = file:close()
-  if not ok then return false, err, errcode end
-  return true, string{}, 0
+  local fd: cint = open(path, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH)
+  if fd < 0 then
+    return result_from_errno(false)
+  end
+  defer close(fd) end
+  if contents.size > 0 then
+    local writtenbytes: usize = 0
+    local IO_CHUNK_SIZE <comptime> = 4096
+    repeat -- keep writing until all bytes are written
+      local remaining: usize = contents.size - writtenbytes
+      if remaining > IO_CHUNK_SIZE then remaining = IO_CHUNK_SIZE end
+      local writebytes: isize = write(fd, &contents.data[writtenbytes], remaining)
+      if writebytes < 0 then return result_from_errno(false) end
+      -- the write may be incomplete, keep writing until finished
+      writtenbytes = writtenbytes + (@usize)(writebytes)
+    until writtenbytes >= contents.size
+  end
+  return true, (@string){}, 0
 end
 
 local function fs_readfile(path: string): (string, string, integer)
-  local file: filestream <close>, err: string, errcode: integer = io.open(path, 'rb')
-  if #err > 0 then return '', err, errcode end
-  local contents: string
-  contents, err, errcode = file:read('a')
-  if #err > 0 then return string{}, err, errcode end
-  return contents, string{}, 0
+  local fd: cint = open(path, O_RDONLY, 0)
+  if fd < 0 then
+    return (@string){}, strerror(errno), errno
+  end
+  defer close(fd) end
+  local sb: stringbuilder
+  local IO_CHUNK_SIZE <comptime> = 4096
+  repeat -- read in chunks
+    local p: span(byte) = sb:prepare(IO_CHUNK_SIZE)
+    if p:empty() then
+      sb:destroy()
+      return (@string){}, 'out of buffer memory', -1
+    end
+    local nr: isize = read(fd, p.data, IO_CHUNK_SIZE)
+    if nr < 0 then
+      sb:destroy()
+      return (@string){}, strerror(errno), errno
+    end
+    sb:commit((@usize)(nr))
+  until nr < IO_CHUNK_SIZE
+  return sb:promote(), (@string){}, 0
 end
 
 local limit_pair: type = @record{

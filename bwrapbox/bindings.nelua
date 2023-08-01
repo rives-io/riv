@@ -3,6 +3,7 @@ cinclude '<string.h>'
 cinclude '<time.h>'
 cinclude '<errno.h>'
 cinclude '<signal.h>'
+cinclude '<fcntl.h>'
 cinclude '<unistd.h>'
 cinclude '<sys/prctl.h>'
 cinclude '<sys/resource.h>'
@@ -24,6 +25,9 @@ global function execvp(file: cstring,argv: *[0]cstring): cint <cimport,nodecl> e
 global function _exit(status: cint): cint <cimport,nodecl> end
 global function exit(status: cint): cint <cimport,nodecl> end
 global function rmdir(path: cstring): cint <cimport,nodecl> end
+global function close(fd: cint): cint <cimport,nodecl> end
+global function read(fd: cint, buf: pointer, n: csize): clong <cimport,nodecl> end
+global function write(fd: cint, buf: pointer, n: csize): clong <cimport,nodecl> end
 
 -- wait
 global function waitpid(pid: cint, stat_loc: *cint, options: cint): cint <cimport,nodecl> end
@@ -115,3 +119,10 @@ global function mkdir(path: cstring, mode: cuint): cint <cimport,nodecl> end
 -- errno
 global errno: cint <cimport,nodecl>
 global function strerror(errnum: cint): cstring <cimport,nodecl> end
+
+-- fcntl
+global O_RDONLY: cint <cimport,nodecl,const>
+global O_WRONLY: cint <cimport,nodecl,const>
+global O_CREAT: cint <cimport,nodecl,const>
+global O_TRUNC: cint <cimport,nodecl,const>
+global function open(file: cstring, oflag: cint, mode: cuint): cint <cimport,nodecl> end
