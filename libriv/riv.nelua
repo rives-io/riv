@@ -4,11 +4,12 @@ require 'span'
 
 global RIV_FRAMEBUFFER_SIZE <comptime> = 1024*1024
 global RIV_AUDIOBUFFER_SIZE <comptime> = 512*1024
-global RIV_CARTRIDGE_SIZE <comptime> = 16*1024*1024
 global RIV_MMAP_SIZE <comptime> = 2*1024*1024
 
 global RIV_VERSION: uint64 <comptime> = 000001000
+
 global RIV_CARTRIDGE_BASE_PADDR: uint64 <comptime> = 0x90000000000000
+global RIV_CARTRIDGE_SIZE <comptime> = 16*1024*1024
 
 global RIV_BASE_VADDR: uint64 <comptime> = 0x10000000
 global RIV_DESC_VADDR: uint64 <comptime> = RIV_BASE_VADDR
