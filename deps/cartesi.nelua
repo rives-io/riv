@@ -1,6 +1,5 @@
 ##[[
-cinclude 'cartesi.h'
--- cinclude '<cartesi-machine/machine-c-api.h>'
+cinclude 'cartesi'
 linklib 'cartesi'
 ]]
 global cm_hash: type <cimport,nodecl> = @[32]uint8

@@ -227,7 +227,8 @@ in the Web Browser with WebAssembly, so you can bundle it in your frontend.
 
 ### How RIV can run on the web browser? Is the Cartesi Machine running on the browser?
 
-Yes, the Cartesi Machine was compiled to WebAssembly, therefore uses the RIV emulator in the Web Browser.
+Yes, the Cartesi Machine was compiled to WebAssembly,
+therefore you can run the RIV emulator in a Web Browser.
 
 ### Why RIV was created?
 

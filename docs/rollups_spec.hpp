@@ -26,9 +26,9 @@ enum response_status : uint8_t {
 enum request_opcode : uint8_t {
     OPCODE_VERIFY_REPLAY_ADVANCE_REQUEST,
     OPCODE_PREVIEW_REPLAY_INSPECT_REQUEST,
-    // OPCODE_ADD_CARTRIDGE_ADVANCE_REQUEST,
-    // OPCODE_REMOVE_CARTRIDGE_ADVANCE_REQUEST,
-    // OPCODE_DOWNLOAD_CARTRIDGE_INSPECT_REQUEST,
+    OPCODE_ADD_CARTRIDGE_ADVANCE_REQUEST,
+    OPCODE_REMOVE_CARTRIDGE_ADVANCE_REQUEST,
+    OPCODE_DOWNLOAD_CARTRIDGE_INSPECT_REQUEST,
 };
 
 /////////////////////
@@ -41,8 +41,9 @@ struct verify_replay_advance_request {
     hash256_t resut_hash;       // result hash
     string args;                // command line parameters when running
     string card;                // memory card (extra parameters)
-    string replay;              // compressed replay
+    string replay;              // replay log
 } __attribute__((packed));
+
 struct verify_replay_notice_response {
     uint8_t status;             // replay status
     bool finished;              // whether the game finished
@@ -50,7 +51,6 @@ struct verify_replay_notice_response {
     string result_card;         // result card (extra results)
 } __attribute__((packed));
 
-/*
 // Add cartridge
 struct add_cartridge_advance_request {
     uint8_t opcode; // opcode
@@ -69,7 +69,6 @@ struct remove_cartridge_advance_request {
 struct remove_cartridge_report_response {
     uint8_t status; // status
 };
-*/
 
 /////////////////////
 // Inspect requests
@@ -78,9 +77,8 @@ struct remove_cartridge_report_response {
 using preview_replay_inspect_response = verify_replay_advance_request;
 using preview_replay_report_response = verify_replay_notice_response;
 
-/*
 // Download cartridge
-struct download_cartridge_advance_request {
+struct download_cartridge_inspect_request {
     uint8_t opcode; // opcode
     string hash;    // cartridge hash
 };
@@ -88,4 +86,3 @@ struct download_cartridge_report_response {
     uint8_t status; // status
     string data;    // cartridge data
 };
-*/
