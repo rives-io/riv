@@ -5,19 +5,23 @@ READELF=readelf
 SIZE=size
 STRINGS=strings
 ELFTOC=elftoc
-
-CFLAGS=
 NELUA_FLAGS=-Pnogc -Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 NELUA_LIBS=-L../libriv
 OBJDUMP_FLAGS=--all-headers --disassemble --disassemble-zeroes
-STRIPFLAGS=--strip-unneeded \
-	--remove-section=.note \
-	--remove-section=.note.gnu.build-id \
-	--remove-section=.note.ABI-tag \
-	--remove-section=.comment \
-	--remove-section=.eh_frame \
-	--remove-section=.eh_frame_hdr \
-	--remove-section=.riscv.attributes
+
+# all of the following flags are known to help generating the small RISC-V ELF binaries
+CFLAGS+=-Os -DNDEBUG -ffast-math -flto=auto
+CFLAGS+=-ffunction-sections -fdata-sections
+CFLAGS+=-fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables
+CFLAGS+=-mno-save-restore -mstrict-align -mshorten-memrefs -msmall-data-limit=0
+CFLAGS+=-mno-plt -fno-plt -fpie -pie -fno-semantic-interposition
+STRIPFLAGS+=--strip-unneeded --remove-section=.note --remove-section=.comment
+STRIPFLAGS+=--remove-section=.eh_frame --remove-section=.eh_frame_hdr
+STRIPFLAGS+=--remove-section=.riscv.attributes
+LDFLAGS+=-Wl,-O1,-gc-sections,--as-needed,--no-eh-frame-hdr,--build-id=none,--hash-style=sysv
+LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=alignment,--spare-dynamic-tags=0
+LDFLAGS+=-Wl,--dynamic-linker=/lib/ld.so
+LDFLAGS+=-z norelro -z noseparate-code -z lazy
 
 all: snake.sqfs
 
@@ -25,6 +29,7 @@ all: snake.sqfs
 	nelua $(NELUA_FLAGS) $(NELUA_LIBS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
+		--ldflags="$(LDFLAGS)" \
 		--strip-bin \
 		--stripflags="$(STRIPFLAGS)" \
 		--cache-dir . \

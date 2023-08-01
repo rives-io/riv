@@ -1,12 +1,4 @@
-##[[
-pragmas.noentrypoint = true
-cflags '-O2 -flto=auto -fno-stack-protector -march=rv64g -DNDEBUG -rdynamic -lm -s'
-ldflags '-Wl,-O1,--sort-common,--build-id=none'
-ldflags '-Wl,--dynamic-linker=/lib/ld.so'
-ldflags '-z relro -z now'
-
-RIV_IMPLEMENTATION = true
-]]
+## RIV_IMPLEMENTATION = true
 
 require '.riv'
 require '.riv_prng'

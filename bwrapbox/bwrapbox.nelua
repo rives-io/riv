@@ -2,7 +2,6 @@ require 'io'
 require 'arg'
 require 'hashmap'
 require 'sequence'
-
 require 'bindings'
 
 ------------------

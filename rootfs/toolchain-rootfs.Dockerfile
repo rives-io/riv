@@ -67,6 +67,10 @@ RUN make -C bwrapbox install PREFIX=/usr
 COPY libriv libriv
 RUN make -C libriv install PREFIX=/usr
 
+# Link aliases
+RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
+    ln -s ld-musl-riscv64.so.1 /lib/ld.so
+
 ################################
 # Build rootfs
 

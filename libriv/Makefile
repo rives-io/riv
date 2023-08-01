@@ -1,6 +1,6 @@
 CC=gcc
-CFLAGS=-Wall -Werror -fno-stack-protector
-LDFLAGS=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now
+CFLAGS=-O2 -fno-stack-protector -Wall -Werror
+LDFLAGS=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now -rdynamic
 STRIPFLAGS=--strip-unneeded --remove-section=.comment
 NELUA_FLAGS=-Pnogc -Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 PREFIX=/usr/local
