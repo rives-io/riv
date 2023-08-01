@@ -1,5 +1,5 @@
 ##[[
-cinclude 'cartesi'
+cinclude 'cartesi.h'
 linklib 'cartesi'
 ]]
 global cm_hash: type <cimport,nodecl> = @[32]uint8
@@ -86,11 +86,15 @@ global CM_PROC_CSR: type <cimport,nodecl,using> = @enum(cint){
   CM_PROC_HTIF_IHALT = 33,
   CM_PROC_HTIF_ICONSOLE = 34,
   CM_PROC_HTIF_IYIELD = 35,
-  CM_PROC_UARCH_CYCLE = 36,
-  CM_PROC_UARCH_PC = 37,
-  CM_PROC_UARCH_ROM_LENGTH = 38,
+  CM_PROC_UARCH_PC = 36,
+  CM_PROC_UARCH_CYCLE = 37,
+  CM_PROC_UARCH_HALT_FLAG = 38,
   CM_PROC_UARCH_RAM_LENGTH = 39,
   CM_PROC_UNKNOWN = 40
+}
+global CM_UARCH_BREAK_REASON: type <cimport,nodecl,using> = @enum(cint){
+  CM_UARCH_BREAK_REASON_REACHED_TARGET_CYCLE = 0,
+  CM_UARCH_BREAK_REASON_HALTED = 1
 }
 global cm_processor_config: type <cimport,nodecl> = @record{
   x: [32]uint64,
@@ -169,18 +173,14 @@ global cm_uarch_ram_config: type <cimport,nodecl> = @record{
   length: uint64,
   image_filename: cstring
 }
-global cm_uarch_rom_config: type <cimport,nodecl> = @record{
-  length: uint64,
-  image_filename: cstring
-}
 global cm_uarch_processor_config: type <cimport,nodecl> = @record{
   x: [32]uint64,
   pc: uint64,
-  cycle: uint64
+  cycle: uint64,
+  halt_flag: boolean
 }
 global cm_uarch_config: type <cimport,nodecl> = @record{
   processor: cm_uarch_processor_config,
-  rom: cm_uarch_rom_config,
   ram: cm_uarch_ram_config
 }
 global cm_machine_config: type <cimport,nodecl> = @record{
@@ -254,6 +254,13 @@ global cm_machine_runtime_config: type <cimport,nodecl> = @record{
   concurrency: cm_concurrency_config
 }
 global cm_machine: type <cimport,nodecl,forwarddecl> = @record{}
+global cm_semantic_version: type <cimport,nodecl> = @record{
+  major: uint32,
+  minor: uint32,
+  patch: uint32,
+  pre_release: cstring,
+  build: cstring
+}
 global function cm_new_default_machine_config(): *cm_machine_config <cimport,nodecl> end
 global function cm_delete_machine_config(config: *cm_machine_config): void <cimport,nodecl> end
 global function cm_create_machine(config: *cm_machine_config, runtime_config: *cm_machine_runtime_config, new_machine: **cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
@@ -261,7 +268,7 @@ global function cm_load_machine(dir: cstring, runtime_config: *cm_machine_runtim
 global function cm_store(m: *cm_machine, dir: cstring, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_delete_machine(m: *cm_machine): void <cimport,nodecl> end
 global function cm_machine_run(m: *cm_machine, mcycle_end: uint64, break_reason_result: *CM_BREAK_REASON, err_msg: *cstring): cint <cimport,nodecl> end
-global function cm_step(m: *cm_machine, log_type: cm_access_log_type, one_based: boolean, access_log: **cm_access_log, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_step_uarch(m: *cm_machine, log_type: cm_access_log_type, one_based: boolean, access_log: **cm_access_log, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_delete_access_log(acc_log: *cm_access_log): void <cimport,nodecl> end
 global function cm_verify_access_log(log: *cm_access_log, runtime_config: *cm_machine_runtime_config, one_based: boolean, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_verify_state_transition(root_hash_before: *cm_hash, log: *cm_access_log, root_hash_after: *cm_hash, runtime_config: *cm_machine_runtime_config, one_based: boolean, err_msg: *cstring): cint <cimport,nodecl> end
@@ -280,6 +287,7 @@ global function cm_write_virtual_memory(m: *cm_machine, address: uint64, data: *
 global function cm_read_x(m: *cm_machine, i: cint, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_write_x(m: *cm_machine, i: cint, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_get_x_address(i: cint): uint64 <cimport,nodecl> end
+global function cm_get_uarch_x_address(i: cint): uint64 <cimport,nodecl> end
 global function cm_read_f(m: *cm_machine, i: cint, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_write_f(m: *cm_machine, i: cint, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_get_f_address(i: cint): uint64 <cimport,nodecl> end
@@ -373,6 +381,9 @@ global function cm_replace_memory_range(m: *cm_machine, new_range: *cm_memory_ra
 global function cm_delete_memory_range_config(config: *cm_memory_range_config): void <cimport,nodecl> end
 global function cm_delete_error_message(err_msg: cstring): void <cimport,nodecl> end
 global function cm_delete_machine_runtime_config(config: *cm_machine_runtime_config): void <cimport,nodecl> end
+global function cm_delete_uarch_ram_config(config: *cm_uarch_ram_config): void <cimport,nodecl> end
+global function cm_delete_uarch_config(config: *cm_uarch_config): void <cimport,nodecl> end
+global function cm_delete_semantic_version(version: *cm_semantic_version): void <cimport,nodecl> end
 global function cm_destroy(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_snapshot(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_rollback(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
@@ -381,10 +392,12 @@ global function cm_write_uarch_x(m: *cm_machine, i: cint, val: uint64, err_msg: 
 global function cm_read_uarch_pc(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_write_uarch_pc(m: *cm_machine, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_read_uarch_cycle(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
-global function cm_read_uarch_rom_length(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_read_uarch_ram_length(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_write_uarch_cycle(m: *cm_machine, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
-global function cm_machine_uarch_run(m: *cm_machine, uarch_cycle_end: uint64, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_read_uarch_halt_flag(m: *cm_machine, val: *boolean, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_set_uarch_halt_flag(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_reset_uarch_state(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_machine_run_uarch(m: *cm_machine, uarch_cycle_end: uint64, status_result: *CM_UARCH_BREAK_REASON, err_msg: *cstring): cint <cimport,nodecl> end
 global CM_MACHINE_HASH_BYTE_SIZE: cint <comptime> = 32
 global CM_MACHINE_X_REG_COUNT: cint <comptime> = 32
 global CM_MACHINE_F_REG_COUNT: cint <comptime> = 32

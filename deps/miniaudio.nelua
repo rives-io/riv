@@ -1,6 +1,7 @@
 ##[[
 if not MINIAUDIO_NO_IMPL then
   cdefine 'MA_API static'
+  cdefine 'MA_PRIVATE static'
   cdefine 'MA_NO_PTHREAD_IN_HEADER'
   cdefine 'MINIAUDIO_IMPLEMENTATION'
 end
@@ -158,23 +159,24 @@ global ma_result: type <cimport,nodecl,using> = @enum(cint){
   MA_IN_PROGRESS = -50,
   MA_CANCELLED = -51,
   MA_MEMORY_ALREADY_MAPPED = -52,
-  MA_FORMAT_NOT_SUPPORTED = -100,
-  MA_DEVICE_TYPE_NOT_SUPPORTED = -101,
-  MA_SHARE_MODE_NOT_SUPPORTED = -102,
-  MA_NO_BACKEND = -103,
-  MA_NO_DEVICE = -104,
-  MA_API_NOT_FOUND = -105,
-  MA_INVALID_DEVICE_CONFIG = -106,
-  MA_LOOP = -107,
-  MA_BACKEND_NOT_ENABLED = -108,
-  MA_DEVICE_NOT_INITIALIZED = -200,
-  MA_DEVICE_ALREADY_INITIALIZED = -201,
-  MA_DEVICE_NOT_STARTED = -202,
-  MA_DEVICE_NOT_STOPPED = -203,
-  MA_FAILED_TO_INIT_BACKEND = -300,
-  MA_FAILED_TO_OPEN_BACKEND_DEVICE = -301,
-  MA_FAILED_TO_START_BACKEND_DEVICE = -302,
-  MA_FAILED_TO_STOP_BACKEND_DEVICE = -303
+  MA_CRC_MISMATCH = -100,
+  MA_FORMAT_NOT_SUPPORTED = -200,
+  MA_DEVICE_TYPE_NOT_SUPPORTED = -201,
+  MA_SHARE_MODE_NOT_SUPPORTED = -202,
+  MA_NO_BACKEND = -203,
+  MA_NO_DEVICE = -204,
+  MA_API_NOT_FOUND = -205,
+  MA_INVALID_DEVICE_CONFIG = -206,
+  MA_LOOP = -207,
+  MA_BACKEND_NOT_ENABLED = -208,
+  MA_DEVICE_NOT_INITIALIZED = -300,
+  MA_DEVICE_ALREADY_INITIALIZED = -301,
+  MA_DEVICE_NOT_STARTED = -302,
+  MA_DEVICE_NOT_STOPPED = -303,
+  MA_FAILED_TO_INIT_BACKEND = -400,
+  MA_FAILED_TO_OPEN_BACKEND_DEVICE = -401,
+  MA_FAILED_TO_START_BACKEND_DEVICE = -402,
+  MA_FAILED_TO_STOP_BACKEND_DEVICE = -403
 }
 global ma_stream_format: type <cimport,nodecl,using> = @enum(cint){
   ma_stream_format_pcm = 0
@@ -1808,6 +1810,18 @@ global ma_waveform: type <cimport,nodecl> = @record{
   advance: float64,
   time: float64
 }
+global ma_pulsewave_config: type <cimport,nodecl> = @record{
+  format: ma_format,
+  channels: ma_uint32,
+  sampleRate: ma_uint32,
+  dutyCycle: float64,
+  amplitude: float64,
+  frequency: float64
+}
+global ma_pulsewave: type <cimport,nodecl> = @record{
+  waveform: ma_waveform,
+  config: ma_pulsewave_config
+}
 global ma_noise_type: type <cimport,nodecl,using> = @enum(cint){
   ma_noise_type_white = 0,
   ma_noise_type_pink = 1,
@@ -2176,6 +2190,7 @@ global ma_engine_node_config: type <cimport,nodecl> = @record{
   channelsIn: ma_uint32,
   channelsOut: ma_uint32,
   sampleRate: ma_uint32,
+  volumeSmoothTimeInPCMFrames: ma_uint32,
   monoExpansionMode: ma_mono_expansion_mode,
   isPitchDisabled: ma_bool8,
   isSpatializationDisabled: ma_bool8,
@@ -2185,11 +2200,14 @@ global ma_engine_node: type <cimport,nodecl> = @record{
   baseNode: ma_node_base,
   pEngine: *ma_engine,
   sampleRate: ma_uint32,
+  volumeSmoothTimeInPCMFrames: ma_uint32,
   monoExpansionMode: ma_mono_expansion_mode,
   fader: ma_fader,
   resampler: ma_linear_resampler,
   spatializer: ma_spatializer,
   panner: ma_panner,
+  volumeGainer: ma_gainer,
+  volume: ma_atomic_float,
   pitch: float32,
   oldPitch: float32,
   oldDopplerPitch: float32,
@@ -2210,6 +2228,7 @@ global ma_sound_config: type <cimport,nodecl> = @record{
   channelsOut: ma_uint32,
   monoExpansionMode: ma_mono_expansion_mode,
   flags: ma_uint32,
+  volumeSmoothTimeInPCMFrames: ma_uint32,
   initialSeekPointInPCMFrames: ma_uint64,
   rangeBegInPCMFrames: ma_uint64,
   rangeEndInPCMFrames: ma_uint64,
@@ -2253,6 +2272,7 @@ global ma_engine_config: type <cimport,nodecl> = @record{
   periodSizeInMilliseconds: ma_uint32,
   gainSmoothTimeInFrames: ma_uint32,
   gainSmoothTimeInMilliseconds: ma_uint32,
+  defaultVolumeSmoothTimeInPCMFrames: ma_uint32,
   allocationCallbacks: ma_allocation_callbacks,
   noAutoStart: ma_bool32,
   noDevice: ma_bool32,
@@ -2274,6 +2294,7 @@ ma_engine = @record{
   pInlinedSoundHead: *ma_sound_inlined,
   inlinedSoundCount: ma_uint32,
   gainSmoothTimeInFrames: ma_uint32,
+  defaultVolumeSmoothTimeInPCMFrames: ma_uint32,
   monoExpansionMode: ma_mono_expansion_mode
 }
 global function ma_version(pMajor: *ma_uint32, pMinor: *ma_uint32, pRevision: *ma_uint32): void <cimport,nodecl> end
@@ -2857,6 +2878,15 @@ global function ma_waveform_set_amplitude(pWaveform: *ma_waveform, amplitude: fl
 global function ma_waveform_set_frequency(pWaveform: *ma_waveform, frequency: float64): ma_result <cimport,nodecl> end
 global function ma_waveform_set_type(pWaveform: *ma_waveform, type: ma_waveform_type): ma_result <cimport,nodecl> end
 global function ma_waveform_set_sample_rate(pWaveform: *ma_waveform, sampleRate: ma_uint32): ma_result <cimport,nodecl> end
+global function ma_pulsewave_config_init(format: ma_format, channels: ma_uint32, sampleRate: ma_uint32, dutyCycle: float64, amplitude: float64, frequency: float64): ma_pulsewave_config <cimport,nodecl> end
+global function ma_pulsewave_init(pConfig: *ma_pulsewave_config, pWaveform: *ma_pulsewave): ma_result <cimport,nodecl> end
+global function ma_pulsewave_uninit(pWaveform: *ma_pulsewave): void <cimport,nodecl> end
+global function ma_pulsewave_read_pcm_frames(pWaveform: *ma_pulsewave, pFramesOut: pointer, frameCount: ma_uint64, pFramesRead: *ma_uint64): ma_result <cimport,nodecl> end
+global function ma_pulsewave_seek_to_pcm_frame(pWaveform: *ma_pulsewave, frameIndex: ma_uint64): ma_result <cimport,nodecl> end
+global function ma_pulsewave_set_amplitude(pWaveform: *ma_pulsewave, amplitude: float64): ma_result <cimport,nodecl> end
+global function ma_pulsewave_set_frequency(pWaveform: *ma_pulsewave, frequency: float64): ma_result <cimport,nodecl> end
+global function ma_pulsewave_set_sample_rate(pWaveform: *ma_pulsewave, sampleRate: ma_uint32): ma_result <cimport,nodecl> end
+global function ma_pulsewave_set_duty_cycle(pWaveform: *ma_pulsewave, dutyCycle: float64): ma_result <cimport,nodecl> end
 global function ma_noise_config_init(format: ma_format, channels: ma_uint32, type: ma_noise_type, seed: ma_int32, amplitude: float64): ma_noise_config <cimport,nodecl> end
 global function ma_noise_get_heap_size(pConfig: *ma_noise_config, pHeapSizeInBytes: *csize): ma_result <cimport,nodecl> end
 global function ma_noise_init_preallocated(pConfig: *ma_noise_config, pHeap: pointer, pNoise: *ma_noise): ma_result <cimport,nodecl> end
@@ -3180,7 +3210,7 @@ global function ma_sound_group_is_playing(pGroup: *ma_sound_group): ma_bool32 <c
 global function ma_sound_group_get_time_in_pcm_frames(pGroup: *ma_sound_group): ma_uint64 <cimport,nodecl> end
 global MA_VERSION_MAJOR: cint <comptime> = 0
 global MA_VERSION_MINOR: cint <comptime> = 11
-global MA_VERSION_REVISION: cint <comptime> = 14
+global MA_VERSION_REVISION: cint <comptime> = 17
 global MA_SIZEOF_PTR: cint <comptime> = 8
 global MA_TRUE: cint <comptime> = 1
 global MA_FALSE: cint <comptime> = 0

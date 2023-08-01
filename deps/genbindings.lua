@@ -11,7 +11,7 @@ nldecl.generate_bindings_file{
   },
   output_head = [==[
 ##[[
-cinclude 'cartesi'
+cinclude 'cartesi.h'
 linklib 'cartesi'
 ]]
 ]==]
@@ -31,6 +31,7 @@ nldecl.generate_bindings_file{
 ##[[
 if not MINIAUDIO_NO_IMPL then
   cdefine 'MA_API static'
+  cdefine 'MA_PRIVATE static'
   cdefine 'MA_NO_PTHREAD_IN_HEADER'
   cdefine 'MINIAUDIO_IMPLEMENTATION'
 end
@@ -58,15 +59,18 @@ nldecl.generate_bindings_file{
   output_head =
 [==[
 ##[[
+-- sokol backend
+if ccinfo.is_emscripten then
+  cdefine 'SOKOL_GLES3'
+elseif ccinfo.is_windows then
+  cdefine 'SOKOL_D3D11'
+else
+  cdefine 'SOKOL_GLCORE33'
+end
 -- sokol_gfx
 if not SOKOL_GFX_NO_IMPL then
   cdefine 'SOKOL_GFX_API_DECL static'
   cdefine 'SOKOL_GFX_IMPL'
-end
-if ccinfo.is_emscripten then
-  cdefine 'SOKOL_GLES2'
-else
-  cdefine 'SOKOL_GLCORE33'
 end
 cinclude 'sokol_gfx.h'
 if ccinfo.is_windows then
@@ -87,11 +91,6 @@ if not SOKOL_APP_NO_IMPL then
   cdefine 'SOKOL_APP_IMPL'
 end
 cdefine 'SOKOL_NO_ENTRY'
-if ccinfo.is_emscripten then
-  cdefine 'SOKOL_GLES2'
-else
-  cdefine 'SOKOL_GLCORE33'
-end
 cinclude 'sokol_app.h'
 if ccinfo.is_linux then
   linklib 'X11'
@@ -113,7 +112,6 @@ global function sapp_sgcontext(): sg_context_desc
   desc.color_format = (@sg_pixel_format)(sapp_color_format())
   desc.depth_format = (@sg_pixel_format)(sapp_depth_format())
   desc.sample_count = sapp_sample_count()
-  desc.gl.force_gles2 = sapp_gles2()
   desc.metal.device = sapp_metal_get_device()
   desc.metal.renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor
   desc.metal.drawable_cb = sapp_metal_get_drawable

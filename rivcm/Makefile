@@ -12,7 +12,7 @@ INCS=-I"$(CARTESI_MACHINE_INC_DIR)"
 LIBS=-L"$(CARTESI_MACHINE_LIB_DIR)" -Wl,-rpath,"$(CARTESI_MACHINE_LIB_DIR)"
 NELUA_LIBS=-L../libriv -L../deps
 
-# release info
+# for release
 # NELUA_FLAGS+= -Pnochecks -Pnoassertloc -Pnocstaticassert --release
 
 rivcm: rivcm.nelua *.nelua

@@ -7,7 +7,6 @@ require 'math'
 require 'arg'
 require 'memory'
 require 'sokol'
-require 'sokol_glue'
 require 'miniaudio'
 require 'fs'
 require 'cartesi-utils'
@@ -300,9 +299,9 @@ local function frame()
 
   -- Dispatch draw commands
   sg_begin_default_pass(&(@sg_pass_action){
-    colors={{action=SG_ACTION_CLEAR, value={r=0,g=0,b=0,a=1}}},
-    depth={action=SG_ACTION_DONTCARE},
-    stencil={action=SG_ACTION_DONTCARE}
+    colors={{load_action=SG_LOADACTION_CLEAR, clear_value={r=0,g=0,b=0,a=1}}},
+    depth={load_action=SG_LOADACTION_DONTCARE},
+    stencil={load_action=SG_LOADACTION_DONTCARE}
   }, app_width, app_height)
   sgp_flush()
   sgp_end()

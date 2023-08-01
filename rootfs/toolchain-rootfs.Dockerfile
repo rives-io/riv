@@ -14,8 +14,15 @@ RUN apk add bash gcc g++ git libc-dev make cmake pkgconfig automake autoconf
 # Install other utilities
 RUN apk add squashfs-tools su-exec
 
+# Musl link aliases
+RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
+    ln -s ld-musl-riscv64.so.1 /lib/ld.so
+
 # Build other packages inside /root
 WORKDIR /root
+
+# Download apks to be installed in rootfs
+RUN apk fetch musl bubblewrap libcap2
 
 # Install Nelua
 RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarball/master && \
@@ -55,9 +62,6 @@ RUN tar -xf linux-headers-5.15.63-ctsi-2.tar.xz && \
     cp -R opt/riscv/kernel/work/linux-headers/include/* /usr/include/ && \
     rm -rf opt linux-headers*
 
-# Download apks to be installed in rootfs
-RUN apk fetch musl bubblewrap libcap2
-
 # Install bwrapbox
 RUN apk add libseccomp-dev bubblewrap
 COPY bwrapbox bwrapbox
@@ -66,10 +70,6 @@ RUN make -C bwrapbox install PREFIX=/usr
 # Install libriv
 COPY libriv libriv
 RUN make -C libriv install PREFIX=/usr
-
-# Link aliases
-RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
-    ln -s ld-musl-riscv64.so.1 /lib/ld.so
 
 ################################
 # Build rootfs

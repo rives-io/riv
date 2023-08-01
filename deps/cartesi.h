@@ -152,12 +152,18 @@ typedef enum { // NOLINT(modernize-use-using)
     CM_PROC_HTIF_IHALT,
     CM_PROC_HTIF_ICONSOLE,
     CM_PROC_HTIF_IYIELD,
-    CM_PROC_UARCH_CYCLE,
     CM_PROC_UARCH_PC,
-    CM_PROC_UARCH_ROM_LENGTH,
+    CM_PROC_UARCH_CYCLE,
+    CM_PROC_UARCH_HALT_FLAG,
     CM_PROC_UARCH_RAM_LENGTH,
     CM_PROC_UNKNOWN
 } CM_PROC_CSR;
+
+/// \brief Return values of uarch_interpret
+typedef enum { // NOLINT(modernize-use-using)
+    CM_UARCH_BREAK_REASON_REACHED_TARGET_CYCLE,
+    CM_UARCH_BREAK_REASON_HALTED
+} CM_UARCH_BREAK_REASON;
 
 /// \brief Processor state configuration
 typedef struct {                        // NOLINT(modernize-use-using)
@@ -256,23 +262,17 @@ typedef struct {                // NOLINT(modernize-use-using)
     const char *image_filename; ///< RAM image file name
 } cm_uarch_ram_config;
 
-/// \brief microarchitecture ROM configuration
-typedef struct {                // NOLINT(modernize-use-using)
-    uint64_t length;            ///< RAM length
-    const char *image_filename; ///< RAM image file name
-} cm_uarch_rom_config;
-
 /// \brief Microarchitecture processor configuration
 typedef struct { // NOLINT(modernize-use-using)
     uint64_t x[CM_MACHINE_UARCH_X_REG_COUNT];
     uint64_t pc;
     uint64_t cycle;
+    bool halt_flag;
 } cm_uarch_processor_config;
 
 /// \brief Microarchitecture state configuration
 typedef struct { // NOLINT(modernize-use-using)
     cm_uarch_processor_config processor;
-    cm_uarch_rom_config rom;
     cm_uarch_ram_config ram;
 } cm_uarch_config;
 
@@ -383,6 +383,15 @@ typedef struct { // NOLINT(modernize-use-using)
 /// where pointer size depend on types, this api might not work
 typedef struct cm_machine_tag cm_machine; // NOLINT(modernize-use-using)
 
+/// \brief Semantic version
+typedef struct { // NOLINT(modernize-use-using)
+    uint32_t major;
+    uint32_t minor;
+    uint32_t patch;
+    const char *pre_release;
+    const char *build;
+} cm_semantic_version;
+
 // ---------------------------------
 // API function definitions
 // ---------------------------------
@@ -449,7 +458,7 @@ CM_API void cm_delete_machine(cm_machine *m);
 /// \returns 0 for success, non zero code for error
 CM_API int cm_machine_run(cm_machine *m, uint64_t mcycle_end, CM_BREAK_REASON *break_reason_result, char **err_msg);
 
-/// \brief Runs the machine for one cycle logging all accesses to the state.
+/// \brief Runs the machine for one micro cycle logging all accesses to the state.
 /// \param m Pointer to valid machine instance
 /// \param log_type Type of access log to generate.
 /// \param one_based Use 1-based indices when reporting errors.
@@ -459,7 +468,7 @@ CM_API int cm_machine_run(cm_machine *m, uint64_t mcycle_end, CM_BREAK_REASON *b
 /// must be deleted by the function caller using cm_delete_error_message.
 /// err_msg can be NULL, meaning the error message won't be received.
 /// \returns 0 for success, non zero code for error
-CM_API int cm_step(cm_machine *m, cm_access_log_type log_type, bool one_based, cm_access_log **access_log,
+CM_API int cm_step_uarch(cm_machine *m, cm_access_log_type log_type, bool one_based, cm_access_log **access_log,
     char **err_msg);
 
 /// \brief  Deletes the instance of cm_access_log acquired from cm_step
@@ -651,6 +660,11 @@ CM_API int cm_write_x(cm_machine *m, int i, uint64_t val, char **err_msg);
 /// \param i Register index. Between 0 and X_REG_COUNT-1, inclusive.
 /// \returns Address of the specified register
 CM_API uint64_t cm_get_x_address(int i);
+
+/// \brief Gets the address of a general-purpose microarchitecture register.
+/// \param i Register index. Between 0 and UARCH_X_REG_COUNT-1, inclusive.
+/// \returns Address of the specified register
+CM_API uint64_t cm_get_uarch_x_address(int i);
 
 /// \brief Reads the value of a floating-point register.
 /// \param m Pointer to valid machine instance
@@ -1558,6 +1572,18 @@ CM_API void cm_delete_error_message(const char *err_msg);
 /// \returns void
 CM_API void cm_delete_machine_runtime_config(const cm_machine_runtime_config *config);
 
+/// \brief Deletes allocated microarchitecture ram config
+/// \returns void
+CM_API void cm_delete_uarch_ram_config(const cm_uarch_ram_config *config);
+
+/// \brief Deletes allocated dhd microarchitecture config
+/// \returns void
+CM_API void cm_delete_uarch_config(const cm_uarch_config *config);
+
+/// \brief Deletes semantic version instance
+/// \param m Valid pointer to the existing semantic version instance
+CM_API void cm_delete_semantic_version(const cm_semantic_version *version);
+
 /// \brief Destroys machine
 /// \param err_msg Receives the error message if function execution fails
 /// or NULL in case of successful function execution. In case of failure error_msg
@@ -1634,16 +1660,6 @@ CM_API int cm_write_uarch_pc(cm_machine *m, uint64_t val, char **err_msg);
 /// \returns 0 for success, non zero code for error
 CM_API int cm_read_uarch_cycle(const cm_machine *m, uint64_t *val, char **err_msg);
 
-/// \brief Reads the value of the microarchitecture ROM length
-/// \param m Pointer to valid machine instance
-/// \param val Receives value of the microarchitecture ROM length.
-/// \param err_msg Receives the error message if function execution fails
-/// or NULL in case of successful function execution. In case of failure error_msg
-/// must be deleted by the function caller using cm_delete_error_message.
-/// err_msg can be NULL, meaning the error message won't be received.
-/// \returns 0 for success, non zero code for error
-CM_API int cm_read_uarch_rom_length(const cm_machine *m, uint64_t *val, char **err_msg);
-
 /// \brief Reads the value of the microarchitecture RAM length
 /// \param m Pointer to valid machine instance
 /// \param val Receives value of the microarchitecture RAM length.
@@ -1664,14 +1680,41 @@ CM_API int cm_read_uarch_ram_length(const cm_machine *m, uint64_t *val, char **e
 /// \returns 0 for success, non zero code for error
 CM_API int cm_write_uarch_cycle(cm_machine *m, uint64_t val, char **err_msg);
 
+/// \brief Gets the value of the microarchitecture halt flag.
+/// \param m Pointer to valid machine instance
+/// \param val Receives value of the halt flag.
+/// \param err_msg Receives the error message if function execution fails
+/// or NULL in case of successfull function execution. In case of failure error_msg
+/// must be deleted by the function caller using cm_delete_error_message
+/// \returns 0 for success, non zero code for error
+CM_API int cm_read_uarch_halt_flag(const cm_machine *m, bool *val, char **err_msg);
+
+/// \brief Sets the value of the microarchitecture halt flag.
+/// \param m Pointer to valid machine instance
+/// \param err_msg Receives the error message if function execution fails
+/// or NULL in case of successfull function execution. In case of failure error_msg
+/// must be deleted by the function caller using cm_delete_error_message
+/// \returns 0 for success, non zero code for error
+CM_API int cm_set_uarch_halt_flag(cm_machine *m, char **err_msg);
+
+/// \brief Resets the value of the microarchitecture halt flag.
+/// \param m Pointer to valid machine instance
+/// \param err_msg Receives the error message if function execution fails
+/// or NULL in case of successfull function execution. In case of failure error_msg
+/// must be deleted by the function caller using cm_delete_error_message
+/// \returns 0 for success, non zero code for error
+CM_API int cm_reset_uarch_state(cm_machine *m, char **err_msg);
+
 /// \brief Runs the machine in the microarchitecture until the mcycle advances by one unit or the micro cycles counter
 /// (uarch_cycle) reaches uarch_cycle_end \param m Pointer to valid machine instance \param mcycle_end End cycle value
+/// \param status_result Receives status of machine run_uarch when not NULL
 /// \param err_msg Receives the error message if function execution fails
 /// or NULL in case of successful function execution. In case of failure error_msg
 /// must be deleted by the function caller using cm_delete_error_message.
 /// err_msg can be NULL, meaning the error message won't be received.
 /// \returns 0 for success, non zero code for error
-CM_API int cm_machine_uarch_run(cm_machine *m, uint64_t uarch_cycle_end, char **err_msg);
+CM_API int cm_machine_run_uarch(cm_machine *m, uint64_t uarch_cycle_end, CM_UARCH_BREAK_REASON *status_result,
+    char **err_msg);
 
 #ifdef __cplusplus
 }
