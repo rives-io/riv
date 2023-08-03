@@ -1,0 +1,51 @@
+-- This file contains all code related to frame limiting and frame counting.
+
+require 'io'
+require 'os'
+
+require '.machine'
+
+-- Frame limiter.
+global framelimiter = @record{}
+
+-- Frame limiter state.
+local next_frame_time: float64
+local time_elapsed_sum: float64
+local mcycle_elapsed_sum: uint64
+local mcycle_sum: uint64
+local fps: uint64
+local last_time: float64
+
+-- Limit frame rate by sleeping while necessary.
+function framelimiter.limit_fps()
+  if machine.mmio.framebuffer_desc.fps == 0 then return end
+  local frame_delay: float64 = 1.0/machine.mmio.framebuffer_desc.fps
+  local now: float64 = os.now()
+  if next_frame_time > now then
+    local delay: float64 = next_frame_time - now
+    os.sleep(delay)
+    next_frame_time = next_frame_time + frame_delay
+  else
+    next_frame_time = now + frame_delay
+  end
+end
+
+-- Log the frame rate statistics to stderr every second.
+function framelimiter.log_fps(now: float64, time_elapsed: float64, mcycle_elapsed: uint64)
+  fps = fps + 1
+  time_elapsed_sum = time_elapsed_sum + time_elapsed
+  mcycle_elapsed_sum = mcycle_elapsed_sum + mcycle_elapsed
+  local last_time_elapsed: float64 = now - last_time
+  if last_time_elapsed >= 1.0 then
+    if not machine:is_halted() then
+      local mips: float64 = mcycle_elapsed_sum / (time_elapsed_sum * 1000000.0)
+      local cpu_usage: float64 = (time_elapsed_sum * 100.0) / last_time_elapsed
+      io.printf('frame=%d fps=%.2f guest_cpu_clock=%.2fMHz host_cpu_usage=%.2f%%\n',
+        machine.mmio.frame, fps / last_time_elapsed, mips, cpu_usage)
+    end
+    fps = 0
+    time_elapsed_sum = 0
+    mcycle_elapsed_sum = 0
+    last_time = now
+  end
+end

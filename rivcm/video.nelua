@@ -1,0 +1,137 @@
+-- This file contains all code related to the video subsystem.
+
+require 'math'
+require 'sokol'
+
+require '.machine'
+
+-- Video subsystem.
+global video = @record{}
+
+-- Video subsystem state.
+local fb_desc: riv_framebuffer_desc
+local fb_image: sg_image
+local framebuffer: [RIV_FRAMEBUFFER_SIZE]byte
+local framebuffer_rgba: [RIV_FRAMEBUFFER_SIZE]uint32
+
+-- Destroy the window framebuffer image.
+local function destroy_framebuffer_image(): void
+  if sg_query_image_state(fb_image) == SG_RESOURCESTATE_VALID then
+    sg_destroy_image(fb_image)
+    fb_image = {}
+  end
+end
+
+-- Initialize video subsystem.
+function video.setup(): void
+  sg_setup(sg_desc{context = sapp_sgcontext()})
+  assert(sg_isvalid(), 'failed to initialize Sokol GFX')
+  sgp_setup(sgp_desc{})
+  assert(sgp_is_valid(), 'failed to initialize SGP')
+end
+
+-- Terminate video subsystem.
+function video.shutdown(): void
+  destroy_framebuffer_image()
+  fb_desc = {}
+  framebuffer = {}
+  framebuffer_rgba = {}
+
+  sgp_shutdown()
+  sg_shutdown()
+end
+
+-- Resize the window framebuffer image.
+local function update_framebuffer_desc(): void
+  -- update framebuffer desc
+  if fb_desc == machine.mmio.framebuffer_desc then return end
+  local recreate: boolean = fb_desc.width ~= machine.mmio.framebuffer_desc.width or
+                            fb_desc.height ~= machine.mmio.framebuffer_desc.height
+  fb_desc = machine.mmio.framebuffer_desc
+
+  -- return early if no resize is needed
+  if not recreate then return end
+
+  -- destroy current framebuffer
+  destroy_framebuffer_image()
+
+  -- no need to create an fb image when its size is 0
+  if fb_desc.width * fb_desc.height == 0 then return end
+
+  -- create the framebuffer
+  fb_image = sg_make_image(sg_image_desc{
+    usage = SG_USAGE_STREAM,
+    width = fb_desc.width,
+    height = fb_desc.height,
+    min_filter = SG_FILTER_NEAREST,
+    mag_filter = SG_FILTER_NEAREST,
+    wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+    wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+  })
+  assert(sg_query_image_state(fb_image) == SG_RESOURCESTATE_VALID, "failed to create frame buffer image")
+end
+
+-- Update the framebuffer into host RAM memory.
+local function update_framebuffer_mem(): void
+  local fb_pixel_count: int64 = fb_desc.width * fb_desc.height
+  if fb_pixel_count == 0 then return end
+  local fb_machine_mem: span(byte) = {data=&framebuffer,size=fb_pixel_count}
+  machine:read_memory(machine.mmio_paddr + RIV_FRAMEBUFFER_OFFSET, fb_machine_mem)
+end
+
+-- Update the framebuffer into GPU memory.
+local function update_framebuffer_video_mem(): void
+  local fb_pixel_count: int64 = fb_desc.width * fb_desc.height
+  -- update the framebuffer pixels using palette
+  for i=0,<fb_pixel_count do
+    framebuffer_rgba[i] = machine.mmio.palette[framebuffer[i]]
+  end
+  sg_update_image(fb_image, sg_image_data{{{{ptr=&framebuffer_rgba, size=fb_pixel_count*4}}}})
+end
+
+-- Fit a box into another box while preserving aspect ratio.
+local function fit_box(inner_width: int64, inner_height: int64, outer_width: int64, outer_height: int64): (int64, int64, int64, int64)
+  local scale: number
+  if inner_height*outer_width >= inner_width*outer_height then -- full vertical
+    scale = (outer_height >= inner_height) and (outer_height // inner_height) or (outer_height / inner_height)
+  else -- full horizontal
+    scale = (outer_width >= inner_width) and (outer_width // inner_width) or (outer_width / inner_width)
+  end
+  local inner_width: int64, inner_height: int64 = math.ifloor(inner_width * scale), math.ifloor(inner_height * scale)
+  local x: int64, y: int64 = (outer_width - inner_width) // 2, (outer_height - inner_height) // 2
+  return x, y, inner_width, inner_height
+end
+
+-- Draw the framebuffer into the window screen.
+local function draw_framebuffer(screen_width: int64, screen_height: int64): void
+  sgp_set_image(0, fb_image)
+  sgp_draw_textured_rect(fit_box(fb_desc.width, fb_desc.height, screen_width, screen_height))
+  sgp_reset_image(0)
+end
+
+function video.present(): void
+  -- update framebuffer
+  update_framebuffer_desc()
+  update_framebuffer_mem()
+  update_framebuffer_video_mem()
+
+  -- prepare for drawing
+  local app_width: int64, app_height: int64 = sapp_width(), sapp_height()
+  sgp_begin(app_width, app_height)
+  sgp_viewport(0, 0, app_width, app_height)
+  sgp_project(0, app_width, 0, app_height)
+
+  -- draw
+  draw_framebuffer(app_width, app_height)
+
+  -- dispatch draw commands
+  sg_begin_default_pass(sg_pass_action{
+    colors={{load_action=SG_LOADACTION_CLEAR, clear_value={r=0,g=0,b=0,a=1}}},
+    depth={load_action=SG_LOADACTION_DONTCARE},
+    stencil={load_action=SG_LOADACTION_DONTCARE}
+  }, app_width, app_height)
+  sgp_flush()
+  sgp_end()
+  sg_end_pass()
+  sg_commit()
+end

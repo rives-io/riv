@@ -1,0 +1,163 @@
+-- This file contains code related to machine being emulated.
+
+require 'cartesi'
+require 'riv'
+
+--------------------------------------------------------------------------------
+
+-- Macro to check if a cm_* call was a success.
+## function cm_assert(callnode)
+  do
+    local errmsg: cstring
+    -- appends `errmsg` to the call arguments of `a`
+    ## local callargs, callname = callnode[1], callnode[2][1]
+    ## table.insert(callargs, aster.UnaryOp{"ref", aster.Id{"errmsg"}})
+    local result: auto = #[callnode]#
+    if errmsg then
+      error(#[callname..': ']#..errmsg)
+    elseif result ~= 0 then
+      error(#[callname..': failed']#)
+    end
+  end
+## end
+
+--------------------------------------------------------------------------------
+
+-- Machine.
+global Machine = @record{
+  machine: *cm_machine,
+  mmio: riv_mmio,
+  mmio_paddr: uint64
+}
+
+-- Creates a new machine.
+function Machine.create(cartridge: string, entrypoint: string): Machine
+  -- get default config
+  local defconfig: *cm_machine_config
+  cm_assert!(cm_get_default_config(&defconfig))
+  defer cm_delete_machine_config(defconfig) end
+
+  -- set custom configs
+  local config: cm_machine_config = $defconfig
+  local bootargs: string <close> = "console=hvc0 \z
+    rootfstype=ext2 \z
+    root=/dev/mtdblock0 \z
+    rw quiet \z
+    swiotlb=noforce \z
+    mtdparts=flash.0:-(root) \z
+    hugepagesz=2M hugepages=1 -- " .. entrypoint
+  config.ram = {
+    image_filename = './kernel/linux.bin',
+    length = MACHINE_MEM_SIZE
+  }
+  config.rom = {
+    image_filename = './kernel/rom.bin',
+    bootargs = bootargs
+  }
+  config.htif = {
+    yield_automatic = true,
+  }
+  config.flash_drive = {count = 2, entry = {
+    {
+      start = RIV_ROOTFS_BASE_PADDR,
+      length = (@uint64)(-1),
+      image_filename = "./rootfs/rootfs.ext2",
+    },
+    {
+      start = RIV_CARTRIDGE_BASE_PADDR,
+      length = (@uint64)(-1),
+      image_filename = cartridge,
+    }
+  }}
+
+  -- create the machine
+  local self: Machine
+  cm_assert!(cm_create_machine(config, cm_machine_runtime_config{}, &self.machine))
+  return self
+end
+
+-- Destroy the machine.
+function Machine:destroy(): void
+  cm_delete_machine(self.machine)
+  $self = {}
+end
+
+-- Run the machine.
+function Machine:run(): CM_BREAK_REASON
+  local break_reason: CM_BREAK_REASON
+  cm_assert!(cm_machine_run(self.machine, (@uint64)(-1), &break_reason))
+  return break_reason
+end
+
+-- Check if the machine is halted.
+function Machine:is_halted(): boolean
+  local halted: boolean
+  cm_assert!(cm_read_iflags_H(self.machine, &halted))
+  return halted
+end
+
+-- Get machine yield reason.
+function Machine:read_yield_reason(): uint32
+  local data: uint64
+  cm_assert!(cm_read_htif_tohost_data(self.machine, &data))
+  return data >> 32
+end
+
+-- Get machine mcycle.
+function Machine:read_mcycle(): uint64
+  local mcycle: uint64
+  cm_assert!(cm_read_mcycle(self.machine, &mcycle))
+  return mcycle
+end
+
+-- Read machine memory.
+function Machine:read_memory(paddr: uint64, dest: span(byte)): void
+  cm_assert!(cm_read_memory(self.machine, paddr, dest.data, dest.size))
+end
+
+-- Write machine memory.
+function Machine:write_memory(paddr: uint64, dest: span(byte)): void
+  cm_assert!(cm_write_memory(self.machine, paddr, dest.data, dest.size))
+end
+
+-- Find and load MMIO physical address from machine.
+function Machine:load_mmio_paddr(): void
+  local magic: [32]byte
+
+  -- check if mmio physical address is still valid
+  if self.mmio_paddr ~= 0 then
+    self:read_memory(self.mmio_paddr, &magic)
+    if magic == RIV_DEVICE_MAGIC then -- still the same
+      return
+    end
+  end
+
+  -- invalidate mmio physical address
+  self.mmio_paddr = 0
+
+  -- find mmio physical address
+  for paddr=MACHINE_MEM_BASE_PADDR,MACHINE_MEM_BASE_PADDR+MACHINE_MEM_SIZE-1,HUGE_PAGE_SIZE do
+    self:read_memory(paddr, &magic)
+    if magic == RIV_DEVICE_MAGIC then
+      self.mmio_paddr = paddr
+      break
+    end
+  end
+
+  assert(self.mmio_paddr ~= 0, 'unable to find mmio physical address')
+end
+
+-- Copy MMIO state from machine memory to host memory.
+function Machine:load_mmio(): void
+  self:load_mmio_paddr()
+  self:read_memory(self.mmio_paddr, (@span(byte)){data=(@*[0]byte)(&self.mmio),size=#@riv_mmio})
+end
+
+-- Store MMIO state from host memory to machine memory.
+function Machine:store_mmio(): void
+  self:load_mmio_paddr()
+  self:write_memory(self.mmio_paddr, (@span(byte)){data=(@*[0]byte)(&self.mmio),size=#@riv_mmio})
+end
+
+-- Global machine.
+global machine: Machine

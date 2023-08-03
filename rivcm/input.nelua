@@ -1,0 +1,39 @@
+-- This file contains all code related to keyboard/mouse input subsystem.
+
+require 'sokol'
+
+require '.machine'
+
+-- Input subsystem.
+global input = @record{}
+
+-- Initialize input subsystem.
+function input.setup(): void
+
+end
+
+-- Terminate input subsystem.
+function input.shutdown(): void
+
+end
+
+-- Poll for keyboard/mouse input events.
+function input.poll(event: *sapp_event)
+  -- TODO: these inputs should be ignored until the machine mmio is ready
+
+  local update: boolean = false
+  if not event.key_repeat then
+    if event.type == SAPP_EVENTTYPE_KEY_DOWN then
+      machine.mmio.keys[event.key_code].down_frame = machine.mmio.frame + 1
+      update = true
+    elseif event.type == SAPP_EVENTTYPE_KEY_UP then
+      machine.mmio.keys[event.key_code].up_frame = machine.mmio.frame + 1
+      update = true
+    end
+    -- TODO mouse button events
+  end
+
+  if update then
+    machine:store_mmio()
+  end
+end

@@ -1,0 +1,60 @@
+-- This file contains all code related to the audio subsystem.
+
+require 'miniaudio'
+
+require '.machine'
+
+--------------------------------------------------------------------------------
+
+-- Macro for quick error handling miniaudio errors.
+## local function ma_assert(callnode)
+  local result: ma_result = #[callnode]#
+  if result ~= MA_SUCCESS then
+    error(#[callnode[2][1]..': ']#..ma_result_description(result))
+  end
+## end
+
+--------------------------------------------------------------------------------
+
+-- Audio subsystem.
+global audio = @record{}
+
+-- Audio subsystem state.
+local audio_engine: ma_engine
+local audiobuffer: [RIV_AUDIOBUFFER_SIZE]byte
+
+-- Initialize audio subsystem.
+function audio.setup(): void
+  ma_assert!(ma_engine_init(nilptr, &audio_engine))
+end
+
+-- Terminate audio subsystem.
+function audio.shutdown(): void
+  ma_engine_uninit(&audio_engine)
+end
+
+-- Control audio subsystem.
+function audio.control(): void
+  if machine.mmio_paddr == 0 then return end
+
+  local data: span(byte) = {data=&audiobuffer[0],size=machine.mmio.audio_ctl.data_size}
+  machine:read_memory(machine.mmio_paddr + RIV_AUDIOBUFFER_OFFSET, data)
+
+  switch machine.mmio.audio_ctl.command do
+  case RIV_AUDIO_COMMAND_SOUND_PLAY then
+    -- FIXME: collect audio buffers when sound stops
+    local sound = new(@ma_sound)
+    local audio_buffer = new(@ma_audio_buffer)
+    local config: ma_audio_buffer_config = ma_audio_buffer_config_init(ma_format_u8, 1, data.size, data.data, nilptr)
+    config.sampleRate = 11025
+    ma_assert!(ma_audio_buffer_init_copy(&config, audio_buffer))
+    local flags: uint32 = MA_SOUND_FLAG_NO_SPATIALIZATION
+    ma_assert!(ma_sound_init_from_data_source(&audio_engine, &audio_buffer.ref.ds, flags, nilptr, sound))
+    ma_sound_set_volume(sound, 0.2)
+    ma_assert!(ma_sound_start(sound))
+  case RIV_AUDIO_COMMAND_SOUND_STOP then
+    -- TODO
+  else
+    error 'unknown audio command'
+  end
+end

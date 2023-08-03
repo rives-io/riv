@@ -2,13 +2,21 @@
 
 require 'span'
 
+global RIV_ROOTFS_BASE_PADDR <comptime> = 0x80000000000000
+global RIV_CARTRIDGE_BASE_PADDR: uint64 <comptime> = 0x90000000000000
+global MACHINE_OUTPUT_PADDR <comptime> = 0xa0000000000000
+
+global MACHINE_MEM_BASE_PADDR <comptime> = 0x80000000
+global MACHINE_OUTPUT_SIZE <comptime> = 0x200000
+global HUGE_PAGE_SIZE <comptime> = 2*1024*1024
+global MACHINE_MEM_SIZE <comptime> = 128*1024*1024
+
 global RIV_FRAMEBUFFER_SIZE <comptime> = 1024*1024
 global RIV_AUDIOBUFFER_SIZE <comptime> = 512*1024
 global RIV_MMAP_SIZE <comptime> = 2*1024*1024
 
 global RIV_VERSION: uint64 <comptime> = 000001000
 
-global RIV_CARTRIDGE_BASE_PADDR: uint64 <comptime> = 0x90000000000000
 global RIV_CARTRIDGE_SIZE <comptime> = 16*1024*1024
 
 global RIV_BASE_VADDR: uint64 <comptime> = 0x10000000
@@ -80,18 +88,18 @@ global riv_keystate = @record{
   up_frame: uint64,
 }
 
-global riv_desc = @record{
+global riv_mmio = @record{
   magic: [32]byte,
   version: uint32,
   frame: uint64,
   audio_ctl: riv_audio_ctl_desc,
-  framebuffer: riv_framebuffer_desc,
+  framebuffer_desc: riv_framebuffer_desc,
   keys: [512]riv_keystate,
   palette: [256]uint32,
 }
 
 global riv_context = @record{
-  desc: *riv_desc,
+  mmio: *riv_mmio,
   running: boolean,
   yield_fd: int32,
   audiobuffer: span(byte),
@@ -102,12 +110,12 @@ global riv_run_desc = @record{
   init_cb: function(*riv_context),
   cleanup_cb: function(*riv_context),
   frame_cb: function(*riv_context),
-  framebuffer: riv_framebuffer_desc,
+  framebuffer_desc: riv_framebuffer_desc,
 }
 
 ## if RIV_IMPLEMENTATION then
 
-require '.linux-api'
+require '.linux'
 require 'memory'
 local strconv = require 'detail.strconv'
 
@@ -166,10 +174,10 @@ function riv_context:init(): void <cexport'riv_init'>
   assert(get_free_hugepages() == 0, 'no used hugepage')
   -- initialize device
   memory.zero(riv_base, RIV_MMAP_SIZE)
-  self.desc = (@*riv_desc)(RIV_BASE_VADDR)
+  self.desc = (@*riv_mmio)(RIV_BASE_VADDR)
   self.desc.magic = RIV_DEVICE_MAGIC
   self.desc.version = RIV_VERSION
-  self.desc.framebuffer = {
+  self.desc.framebuffer_desc = {
     width = RIV_DEFAULT_WIDTH,
     height = RIV_DEFAULT_HEIGHT,
     fps = RIV_DEFAULT_FPS,
@@ -180,7 +188,7 @@ function riv_context:init(): void <cexport'riv_init'>
     data=(@*[0]byte)(RIV_AUDIOBUFFER_VADDR),
     size=RIV_AUDIOBUFFER_SIZE
   }
-  self.framebuffer = {
+  self.framebuffer_desc = {
     data=(@*[0]byte)(RIV_FRAMEBUFFER_VADDR),
     size=RIV_FRAMEBUFFER_SIZE
   }
@@ -228,17 +236,17 @@ end
 
 global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>
   local self: riv_context
-  if run_desc.framebuffer.width == 0 then run_desc.framebuffer.width = RIV_DEFAULT_WIDTH end
-  if run_desc.framebuffer.height == 0 then run_desc.framebuffer.height = RIV_DEFAULT_HEIGHT end
-  if run_desc.framebuffer.fps == 0 then run_desc.framebuffer.fps = RIV_DEFAULT_FPS end
-  if run_desc.framebuffer.pixel_format == 0 then run_desc.framebuffer.pixel_format = RIV_DEFAULT_PIXEL_FORMAT end
+  if run_desc.framebuffer_desc.width == 0 then run_desc.framebuffer_desc.width = RIV_DEFAULT_WIDTH end
+  if run_desc.framebuffer_desc.height == 0 then run_desc.framebuffer_desc.height = RIV_DEFAULT_HEIGHT end
+  if run_desc.framebuffer_desc.fps == 0 then run_desc.framebuffer_desc.fps = RIV_DEFAULT_FPS end
+  if run_desc.framebuffer_desc.pixel_format == 0 then run_desc.framebuffer_desc.pixel_format = RIV_DEFAULT_PIXEL_FORMAT end
   if not self.desc then
     self:init()
   end
   if run_desc.init_cb then
     run_desc.init_cb(self)
   end
-  self.desc.framebuffer = run_desc.framebuffer
+  self.desc.framebuffer_desc = run_desc.framebuffer_desc
   if run_desc.frame_cb then
     self:loop(run_desc.frame_cb)
   end

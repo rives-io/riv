@@ -1,4 +1,4 @@
-require 'riv-app'
+require 'riv_app'
 
 -- game types
 local Point2D = @record{x: int32, y: int32}
@@ -83,20 +83,20 @@ end
 
 local function poll_events()
   local headdir = get_tile(headpos)
-  local frame = riv.desc.frame
-  if riv.desc.keys[RIV_KEYCODE_UP].down_frame == frame then
+  local frame = riv.mmio.frame
+  if riv.mmio.keys[RIV_KEYCODE_UP].down_frame == frame then
     if headdir ~= Direction.DOWN then
       movedir = Direction.UP
     end
-  elseif riv.desc.keys[RIV_KEYCODE_DOWN].down_frame == frame then
+  elseif riv.mmio.keys[RIV_KEYCODE_DOWN].down_frame == frame then
     if headdir ~= Direction.UP then
       movedir = Direction.DOWN
     end
-  elseif riv.desc.keys[RIV_KEYCODE_RIGHT].down_frame == frame then
+  elseif riv.mmio.keys[RIV_KEYCODE_RIGHT].down_frame == frame then
     if headdir ~= Direction.LEFT then
       movedir = Direction.RIGHT
     end
-  elseif riv.desc.keys[RIV_KEYCODE_LEFT].down_frame == frame then
+  elseif riv.mmio.keys[RIV_KEYCODE_LEFT].down_frame == frame then
     if headdir ~= Direction.RIGHT then
       movedir = Direction.LEFT
     end
@@ -104,7 +104,7 @@ local function poll_events()
 end
 
 local function poll_game()
-  local now = riv.desc.frame
+  local now = riv.mmio.frame
   if now < nextmove then return end
   nextmove = now + MOVE_DELAY
 
@@ -143,7 +143,7 @@ end
 
 local function draw_background(color: Color)
   local framebuffer: span(byte) = riv.framebuffer
-  for i=0,<riv.desc.framebuffer.width*riv.desc.framebuffer.height do
+  for i=0,<riv.mmio.framebuffer_desc.width*riv.mmio.framebuffer_desc.height do
     framebuffer[i] = color
   end
 end
@@ -181,7 +181,7 @@ end
 
 local function frame(ctx: *riv_context)
   riv = ctx
-  if riv.desc.frame == 0 then
+  if riv.mmio.frame == 0 then
     prng:seed()
     init_game()
   end
@@ -192,7 +192,7 @@ end
 
 riv_run(&(@riv_run_desc){
   frame_cb = frame,
-  framebuffer = {
+  framebuffer_desc = {
     width = SCREEN_SIZE,
     height = SCREEN_SIZE,
     fps = 60,
