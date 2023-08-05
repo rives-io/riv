@@ -152,6 +152,8 @@ local function poll_keyboard_events(): void
     local key_code: riv_key_code = translate_keycode_to_riv(event.key_code)
     -- ignore unsupported key codes
     if key_code == RIV_KEYCODE_INVALID then continue end
+    -- ignore keys not tracked
+    if not machine.mmio_driver.tracked_keys[key_code] then continue end
     -- compute key event
     local key_event: uint8 = key_code | (event.type == SAPP_EVENTTYPE_KEY_UP and 128_u8 or 0_u8)
     local found: boolean, prev_index: uint8 = event_index_by_key_code:has_and_get(key_code)

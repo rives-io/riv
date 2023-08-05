@@ -1,17 +1,17 @@
 require 'riv_app'
 
--- game types
+-- Game types
 local Point2D = @record{x: int32, y: int32}
 local Direction = @enum(byte){NONE=0, UP, DOWN, RIGHT, LEFT}
 local Color = @byte
 
--- game constants
+-- Game constants
 local TILE_SIZE <comptime> = 1
 local GRID_SIZE <comptime> = 16
 local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
 local MOVE_DELAY <comptime> = 8
 
--- game state variables
+-- Game state variables
 local prng: riv_prng
 local riv: *riv_context
 local nextmove: uint64
@@ -176,17 +176,24 @@ local function draw()
 end
 
 local function frame(ctx: *riv_context)
-  riv = ctx
-  if riv.frame == 0 then
-    prng:seed()
-    init_game()
-  end
   poll_events()
   poll_game()
   draw()
 end
 
+local function init(ctx: *riv_context)
+  riv = ctx
+  prng:seed()
+  init_game()
+  riv.tracked_keys = {}
+  riv.tracked_keys[RIV_KEYCODE_UP] = true
+  riv.tracked_keys[RIV_KEYCODE_DOWN] = true
+  riv.tracked_keys[RIV_KEYCODE_LEFT] = true
+  riv.tracked_keys[RIV_KEYCODE_RIGHT] = true
+end
+
 riv_run(&(@riv_run_desc){
+  init_cb = init,
   frame_cb = frame,
   framebuffer_desc = {
     width = SCREEN_SIZE,

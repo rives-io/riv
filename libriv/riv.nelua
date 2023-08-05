@@ -79,6 +79,13 @@ function riv_context:init(): void <cexport'riv_init'>
     data=(@*[0]byte)(RIV_VADDR_FRAMEBUFFER),
     size=RIV_MEMSIZE_FRAMEBUFFER
   }
+  -- aliases
+  self.framebuffer_desc = &self.mmio_driver.framebuffer_desc
+  self.tracked_keys = &self.mmio_driver.tracked_keys
+  self.palette = &self.mmio_driver.palette
+  -- track all keys by default
+  memory.spanset((@span(boolean))(self.mmio_driver.tracked_keys), true)
+  -- init palette
   init_default_palette(self)
 end
 
@@ -109,7 +116,7 @@ function riv_context:ctl(reason: riv_control_reason): void <cexport'riv_ctl'>
 end
 
 function riv_context:_poll_inputs() : void
-  for i: uint8=0,<self.mmio_device.key_event_count do
+  for i=0,<self.mmio_device.key_event_count do
     local key_event: uint8 = self.mmio_device.key_events[i]
     local key_code: uint8 = key_event & 127
     local down: boolean = (key_event & 128) == 0
