@@ -21,7 +21,7 @@ global audio = @record{}
 
 -- Audio subsystem state.
 local audio_engine: ma_engine
-local audiobuffer: [RIV_AUDIOBUFFER_SIZE]byte
+local audiobuffer: [RIV_MEMSIZE_AUDIOBUFFER]byte
 
 -- Initialize audio subsystem.
 function audio.setup(): void
@@ -35,13 +35,11 @@ end
 
 -- Control audio subsystem.
 function audio.control(): void
-  if machine.mmio_paddr == 0 then return end
+  local data: span(byte) = {data=&audiobuffer[0],size=machine.mmio_driver.audio_ctl.data_size}
+  machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_AUDIOBUFFER, data)
 
-  local data: span(byte) = {data=&audiobuffer[0],size=machine.mmio.audio_ctl.data_size}
-  machine:read_memory(machine.mmio_paddr + RIV_AUDIOBUFFER_OFFSET, data)
-
-  switch machine.mmio.audio_ctl.command do
-  case RIV_AUDIO_COMMAND_SOUND_PLAY then
+  switch machine.mmio_driver.audio_ctl.command do
+  case RIV_AUDIOCOMMAND_SOUND_PLAY then
     -- FIXME: collect audio buffers when sound stops
     local sound = new(@ma_sound)
     local audio_buffer = new(@ma_audio_buffer)
@@ -52,7 +50,7 @@ function audio.control(): void
     ma_assert!(ma_sound_init_from_data_source(&audio_engine, &audio_buffer.ref.ds, flags, nilptr, sound))
     ma_sound_set_volume(sound, 0.2)
     ma_assert!(ma_sound_start(sound))
-  case RIV_AUDIO_COMMAND_SOUND_STOP then
+  case RIV_AUDIOCOMMAND_SOUND_STOP then
     -- TODO
   else
     error 'unknown audio command'

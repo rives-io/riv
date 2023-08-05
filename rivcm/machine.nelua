@@ -26,8 +26,9 @@ require 'riv'
 -- Machine.
 global Machine = @record{
   machine: *cm_machine,
-  mmio: riv_mmio,
-  mmio_paddr: uint64
+  mmio_paddr: uint64,
+  mmio_driver: riv_mmio_driver,
+  mmio_device: riv_mmio_device
 }
 
 -- Creates a new machine.
@@ -48,7 +49,7 @@ function Machine.create(cartridge: string, entrypoint: string): Machine
     hugepagesz=2M hugepages=1 -- " .. entrypoint
   config.ram = {
     image_filename = './kernel/linux.bin',
-    length = MACHINE_MEM_SIZE
+    length = RIV_MEMSIZE_RAM
   }
   config.rom = {
     image_filename = './kernel/rom.bin',
@@ -59,12 +60,12 @@ function Machine.create(cartridge: string, entrypoint: string): Machine
   }
   config.flash_drive = {count = 2, entry = {
     {
-      start = RIV_ROOTFS_BASE_PADDR,
+      start = RIV_PADDR_ROOTFS,
       length = (@uint64)(-1),
       image_filename = "./rootfs/rootfs.ext2",
     },
     {
-      start = RIV_CARTRIDGE_BASE_PADDR,
+      start = RIV_PADDR_CARTRIDGE,
       length = (@uint64)(-1),
       image_filename = cartridge,
     }
@@ -80,13 +81,6 @@ end
 function Machine:destroy(): void
   cm_delete_machine(self.machine)
   $self = {}
-end
-
--- Run the machine.
-function Machine:run(): CM_BREAK_REASON
-  local break_reason: CM_BREAK_REASON
-  cm_assert!(cm_machine_run(self.machine, (@uint64)(-1), &break_reason))
-  return break_reason
 end
 
 -- Check if the machine is halted.
@@ -120,43 +114,92 @@ function Machine:write_memory(paddr: uint64, dest: span(byte)): void
   cm_assert!(cm_write_memory(self.machine, paddr, dest.data, dest.size))
 end
 
--- Find and load MMIO physical address from machine.
-function Machine:load_mmio_paddr(): void
-  local magic: [32]byte
-
-  -- check if mmio physical address is still valid
-  if self.mmio_paddr ~= 0 then
-    self:read_memory(self.mmio_paddr, &magic)
-    if magic == RIV_DEVICE_MAGIC then -- still the same
-      return
-    end
-  end
-
-  -- invalidate mmio physical address
-  self.mmio_paddr = 0
-
-  -- find mmio physical address
-  for paddr=MACHINE_MEM_BASE_PADDR,MACHINE_MEM_BASE_PADDR+MACHINE_MEM_SIZE-1,HUGE_PAGE_SIZE do
-    self:read_memory(paddr, &magic)
-    if magic == RIV_DEVICE_MAGIC then
-      self.mmio_paddr = paddr
-      break
-    end
-  end
-
-  assert(self.mmio_paddr ~= 0, 'unable to find mmio physical address')
+-- Returns true if MMIO is ready to exchange data between driver and device.
+function Machine:is_mmio_ready(): boolean
+  return self.mmio_paddr ~= 0
 end
 
 -- Copy MMIO state from machine memory to host memory.
-function Machine:load_mmio(): void
-  self:load_mmio_paddr()
-  self:read_memory(self.mmio_paddr, (@span(byte)){data=(@*[0]byte)(&self.mmio),size=#@riv_mmio})
+function Machine:_load_driver_mmio(): void
+  assert(self.mmio_paddr ~= 0, 'mmio is not connected')
+  local data: span(byte) = {data=(@*[0]byte)(&self.mmio_driver),size=#@riv_mmio_driver}
+  self:read_memory(self.mmio_paddr + RIV_MMIOSTART_MMIO_DRIVER, data)
 end
 
 -- Store MMIO state from host memory to machine memory.
-function Machine:store_mmio(): void
-  self:load_mmio_paddr()
-  self:write_memory(self.mmio_paddr, (@span(byte)){data=(@*[0]byte)(&self.mmio),size=#@riv_mmio})
+function Machine:_store_device_mmio(): void
+  assert(self.mmio_paddr ~= 0, 'mmio is not connected')
+  local data: span(byte) = {data=(@*[0]byte)(&self.mmio_device),size=#@riv_mmio_device}
+  self:write_memory(self.mmio_paddr + RIV_MMIOSTART_MMIO_DEVICE, data)
+end
+
+-- Init MMIO link.
+function Machine:_init_mmio(): void
+  -- load MMIO from guest driver into host device
+  self:_load_driver_mmio()
+  -- copy header
+  self.mmio_device.header = self.mmio_driver.header
+  self.mmio_device.header.magic = RIV_DEVICE_MAGIC
+end
+
+-- Reset MMIO link.
+function Machine:_reset_mmio(): void
+  if self.mmio_paddr == 0 then return end
+  self.mmio_paddr = 0
+  self.mmio_device.header = {}
+end
+
+-- Check if MMIO link still valid.
+function Machine:_check_mmio(): boolean
+  if self.mmio_paddr == 0 then return false end
+  local check_header: riv_mmio_header = self.mmio_device.header
+  check_header.magic = RIV_DRIVER_MAGIC
+  local driver_header: riv_mmio_header
+  local data: span(byte) = {data=(@*[0]byte)(&driver_header),size=#@riv_mmio_header}
+  self:read_memory(self.mmio_paddr + RIV_MMIOSTART_MMIO_DRIVER, data)
+  return driver_header == check_header
+end
+
+-- Find MMIO physical address and link it.
+function Machine:_setup_mmio(): boolean
+  self:_reset_mmio()
+  local header: riv_mmio_header
+  local data: span(byte) = {data=(@*[0]byte)(&header),size=#@riv_mmio_header}
+  for paddr: uint64 = RIV_PADDR_RAM,<RIV_PADDR_RAM+RIV_MEMSIZE_RAM,RIV_MEMSIZE_HUGEPAGE do
+    self:read_memory(paddr + RIV_MMIOSTART_MMIO_DRIVER, data)
+    if header.magic == RIV_DRIVER_MAGIC then -- connected
+      assert(header.version == RIV_VERSION, 'unsupported RIV version')
+      assert(header.features == 0, 'unsupported RIV features')
+      self.mmio_paddr = paddr
+      self:_init_mmio()
+      return true
+    end
+  end
+  return false
+end
+
+-- Run the machine.
+function Machine:run(): CM_BREAK_REASON
+  -- store MMIO from host device into guest driver
+  if self:is_mmio_ready() then
+    self:_store_device_mmio()
+  end
+  -- run the machine
+  local break_reason: CM_BREAK_REASON
+  cm_assert!(cm_machine_run(self.machine, (@uint64)(-1), &break_reason))
+  -- load driver MMIO
+  if break_reason == CM_BREAK_REASON_YIELDED_AUTOMATICALLY then
+    if self:_check_mmio() then -- is the MMIO still valid?
+      -- load MMIO from guest driver into host device
+      self:_load_driver_mmio()
+    elseif not self:_setup_mmio() then -- try to initialize it
+      error('unable to connect MMIO')
+    end
+  else -- for any other reason, MMIO becomes disconnected
+    self:_reset_mmio()
+  end
+  -- return break reason
+  return break_reason
 end
 
 -- Global machine.

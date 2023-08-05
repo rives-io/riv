@@ -10,9 +10,6 @@ local TILE_SIZE <comptime> = 1
 local GRID_SIZE <comptime> = 16
 local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
 local MOVE_DELAY <comptime> = 8
-local COLOR_RED <comptime> = 8
-local COLOR_GREEN <comptime> = 11
-local COLOR_BACK <comptime> = 1
 
 -- game state variables
 local prng: riv_prng
@@ -83,20 +80,19 @@ end
 
 local function poll_events()
   local headdir = get_tile(headpos)
-  local frame = riv.mmio.frame
-  if riv.mmio.keys[RIV_KEYCODE_UP].down_frame == frame then
+  if riv.keys[RIV_KEYCODE_UP].press then
     if headdir ~= Direction.DOWN then
       movedir = Direction.UP
     end
-  elseif riv.mmio.keys[RIV_KEYCODE_DOWN].down_frame == frame then
+  elseif riv.keys[RIV_KEYCODE_DOWN].press then
     if headdir ~= Direction.UP then
       movedir = Direction.DOWN
     end
-  elseif riv.mmio.keys[RIV_KEYCODE_RIGHT].down_frame == frame then
+  elseif riv.keys[RIV_KEYCODE_RIGHT].press then
     if headdir ~= Direction.LEFT then
       movedir = Direction.RIGHT
     end
-  elseif riv.mmio.keys[RIV_KEYCODE_LEFT].down_frame == frame then
+  elseif riv.keys[RIV_KEYCODE_LEFT].press then
     if headdir ~= Direction.RIGHT then
       movedir = Direction.LEFT
     end
@@ -104,7 +100,7 @@ local function poll_events()
 end
 
 local function poll_game()
-  local now = riv.mmio.frame
+  local now = riv.frame
   if now < nextmove then return end
   nextmove = now + MOVE_DELAY
 
@@ -142,14 +138,14 @@ local function poll_game()
 end
 
 local function draw_background(color: Color)
-  local framebuffer: span(byte) = riv.framebuffer
-  for i=0,<riv.mmio.framebuffer_desc.width*riv.mmio.framebuffer_desc.height do
+  local framebuffer = riv.framebuffer
+  for i=0,<SCREEN_SIZE*SCREEN_SIZE do
     framebuffer[i] = color
   end
 end
 
 local function draw_tile(pos: Point2D, color: Color)
-  local framebuffer: span(byte) = riv.framebuffer
+  local framebuffer = riv.framebuffer
   local xoff, yoff = pos.x*TILE_SIZE, pos.y*TILE_SIZE
   for y=yoff,<yoff+TILE_SIZE do
     for x=xoff,<xoff+TILE_SIZE do
@@ -159,7 +155,7 @@ local function draw_tile(pos: Point2D, color: Color)
 end
 
 local function draw_apple()
-  draw_tile(applepos, COLOR_RED)
+  draw_tile(applepos, RIV_PAL16_RED)
 end
 
 local function draw_snake()
@@ -167,21 +163,21 @@ local function draw_snake()
     for y=0,GRID_SIZE-1 do
       local pos = Point2D{x=x,y=y}
       if has_tile(pos) then -- snake is present at this tile
-        draw_tile(pos, COLOR_GREEN)
+        draw_tile(pos, RIV_PAL16_GREEN)
       end
     end
   end
 end
 
 local function draw()
-  draw_background(COLOR_BACK)
+  draw_background(RIV_PAL16_DARKBLUE)
   draw_apple()
   draw_snake()
 end
 
 local function frame(ctx: *riv_context)
   riv = ctx
-  if riv.mmio.frame == 0 then
+  if riv.frame == 0 then
     prng:seed()
     init_game()
   end
@@ -196,7 +192,7 @@ riv_run(&(@riv_run_desc){
     width = SCREEN_SIZE,
     height = SCREEN_SIZE,
     fps = 60,
-    pixel_format = RIV_PIXEL_FORMAT_PALETTE_256_BIT,
+    pixel_format = RIV_PIXELFORMAT_PAL256,
   }
 })
 

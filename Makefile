@@ -6,7 +6,7 @@ rootfs rivcm:
 libriv bwrapbox demos:
 	$(MAKE) -C rootfs toolchain-exec COMMAND="make -C $@"
 
-shell toolchain toolchain-exec toolchain-env toolchain-env-asroot:
+toolchain toolchain-exec toolchain-env toolchain-env-asroot shell:
 	$(MAKE) -C rootfs $@
 
 clean:

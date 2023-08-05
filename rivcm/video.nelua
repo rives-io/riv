@@ -10,9 +10,10 @@ global video = @record{}
 
 -- Video subsystem state.
 local fb_desc: riv_framebuffer_desc
+local fb_pixel_count: int64
 local fb_image: sg_image
-local framebuffer: [RIV_FRAMEBUFFER_SIZE]byte
-local framebuffer_rgba: [RIV_FRAMEBUFFER_SIZE]uint32
+local framebuffer: [RIV_MEMSIZE_FRAMEBUFFER]byte
+local framebuffer_rgba: [RIV_MEMSIZE_FRAMEBUFFER]uint32
 
 -- Destroy the window framebuffer image.
 local function destroy_framebuffer_image(): void
@@ -34,6 +35,7 @@ end
 function video.shutdown(): void
   destroy_framebuffer_image()
   fb_desc = {}
+  fb_pixel_count = 0
   framebuffer = {}
   framebuffer_rgba = {}
 
@@ -44,10 +46,11 @@ end
 -- Resize the window framebuffer image.
 local function update_framebuffer_desc(): void
   -- update framebuffer desc
-  if fb_desc == machine.mmio.framebuffer_desc then return end
-  local recreate: boolean = fb_desc.width ~= machine.mmio.framebuffer_desc.width or
-                            fb_desc.height ~= machine.mmio.framebuffer_desc.height
-  fb_desc = machine.mmio.framebuffer_desc
+  if fb_desc == machine.mmio_driver.framebuffer_desc then return end
+  local recreate: boolean = fb_desc.width ~= machine.mmio_driver.framebuffer_desc.width or
+                            fb_desc.height ~= machine.mmio_driver.framebuffer_desc.height
+  fb_desc = machine.mmio_driver.framebuffer_desc
+  fb_pixel_count = fb_desc.width * fb_desc.height
 
   -- return early if no resize is needed
   if not recreate then return end
@@ -73,37 +76,39 @@ end
 
 -- Update the framebuffer into host RAM memory.
 local function update_framebuffer_mem(): void
-  local fb_pixel_count: int64 = fb_desc.width * fb_desc.height
   if fb_pixel_count == 0 then return end
   local fb_machine_mem: span(byte) = {data=&framebuffer,size=fb_pixel_count}
-  machine:read_memory(machine.mmio_paddr + RIV_FRAMEBUFFER_OFFSET, fb_machine_mem)
+  machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_FRAMEBUFFER, fb_machine_mem)
 end
 
 -- Update the framebuffer into GPU memory.
 local function update_framebuffer_video_mem(): void
-  local fb_pixel_count: int64 = fb_desc.width * fb_desc.height
+  if fb_pixel_count == 0 then return end
   -- update the framebuffer pixels using palette
   for i=0,<fb_pixel_count do
-    framebuffer_rgba[i] = machine.mmio.palette[framebuffer[i]]
+    framebuffer_rgba[i] = machine.mmio_driver.palette[framebuffer[i]]
   end
   sg_update_image(fb_image, sg_image_data{{{{ptr=&framebuffer_rgba, size=fb_pixel_count*4}}}})
 end
 
 -- Fit a box into another box while preserving aspect ratio.
 local function fit_box(inner_width: int64, inner_height: int64, outer_width: int64, outer_height: int64): (int64, int64, int64, int64)
-  local scale: number
-  if inner_height*outer_width >= inner_width*outer_height then -- full vertical
-    scale = (outer_height >= inner_height) and (outer_height // inner_height) or (outer_height / inner_height)
-  else -- full horizontal
-    scale = (outer_width >= inner_width) and (outer_width // inner_width) or (outer_width / inner_width)
+  local scale: number = 0
+  if inner_height > 0 and inner_height > 0 then
+    if inner_height*outer_width >= inner_width*outer_height then -- full vertical
+      scale = (outer_height >= inner_height) and (outer_height // inner_height) or (outer_height / inner_height)
+    else -- full horizontal
+      scale = (outer_width >= inner_width) and (outer_width // inner_width) or (outer_width / inner_width)
+    end
   end
-  local inner_width: int64, inner_height: int64 = math.ifloor(inner_width * scale), math.ifloor(inner_height * scale)
-  local x: int64, y: int64 = (outer_width - inner_width) // 2, (outer_height - inner_height) // 2
-  return x, y, inner_width, inner_height
+  local width: int64, height: int64 = math.ifloor(inner_width * scale), math.ifloor(inner_height * scale)
+  local x: int64, y: int64 = (outer_width - width) // 2, (outer_height - height) // 2
+  return x, y, width, height
 end
 
 -- Draw the framebuffer into the window screen.
 local function draw_framebuffer(screen_width: int64, screen_height: int64): void
+  if fb_pixel_count == 0 then return end
   sgp_set_image(0, fb_image)
   sgp_draw_textured_rect(fit_box(fb_desc.width, fb_desc.height, screen_width, screen_height))
   sgp_reset_image(0)

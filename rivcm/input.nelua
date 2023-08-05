@@ -1,11 +1,131 @@
 -- This file contains all code related to keyboard/mouse input subsystem.
 
 require 'sokol'
+require 'hashmap'
 
 require '.machine'
 
+--------------------------------------------------------------------------------
+
+-- Translates a sokol_app key code to a RIV key code.
+local function translate_keycode_to_riv(keycode: sapp_keycode): riv_key_code
+  switch keycode do
+  case SAPP_KEYCODE_SPACE then return RIV_KEYCODE_SPACE
+  case SAPP_KEYCODE_APOSTROPHE then return RIV_KEYCODE_APOSTROPHE
+  case SAPP_KEYCODE_COMMA then return RIV_KEYCODE_COMMA
+  case SAPP_KEYCODE_MINUS then return RIV_KEYCODE_MINUS
+  case SAPP_KEYCODE_PERIOD then return RIV_KEYCODE_PERIOD
+  case SAPP_KEYCODE_SLASH then return RIV_KEYCODE_SLASH
+  case SAPP_KEYCODE_0 then return RIV_KEYCODE_0
+  case SAPP_KEYCODE_1 then return RIV_KEYCODE_1
+  case SAPP_KEYCODE_2 then return RIV_KEYCODE_2
+  case SAPP_KEYCODE_3 then return RIV_KEYCODE_3
+  case SAPP_KEYCODE_4 then return RIV_KEYCODE_4
+  case SAPP_KEYCODE_5 then return RIV_KEYCODE_5
+  case SAPP_KEYCODE_6 then return RIV_KEYCODE_6
+  case SAPP_KEYCODE_7 then return RIV_KEYCODE_7
+  case SAPP_KEYCODE_8 then return RIV_KEYCODE_8
+  case SAPP_KEYCODE_9 then return RIV_KEYCODE_9
+  case SAPP_KEYCODE_SEMICOLON then return RIV_KEYCODE_SEMICOLON
+  case SAPP_KEYCODE_EQUAL then return RIV_KEYCODE_EQUAL
+  case SAPP_KEYCODE_A then return RIV_KEYCODE_A
+  case SAPP_KEYCODE_B then return RIV_KEYCODE_B
+  case SAPP_KEYCODE_C then return RIV_KEYCODE_C
+  case SAPP_KEYCODE_D then return RIV_KEYCODE_D
+  case SAPP_KEYCODE_E then return RIV_KEYCODE_E
+  case SAPP_KEYCODE_F then return RIV_KEYCODE_F
+  case SAPP_KEYCODE_G then return RIV_KEYCODE_G
+  case SAPP_KEYCODE_H then return RIV_KEYCODE_H
+  case SAPP_KEYCODE_I then return RIV_KEYCODE_I
+  case SAPP_KEYCODE_J then return RIV_KEYCODE_J
+  case SAPP_KEYCODE_K then return RIV_KEYCODE_K
+  case SAPP_KEYCODE_L then return RIV_KEYCODE_L
+  case SAPP_KEYCODE_M then return RIV_KEYCODE_M
+  case SAPP_KEYCODE_N then return RIV_KEYCODE_N
+  case SAPP_KEYCODE_O then return RIV_KEYCODE_O
+  case SAPP_KEYCODE_P then return RIV_KEYCODE_P
+  case SAPP_KEYCODE_Q then return RIV_KEYCODE_Q
+  case SAPP_KEYCODE_R then return RIV_KEYCODE_R
+  case SAPP_KEYCODE_S then return RIV_KEYCODE_S
+  case SAPP_KEYCODE_T then return RIV_KEYCODE_T
+  case SAPP_KEYCODE_U then return RIV_KEYCODE_U
+  case SAPP_KEYCODE_V then return RIV_KEYCODE_V
+  case SAPP_KEYCODE_W then return RIV_KEYCODE_W
+  case SAPP_KEYCODE_X then return RIV_KEYCODE_X
+  case SAPP_KEYCODE_Y then return RIV_KEYCODE_Y
+  case SAPP_KEYCODE_Z then return RIV_KEYCODE_Z
+  case SAPP_KEYCODE_LEFT_BRACKET then return RIV_KEYCODE_LEFT_BRACKET
+  case SAPP_KEYCODE_BACKSLASH then return RIV_KEYCODE_BACKSLASH
+  case SAPP_KEYCODE_RIGHT_BRACKET then return RIV_KEYCODE_RIGHT_BRACKET
+  case SAPP_KEYCODE_GRAVE_ACCENT then return RIV_KEYCODE_GRAVE_ACCENT
+  case SAPP_KEYCODE_ESCAPE then return RIV_KEYCODE_ESCAPE
+  case SAPP_KEYCODE_ENTER then return RIV_KEYCODE_ENTER
+  case SAPP_KEYCODE_TAB then return RIV_KEYCODE_TAB
+  case SAPP_KEYCODE_BACKSPACE then return RIV_KEYCODE_BACKSPACE
+  case SAPP_KEYCODE_INSERT then return RIV_KEYCODE_INSERT
+  case SAPP_KEYCODE_DELETE then return RIV_KEYCODE_DELETE
+  case SAPP_KEYCODE_RIGHT then return RIV_KEYCODE_RIGHT
+  case SAPP_KEYCODE_LEFT then return RIV_KEYCODE_LEFT
+  case SAPP_KEYCODE_DOWN then return RIV_KEYCODE_DOWN
+  case SAPP_KEYCODE_UP then return RIV_KEYCODE_UP
+  case SAPP_KEYCODE_PAGE_UP then return RIV_KEYCODE_PAGE_UP
+  case SAPP_KEYCODE_PAGE_DOWN then return RIV_KEYCODE_PAGE_DOWN
+  case SAPP_KEYCODE_HOME then return RIV_KEYCODE_HOME
+  case SAPP_KEYCODE_END then return RIV_KEYCODE_END
+  case SAPP_KEYCODE_CAPS_LOCK then return RIV_KEYCODE_CAPS_LOCK
+  case SAPP_KEYCODE_SCROLL_LOCK then return RIV_KEYCODE_SCROLL_LOCK
+  case SAPP_KEYCODE_NUM_LOCK then return RIV_KEYCODE_NUM_LOCK
+  case SAPP_KEYCODE_PRINT_SCREEN then return RIV_KEYCODE_PRINT_SCREEN
+  case SAPP_KEYCODE_PAUSE then return RIV_KEYCODE_PAUSE
+  case SAPP_KEYCODE_F1 then return RIV_KEYCODE_F1
+  case SAPP_KEYCODE_F2 then return RIV_KEYCODE_F2
+  case SAPP_KEYCODE_F3 then return RIV_KEYCODE_F3
+  case SAPP_KEYCODE_F4 then return RIV_KEYCODE_F4
+  case SAPP_KEYCODE_F5 then return RIV_KEYCODE_F5
+  case SAPP_KEYCODE_F6 then return RIV_KEYCODE_F6
+  case SAPP_KEYCODE_F7 then return RIV_KEYCODE_F7
+  case SAPP_KEYCODE_F8 then return RIV_KEYCODE_F8
+  case SAPP_KEYCODE_F9 then return RIV_KEYCODE_F9
+  case SAPP_KEYCODE_F10 then return RIV_KEYCODE_F10
+  case SAPP_KEYCODE_F11 then return RIV_KEYCODE_F11
+  case SAPP_KEYCODE_F12 then return RIV_KEYCODE_F12
+  case SAPP_KEYCODE_KP_0 then return RIV_KEYCODE_KP_0
+  case SAPP_KEYCODE_KP_1 then return RIV_KEYCODE_KP_1
+  case SAPP_KEYCODE_KP_2 then return RIV_KEYCODE_KP_2
+  case SAPP_KEYCODE_KP_3 then return RIV_KEYCODE_KP_3
+  case SAPP_KEYCODE_KP_4 then return RIV_KEYCODE_KP_4
+  case SAPP_KEYCODE_KP_5 then return RIV_KEYCODE_KP_5
+  case SAPP_KEYCODE_KP_6 then return RIV_KEYCODE_KP_6
+  case SAPP_KEYCODE_KP_7 then return RIV_KEYCODE_KP_7
+  case SAPP_KEYCODE_KP_8 then return RIV_KEYCODE_KP_8
+  case SAPP_KEYCODE_KP_9 then return RIV_KEYCODE_KP_9
+  case SAPP_KEYCODE_KP_DECIMAL then return RIV_KEYCODE_KP_DECIMAL
+  case SAPP_KEYCODE_KP_DIVIDE then return RIV_KEYCODE_KP_DIVIDE
+  case SAPP_KEYCODE_KP_MULTIPLY then return RIV_KEYCODE_KP_MULTIPLY
+  case SAPP_KEYCODE_KP_SUBTRACT then return RIV_KEYCODE_KP_SUBTRACT
+  case SAPP_KEYCODE_KP_ADD then return RIV_KEYCODE_KP_ADD
+  case SAPP_KEYCODE_KP_ENTER then return RIV_KEYCODE_KP_ENTER
+  case SAPP_KEYCODE_KP_EQUAL then return RIV_KEYCODE_KP_EQUAL
+  case SAPP_KEYCODE_LEFT_SHIFT then return RIV_KEYCODE_LEFT_SHIFT
+  case SAPP_KEYCODE_LEFT_CONTROL then return RIV_KEYCODE_LEFT_CONTROL
+  case SAPP_KEYCODE_LEFT_ALT then return RIV_KEYCODE_LEFT_ALT
+  case SAPP_KEYCODE_LEFT_SUPER then return RIV_KEYCODE_LEFT_SUPER
+  case SAPP_KEYCODE_RIGHT_SHIFT then return RIV_KEYCODE_RIGHT_SHIFT
+  case SAPP_KEYCODE_RIGHT_CONTROL then return RIV_KEYCODE_RIGHT_CONTROL
+  case SAPP_KEYCODE_RIGHT_ALT then return RIV_KEYCODE_RIGHT_ALT
+  case SAPP_KEYCODE_RIGHT_SUPER then return RIV_KEYCODE_RIGHT_SUPER
+  case SAPP_KEYCODE_MENU then return RIV_KEYCODE_MENU
+  else return RIV_KEYCODE_INVALID end
+end
+
+--------------------------------------------------------------------------------
+
 -- Input subsystem.
 global input = @record{}
+
+-- Input subsystem state.
+local events: vector(sapp_event)
+local event_index_by_key_code: hashmap(uint8, uint8)
 
 -- Initialize input subsystem.
 function input.setup(): void
@@ -14,26 +134,58 @@ end
 
 -- Terminate input subsystem.
 function input.shutdown(): void
+  events:destroy()
+  event_index_by_key_code:destroy()
+end
 
+local function poll_keyboard_events(): void
+  defer event_index_by_key_code:clear() end
+  local index: uint8 = 0
+
+  -- poll keyboard events
+  for _, event: *sapp_event in mipairs(events) do
+    -- ignore key repeat
+    if event.key_repeat then continue end
+    -- ignore non key up/down events
+    if not (event.type == SAPP_EVENTTYPE_KEY_DOWN or event.type == SAPP_EVENTTYPE_KEY_UP) then continue end
+    -- translate key code
+    local key_code: riv_key_code = translate_keycode_to_riv(event.key_code)
+    -- ignore unsupported key codes
+    if key_code == RIV_KEYCODE_INVALID then continue end
+    -- compute key event
+    local key_event: uint8 = key_code | (event.type == SAPP_EVENTTYPE_KEY_UP and 128_u8 or 0_u8)
+    local found: boolean, prev_index: uint8 = event_index_by_key_code:has_and_get(key_code)
+    if found then -- replace previous event
+      machine.mmio_device.key_events[prev_index] = key_event
+    else -- append new event
+      machine.mmio_device.key_events[index] = key_event
+      event_index_by_key_code[key_code] = index
+      index = index + 1
+      -- stop when event list is full, this is almost impossible, here just for sanity
+      if index >= #machine.mmio_device.key_events then break end
+    end
+  end
+  machine.mmio_device.key_event_count = index
+
+  -- fill remaining key events with 0
+  while index < #machine.mmio_device.key_events do
+    machine.mmio_device.key_events[index] = 0
+    index = index + 1
+  end
 end
 
 -- Poll for keyboard/mouse input events.
-function input.poll(event: *sapp_event)
-  -- TODO: these inputs should be ignored until the machine mmio is ready
+function input.poll(): void
+  -- poll always destroy events in queue
+  defer events:clear() end
 
-  local update: boolean = false
-  if not event.key_repeat then
-    if event.type == SAPP_EVENTTYPE_KEY_DOWN then
-      machine.mmio.keys[event.key_code].down_frame = machine.mmio.frame + 1
-      update = true
-    elseif event.type == SAPP_EVENTTYPE_KEY_UP then
-      machine.mmio.keys[event.key_code].up_frame = machine.mmio.frame + 1
-      update = true
-    end
-    -- TODO mouse button events
-  end
+  -- ignore events when machine is not ready
+  if not machine:is_mmio_ready() then return end
 
-  if update then
-    machine:store_mmio()
-  end
+  poll_keyboard_events()
+end
+
+-- Poll keyboard/mouse input events.
+function input.append_event(event: *sapp_event): void
+  events:push($event)
 end

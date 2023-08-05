@@ -1,4 +1,4 @@
-----------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Bindings
 
 global O_RDWR: int32 <cimport,cinclude'<fcntl.h>',const>
@@ -20,10 +20,10 @@ global function mmap(addr: pointer, len: csize, prot: cint, flags: cint, fd: cin
 global function munmap(addr: pointer, len: csize): cint <cimport,cinclude'<sys/mman.h>'> end
 global function exit(status: cint): void <cimport,cinclude'<stdlib.h>'> end
 
-----------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Utilities
 
-local strconv = require 'detail.strconv'
+local strconv: type = require 'detail.strconv'
 
 global function get_free_hugepages(): integer
   local fd = open('/sys/kernel/mm/hugepages/hugepages-2048kB/free_hugepages')

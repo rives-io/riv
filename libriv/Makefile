@@ -5,7 +5,7 @@ STRIPFLAGS=--strip-unneeded --remove-section=.comment
 NELUA_FLAGS=-Pnogc -Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 PREFIX=/usr/local
 
-libriv.so: libriv.nelua linux-api.nelua
+libriv.so: libriv.nelua *.nelua
 	nelua $(NELUA_FLAGS) \
 		-DRIV_IMPLEMENTATION \
 		--cc=$(CC) \
