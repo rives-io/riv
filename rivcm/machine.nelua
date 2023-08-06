@@ -3,6 +3,14 @@
 require 'cartesi'
 require 'riv_types'
 
+global riv_paddr_base: type <using> = @enum(uint64) {
+  RIV_PADDR_RAM        = 0x80000000,
+  RIV_PADDR_ROOTFS     = 0x80000000000000,
+  RIV_PADDR_CARTRIDGE  = 0x90000000000000,
+}
+
+global RIV_MEMSIZE_RAM: uint64 <comptime> = 128*1024*1024
+
 --------------------------------------------------------------------------------
 
 -- Macro to check if a cm_* call was a success.

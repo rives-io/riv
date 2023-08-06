@@ -1,373 +1,269 @@
 ## pragmas.unitname = ''
-
---------------------------------------------------------------------------------
--- Enums
-
--- All supported RIV key codes, specially mapped to fit in 7 bits.
-global riv_key_code: type <using> = @enum(uint8) {
-  RIV_KEYCODE_INVALID             = 0,
-  -- F keys
-  RIV_KEYCODE_F1                  = 1,
-  RIV_KEYCODE_F2                  = 2,
-  RIV_KEYCODE_F3                  = 3,
-  RIV_KEYCODE_F4                  = 4,
-  RIV_KEYCODE_F5                  = 5,
-  RIV_KEYCODE_F6                  = 6,
-  RIV_KEYCODE_F7                  = 7,
-  RIV_KEYCODE_F8                  = 8,
-  RIV_KEYCODE_F9                  = 9,
-  RIV_KEYCODE_F10                 = 10,
-  RIV_KEYCODE_F11                 = 11,
-  RIV_KEYCODE_F12                 = 12,
-  -- numeric keys
-  RIV_KEYCODE_BACKSPACE           = 13,
-  RIV_KEYCODE_NUM_LOCK            = 14,
-  RIV_KEYCODE_KP_ENTER            = 15,
-  RIV_KEYCODE_KP_0                = 16,
-  RIV_KEYCODE_KP_1                = 17,
-  RIV_KEYCODE_KP_2                = 18,
-  RIV_KEYCODE_KP_3                = 19,
-  RIV_KEYCODE_KP_4                = 20,
-  RIV_KEYCODE_KP_5                = 21,
-  RIV_KEYCODE_KP_6                = 22,
-  RIV_KEYCODE_KP_7                = 23,
-  RIV_KEYCODE_KP_8                = 24,
-  RIV_KEYCODE_KP_9                = 25,
-  RIV_KEYCODE_KP_DECIMAL          = 26,
-  RIV_KEYCODE_KP_DIVIDE           = 27,
-  RIV_KEYCODE_KP_MULTIPLY         = 28,
-  RIV_KEYCODE_KP_SUBTRACT         = 29,
-  RIV_KEYCODE_KP_ADD              = 30,
-  RIV_KEYCODE_KP_EQUAL            = 31,
-  -- printable keys
-  RIV_KEYCODE_SPACE               = 32,
-  -- ASCII 33 !
-  -- ASCII 34 "
-  -- ASCII 35 #
-  -- ASCII 36 $
-  -- ASCII 37 %
-  -- ASCII 38 &
-  RIV_KEYCODE_APOSTROPHE          = 39,  -- '
-  -- ASCII 40 (
-  -- ASCII 41 )
-  -- ASCII 42 *
-  -- ASCII 43 +
-  RIV_KEYCODE_COMMA               = 44,  -- ,
-  RIV_KEYCODE_MINUS               = 45,  -- -
-  RIV_KEYCODE_PERIOD              = 46,  -- .
-  RIV_KEYCODE_SLASH               = 47,  -- /
-  RIV_KEYCODE_0                   = 48,
-  RIV_KEYCODE_1                   = 49,
-  RIV_KEYCODE_2                   = 50,
-  RIV_KEYCODE_3                   = 51,
-  RIV_KEYCODE_4                   = 52,
-  RIV_KEYCODE_5                   = 53,
-  RIV_KEYCODE_6                   = 54,
-  RIV_KEYCODE_7                   = 55,
-  RIV_KEYCODE_8                   = 56,
-  RIV_KEYCODE_9                   = 57,
-  -- ASCII 58 :
-  RIV_KEYCODE_SEMICOLON           = 59,  -- ;
-  -- ASCII 60 <
-  RIV_KEYCODE_EQUAL               = 61,  -- =
-  -- ASCII 62 >
-  -- ASCII 63 ?
-  -- ASCII 64 @
-  RIV_KEYCODE_A                   = 65,
-  RIV_KEYCODE_B                   = 66,
-  RIV_KEYCODE_C                   = 67,
-  RIV_KEYCODE_D                   = 68,
-  RIV_KEYCODE_E                   = 69,
-  RIV_KEYCODE_F                   = 70,
-  RIV_KEYCODE_G                   = 71,
-  RIV_KEYCODE_H                   = 72,
-  RIV_KEYCODE_I                   = 73,
-  RIV_KEYCODE_J                   = 74,
-  RIV_KEYCODE_K                   = 75,
-  RIV_KEYCODE_L                   = 76,
-  RIV_KEYCODE_M                   = 77,
-  RIV_KEYCODE_N                   = 78,
-  RIV_KEYCODE_O                   = 79,
-  RIV_KEYCODE_P                   = 80,
-  RIV_KEYCODE_Q                   = 81,
-  RIV_KEYCODE_R                   = 82,
-  RIV_KEYCODE_S                   = 83,
-  RIV_KEYCODE_T                   = 84,
-  RIV_KEYCODE_U                   = 85,
-  RIV_KEYCODE_V                   = 86,
-  RIV_KEYCODE_W                   = 87,
-  RIV_KEYCODE_X                   = 88,
-  RIV_KEYCODE_Y                   = 89,
-  RIV_KEYCODE_Z                   = 90,
-  RIV_KEYCODE_LEFT_BRACKET        = 91,  -- [
-  RIV_KEYCODE_BACKSLASH           = 92,  -- \
-  RIV_KEYCODE_RIGHT_BRACKET       = 93,  -- ]
-  -- ASCII 94 ^
-  -- ASCII 95 _
-  RIV_KEYCODE_GRAVE_ACCENT        = 96,  -- `
-  -- other keys
-  RIV_KEYCODE_ESCAPE              = 97,
-  RIV_KEYCODE_ENTER               = 98,
-  RIV_KEYCODE_TAB                 = 99,
-  RIV_KEYCODE_INSERT              = 100,
-  RIV_KEYCODE_DELETE              = 101,
-  RIV_KEYCODE_RIGHT               = 102,
-  RIV_KEYCODE_LEFT                = 103,
-  RIV_KEYCODE_DOWN                = 104,
-  RIV_KEYCODE_UP                  = 105,
-  RIV_KEYCODE_PAGE_UP             = 106,
-  RIV_KEYCODE_PAGE_DOWN           = 107,
-  RIV_KEYCODE_HOME                = 108,
-  RIV_KEYCODE_END                 = 109,
-  RIV_KEYCODE_CAPS_LOCK           = 110,
-  RIV_KEYCODE_SCROLL_LOCK         = 111,
-  RIV_KEYCODE_PRINT_SCREEN        = 112,
-  RIV_KEYCODE_PAUSE               = 113,
-  RIV_KEYCODE_LEFT_SHIFT          = 114,
-  RIV_KEYCODE_LEFT_CONTROL        = 115,
-  RIV_KEYCODE_LEFT_ALT            = 116,
-  RIV_KEYCODE_LEFT_SUPER          = 117,
-  RIV_KEYCODE_RIGHT_SHIFT         = 118,
-  RIV_KEYCODE_RIGHT_CONTROL       = 119,
-  RIV_KEYCODE_RIGHT_ALT           = 120,
-  RIV_KEYCODE_RIGHT_SUPER         = 121,
-  RIV_KEYCODE_MENU                = 122,
-  -- ASCII 123 {
-  -- ASCII 124 |
-  -- ASCII 125 }
-  -- ASCII 126 ~
+global riv_key_code: type <using> = @enum(uint8){
+  RIV_KEYCODE_INVALID = 0,
+  RIV_KEYCODE_F1 = 1,
+  RIV_KEYCODE_F2 = 2,
+  RIV_KEYCODE_F3 = 3,
+  RIV_KEYCODE_F4 = 4,
+  RIV_KEYCODE_F5 = 5,
+  RIV_KEYCODE_F6 = 6,
+  RIV_KEYCODE_F7 = 7,
+  RIV_KEYCODE_F8 = 8,
+  RIV_KEYCODE_F9 = 9,
+  RIV_KEYCODE_F10 = 10,
+  RIV_KEYCODE_F11 = 11,
+  RIV_KEYCODE_F12 = 12,
+  RIV_KEYCODE_BACKSPACE = 13,
+  RIV_KEYCODE_NUM_LOCK = 14,
+  RIV_KEYCODE_KP_ENTER = 15,
+  RIV_KEYCODE_KP_0 = 16,
+  RIV_KEYCODE_KP_1 = 17,
+  RIV_KEYCODE_KP_2 = 18,
+  RIV_KEYCODE_KP_3 = 19,
+  RIV_KEYCODE_KP_4 = 20,
+  RIV_KEYCODE_KP_5 = 21,
+  RIV_KEYCODE_KP_6 = 22,
+  RIV_KEYCODE_KP_7 = 23,
+  RIV_KEYCODE_KP_8 = 24,
+  RIV_KEYCODE_KP_9 = 25,
+  RIV_KEYCODE_KP_DECIMAL = 26,
+  RIV_KEYCODE_KP_DIVIDE = 27,
+  RIV_KEYCODE_KP_MULTIPLY = 28,
+  RIV_KEYCODE_KP_SUBTRACT = 29,
+  RIV_KEYCODE_KP_ADD = 30,
+  RIV_KEYCODE_KP_EQUAL = 31,
+  RIV_KEYCODE_SPACE = 32,
+  RIV_KEYCODE_APOSTROPHE = 39,
+  RIV_KEYCODE_COMMA = 44,
+  RIV_KEYCODE_MINUS = 45,
+  RIV_KEYCODE_PERIOD = 46,
+  RIV_KEYCODE_SLASH = 47,
+  RIV_KEYCODE_0 = 48,
+  RIV_KEYCODE_1 = 49,
+  RIV_KEYCODE_2 = 50,
+  RIV_KEYCODE_3 = 51,
+  RIV_KEYCODE_4 = 52,
+  RIV_KEYCODE_5 = 53,
+  RIV_KEYCODE_6 = 54,
+  RIV_KEYCODE_7 = 55,
+  RIV_KEYCODE_8 = 56,
+  RIV_KEYCODE_9 = 57,
+  RIV_KEYCODE_SEMICOLON = 59,
+  RIV_KEYCODE_EQUAL = 61,
+  RIV_KEYCODE_A = 65,
+  RIV_KEYCODE_B = 66,
+  RIV_KEYCODE_C = 67,
+  RIV_KEYCODE_D = 68,
+  RIV_KEYCODE_E = 69,
+  RIV_KEYCODE_F = 70,
+  RIV_KEYCODE_G = 71,
+  RIV_KEYCODE_H = 72,
+  RIV_KEYCODE_I = 73,
+  RIV_KEYCODE_J = 74,
+  RIV_KEYCODE_K = 75,
+  RIV_KEYCODE_L = 76,
+  RIV_KEYCODE_M = 77,
+  RIV_KEYCODE_N = 78,
+  RIV_KEYCODE_O = 79,
+  RIV_KEYCODE_P = 80,
+  RIV_KEYCODE_Q = 81,
+  RIV_KEYCODE_R = 82,
+  RIV_KEYCODE_S = 83,
+  RIV_KEYCODE_T = 84,
+  RIV_KEYCODE_U = 85,
+  RIV_KEYCODE_V = 86,
+  RIV_KEYCODE_W = 87,
+  RIV_KEYCODE_X = 88,
+  RIV_KEYCODE_Y = 89,
+  RIV_KEYCODE_Z = 90,
+  RIV_KEYCODE_LEFT_BRACKET = 91,
+  RIV_KEYCODE_BACKSLASH = 92,
+  RIV_KEYCODE_RIGHT_BRACKET = 93,
+  RIV_KEYCODE_GRAVE_ACCENT = 96,
+  RIV_KEYCODE_ESCAPE = 97,
+  RIV_KEYCODE_ENTER = 98,
+  RIV_KEYCODE_TAB = 99,
+  RIV_KEYCODE_INSERT = 100,
+  RIV_KEYCODE_DELETE = 101,
+  RIV_KEYCODE_RIGHT = 102,
+  RIV_KEYCODE_LEFT = 103,
+  RIV_KEYCODE_DOWN = 104,
+  RIV_KEYCODE_UP = 105,
+  RIV_KEYCODE_PAGE_UP = 106,
+  RIV_KEYCODE_PAGE_DOWN = 107,
+  RIV_KEYCODE_HOME = 108,
+  RIV_KEYCODE_END = 109,
+  RIV_KEYCODE_CAPS_LOCK = 110,
+  RIV_KEYCODE_SCROLL_LOCK = 111,
+  RIV_KEYCODE_PRINT_SCREEN = 112,
+  RIV_KEYCODE_PAUSE = 113,
+  RIV_KEYCODE_LEFT_SHIFT = 114,
+  RIV_KEYCODE_LEFT_CONTROL = 115,
+  RIV_KEYCODE_LEFT_ALT = 116,
+  RIV_KEYCODE_LEFT_SUPER = 117,
+  RIV_KEYCODE_RIGHT_SHIFT = 118,
+  RIV_KEYCODE_RIGHT_CONTROL = 119,
+  RIV_KEYCODE_RIGHT_ALT = 120,
+  RIV_KEYCODE_RIGHT_SUPER = 121,
+  RIV_KEYCODE_MENU = 122
 }
-
-global riv_pal16_color: type <using> = @enum(uint8) {
-  RIV_PAL16_BLACK      = 0,
-  RIV_PAL16_DARKBLUE   = 1,
+global riv_pal16_color: type <using> = @enum(uint8){
+  RIV_PAL16_BLACK = 0,
+  RIV_PAL16_DARKBLUE = 1,
   RIV_PAL16_DARKPURPLE = 2,
-  RIV_PAL16_DARKGREEN  = 3,
-  RIV_PAL16_BROWN      = 4,
-  RIV_PAL16_DARKGREY   = 5,
-  RIV_PAL16_LIGHTGREY  = 6,
-  RIV_PAL16_WHITE      = 7,
-  RIV_PAL16_RED        = 8,
-  RIV_PAL16_ORANGE     = 9,
-  RIV_PAL16_YELLOW     = 10,
-  RIV_PAL16_GREEN      = 11,
-  RIV_PAL16_BLUE       = 12,
-  RIV_PAL16_LAVENDER   = 13,
-  RIV_PAL16_PINK       = 14,
-  RIV_PAL16_LIGHTPEACH = 15,
+  RIV_PAL16_DARKGREEN = 3,
+  RIV_PAL16_BROWN = 4,
+  RIV_PAL16_DARKGREY = 5,
+  RIV_PAL16_LIGHTGREY = 6,
+  RIV_PAL16_WHITE = 7,
+  RIV_PAL16_RED = 8,
+  RIV_PAL16_ORANGE = 9,
+  RIV_PAL16_YELLOW = 10,
+  RIV_PAL16_GREEN = 11,
+  RIV_PAL16_BLUE = 12,
+  RIV_PAL16_LAVENDER = 13,
+  RIV_PAL16_PINK = 14,
+  RIV_PAL16_LIGHTPEACH = 15
 }
-
-global riv_rgb_pal16_color: type <using> = @enum(uint32) {
-  RIV_RGB_PAL16_BLACK      = 0x000000,
-  RIV_RGB_PAL16_DARKBLUE   = 0x532B1D,
-  RIV_RGB_PAL16_DARKPURPLE = 0x53257E,
-  RIV_RGB_PAL16_DARKGREEN  = 0x518700,
-  RIV_RGB_PAL16_BROWN      = 0x3652AB,
-  RIV_RGB_PAL16_DARKGREY   = 0x4F575F,
-  RIV_RGB_PAL16_LIGHTGREY  = 0xC7C3C2,
-  RIV_RGB_PAL16_WHITE      = 0xE8F1FF,
-  RIV_RGB_PAL16_RED        = 0x4D00FF,
-  RIV_RGB_PAL16_ORANGE     = 0x00A3FF,
-  RIV_RGB_PAL16_YELLOW     = 0x27ECFF,
-  RIV_RGB_PAL16_GREEN      = 0x36E400,
-  RIV_RGB_PAL16_BLUE       = 0xFFAD29,
-  RIV_RGB_PAL16_LAVENDER   = 0x9C7683,
-  RIV_RGB_PAL16_PINK       = 0xA877FF,
-  RIV_RGB_PAL16_LIGHTPEACH = 0xAACCFF,
+global riv_rgb_pal16_color: type <using> = @enum(uint32){
+  RIV_RGB_PAL16_BLACK = 0,
+  RIV_RGB_PAL16_DARKBLUE = 5450525,
+  RIV_RGB_PAL16_DARKPURPLE = 5449086,
+  RIV_RGB_PAL16_DARKGREEN = 5342976,
+  RIV_RGB_PAL16_BROWN = 3560107,
+  RIV_RGB_PAL16_DARKGREY = 5199711,
+  RIV_RGB_PAL16_LIGHTGREY = 13091778,
+  RIV_RGB_PAL16_WHITE = 15266303,
+  RIV_RGB_PAL16_RED = 5046527,
+  RIV_RGB_PAL16_ORANGE = 41983,
+  RIV_RGB_PAL16_YELLOW = 2616575,
+  RIV_RGB_PAL16_GREEN = 3597312,
+  RIV_RGB_PAL16_BLUE = 16756009,
+  RIV_RGB_PAL16_LAVENDER = 10253955,
+  RIV_RGB_PAL16_PINK = 11040767,
+  RIV_RGB_PAL16_LIGHTPEACH = 11193599
 }
-
-global riv_control_reason: type <using> = @enum(uint32) {
+global riv_control_reason: type <using> = @enum(uint32){
   RIV_CONTROL_UNKNOWN = 0,
-  RIV_CONTROL_PRESENT,
-  RIV_CONTROL_AUDIO,
+  RIV_CONTROL_PRESENT = 1,
+  RIV_CONTROL_AUDIO = 2
 }
-
-global riv_pixel_format: type <using> = @enum(uint32) {
+global riv_pixel_format: type <using> = @enum(uint32){
   RIV_PIXELFORMAT_UNKNOWN = 0,
-  RIV_PIXELFORMAT_PAL256,
-  -- RIV_PIXELFORMAT_RGB8,
-  -- RIV_PIXELFORMAT_RGB16,
-  -- RIV_PIXELFORMAT_RGB24,
-  -- RIV_PIXELFORMAT_RGB32,
-  -- RIV_PIXELFORMAT_RGB32F,
+  RIV_PIXELFORMAT_PAL256 = 1,
+  RIV_DEFAULT_PIXELFORMAT = 1
 }
-
-global riv_audio_command: type <using> = @enum(uint32) {
+global riv_audio_command: type <using> = @enum(uint32){
   RIV_AUDIOCOMMAND_NONE = 0,
-  RIV_AUDIOCOMMAND_SOUND_PLAY,
-  RIV_AUDIOCOMMAND_SOUND_STOP,
+  RIV_AUDIOCOMMAND_SOUND_PLAY = 1,
+  RIV_AUDIOCOMMAND_SOUND_STOP = 2
 }
-
-global riv_mem_size: type <using> = @enum(uint64) {
-  RIV_MEMSIZE_HUGEPAGE     =   2*1024*1024, -- 2 MB
-  RIV_MEMSIZE_CARTRIDGE    =  16*1024*1024, -- 16 MB
-  RIV_MEMSIZE_RAM          = 128*1024*1024, -- 128 MB
-  -- driver
-  RIV_MEMSIZE_MMIO_DRIVER  =  128*1024, -- 128 KB
-  RIV_MEMSIZE_MMIO_DEVICE  =  128*1024, -- 128 KB
-  RIV_MEMSIZE_AUDIOBUFFER  =  768*1024, -- 768 KB
-  RIV_MEMSIZE_FRAMEBUFFER  = 1024*1024, -- 1 MB
+global riv_mem_size: type <using> = @enum(uint64){
+  RIV_MEMSIZE_HUGEPAGE = 2097152,
+  RIV_MEMSIZE_MMIO_DRIVER = 131072,
+  RIV_MEMSIZE_MMIO_DEVICE = 131072,
+  RIV_MEMSIZE_AUDIOBUFFER = 786432,
+  RIV_MEMSIZE_FRAMEBUFFER = 1048576
 }
-
-global riv_mmio_offset: type <using> = @enum(uint64) {
-  RIV_MMIOSTART_MMIO_DRIVER  = 0,
-  RIV_MMIOSTART_MMIO_DEVICE  = RIV_MEMSIZE_MMIO_DRIVER,
-  RIV_MMIOSTART_AUDIOBUFFER  = RIV_MEMSIZE_MMIO_DRIVER + RIV_MEMSIZE_MMIO_DEVICE,
-  RIV_MMIOSTART_FRAMEBUFFER  = RIV_MEMSIZE_MMIO_DRIVER + RIV_MEMSIZE_MMIO_DEVICE + RIV_MEMSIZE_AUDIOBUFFER,
+global riv_mmio_offset: type <using> = @enum(uint64){
+  RIV_MMIOSTART_MMIO_DRIVER = 0,
+  RIV_MMIOSTART_MMIO_DEVICE = 131072,
+  RIV_MMIOSTART_AUDIOBUFFER = 262144,
+  RIV_MMIOSTART_FRAMEBUFFER = 1048576
 }
-
-global RIV_VADDR_BASE: uint64 <comptime> = 0x10000000
-
-global riv_vaddr_base: type <using> = @enum(uint64) {
-  RIV_VADDR_MMIO_DRIVER  = RIV_VADDR_BASE + RIV_MMIOSTART_MMIO_DRIVER,
-  RIV_VADDR_MMIO_DEVICE  = RIV_VADDR_BASE + RIV_MMIOSTART_MMIO_DEVICE,
-  RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_AUDIOBUFFER,
-  RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_FRAMEBUFFER,
+global riv_vaddr_base: type <using> = @enum(uint64){
+  RIV_VADDR_BASE = 268435456,
+  RIV_VADDR_MMIO_DRIVER = 268435456,
+  RIV_VADDR_MMIO_DEVICE = 268566528,
+  RIV_VADDR_AUDIOBUFFER = 268697600,
+  RIV_VADDR_FRAMEBUFFER = 269484032
 }
-
-global riv_paddr_base: type <using> = @enum(uint64) {
-  RIV_PADDR_RAM        = 0x80000000,
-  RIV_PADDR_ROOTFS     = 0x80000000000000,
-  RIV_PADDR_CARTRIDGE  = 0x90000000000000,
-}
-
-global riv_fps_limit: type <using> = @enum(uint32) {
+global riv_fps_limit: type <using> = @enum(uint32){
   RIV_FPS_INVALID = 0,
   RIV_FPS_24 = 24,
   RIV_FPS_30 = 30,
   RIV_FPS_48 = 48,
   RIV_FPS_60 = 60,
-  RIV_FPS_UNLIMITED = 0xffffffff,
+  RIV_FPS_UNLIMITED = 4294967295
 }
-
-global riv_constants: type <using> = @enum(uint32) {
-  RIV_MAX_CYCLESPERSECOND = 30*1000*1000, -- 30 MHz
-  RIV_VERSION = 000001000,
+global riv_constants: type <using> = @enum(uint32){
   RIV_DEFAULT_WIDTH = 256,
   RIV_DEFAULT_HEIGHT = 256,
-  RIV_DEFAULT_FPS = 60,
-  RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PAL256,
+  RIV_DEFAULT_FPS = 60
 }
-
---------------------------------------------------------------------------------
--- Constants
-
-global RIV_DRIVER_MAGIC: [32]byte <const> = {
-  0x3f, 0xdf, 0x37, 0x1e, 0xc0, 0xfc, 0xd1, 0xba,
-  0xec, 0xe9, 0x72, 0xa1, 0xf5, 0x89, 0x87, 0xc5,
-  0x70, 0xfd, 0xbe, 0xc0, 0xce, 0xcc, 0x2d, 0x74,
-  0x8d, 0x45, 0x39, 0x62, 0x49, 0xb8, 0x15, 0x26
-}
-
-global RIV_DEVICE_MAGIC: [32]byte <const> = {
-  0x83, 0x0b, 0x3a, 0xd1, 0xcc, 0x8b, 0xc2, 0xe5,
-  0x70, 0x5c, 0x83, 0x98, 0x6c, 0xe4, 0x67, 0xc9,
-  0xc1, 0xc6, 0x0b, 0xc6, 0xb9, 0x80, 0xa4, 0x1c,
-  0x34, 0x12, 0x8c, 0x2e, 0x05, 0xd8, 0x2c, 0x4e
-}
-
---------------------------------------------------------------------------------
--- Structures for both device and driver
-
 global riv_framebuffer_desc: type = @record{
   height: uint32,
   width: uint32,
   fps: uint32,
-  pixel_format: riv_pixel_format,
+  pixel_format: riv_pixel_format
 }
-
 global riv_audio_ctl_desc: type = @record{
   command: riv_audio_command,
-  flags: uint32, -- reserved
+  flags: uint32,
   handle_id: uint64,
-  buffer_offset: uint32, -- reserved
+  buffer_offset: uint32,
   data_size: uint32,
-  volume: uint32,
+  volume: uint32
 }
-
 global riv_mmio_header: type = @record{
-  magic: [32]byte,
+  magic: [32]uint8,
   version: uint32,
-  features: uint32, -- reserved
-  uuid: uint64,
+  features: uint32,
+  uuid: uint64
 }
-
--- Only driver writes, only device reads.
 global riv_mmio_driver: type = @record{
   header: riv_mmio_header,
   frame: uint64,
   audio_ctl: riv_audio_ctl_desc,
   framebuffer_desc: riv_framebuffer_desc,
   tracked_keys: [128]boolean,
-  palette: [256]uint32,
+  palette: [256]uint32
 }
-
--- Only device writes, only driver reads.
 global riv_mmio_device: type = @record{
   header: riv_mmio_header,
   key_event_count: uint32,
-  key_events: [128]uint8,
+  key_events: [128]uint8
 }
-
---[[
-global riv_input_log_format: type <using> = @enum(uint8) {
-  RIV_INPUTLOG_INVALID = 0,
-  RIV_INPUTLOG_UNPACKED_KEYS = 1,
-}
-
-global riv_log_key: type <packed> = @record{
-  key_code: uint8,
-  down: boolean,
-  frame: uint64
-}
-
-global riv_replay: type = @record{
-  format: uint8,
-  version: uint8,
-  flags: uint16,
-  frames: uint64,
-  events: span(riv_log_key)
-}
-]]
-
---------------------------------------------------------------------------------
--- Structures for driver
-
--- Pseudo random number generator.
 global riv_prng: type = @record{
   state: [4]uint64
 }
-
 global riv_key_state: type = @record{
-  press: boolean,     -- Becomes trues when the key is pressed, becomes false only when it is released
-  down: boolean,      -- True only in the frame the key is pressed
-  up: boolean,        -- True only in the frame the key is released
-  down_frame: uint64, -- Last frame the key was pressed
-  up_frame: uint64,   -- Last frame the key was released
+  press: boolean,
+  down: boolean,
+  up: boolean,
+  down_frame: uint64,
+  up_frame: uint64
 }
-
 global riv_context: type = @record{
-  -- internal
   mmio_driver: *riv_mmio_driver,
   mmio_device: *riv_mmio_device,
   yield_fd: int32,
-  -- public read-only fields
   keys: [128]riv_key_state,
   frame: uint64,
-  -- public read/write fields
   running: boolean,
-  framebuffer: *[RIV_MEMSIZE_FRAMEBUFFER]byte,
-  audiobuffer: *[RIV_MEMSIZE_AUDIOBUFFER]byte,
   framebuffer_desc: *riv_framebuffer_desc,
+  framebuffer: *[RIV_MEMSIZE_FRAMEBUFFER]uint8,
+  audiobuffer: *[RIV_MEMSIZE_AUDIOBUFFER]uint8,
   tracked_keys: *[128]boolean,
-  palette: *[256]uint32,
+  palette: *[256]uint32
 }
-
-global riv_context_callback: type = @function(*riv_context)
-
+global riv_context_callback: type = @function(a1: *riv_context): void
 global riv_run_desc: type = @record{
   init_cb: riv_context_callback,
   cleanup_cb: riv_context_callback,
   frame_cb: riv_context_callback,
-  framebuffer_desc: riv_framebuffer_desc,
+  framebuffer_desc: riv_framebuffer_desc
+}
+global RIV_VERSION: cint <comptime> = 1000
+global RIV_DRIVER_MAGIC: [32]byte <const> = {
+  0x3f, 0xdf, 0x37, 0x1e, 0xc0, 0xfc, 0xd1, 0xba,
+  0xec, 0xe9, 0x72, 0xa1, 0xf5, 0x89, 0x87, 0xc5,
+  0x70, 0xfd, 0xbe, 0xc0, 0xce, 0xcc, 0x2d, 0x74,
+  0x8d, 0x45, 0x39, 0x62, 0x49, 0xb8, 0x15, 0x26
+}
+global RIV_DEVICE_MAGIC: [32]byte <const> = {
+  0x83, 0x0b, 0x3a, 0xd1, 0xcc, 0x8b, 0xc2, 0xe5,
+  0x70, 0x5c, 0x83, 0x98, 0x6c, 0xe4, 0x67, 0xc9,
+  0xc1, 0xc6, 0x0b, 0xc6, 0xb9, 0x80, 0xa4, 0x1c,
+  0x34, 0x12, 0x8c, 0x2e, 0x05, 0xd8, 0x2c, 0x4e
 }

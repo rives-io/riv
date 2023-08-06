@@ -24,14 +24,14 @@ WORKDIR /root
 # Download apks to be installed in rootfs
 RUN apk fetch musl bubblewrap libcap2
 
-# Install Nelua
-RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarball/master && \
-    tar -xzf nelua-lang-latest.tar.gz && \
-    cd edubart-nelua-lang-* && \
-    make && \
-    make install PREFIX=/usr && \
+# Install elfkickers
+RUN wget -O BR903-ELFkickers.tar.gz https://github.com/BR903/ELFkickers/tarball/master && \
+    tar -xzf BR903-ELFkickers.tar.gz && \
+    cd BR903-ELFkickers-*  && \
+    make -j4 && \
+    make install prefix=/usr && \
     cd .. && \
-    rm -rf nelua-lang-latest.tar.gz edubart-nelua-lang-*
+    rm -rf BR903-ELFkickers-*
 
 # Install genext2fs
 RUN apk add libarchive-dev
@@ -45,14 +45,14 @@ RUN wget -O genext2fs-1.5.2.tar.gz https://github.com/cartesi/genext2fs/archive/
     cd .. && \
     rm -rf genext2fs-*
 
-# Install elfkickers
-RUN wget -O BR903-ELFkickers.tar.gz https://github.com/BR903/ELFkickers/tarball/master && \
-    tar -xzf BR903-ELFkickers.tar.gz && \
-    cd BR903-ELFkickers-*  && \
-    make -j4 && \
-    make install prefix=/usr && \
+# Install Nelua
+RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarball/master && \
+    tar -xzf nelua-lang-latest.tar.gz && \
+    cd edubart-nelua-lang-* && \
+    make && \
+    make install PREFIX=/usr && \
     cd .. && \
-    rm -rf BR903-ELFkickers-*
+    rm -rf nelua-lang-latest.tar.gz edubart-nelua-lang-*
 
 # Install linux headers
 COPY kernel/linux-headers-5.15.63-ctsi-2.tar.xz linux-headers-5.15.63-ctsi-2.tar.xz

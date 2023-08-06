@@ -5,7 +5,7 @@ STRIPFLAGS=--strip-unneeded --remove-section=.comment
 NELUA_FLAGS=-Pnogc -Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 PREFIX=/usr/local
 
-libriv.so: libriv.nelua *.nelua
+libriv.so: libriv.nelua riv.nelua *.nelua
 	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
@@ -15,6 +15,9 @@ libriv.so: libriv.nelua *.nelua
 		--stripflags="$(STRIPFLAGS)" \
 		--cache-dir . \
 		--output $@ $<
+
+riv.nelua: riv.h
+	nelua-lua genbindings.lua
 
 clean:
 	rm -f libriv.so libriv.c

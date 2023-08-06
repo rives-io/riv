@@ -12,6 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Constants
 
+// All supported RIV key codes, specially mapped to fit in 7 bits.
 typedef enum riv_key_code {
   RIV_KEYCODE_INVALID             = 0,
   // F keys
@@ -198,7 +199,7 @@ typedef enum riv_pixel_format {
   // RIV_PIXELFORMAT_RGB24,
   // RIV_PIXELFORMAT_RGB32,
   // RIV_PIXELFORMAT_RGB32F,
-  RIV_PIXELFORMAT_DEFAULT = RIV_PIXELFORMAT_PAL256
+  RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PAL256
 } riv_pixel_format;
 
 typedef enum riv_audio_command {
@@ -209,9 +210,6 @@ typedef enum riv_audio_command {
 
 typedef enum riv_mem_size {
   RIV_MEMSIZE_HUGEPAGE     =   2*1024*1024, // 2 MB
-  RIV_MEMSIZE_CARTRIDGE    =  16*1024*1024, // 16 MB
-  RIV_MEMSIZE_RAM          = 128*1024*1024, // 128 MB
-  // driver
   RIV_MEMSIZE_MMIO_DRIVER  =  128*1024, // 128 KB
   RIV_MEMSIZE_MMIO_DEVICE  =  128*1024, // 128 KB
   RIV_MEMSIZE_AUDIOBUFFER  =  768*1024, // 768 KB
@@ -232,12 +230,6 @@ typedef enum riv_vaddr_base {
   RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_AUDIOBUFFER,
   RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_FRAMEBUFFER,
 } riv_vaddr_base;
-
-typedef enum riv_paddr_base {
-  RIV_PADDR_RAM        = 0x80000000,
-  RIV_PADDR_ROOTFS     = 0x80000000000000,
-  RIV_PADDR_CARTRIDGE  = 0x90000000000000,
-} riv_paddr_base;
 
 typedef enum riv_fps_limit {
   RIV_FPS_INVALID = 0,
@@ -285,6 +277,7 @@ typedef struct riv_mmio_header {
   uint64_t uuid;
 } riv_mmio_header;
 
+// Only driver writes, only device reads.
 typedef struct riv_mmio_driver {
   riv_mmio_header header;
   uint64_t frame;
@@ -294,6 +287,7 @@ typedef struct riv_mmio_driver {
   uint32_t palette[256];
 } riv_mmio_driver;
 
+// Only device writes, only driver reads.
 typedef struct riv_mmio_device {
   riv_mmio_header header;
   uint32_t key_event_count;
@@ -303,6 +297,7 @@ typedef struct riv_mmio_device {
 ////////////////////////////////////////////////////////////////////////////////
 // Structures used only in the driver
 
+// Pseudo random number generator.
 typedef struct riv_prng {
   uint64_t state[4];
 } riv_prng;
@@ -325,9 +320,9 @@ typedef struct riv_context {
   uint64_t frame;
   // public read/write fields
   bool running;
+  riv_framebuffer_desc* framebuffer_desc;
   uint8_t* framebuffer;
   uint8_t* audiobuffer;
-  riv_framebuffer_desc* framebuffer_desc;
   bool* tracked_keys;
   uint32_t* palette;
 } riv_context;
