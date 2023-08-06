@@ -1,0 +1,173 @@
+require 'memory'
+
+require '.linux'
+require '.riv_types'
+
+local riv_yield_request = @record{
+  dev: uint8,
+  mode: uint8,
+  reason: uint16,
+  data: uint32,
+}
+
+local function init_default_palette(self: *riv_context): void
+  self.mmio_driver.palette[RIV_PAL16_BLACK] = RIV_RGB_PAL16_BLACK
+  self.mmio_driver.palette[RIV_PAL16_DARKBLUE] = RIV_RGB_PAL16_DARKBLUE
+  self.mmio_driver.palette[RIV_PAL16_DARKPURPLE] = RIV_RGB_PAL16_DARKPURPLE
+  self.mmio_driver.palette[RIV_PAL16_DARKGREEN] = RIV_RGB_PAL16_DARKGREEN
+  self.mmio_driver.palette[RIV_PAL16_BROWN] = RIV_RGB_PAL16_BROWN
+  self.mmio_driver.palette[RIV_PAL16_DARKGREY] = RIV_RGB_PAL16_DARKGREY
+  self.mmio_driver.palette[RIV_PAL16_LIGHTGREY] = RIV_RGB_PAL16_LIGHTGREY
+  self.mmio_driver.palette[RIV_PAL16_WHITE] = RIV_RGB_PAL16_WHITE
+  self.mmio_driver.palette[RIV_PAL16_RED] = RIV_RGB_PAL16_RED
+  self.mmio_driver.palette[RIV_PAL16_ORANGE] = RIV_RGB_PAL16_ORANGE
+  self.mmio_driver.palette[RIV_PAL16_YELLOW] = RIV_RGB_PAL16_YELLOW
+  self.mmio_driver.palette[RIV_PAL16_GREEN] = RIV_RGB_PAL16_GREEN
+  self.mmio_driver.palette[RIV_PAL16_BLUE] = RIV_RGB_PAL16_BLUE
+  self.mmio_driver.palette[RIV_PAL16_LAVENDER] = RIV_RGB_PAL16_LAVENDER
+  self.mmio_driver.palette[RIV_PAL16_PINK] = RIV_RGB_PAL16_PINK
+  self.mmio_driver.palette[RIV_PAL16_LIGHTPEACH] = RIV_RGB_PAL16_LIGHTPEACH
+end
+
+function riv_context:init(): void <cexport'riv_init'>
+  assert(not self.mmio_driver, 'riv already initialized')
+  -- yield
+  self.yield_fd = open("/dev/yield", O_RDWR, 0)
+  assert(self.yield_fd > 0, 'open yield device failed')
+  -- map memory
+  assert(get_free_hugepages() == 1, 'no free hugepage')
+  local prot: cint = PROT_READ | PROT_WRITE
+  local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE | MAP_HUGETLB
+  local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
+  assert(mmap(mmio, RIV_MEMSIZE_HUGEPAGE, prot, flags, -1, 0) == mmio, 'mmap failed')
+  assert(get_free_hugepages() == 0, 'no used hugepage')
+  -- initialize device
+  memory.zero(mmio, RIV_MEMSIZE_HUGEPAGE)
+  self.mmio_driver = (@*riv_mmio_driver)(RIV_VADDR_MMIO_DRIVER)
+  self.mmio_device = (@*riv_mmio_device)(RIV_VADDR_MMIO_DEVICE)
+  self.mmio_driver.header = {
+    magic = RIV_DRIVER_MAGIC,
+    version = RIV_VERSION,
+    features = 0,
+    uuid = riv_rdcycle()
+  }
+  self.mmio_driver.framebuffer_desc = {
+    width = RIV_DEFAULT_WIDTH,
+    height = RIV_DEFAULT_HEIGHT,
+    fps = RIV_DEFAULT_FPS,
+    pixel_format = RIV_DEFAULT_PIXELFORMAT,
+  }
+  self.framebuffer = (@*[RIV_MEMSIZE_FRAMEBUFFER]byte)(RIV_VADDR_FRAMEBUFFER)
+  self.audiobuffer = (@*[RIV_MEMSIZE_AUDIOBUFFER]byte)(RIV_VADDR_AUDIOBUFFER)
+  -- aliases
+  self.framebuffer_desc = &self.mmio_driver.framebuffer_desc
+  self.tracked_keys = &self.mmio_driver.tracked_keys
+  self.palette = &self.mmio_driver.palette
+  -- track all keys by default
+  memory.spanset((@span(boolean))(self.mmio_driver.tracked_keys), true)
+  -- init palette
+  init_default_palette(self)
+end
+
+function riv_context:uninit(): void <cexport'riv_uninit'>
+  assert(self.mmio_driver, 'riv not initialized')
+  local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
+  memory.zero(mmio, RIV_MEMSIZE_HUGEPAGE)
+  assert(munmap(mmio, RIV_MEMSIZE_HUGEPAGE) == 0, 'munmap failed')
+  assert(get_free_hugepages() == 1, 'no freed hugepage')
+  if self.yield_fd > 0 then
+    assert(close(self.yield_fd) >= 0, 'close yield fd failed')
+  end
+  $self = {}
+end
+
+function riv_context:ctl(reason: riv_control_reason): void <cexport'riv_ctl'>
+  assert(self.mmio_driver, 'riv not initialized')
+  local IOCTL_YIELD: usize <comptime> = 0xc008d100
+  local HTIF_DEVICE_YIELD: uint8 <comptime> = 2
+  local HTIF_YIELD_AUTOMATIC: uint8 <comptime> = 0
+  local swap_yield_req: riv_yield_request = {
+    dev = HTIF_DEVICE_YIELD,
+    mode = HTIF_YIELD_AUTOMATIC,
+    reason = reason,
+    data = 0,
+  }
+  assert(ioctl(self.yield_fd, IOCTL_YIELD, (@usize)(&swap_yield_req)) == 0, 'yield ioctl failed')
+end
+
+function riv_context:_poll_inputs() : void
+  for i=0,<self.mmio_device.key_event_count do
+    local key_event: uint8 = self.mmio_device.key_events[i]
+    local key_code: uint8 = key_event & 127
+    local down: boolean = (key_event & 128) == 0
+    if down then
+      self.keys[key_code].press = true
+      self.keys[key_code].down = true
+      self.keys[key_code].up = false
+      self.keys[key_code].down_frame = self.frame
+    else -- up
+      self.keys[key_code].press = false
+      self.keys[key_code].down = false
+      self.keys[key_code].up = true
+      self.keys[key_code].up_frame = self.frame
+    end
+  end
+end
+
+function riv_context:present(): void <cexport'riv_present'>
+  self:ctl(RIV_CONTROL_PRESENT)
+  self.frame = self.frame + 1
+  self.mmio_driver.frame = self.frame
+  self:_poll_inputs()
+end
+
+function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cexport'riv_loop'>
+  assert(self.mmio_driver, 'riv not initialized')
+  self.running = true
+  while self.running do
+    frame_cb(self)
+    self:present()
+  end
+end
+
+local sound_handle_counter: uint64 = 0
+function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): uint64 <cexport'riv_sound_play_from_memory'>
+  sound_handle_counter = sound_handle_counter + 1
+  local id: uint64 = sound_handle_counter
+  memory.spancopy((@span(byte))(self.audiobuffer), data)
+  self.mmio_driver.audio_ctl = {command=RIV_AUDIOCOMMAND_SOUND_PLAY, handle_id=id, data_size=#data}
+  self:ctl(RIV_CONTROL_AUDIO)
+  return id
+end
+
+function riv_context:sound_stop(sound_id: uint64): void <cexport'riv_sound_stop'>
+  self.mmio_driver.audio_ctl = {command=RIV_AUDIOCOMMAND_SOUND_STOP, handle_id=sound_id}
+  self:ctl(RIV_CONTROL_AUDIO)
+end
+
+global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>
+  local self: riv_context
+  if run_desc.framebuffer_desc.width == 0 then run_desc.framebuffer_desc.width = RIV_DEFAULT_WIDTH end
+  if run_desc.framebuffer_desc.height == 0 then run_desc.framebuffer_desc.height = RIV_DEFAULT_HEIGHT end
+  if run_desc.framebuffer_desc.fps == 0 then run_desc.framebuffer_desc.fps = RIV_DEFAULT_FPS end
+  if run_desc.framebuffer_desc.pixel_format == 0 then run_desc.framebuffer_desc.pixel_format = RIV_DEFAULT_PIXELFORMAT end
+  if not self.mmio_driver then
+    self:init()
+  end
+  if run_desc.init_cb then
+    run_desc.init_cb(self)
+  end
+  self.mmio_driver.framebuffer_desc = run_desc.framebuffer_desc
+  if run_desc.frame_cb then
+    self:loop(run_desc.frame_cb)
+  end
+  if run_desc.cleanup_cb then
+    run_desc.cleanup_cb(self)
+  end
+  self:uninit()
+  exit(0)
+end
+
+global function riv_stdrun(frame_cb: riv_context_callback): void <cexport'riv_stdrun'>
+  riv_run(&(@riv_run_desc){frame_cb=frame_cb})
+end

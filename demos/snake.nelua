@@ -1,4 +1,4 @@
-require 'riv_app'
+require 'riv'
 
 -- Game types
 local Point2D = @record{x: int32, y: int32}

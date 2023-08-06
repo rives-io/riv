@@ -1,0 +1,22 @@
+require 'C.stdio'
+require 'C.stdarg'
+
+require '.riv_types'
+
+global function riv_version(): uint64 <cexport'riv_version'>
+  return RIV_VERSION
+end
+
+global function riv_rdcycle(): uint64 <cexport'riv_rdcycle'>
+  local cycle: uint64 <noinit,nodce>
+  cemit![[asm volatile ("rdcycle %0" : "=r" (cycle));]]
+  return cycle
+end
+
+global function riv_printf(format: cstring, ...: cvarargs): int32 <cexport'riv_printf'>
+  local args: cvalist
+  C.va_start(args, format)
+  local ret: cint = C.vprintf(format, args)
+  C.va_end(args)
+  return ret
+end

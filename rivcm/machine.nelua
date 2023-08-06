@@ -1,7 +1,7 @@
 -- This file contains code related to machine being emulated.
 
 require 'cartesi'
-require 'riv'
+require 'riv_types'
 
 --------------------------------------------------------------------------------
 

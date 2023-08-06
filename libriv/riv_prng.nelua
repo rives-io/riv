@@ -1,13 +1,6 @@
-## pragmas.unitname = ''
-
 -- This module uses an algorithm based on *xoshiro256* to produce pseudo-random 64-bit integers.
 
--- Random pseudo random number generator.
-global riv_prng: type = @record{
-  state: [4]uint64
-}
-
-## if RIV_IMPLEMENTATION then
+require '.riv_types'
 
 -- Left bit rotation utility.
 ## local function rotl(x, n)
@@ -61,7 +54,7 @@ function riv_prng:rand_int(low: int64, high: int64): int64 <cexport'riv_rand_int
 end
 
 -- Generates a random floating-point number in interval [0, 1).
-function riv_prng:rand_float(): float64 <cexport>
+function riv_prng:rand_float(): float64 <cexport'riv_rand_float'>
   ## local FIGS = math.min(primtypes.float64.mantdigits, 64)
   return (self:rand() >> #[64 - FIGS]#) * (0.5_f64 / (1_u64 << #[FIGS-1]#))
 end
@@ -76,13 +69,3 @@ function riv_prng:seed(a: uint64, b: uint64): void <cexport'riv_seed'>
     self:rand()
   end
 end
-
-## elseif RIV_BINDINGS then
-
-function riv_prng:rand(): uint64 <cimport'riv_rand'> end
-function riv_prng:rand_uint(high: uint64): uint64 <cimport'riv_rand_uint'> end
-function riv_prng:rand_int(low: int64, high: int64): int64 <cimport'riv_rand_int'> end
-function riv_prng:rand_float(): float64 <cimport'riv_rand_float'> end
-function riv_prng:seed(a: uint64, b: uint64): void <cimport'riv_seed'> end
-
-## end

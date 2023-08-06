@@ -7,7 +7,6 @@ PREFIX=/usr/local
 
 libriv.so: libriv.nelua *.nelua
 	nelua $(NELUA_FLAGS) \
-		-DRIV_IMPLEMENTATION \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
 		--shared-lib \
@@ -22,4 +21,4 @@ clean:
 
 install: libriv.so
 	install -m755 libriv.so $(DESTDIR)$(PREFIX)/lib/libriv.so
-	install -m644 libriv.h $(DESTDIR)$(PREFIX)/lib/libriv.h
+	install -m644 riv.h $(DESTDIR)$(PREFIX)/lib/riv.h

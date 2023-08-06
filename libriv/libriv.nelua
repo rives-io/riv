@@ -1,4 +1,4 @@
-## RIV_IMPLEMENTATION = true
-
-require '.riv'
+require '.riv_types'
+require '.riv_util'
+require '.riv_context'
 require '.riv_prng'
