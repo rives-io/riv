@@ -143,15 +143,28 @@ global riv_rgb_pal16_color: type <using> = @enum(uint32){
   RIV_RGB_PAL16_PINK = 11040767,
   RIV_RGB_PAL16_LIGHTPEACH = 11193599
 }
-global riv_control_reason: type <using> = @enum(uint32){
-  RIV_CONTROL_UNKNOWN = 0,
-  RIV_CONTROL_PRESENT = 1,
-  RIV_CONTROL_AUDIO = 2
-}
 global riv_pixel_format: type <using> = @enum(uint32){
   RIV_PIXELFORMAT_UNKNOWN = 0,
   RIV_PIXELFORMAT_PAL256 = 1,
   RIV_DEFAULT_PIXELFORMAT = 1
+}
+global riv_fps_limit: type <using> = @enum(uint32){
+  RIV_FPS_INVALID = 0,
+  RIV_FPS_24 = 24,
+  RIV_FPS_30 = 30,
+  RIV_FPS_48 = 48,
+  RIV_FPS_60 = 60,
+  RIV_FPS_UNLIMITED = 2147483647
+}
+global riv_constants: type <using> = @enum(uint32){
+  RIV_DEFAULT_WIDTH = 256,
+  RIV_DEFAULT_HEIGHT = 256,
+  RIV_DEFAULT_FPS = 60
+}
+global riv_control_reason: type <using> = @enum(uint32){
+  RIV_CONTROL_UNKNOWN = 0,
+  RIV_CONTROL_PRESENT = 1,
+  RIV_CONTROL_AUDIO = 2
 }
 global riv_audio_command: type <using> = @enum(uint32){
   RIV_AUDIOCOMMAND_NONE = 0,
@@ -178,19 +191,6 @@ global riv_vaddr_base: type <using> = @enum(uint64){
   RIV_VADDR_AUDIOBUFFER = 268697600,
   RIV_VADDR_FRAMEBUFFER = 269484032
 }
-global riv_fps_limit: type <using> = @enum(uint32){
-  RIV_FPS_INVALID = 0,
-  RIV_FPS_24 = 24,
-  RIV_FPS_30 = 30,
-  RIV_FPS_48 = 48,
-  RIV_FPS_60 = 60,
-  RIV_FPS_UNLIMITED = 4294967295
-}
-global riv_constants: type <using> = @enum(uint32){
-  RIV_DEFAULT_WIDTH = 256,
-  RIV_DEFAULT_HEIGHT = 256,
-  RIV_DEFAULT_FPS = 60
-}
 global riv_framebuffer_desc: type = @record{
   height: uint32,
   width: uint32,
@@ -214,8 +214,8 @@ global riv_mmio_header: type = @record{
 global riv_mmio_driver: type = @record{
   header: riv_mmio_header,
   frame: uint64,
-  audio_ctl: riv_audio_ctl_desc,
   framebuffer_desc: riv_framebuffer_desc,
+  audio_ctl: riv_audio_ctl_desc,
   tracked_keys: [128]boolean,
   palette: [256]uint32
 }
@@ -238,6 +238,7 @@ global riv_context: type = @record{
   mmio_driver: *riv_mmio_driver,
   mmio_device: *riv_mmio_device,
   yield_fd: int32,
+  sound_handle_gen: uint64,
   keys: [128]riv_key_state,
   frame: uint64,
   running: boolean,
@@ -254,6 +255,9 @@ global riv_run_desc: type = @record{
   frame_cb: riv_context_callback,
   framebuffer_desc: riv_framebuffer_desc
 }
+global RIV_VERSION_MAJOR: cint <comptime> = 0
+global RIV_VERSION_MINOR: cint <comptime> = 1
+global RIV_VERSION_PATCH: cint <comptime> = 0
 global RIV_VERSION: cint <comptime> = 1000
 global RIV_DRIVER_MAGIC: [32]byte <const> = {
   0x3f, 0xdf, 0x37, 0x1e, 0xc0, 0xfc, 0xd1, 0xba,

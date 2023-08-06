@@ -6,7 +6,10 @@ nldecl.generate_bindings_file{
   include_dirs = {'.'},
   include_names = {'^riv_', '^RIV_'},
   force_exclude_names = {
-    ['riv_span_uint8'] = true
+    ['riv_span_uint8'] = true,
+    ['riv_unbounded_uint8'] = true,
+    ['riv_unbounded_uint32'] = true,
+    ['riv_unbounded_bool'] = true,
   },
   enum_types = {
     riv_key_code = 'uint8',

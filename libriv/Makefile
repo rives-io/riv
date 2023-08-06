@@ -5,7 +5,7 @@ STRIPFLAGS=--strip-unneeded --remove-section=.comment
 NELUA_FLAGS=-Pnogc -Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 PREFIX=/usr/local
 
-libriv.so: libriv.nelua riv.nelua *.nelua
+libriv.so: libriv.nelua *.nelua
 	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
@@ -16,12 +16,18 @@ libriv.so: libriv.nelua riv.nelua *.nelua
 		--cache-dir . \
 		--output $@ $<
 
-riv.nelua: riv.h
+update-bindings:
 	nelua-lua genbindings.lua
 
 clean:
 	rm -f libriv.so libriv.c
 
 install: libriv.so
-	install -m755 libriv.so $(DESTDIR)$(PREFIX)/lib/libriv.so
-	install -m644 riv.h $(DESTDIR)$(PREFIX)/lib/riv.h
+	mkdir -p $(DESTDIR)$(PREFIX)/lib
+	install -m755 libriv.so $(DESTDIR)$(PREFIX)/lib/libriv.so.0.1.0
+	ln -sf libriv.so.0.1.0 $(DESTDIR)$(PREFIX)/lib/libriv.so.0.1
+	ln -sf libriv.so.0.1 $(DESTDIR)$(PREFIX)/lib/libriv.so.0
+	ln -sf libriv.so.0 $(DESTDIR)$(PREFIX)/lib/libriv.so
+
+	mkdir -p $(DESTDIR)$(PREFIX)/include
+	install -m644 riv.h $(DESTDIR)$(PREFIX)/include/riv.h

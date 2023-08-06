@@ -85,7 +85,7 @@ end
 local function update_framebuffer_video_mem(): void
   if fb_pixel_count == 0 then return end
   -- update the framebuffer pixels using palette
-  for i=0,<fb_pixel_count do
+  for i: int64=0,<fb_pixel_count do
     framebuffer_rgba[i] = machine.mmio_driver.palette[framebuffer[i]]
   end
   sg_update_image(fb_image, sg_image_data{{{{ptr=&framebuffer_rgba, size=fb_pixel_count*4}}}})
@@ -121,7 +121,7 @@ function video.present(): void
   update_framebuffer_video_mem()
 
   -- prepare for drawing
-  local app_width: int64, app_height: int64 = sapp_width(), sapp_height()
+  local app_width: int32, app_height: int32 = sapp_width(), sapp_height()
   sgp_begin(app_width, app_height)
   sgp_viewport(0, 0, app_width, app_height)
   sgp_project(0, app_width, 0, app_height)

@@ -6,6 +6,8 @@
 *.gz
 *.txt
 *.elf
+*.exe
+*.o
 *.so
 *.dump
 *.out
@@ -24,4 +26,3 @@
 /libriv/libriv.c
 /bwrapbox/bwrapbox.c
 /demos/*.c
-

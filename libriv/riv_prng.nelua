@@ -65,7 +65,7 @@ function riv_prng:seed(a: uint64, b: uint64): void <cexport'riv_seed'>
   self.state[1] = 0xff
   self.state[2] = b
   self.state[3] = 0
-  for i:usize=0,<16 do
+  for i: usize=0,<16 do
     self:rand()
   end
 end

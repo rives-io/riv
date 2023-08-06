@@ -1,6 +1,6 @@
 all: rootfs rivcm demos
 
-rootfs rivcm:
+rootfs rivcm deps:
 	$(MAKE) -C $@
 
 libriv bwrapbox demos:
@@ -16,4 +16,8 @@ clean:
 	$(MAKE) -C rivcm clean
 	$(MAKE) -C demos clean
 
-.PHONY: rootfs rivcm libriv bwrapbox demos
+update-bindings:
+	$(MAKE) -C libriv update-bindings
+	$(MAKE) -C deps update-bindings
+
+.PHONY: rootfs rivcm libriv bwrapbox demos deps

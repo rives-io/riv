@@ -26,5 +26,6 @@ rivcm: rivcm.nelua *.nelua
 clean:
 	rm -f rivcm rivcm.c
 
-install: libriv.so
-	install -m755 rivcm $(DESTDIR)$(PREFIX)/lib/libriv.so
+install: rivcm
+	mkdir -p $(DESTDIR)$(PREFIX)/rivcm
+	install -m755 rivcm $(DESTDIR)$(PREFIX)/bin/rivcm

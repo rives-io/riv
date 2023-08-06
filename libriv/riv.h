@@ -7,7 +7,24 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Defines
 
-#define RIV_VERSION 1000
+#define RIV_VERSION_MAJOR 0
+#define RIV_VERSION_MINOR 1
+#define RIV_VERSION_PATCH 0
+#define RIV_VERSION (RIV_VERSION_MAJOR*1000000 + RIV_VERSION_MINOR*1000 + RIV_VERSION_PATCH)
+
+#define RIV_DRIVER_MAGIC { \
+  0x3f, 0xdf, 0x37, 0x1e, 0xc0, 0xfc, 0xd1, 0xba, \
+  0xec, 0xe9, 0x72, 0xa1, 0xf5, 0x89, 0x87, 0xc5, \
+  0x70, 0xfd, 0xbe, 0xc0, 0xce, 0xcc, 0x2d, 0x74, \
+  0x8d, 0x45, 0x39, 0x62, 0x49, 0xb8, 0x15, 0x26, \
+}
+
+#define RIV_DEVICE_MAGIC { \
+  0x83, 0x0b, 0x3a, 0xd1, 0xcc, 0x8b, 0xc2, 0xe5, \
+  0x70, 0x5c, 0x83, 0x98, 0x6c, 0xe4, 0x67, 0xc9, \
+  0xc1, 0xc6, 0x0b, 0xc6, 0xb9, 0x80, 0xa4, 0x1c, \
+  0x34, 0x12, 0x8c, 0x2e, 0x05, 0xd8, 0x2c, 0x4e, \
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Constants
@@ -147,6 +164,7 @@ typedef enum riv_key_code {
   // ASCII 126 ~
 } riv_key_code;
 
+// Default palette color indexes.
 typedef enum riv_pal16_color {
   RIV_PAL16_BLACK      = 0,
   RIV_PAL16_DARKBLUE   = 1,
@@ -166,6 +184,7 @@ typedef enum riv_pal16_color {
   RIV_PAL16_LIGHTPEACH = 15,
 } riv_pal16_color;
 
+// Default palette colors.
 typedef enum riv_rgb_pal16_color {
   RIV_RGB_PAL16_BLACK      = 0x000000,
   RIV_RGB_PAL16_DARKBLUE   = 0x532B1D,
@@ -185,12 +204,6 @@ typedef enum riv_rgb_pal16_color {
   RIV_RGB_PAL16_LIGHTPEACH = 0xAACCFF,
 } riv_rgb_pal16_color;
 
-typedef enum riv_control_reason {
-  RIV_CONTROL_UNKNOWN = 0,
-  RIV_CONTROL_PRESENT,
-  RIV_CONTROL_AUDIO,
-} riv_control_reason;
-
 typedef enum riv_pixel_format {
   RIV_PIXELFORMAT_UNKNOWN = 0,
   RIV_PIXELFORMAT_PAL256,
@@ -202,6 +215,29 @@ typedef enum riv_pixel_format {
   RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PAL256
 } riv_pixel_format;
 
+typedef enum riv_fps_limit {
+  RIV_FPS_INVALID = 0,
+  RIV_FPS_24 = 24,
+  RIV_FPS_30 = 30,
+  RIV_FPS_48 = 48,
+  RIV_FPS_60 = 60,
+  RIV_FPS_UNLIMITED = 0x7fffffff,
+} riv_fps_limit;
+
+typedef enum riv_constants {
+  RIV_DEFAULT_WIDTH = 256,
+  RIV_DEFAULT_HEIGHT = 256,
+  RIV_DEFAULT_FPS = 60,
+} riv_constants;
+
+// The next constants are used to implement the driver
+
+typedef enum riv_control_reason {
+  RIV_CONTROL_UNKNOWN = 0,
+  RIV_CONTROL_PRESENT,
+  RIV_CONTROL_AUDIO,
+} riv_control_reason;
+
 typedef enum riv_audio_command {
   RIV_AUDIOCOMMAND_NONE = 0,
   RIV_AUDIOCOMMAND_SOUND_PLAY,
@@ -209,11 +245,11 @@ typedef enum riv_audio_command {
 } riv_audio_command;
 
 typedef enum riv_mem_size {
-  RIV_MEMSIZE_HUGEPAGE     =   2*1024*1024, // 2 MB
-  RIV_MEMSIZE_MMIO_DRIVER  =  128*1024, // 128 KB
-  RIV_MEMSIZE_MMIO_DEVICE  =  128*1024, // 128 KB
-  RIV_MEMSIZE_AUDIOBUFFER  =  768*1024, // 768 KB
-  RIV_MEMSIZE_FRAMEBUFFER  = 1024*1024, // 1 MB
+  RIV_MEMSIZE_HUGEPAGE     = 2*1024*1024, // 2 MB
+  RIV_MEMSIZE_MMIO_DRIVER  =    128*1024, // 128 KB
+  RIV_MEMSIZE_MMIO_DEVICE  =    128*1024, // 128 KB
+  RIV_MEMSIZE_AUDIOBUFFER  =    768*1024, // 768 KB
+  RIV_MEMSIZE_FRAMEBUFFER  =   1024*1024, // 1 MB
 } riv_mem_size;
 
 typedef enum riv_mmio_offset {
@@ -231,23 +267,15 @@ typedef enum riv_vaddr_base {
   RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_FRAMEBUFFER,
 } riv_vaddr_base;
 
-typedef enum riv_fps_limit {
-  RIV_FPS_INVALID = 0,
-  RIV_FPS_24 = 24,
-  RIV_FPS_30 = 30,
-  RIV_FPS_48 = 48,
-  RIV_FPS_60 = 60,
-  RIV_FPS_UNLIMITED = 0xffffffff,
-} riv_fps_limit;
+////////////////////////////////////////////////////////////////////////////////
+// Primitive types
 
-typedef enum riv_constants {
-  RIV_DEFAULT_WIDTH = 256,
-  RIV_DEFAULT_HEIGHT = 256,
-  RIV_DEFAULT_FPS = 60,
-} riv_constants;
+typedef uint8_t* riv_unbounded_uint8;
+typedef uint32_t* riv_unbounded_uint32;
+typedef bool* riv_unbounded_bool;
 
 typedef struct riv_span_uint8 {
-  uint8_t* data;
+  riv_unbounded_uint8 data;
   uintptr_t size;
 } riv_span_uint8;
 
@@ -281,8 +309,8 @@ typedef struct riv_mmio_header {
 typedef struct riv_mmio_driver {
   riv_mmio_header header;
   uint64_t frame;
-  riv_audio_ctl_desc audio_ctl;
   riv_framebuffer_desc framebuffer_desc;
+  riv_audio_ctl_desc audio_ctl;
   bool tracked_keys[128];
   uint32_t palette[256];
 } riv_mmio_driver;
@@ -315,16 +343,17 @@ typedef struct riv_context {
   riv_mmio_driver* mmio_driver;
   riv_mmio_device* mmio_device;
   int32_t yield_fd;
+  uint64_t sound_handle_gen;
   // public read-only fields
   riv_key_state keys[128];
   uint64_t frame;
   // public read/write fields
   bool running;
   riv_framebuffer_desc* framebuffer_desc;
-  uint8_t* framebuffer;
-  uint8_t* audiobuffer;
-  bool* tracked_keys;
-  uint32_t* palette;
+  riv_unbounded_uint8 framebuffer;
+  riv_unbounded_uint8 audiobuffer;
+  riv_unbounded_bool tracked_keys;
+  riv_unbounded_uint32 palette;
 } riv_context;
 
 typedef void (*riv_context_callback)(riv_context*);
@@ -339,7 +368,7 @@ typedef struct riv_run_desc {
 ////////////////////////////////////////////////////////////////////////////////
 // API
 
-// utils
+// util
 uint64_t riv_version(void);
 uint64_t riv_rdcycle(void);
 int32_t riv_printf(char* format, ...);
