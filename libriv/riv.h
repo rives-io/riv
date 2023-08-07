@@ -385,10 +385,10 @@ void riv_run(riv_run_desc* run_desc);
 void riv_stdrun(riv_context_callback frame_cb);
 
 // prng
-uint64_t riv_rand(riv_prng* self);
-uint64_t riv_rand_uint(riv_prng* self, uint64_t high);
-int64_t riv_rand_int(riv_prng* self, int64_t low, int64_t high);
-double riv_rand_float(riv_prng* self);
-void riv_seed(riv_prng* self, uint64_t a, uint64_t b);
+uint64_t riv_prng_rand(riv_prng* self);
+uint64_t riv_prng_rand_uint(riv_prng* self, uint64_t high);
+int64_t riv_prng_rand_int(riv_prng* self, int64_t low, int64_t high);
+double riv_prng_rand_float(riv_prng* self);
+void riv_prng_seed(riv_prng* self, uint64_t a, uint64_t b);
 
 #endif

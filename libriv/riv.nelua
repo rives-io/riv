@@ -7,7 +7,7 @@ require '.riv_types'
 -- util
 global function riv_version(): uint64 <cimport'riv_version'> end
 global function riv_rdcycle(): uint64 <cimport'riv_rdcycle'> end
-global function riv_run(run_desc: *riv_run_desc): void <cimport'riv_run'> end
+global function riv_printf(format: cstring, ...: cvarargs): int32 <cimport'riv_printf'> end
 
 -- context
 function riv_context:init(): void <cimport'riv_init'> end
@@ -18,14 +18,14 @@ function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cimport'
 function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): uint64 <cimport'riv_sound_play_from_memory'> end
 function riv_context:sound_stop(source: uint64): void <cimport'riv_sound_stop'> end
 global function riv_stdrun(frame_cb: function(riv: *riv_context)): void <cimport'riv_stdrun'> end
-global function riv_printf(format: cstring, ...: cvarargs): int32 <cimport'riv_printf'> end
+global function riv_run(run_desc: *riv_run_desc): void <cimport'riv_run'> end
 
 -- prng
-function riv_prng:rand(): uint64 <cimport'riv_rand'> end
-function riv_prng:rand_uint(high: uint64): uint64 <cimport'riv_rand_uint'> end
-function riv_prng:rand_int(low: int64, high: int64): int64 <cimport'riv_rand_int'> end
-function riv_prng:rand_float(): float64 <cimport'riv_rand_float'> end
-function riv_prng:seed(a: uint64, b: uint64): void <cimport'riv_seed'> end
+function riv_prng:rand(): uint64 <cimport'riv_prng_rand'> end
+function riv_prng:rand_uint(high: uint64): uint64 <cimport'riv_prng_rand_uint'> end
+function riv_prng:rand_int(low: int64, high: int64): int64 <cimport'riv_prng_rand_int'> end
+function riv_prng:rand_float(): float64 <cimport'riv_prng_rand_float'> end
+function riv_prng:seed(a: uint64, b: uint64): void <cimport'riv_prng_seed'> end
 
 -- Macro for generating tiny binaries.
 ## function nostartfiles(libc) cflags '-nostartfiles'

@@ -8,7 +8,7 @@ require '.riv_types'
 ## end
 
 -- Generates a random unsigned integer in interval [0, UINT64_MAX].
-function riv_prng:rand(): uint64 <cexport'riv_rand'>
+function riv_prng:rand(): uint64 <cexport'riv_prng_rand'>
   local state: [4]uint64 = {
     self.state[0],
     self.state[1],
@@ -24,7 +24,7 @@ function riv_prng:rand(): uint64 <cexport'riv_rand'>
 end
 
 -- Generates a random unsigned integer in interval [0, `high`].
-function riv_prng:rand_uint(high: uint64): uint64 <cexport'riv_rand_uint'>
+function riv_prng:rand_uint(high: uint64): uint64 <cexport'riv_prng_rand_uint'>
   local x: uint64 = self:rand()
   if high & (high + 1) == 0 then -- is 'high + 1' a power of 2?
     x = x & high -- no bias
@@ -48,19 +48,19 @@ function riv_prng:rand_uint(high: uint64): uint64 <cexport'riv_rand_uint'>
 end
 
 -- Returns a pseudo-random integer with uniform distribution in the range [`low`, `high`].
-function riv_prng:rand_int(low: int64, high: int64): int64 <cexport'riv_rand_int'>
+function riv_prng:rand_int(low: int64, high: int64): int64 <cexport'riv_prng_rand_int'>
   assert(low <= high, "interval is empty")
   return (@int64)(self:rand_uint((@uint64)(high) - (@uint64)(low)) + (@uint64)(low))
 end
 
 -- Generates a random floating-point number in interval [0, 1).
-function riv_prng:rand_float(): float64 <cexport'riv_rand_float'>
+function riv_prng:rand_float(): float64 <cexport'riv_prng_rand_float'>
   ## local FIGS = math.min(primtypes.float64.mantdigits, 64)
   return (self:rand() >> #[64 - FIGS]#) * (0.5_f64 / (1_u64 << #[FIGS-1]#))
 end
 
 -- Reinitialize the generator seed.
-function riv_prng:seed(a: uint64, b: uint64): void <cexport'riv_seed'>
+function riv_prng:seed(a: uint64, b: uint64): void <cexport'riv_prng_seed'>
   self.state[0] = a
   self.state[1] = 0xff
   self.state[2] = b
