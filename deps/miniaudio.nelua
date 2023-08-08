@@ -524,7 +524,7 @@ global ma_fader: type <cimport,nodecl> = @record{
   volumeBeg: float32,
   volumeEnd: float32,
   lengthInFrames: ma_uint64,
-  cursorInFrames: ma_uint64
+  cursorInFrames: ma_int64
 }
 global ma_vec3f: type <cimport,nodecl> = @record{
   x: float32,
@@ -2214,6 +2214,12 @@ global ma_engine_node: type <cimport,nodecl> = @record{
   isPitchDisabled: ma_bool32,
   isSpatializationDisabled: ma_bool32,
   pinnedListenerIndex: ma_uint32,
+  fadeSettings: record{
+    volumeBeg: ma_atomic_float,
+    volumeEnd: ma_atomic_float,
+    fadeLengthInFrames: ma_atomic_uint64,
+    absoluteGlobalTimeInFrames: ma_atomic_uint64
+  },
   _ownsHeap: ma_bool8,
   _pHeap: pointer
 }
@@ -2258,11 +2264,13 @@ ma_sound_inlined = @record{
 }
 global ma_sound_group_config: type <cimport,nodecl> = @ma_sound_config
 global ma_sound_group: type <cimport,nodecl> = @ma_sound
+global ma_engine_process_proc: type <cimport,nodecl> = @function(pUserData: pointer, pFramesOut: *float32, frameCount: ma_uint64): void
 global ma_engine_config: type <cimport,nodecl> = @record{
   pResourceManager: *ma_resource_manager,
   pContext: *ma_context,
   pDevice: *ma_device,
   pPlaybackDeviceID: *ma_device_id,
+  dataCallback: ma_device_data_proc,
   notificationCallback: ma_device_notification_proc,
   pLog: *ma_log,
   listenerCount: ma_uint32,
@@ -2277,7 +2285,9 @@ global ma_engine_config: type <cimport,nodecl> = @record{
   noAutoStart: ma_bool32,
   noDevice: ma_bool32,
   monoExpansionMode: ma_mono_expansion_mode,
-  pResourceManagerVFS: *ma_vfs
+  pResourceManagerVFS: *ma_vfs,
+  onProcess: ma_engine_process_proc,
+  pProcessUserData: pointer
 }
 ma_engine = @record{
   nodeGraph: ma_node_graph,
@@ -2295,7 +2305,9 @@ ma_engine = @record{
   inlinedSoundCount: ma_uint32,
   gainSmoothTimeInFrames: ma_uint32,
   defaultVolumeSmoothTimeInPCMFrames: ma_uint32,
-  monoExpansionMode: ma_mono_expansion_mode
+  monoExpansionMode: ma_mono_expansion_mode,
+  onProcess: ma_engine_process_proc,
+  pProcessUserData: pointer
 }
 global function ma_version(pMajor: *ma_uint32, pMinor: *ma_uint32, pRevision: *ma_uint32): void <cimport,nodecl> end
 global function ma_version_string(): cstring <cimport,nodecl> end
@@ -2447,6 +2459,7 @@ global function ma_fader_init(pConfig: *ma_fader_config, pFader: *ma_fader): ma_
 global function ma_fader_process_pcm_frames(pFader: *ma_fader, pFramesOut: pointer, pFramesIn: pointer, frameCount: ma_uint64): ma_result <cimport,nodecl> end
 global function ma_fader_get_data_format(pFader: *ma_fader, pFormat: *ma_format, pChannels: *ma_uint32, pSampleRate: *ma_uint32): void <cimport,nodecl> end
 global function ma_fader_set_fade(pFader: *ma_fader, volumeBeg: float32, volumeEnd: float32, lengthInFrames: ma_uint64): void <cimport,nodecl> end
+global function ma_fader_set_fade_ex(pFader: *ma_fader, volumeBeg: float32, volumeEnd: float32, lengthInFrames: ma_uint64, startOffsetInFrames: ma_int64): void <cimport,nodecl> end
 global function ma_fader_get_current_volume(pFader: *ma_fader): float32 <cimport,nodecl> end
 global function ma_spatializer_listener_config_init(channelsOut: ma_uint32): ma_spatializer_listener_config <cimport,nodecl> end
 global function ma_spatializer_listener_get_heap_size(pConfig: *ma_spatializer_listener_config, pHeapSizeInBytes: *csize): ma_result <cimport,nodecl> end
@@ -3067,7 +3080,9 @@ global function ma_engine_get_sample_rate(pEngine: *ma_engine): ma_uint32 <cimpo
 global function ma_engine_start(pEngine: *ma_engine): ma_result <cimport,nodecl> end
 global function ma_engine_stop(pEngine: *ma_engine): ma_result <cimport,nodecl> end
 global function ma_engine_set_volume(pEngine: *ma_engine, volume: float32): ma_result <cimport,nodecl> end
+global function ma_engine_get_volume(pEngine: *ma_engine): float32 <cimport,nodecl> end
 global function ma_engine_set_gain_db(pEngine: *ma_engine, gainDB: float32): ma_result <cimport,nodecl> end
+global function ma_engine_get_gain_db(pEngine: *ma_engine): float32 <cimport,nodecl> end
 global function ma_engine_get_listener_count(pEngine: *ma_engine): ma_uint32 <cimport,nodecl> end
 global function ma_engine_find_closest_listener(pEngine: *ma_engine, absolutePosX: float32, absolutePosY: float32, absolutePosZ: float32): ma_uint32 <cimport,nodecl> end
 global function ma_engine_listener_set_position(pEngine: *ma_engine, listenerIndex: ma_uint32, x: float32, y: float32, z: float32): void <cimport,nodecl> end
@@ -3094,6 +3109,8 @@ global function ma_sound_get_engine(pSound: *ma_sound): *ma_engine <cimport,node
 global function ma_sound_get_data_source(pSound: *ma_sound): *ma_data_source <cimport,nodecl> end
 global function ma_sound_start(pSound: *ma_sound): ma_result <cimport,nodecl> end
 global function ma_sound_stop(pSound: *ma_sound): ma_result <cimport,nodecl> end
+global function ma_sound_stop_with_fade_in_pcm_frames(pSound: *ma_sound, fadeLengthInFrames: ma_uint64): ma_result <cimport,nodecl> end
+global function ma_sound_stop_with_fade_in_milliseconds(pSound: *ma_sound, fadeLengthInFrames: ma_uint64): ma_result <cimport,nodecl> end
 global function ma_sound_set_volume(pSound: *ma_sound, volume: float32): void <cimport,nodecl> end
 global function ma_sound_get_volume(pSound: *ma_sound): float32 <cimport,nodecl> end
 global function ma_sound_set_pan(pSound: *ma_sound, pan: float32): void <cimport,nodecl> end
@@ -3136,13 +3153,18 @@ global function ma_sound_set_directional_attenuation_factor(pSound: *ma_sound, d
 global function ma_sound_get_directional_attenuation_factor(pSound: *ma_sound): float32 <cimport,nodecl> end
 global function ma_sound_set_fade_in_pcm_frames(pSound: *ma_sound, volumeBeg: float32, volumeEnd: float32, fadeLengthInFrames: ma_uint64): void <cimport,nodecl> end
 global function ma_sound_set_fade_in_milliseconds(pSound: *ma_sound, volumeBeg: float32, volumeEnd: float32, fadeLengthInMilliseconds: ma_uint64): void <cimport,nodecl> end
+global function ma_sound_set_fade_start_in_pcm_frames(pSound: *ma_sound, volumeBeg: float32, volumeEnd: float32, fadeLengthInFrames: ma_uint64, absoluteGlobalTimeInFrames: ma_uint64): void <cimport,nodecl> end
+global function ma_sound_set_fade_start_in_milliseconds(pSound: *ma_sound, volumeBeg: float32, volumeEnd: float32, fadeLengthInMilliseconds: ma_uint64, absoluteGlobalTimeInMilliseconds: ma_uint64): void <cimport,nodecl> end
 global function ma_sound_get_current_fade_volume(pSound: *ma_sound): float32 <cimport,nodecl> end
 global function ma_sound_set_start_time_in_pcm_frames(pSound: *ma_sound, absoluteGlobalTimeInFrames: ma_uint64): void <cimport,nodecl> end
 global function ma_sound_set_start_time_in_milliseconds(pSound: *ma_sound, absoluteGlobalTimeInMilliseconds: ma_uint64): void <cimport,nodecl> end
 global function ma_sound_set_stop_time_in_pcm_frames(pSound: *ma_sound, absoluteGlobalTimeInFrames: ma_uint64): void <cimport,nodecl> end
 global function ma_sound_set_stop_time_in_milliseconds(pSound: *ma_sound, absoluteGlobalTimeInMilliseconds: ma_uint64): void <cimport,nodecl> end
+global function ma_sound_set_stop_time_with_fade_in_pcm_frames(pSound: *ma_sound, stopAbsoluteGlobalTimeInFrames: ma_uint64, fadeLengthInFrames: ma_uint64): void <cimport,nodecl> end
+global function ma_sound_set_stop_time_with_fade_in_milliseconds(pSound: *ma_sound, stopAbsoluteGlobalTimeInMilliseconds: ma_uint64, fadeLengthInMilliseconds: ma_uint64): void <cimport,nodecl> end
 global function ma_sound_is_playing(pSound: *ma_sound): ma_bool32 <cimport,nodecl> end
 global function ma_sound_get_time_in_pcm_frames(pSound: *ma_sound): ma_uint64 <cimport,nodecl> end
+global function ma_sound_get_time_in_milliseconds(pSound: *ma_sound): ma_uint64 <cimport,nodecl> end
 global function ma_sound_set_looping(pSound: *ma_sound, isLooping: ma_bool32): void <cimport,nodecl> end
 global function ma_sound_is_looping(pSound: *ma_sound): ma_bool32 <cimport,nodecl> end
 global function ma_sound_at_end(pSound: *ma_sound): ma_bool32 <cimport,nodecl> end
@@ -3210,7 +3232,7 @@ global function ma_sound_group_is_playing(pGroup: *ma_sound_group): ma_bool32 <c
 global function ma_sound_group_get_time_in_pcm_frames(pGroup: *ma_sound_group): ma_uint64 <cimport,nodecl> end
 global MA_VERSION_MAJOR: cint <comptime> = 0
 global MA_VERSION_MINOR: cint <comptime> = 11
-global MA_VERSION_REVISION: cint <comptime> = 17
+global MA_VERSION_REVISION: cint <comptime> = 18
 global MA_SIZEOF_PTR: cint <comptime> = 8
 global MA_TRUE: cint <comptime> = 1
 global MA_FALSE: cint <comptime> = 0
