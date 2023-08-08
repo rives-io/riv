@@ -98,14 +98,15 @@ global riv_key_code: type <using> = @enum(uint8){
   RIV_KEYCODE_PRINT_SCREEN = 112,
   RIV_KEYCODE_PAUSE = 113,
   RIV_KEYCODE_LEFT_SHIFT = 114,
-  RIV_KEYCODE_LEFT_CONTROL = 115,
+  RIV_KEYCODE_LEFT_CTRL = 115,
   RIV_KEYCODE_LEFT_ALT = 116,
   RIV_KEYCODE_LEFT_SUPER = 117,
   RIV_KEYCODE_RIGHT_SHIFT = 118,
-  RIV_KEYCODE_RIGHT_CONTROL = 119,
+  RIV_KEYCODE_RIGHT_CTRL = 119,
   RIV_KEYCODE_RIGHT_ALT = 120,
   RIV_KEYCODE_RIGHT_SUPER = 121,
-  RIV_KEYCODE_MENU = 122
+  RIV_KEYCODE_MENU = 122,
+  RIV_NUM_KEYCODE = 128
 }
 global riv_pal16_color: type <using> = @enum(uint8){
   RIV_PAL16_BLACK = 0,
@@ -123,7 +124,8 @@ global riv_pal16_color: type <using> = @enum(uint8){
   RIV_PAL16_BLUE = 12,
   RIV_PAL16_LAVENDER = 13,
   RIV_PAL16_PINK = 14,
-  RIV_PAL16_LIGHTPEACH = 15
+  RIV_PAL16_LIGHTPEACH = 15,
+  RIV_NUM_PAL16_COLOR = 16
 }
 global riv_rgb_pal16_color: type <using> = @enum(uint32){
   RIV_RGB_PAL16_BLACK = 0,
@@ -144,8 +146,9 @@ global riv_rgb_pal16_color: type <using> = @enum(uint32){
   RIV_RGB_PAL16_LIGHTPEACH = 11193599
 }
 global riv_pixel_format: type <using> = @enum(uint32){
-  RIV_PIXELFORMAT_UNKNOWN = 0,
+  RIV_PIXELFORMAT_INVALID = 0,
   RIV_PIXELFORMAT_PAL256 = 1,
+  RIV_NUM_PIXELFORMAT = 2,
   RIV_DEFAULT_PIXELFORMAT = 1
 }
 global riv_fps_limit: type <using> = @enum(uint32){
@@ -162,7 +165,7 @@ global riv_constants: type <using> = @enum(uint32){
   RIV_DEFAULT_FPS = 60
 }
 global riv_control_reason: type <using> = @enum(uint32){
-  RIV_CONTROL_UNKNOWN = 0,
+  RIV_CONTROL_NONE = 0,
   RIV_CONTROL_PRESENT = 1,
   RIV_CONTROL_AUDIO = 2
 }
@@ -201,9 +204,14 @@ global riv_audio_ctl_desc: type = @record{
   command: riv_audio_command,
   flags: uint32,
   handle_id: uint64,
-  buffer_offset: uint32,
-  data_size: uint32,
-  volume: uint32
+  channel_id: uint32,
+  buf_off: uint32,
+  buf_len: uint32,
+  volume: uint32,
+  pitch: uint32,
+  pan: uint32,
+  seek: uint32,
+  fade_in: uint32
 }
 global riv_mmio_header: type = @record{
   magic: [32]uint8,
@@ -235,18 +243,19 @@ global riv_key_state: type = @record{
   up_frame: uint64
 }
 global riv_context: type = @record{
-  mmio_driver: *riv_mmio_driver,
-  mmio_device: *riv_mmio_device,
-  yield_fd: int32,
-  sound_handle_gen: uint64,
   keys: [128]riv_key_state,
+  key_modifiers: uint32,
   frame: uint64,
   running: boolean,
   framebuffer_desc: *riv_framebuffer_desc,
   framebuffer: *[RIV_MEMSIZE_FRAMEBUFFER]uint8,
   audiobuffer: *[RIV_MEMSIZE_AUDIOBUFFER]uint8,
-  tracked_keys: *[128]boolean,
-  palette: *[256]uint32
+  tracked_keys: *[RIV_NUM_KEYCODE]boolean,
+  palette: *[256]uint32,
+  mmio_driver: *riv_mmio_driver,
+  mmio_device: *riv_mmio_device,
+  yield_fd: int32,
+  sound_handle_gen: uint64
 }
 global riv_context_callback: type = @function(a1: *riv_context): void
 global riv_run_desc: type = @record{

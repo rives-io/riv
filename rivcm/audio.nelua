@@ -35,7 +35,7 @@ end
 
 -- Control audio subsystem.
 function audio.control(): void
-  local data: span(byte) = {data=&audiobuffer[0],size=machine.mmio_driver.audio_ctl.data_size}
+  local data: span(byte) = {data=&audiobuffer[0],size=machine.mmio_driver.audio_ctl.buf_len}
   machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_AUDIOBUFFER, data)
 
   switch machine.mmio_driver.audio_ctl.command do

@@ -10,10 +10,9 @@ global function riv_rdcycle(): uint64 <cimport'riv_rdcycle'> end
 global function riv_printf(format: cstring, ...: cvarargs): int32 <cimport'riv_printf'> end
 
 -- context
-function riv_context:init(): void <cimport'riv_init'> end
-function riv_context:uninit(): void <cimport'riv_uninit'> end
+function riv_context:setup(): void <cimport'riv_setup'> end
+function riv_context:shutdown(): void <cimport'riv_shutdown'> end
 function riv_context:present(): void <cimport'riv_present'> end
-function riv_context:ctl(reason: riv_control_reason): void <cimport'riv_ctl'> end
 function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cimport'riv_loop'> end
 function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): uint64 <cimport'riv_sound_play_from_memory'> end
 function riv_context:sound_stop(source: uint64): void <cimport'riv_sound_stop'> end

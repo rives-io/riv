@@ -9,10 +9,13 @@ FROM --platform=linux/riscv64 alpine:edge AS toolchain-rootfs-stage
 RUN apk update && apk upgrade
 
 # Add development packages
-RUN apk add bash gcc g++ git libc-dev make cmake pkgconfig automake autoconf
+RUN apk add gcc g++ git libc-dev make cmake pkgconfig automake autoconf
 
-# Install other utilities
-RUN apk add squashfs-tools su-exec
+# Install utilities
+RUN apk add bash squashfs-tools su-exec
+
+# Install other languages
+RUN apk add clang go rust nim
 
 # Musl link aliases
 RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
@@ -45,7 +48,7 @@ RUN wget -O genext2fs-1.5.2.tar.gz https://github.com/cartesi/genext2fs/archive/
     cd .. && \
     rm -rf genext2fs-*
 
-# Install Nelua
+# Install nelua
 RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarball/master && \
     tar -xzf nelua-lang-latest.tar.gz && \
     cd edubart-nelua-lang-* && \
@@ -54,7 +57,7 @@ RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarba
     cd .. && \
     rm -rf nelua-lang-latest.tar.gz edubart-nelua-lang-*
 
-# Install linux headers
+# Install linux-headers
 COPY kernel/linux-headers-5.15.63-ctsi-2.tar.xz linux-headers-5.15.63-ctsi-2.tar.xz
 RUN apk add linux-headers && \
     cd / && rm `apk info -L linux-headers | grep -F ".h"`

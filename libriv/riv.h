@@ -26,6 +26,10 @@
   0x34, 0x12, 0x8c, 0x2e, 0x05, 0xd8, 0x2c, 0x4e, \
 }
 
+#ifndef RIV_API
+#define RIV_API
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Constants
 
@@ -150,11 +154,11 @@ typedef enum riv_key_code {
   RIV_KEYCODE_PRINT_SCREEN        = 112,
   RIV_KEYCODE_PAUSE               = 113,
   RIV_KEYCODE_LEFT_SHIFT          = 114,
-  RIV_KEYCODE_LEFT_CONTROL        = 115,
+  RIV_KEYCODE_LEFT_CTRL           = 115,
   RIV_KEYCODE_LEFT_ALT            = 116,
   RIV_KEYCODE_LEFT_SUPER          = 117,
   RIV_KEYCODE_RIGHT_SHIFT         = 118,
-  RIV_KEYCODE_RIGHT_CONTROL       = 119,
+  RIV_KEYCODE_RIGHT_CTRL          = 119,
   RIV_KEYCODE_RIGHT_ALT           = 120,
   RIV_KEYCODE_RIGHT_SUPER         = 121,
   RIV_KEYCODE_MENU                = 122,
@@ -162,6 +166,8 @@ typedef enum riv_key_code {
   // ASCII 124 |
   // ASCII 125 }
   // ASCII 126 ~
+  // 127 is reserved
+  RIV_NUM_KEYCODE                 = 128
 } riv_key_code;
 
 // Default palette color indexes.
@@ -182,6 +188,7 @@ typedef enum riv_pal16_color {
   RIV_PAL16_LAVENDER   = 13,
   RIV_PAL16_PINK       = 14,
   RIV_PAL16_LIGHTPEACH = 15,
+  RIV_NUM_PAL16_COLOR  = 16
 } riv_pal16_color;
 
 // Default palette colors.
@@ -205,13 +212,14 @@ typedef enum riv_rgb_pal16_color {
 } riv_rgb_pal16_color;
 
 typedef enum riv_pixel_format {
-  RIV_PIXELFORMAT_UNKNOWN = 0,
+  RIV_PIXELFORMAT_INVALID = 0,
   RIV_PIXELFORMAT_PAL256,
   // RIV_PIXELFORMAT_RGB8,
   // RIV_PIXELFORMAT_RGB16,
   // RIV_PIXELFORMAT_RGB24,
   // RIV_PIXELFORMAT_RGB32,
   // RIV_PIXELFORMAT_RGB32F,
+  RIV_NUM_PIXELFORMAT,
   RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PAL256
 } riv_pixel_format;
 
@@ -233,7 +241,7 @@ typedef enum riv_constants {
 // The next constants are used to implement the driver
 
 typedef enum riv_control_reason {
-  RIV_CONTROL_UNKNOWN = 0,
+  RIV_CONTROL_NONE = 0,
   RIV_CONTROL_PRESENT,
   RIV_CONTROL_AUDIO,
 } riv_control_reason;
@@ -291,11 +299,16 @@ typedef struct riv_framebuffer_desc {
 
 typedef struct riv_audio_ctl_desc {
   riv_audio_command command;
-  uint32_t flags;
+  uint32_t flags; // NIY
   uint64_t handle_id;
-  uint32_t buffer_offset;
-  uint32_t data_size;
+  uint32_t channel_id;
+  uint32_t buf_off; // NIY
+  uint32_t buf_len;
   uint32_t volume;
+  uint32_t pitch; // NIY
+  uint32_t pan; // NIY
+  uint32_t seek; // NIY
+  uint32_t fade_in; // NIY
 } riv_audio_ctl_desc;
 
 typedef struct riv_mmio_header {
@@ -311,7 +324,7 @@ typedef struct riv_mmio_driver {
   uint64_t frame;
   riv_framebuffer_desc framebuffer_desc;
   riv_audio_ctl_desc audio_ctl;
-  bool tracked_keys[128];
+  bool tracked_keys[RIV_NUM_KEYCODE];
   uint32_t palette[256];
 } riv_mmio_driver;
 
@@ -319,7 +332,7 @@ typedef struct riv_mmio_driver {
 typedef struct riv_mmio_device {
   riv_mmio_header header;
   uint32_t key_event_count;
-  uint8_t key_events[128];
+  uint8_t key_events[RIV_NUM_KEYCODE];
 } riv_mmio_device;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -339,21 +352,22 @@ typedef struct riv_key_state {
 } riv_key_state;
 
 typedef struct riv_context {
-  // private fields
-  riv_mmio_driver* mmio_driver;
-  riv_mmio_device* mmio_device;
-  int32_t yield_fd;
-  uint64_t sound_handle_gen;
-  // public read-only fields
-  riv_key_state keys[128];
+  // Public read-only fields
+  riv_key_state keys[RIV_NUM_KEYCODE];
+  uint32_t key_modifiers; // NIY
   uint64_t frame;
-  // public read/write fields
+  // Public read/write fields
   bool running;
   riv_framebuffer_desc* framebuffer_desc;
   riv_unbounded_uint8 framebuffer;
   riv_unbounded_uint8 audiobuffer;
   riv_unbounded_bool tracked_keys;
   riv_unbounded_uint32 palette;
+  // Private fields
+  riv_mmio_driver* mmio_driver;
+  riv_mmio_device* mmio_device;
+  int32_t yield_fd;
+  uint64_t sound_handle_gen;
 } riv_context;
 
 typedef void (*riv_context_callback)(riv_context*);
@@ -368,27 +382,28 @@ typedef struct riv_run_desc {
 ////////////////////////////////////////////////////////////////////////////////
 // API
 
-// util
-uint64_t riv_version(void);
-uint64_t riv_rdcycle(void);
-int32_t riv_printf(char* format, ...);
+// Utilities
+RIV_API uint64_t riv_version(void);            // Get the RIV library version
+RIV_API uint64_t riv_rdcycle(void);            // Get the current machine cycle, THIS IS NOT REPRODUCIBLE, use for benchmarking only.
+RIV_API int32_t riv_printf(char* format, ...); // Print to standard output, use for debugging.
 
-// context
-void riv_init(riv_context* self);
-void riv_uninit(riv_context* self);
-void riv_ctl(riv_context* self, riv_control_reason reason);
-void riv_present(riv_context* self);
-void riv_loop(riv_context* self, riv_context_callback frame_cb);
-uint64_t riv_sound_play_from_memory(riv_context* self, riv_span_uint8 data, uint32_t vol);
-void riv_sound_stop(riv_context* self, uint64_t sound_id);
-void riv_run(riv_run_desc* run_desc);
-void riv_stdrun(riv_context_callback frame_cb);
+// Basic
+RIV_API void riv_setup(riv_context* self);
+RIV_API void riv_shutdown(riv_context* self);
+RIV_API void riv_present(riv_context* self);
+RIV_API void riv_loop(riv_context* self, riv_context_callback frame_cb);
+RIV_API void riv_run(riv_run_desc* run_desc);
+RIV_API void riv_stdrun(riv_context_callback frame_cb);
 
-// prng
-uint64_t riv_prng_rand(riv_prng* self);
-uint64_t riv_prng_rand_uint(riv_prng* self, uint64_t high);
-int64_t riv_prng_rand_int(riv_prng* self, int64_t low, int64_t high);
-double riv_prng_rand_float(riv_prng* self);
-void riv_prng_seed(riv_prng* self, uint64_t a, uint64_t b);
+// Sound system
+RIV_API uint64_t riv_sound_play_from_memory(riv_context* self, riv_span_uint8 data, uint32_t vol);
+RIV_API void riv_sound_stop(riv_context* self, uint64_t sound_id);
+
+// Pseudo random number generator (PRNG)
+RIV_API uint64_t riv_prng_rand(riv_prng* self);
+RIV_API uint64_t riv_prng_rand_uint(riv_prng* self, uint64_t high);
+RIV_API int64_t riv_prng_rand_int(riv_prng* self, int64_t low, int64_t high);
+RIV_API double riv_prng_rand_float(riv_prng* self);
+RIV_API void riv_prng_seed(riv_prng* self, uint64_t a, uint64_t b);
 
 #endif

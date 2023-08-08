@@ -30,7 +30,7 @@ nldecl.generate_bindings_file{
     -- sized arrays
     {'framebuffer: %*', 'framebuffer: *[RIV_MEMSIZE_FRAMEBUFFER]'},
     {'audiobuffer: %*', 'audiobuffer: *[RIV_MEMSIZE_AUDIOBUFFER]'},
-    {'tracked_keys: %*', 'tracked_keys: *[128]'},
+    {'tracked_keys: %*', 'tracked_keys: *[RIV_NUM_KEYCODE]'},
     {'palette: %*', 'palette: *[256]'},
   },
   output_head = [[

@@ -29,7 +29,8 @@ local function init_default_palette(self: *riv_context): void
   self.mmio_driver.palette[RIV_PAL16_LIGHTPEACH] = RIV_RGB_PAL16_LIGHTPEACH
 end
 
-function riv_context:init(): void <cexport'riv_init'>
+function riv_context:setup(): void <cexport'riv_setup'>
+  $self = {}
   assert(not self.mmio_driver, 'riv already initialized')
   -- yield
   self.yield_fd = open("/dev/yield", O_RDWR, 0)
@@ -69,7 +70,7 @@ function riv_context:init(): void <cexport'riv_init'>
   init_default_palette(self)
 end
 
-function riv_context:uninit(): void <cexport'riv_uninit'>
+function riv_context:shutdown(): void <cexport'riv_shutdown'>
   assert(self.mmio_driver, 'riv not initialized')
   local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
   memory.zero(mmio, RIV_MEMSIZE_HUGEPAGE)
@@ -81,7 +82,7 @@ function riv_context:uninit(): void <cexport'riv_uninit'>
   $self = {}
 end
 
-function riv_context:ctl(reason: riv_control_reason): void <cexport'riv_ctl'>
+function riv_context:_ctl(reason: riv_control_reason): void
   assert(self.mmio_driver, 'riv not initialized')
   local IOCTL_YIELD: usize <comptime> = 0xc008d100
   local HTIF_DEVICE_YIELD: uint8 <comptime> = 2
@@ -115,7 +116,7 @@ function riv_context:_poll_inputs() : void
 end
 
 function riv_context:present(): void <cexport'riv_present'>
-  self:ctl(RIV_CONTROL_PRESENT)
+  self:_ctl(RIV_CONTROL_PRESENT)
   self.frame = self.frame + 1
   self.mmio_driver.frame = self.frame
   self:_poll_inputs()
@@ -134,14 +135,14 @@ function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): uint
   local handle_id: uint64 = self.sound_handle_gen + 1
   self.sound_handle_gen = handle_id
   memory.spancopy((@span(byte))(self.audiobuffer), data)
-  self.mmio_driver.audio_ctl = {command=RIV_AUDIOCOMMAND_SOUND_PLAY, handle_id=handle_id, data_size=#data}
-  self:ctl(RIV_CONTROL_AUDIO)
+  self.mmio_driver.audio_ctl = {command=RIV_AUDIOCOMMAND_SOUND_PLAY, handle_id=handle_id, buf_len=#data}
+  self:_ctl(RIV_CONTROL_AUDIO)
   return handle_id
 end
 
 function riv_context:sound_stop(sound_id: uint64): void <cexport'riv_sound_stop'>
   self.mmio_driver.audio_ctl = {command=RIV_AUDIOCOMMAND_SOUND_STOP, handle_id=sound_id}
-  self:ctl(RIV_CONTROL_AUDIO)
+  self:_ctl(RIV_CONTROL_AUDIO)
 end
 
 global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>
@@ -151,7 +152,7 @@ global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>
   if run_desc.framebuffer_desc.fps == 0 then run_desc.framebuffer_desc.fps = RIV_DEFAULT_FPS end
   if run_desc.framebuffer_desc.pixel_format == 0 then run_desc.framebuffer_desc.pixel_format = RIV_DEFAULT_PIXELFORMAT end
   if not self.mmio_driver then
-    self:init()
+    self:setup()
   end
   if run_desc.init_cb then
     run_desc.init_cb(self)
@@ -163,7 +164,7 @@ global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>
   if run_desc.cleanup_cb then
     run_desc.cleanup_cb(self)
   end
-  self:uninit()
+  self:shutdown()
   exit(0)
 end
 

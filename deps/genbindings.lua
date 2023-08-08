@@ -23,10 +23,7 @@ nldecl.generate_bindings_file{
   defines = {'MA_NO_PTHREAD_IN_HEADER'},
   includes = {'miniaudio.h'},
   include_dirs = {'.'},
-  include_names = {
-    '^ma_',
-    '^MA_'
-  },
+  include_names = {'^ma_', '^MA_'},
   output_head = [==[
 ##[[
 if not MINIAUDIO_NO_IMPL then
@@ -52,9 +49,9 @@ nldecl.generate_bindings_file{
   includes = {'sokol_gfx.h', 'sokol_gp.h', 'sokol_app.h'},
   include_dirs = {'.'},
   include_names = {
-    '^sg_',
-    '^sgp_',
-    '^sapp_',
+    '^sg_', '^SG_',
+    '^sapp_', '^SAPP_',
+    '^sgp_', '^SGP_',
   },
   output_head =
 [==[

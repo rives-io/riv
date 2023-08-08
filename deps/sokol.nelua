@@ -66,6 +66,17 @@ global sg_range: type <cimport,nodecl> = @record{
   ptr: pointer,
   size: csize
 }
+global SG_INVALID_ID: cint <comptime> = 0
+global SG_NUM_SHADER_STAGES: cint <comptime> = 2
+global SG_NUM_INFLIGHT_FRAMES: cint <comptime> = 2
+global SG_MAX_COLOR_ATTACHMENTS: cint <comptime> = 4
+global SG_MAX_SHADERSTAGE_BUFFERS: cint <comptime> = 8
+global SG_MAX_SHADERSTAGE_IMAGES: cint <comptime> = 12
+global SG_MAX_SHADERSTAGE_UBS: cint <comptime> = 4
+global SG_MAX_UB_MEMBERS: cint <comptime> = 16
+global SG_MAX_VERTEX_ATTRIBUTES: cint <comptime> = 16
+global SG_MAX_MIPMAPS: cint <comptime> = 16
+global SG_MAX_TEXTUREARRAY_LAYERS: cint <comptime> = 128
 global sg_color: type <cimport,nodecl> = @record{
   r: float32,
   g: float32,
@@ -1086,6 +1097,10 @@ global sgp_pipeline_desc: type <cimport,nodecl> = @record{
   primitive_type: sg_primitive_type,
   blend_mode: sgp_blend_mode
 }
+global SAPP_MAX_TOUCHPOINTS: cint <comptime> = 8
+global SAPP_MAX_MOUSEBUTTONS: cint <comptime> = 3
+global SAPP_MAX_KEYCODES: cint <comptime> = 512
+global SAPP_MAX_ICONIMAGES: cint <comptime> = 8
 global sapp_event_type: type <cimport,nodecl,using> = @enum(cint){
   SAPP_EVENTTYPE_INVALID = 0,
   SAPP_EVENTTYPE_KEY_DOWN = 1,
@@ -1256,6 +1271,13 @@ global sapp_mousebutton: type <cimport,nodecl,using> = @enum(cint){
   SAPP_MOUSEBUTTON_MIDDLE = 2,
   SAPP_MOUSEBUTTON_INVALID = 256
 }
+global SAPP_MODIFIER_SHIFT: cint <comptime> = 1
+global SAPP_MODIFIER_CTRL: cint <comptime> = 2
+global SAPP_MODIFIER_ALT: cint <comptime> = 4
+global SAPP_MODIFIER_SUPER: cint <comptime> = 8
+global SAPP_MODIFIER_LMB: cint <comptime> = 256
+global SAPP_MODIFIER_RMB: cint <comptime> = 512
+global SAPP_MODIFIER_MMB: cint <comptime> = 1024
 global sapp_event: type <cimport,nodecl> = @record{
   frame_count: uint64,
   type: sapp_event_type,
@@ -1659,6 +1681,9 @@ global function sapp_wgpu_get_render_view(): pointer <cimport,nodecl> end
 global function sapp_wgpu_get_resolve_view(): pointer <cimport,nodecl> end
 global function sapp_wgpu_get_depth_stencil_view(): pointer <cimport,nodecl> end
 global function sapp_android_get_native_activity(): pointer <cimport,nodecl> end
+global SGP_BATCH_OPTIMIZER_DEPTH: cint <comptime> = 8
+global SGP_UNIFORM_CONTENT_SLOTS: cint <comptime> = 4
+global SGP_TEXTURE_SLOTS: cint <comptime> = 4
 global function sapp_sgcontext(): sg_context_desc
   local desc: sg_context_desc
   desc.color_format = (@sg_pixel_format)(sapp_color_format())

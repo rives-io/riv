@@ -107,11 +107,11 @@ local function translate_keycode_to_riv(keycode: sapp_keycode): riv_key_code
   case SAPP_KEYCODE_KP_ENTER then return RIV_KEYCODE_KP_ENTER
   case SAPP_KEYCODE_KP_EQUAL then return RIV_KEYCODE_KP_EQUAL
   case SAPP_KEYCODE_LEFT_SHIFT then return RIV_KEYCODE_LEFT_SHIFT
-  case SAPP_KEYCODE_LEFT_CONTROL then return RIV_KEYCODE_LEFT_CONTROL
+  case SAPP_KEYCODE_LEFT_CONTROL then return RIV_KEYCODE_LEFT_CTRL
   case SAPP_KEYCODE_LEFT_ALT then return RIV_KEYCODE_LEFT_ALT
   case SAPP_KEYCODE_LEFT_SUPER then return RIV_KEYCODE_LEFT_SUPER
   case SAPP_KEYCODE_RIGHT_SHIFT then return RIV_KEYCODE_RIGHT_SHIFT
-  case SAPP_KEYCODE_RIGHT_CONTROL then return RIV_KEYCODE_RIGHT_CONTROL
+  case SAPP_KEYCODE_RIGHT_CONTROL then return RIV_KEYCODE_RIGHT_CTRL
   case SAPP_KEYCODE_RIGHT_ALT then return RIV_KEYCODE_RIGHT_ALT
   case SAPP_KEYCODE_RIGHT_SUPER then return RIV_KEYCODE_RIGHT_SUPER
   case SAPP_KEYCODE_MENU then return RIV_KEYCODE_MENU
@@ -141,6 +141,8 @@ end
 local function poll_keyboard_events(): void
   defer event_index_by_key_code:clear() end
   local index: uint8 = 0
+
+  --TODO: save key modifiers
 
   -- poll keyboard events
   for _, event: *sapp_event in mipairs(events) do
