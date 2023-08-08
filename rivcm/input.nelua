@@ -257,7 +257,6 @@ function input.poll(): void
 
   if replaying then
     poll_replay_events()
-
   else
     poll_keyboard_events()
     if recording then

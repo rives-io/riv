@@ -9,7 +9,7 @@ local Color = @byte
 local TILE_SIZE <comptime> = 1
 local GRID_SIZE <comptime> = 16
 local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
-local MOVE_DELAY <comptime> = 8
+local MOVE_DELAY <comptime> = 1
 
 -- Game state variables
 local prng: riv_prng
@@ -75,7 +75,8 @@ end
 
 local function game_over()
   riv_printf('GAME OVER\n')
-  init_game()
+  riv.running = false
+  -- init_game()
 end
 
 local function poll_events()
@@ -198,7 +199,7 @@ riv_run(&(@riv_run_desc){
   framebuffer_desc = {
     width = SCREEN_SIZE,
     height = SCREEN_SIZE,
-    fps = 60,
+    fps = 8,
     pixel_format = RIV_PIXELFORMAT_PAL256,
   }
 })

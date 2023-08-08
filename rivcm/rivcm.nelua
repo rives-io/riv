@@ -47,7 +47,7 @@ local function parse_options(): rivcm_options
         entrypoint_sb:write('cartridge-run')
         opts.cartridge = arg[argi + 1]
         argi = argi + 1
-      elseif a == '-fast-forward' then
+      elseif a == '-speed' then
         opts.fast_forward = true
       elseif a == '--' then
         entrypoint_args = true
@@ -63,8 +63,8 @@ local function parse_options(): rivcm_options
 -replay <filename>
     Replay using input log from a replay file.
 
--fast-forward
-    Fast forward replay.
+-speed <speed>
+    Set replay speed.
 ]]
         os.exit(0)
       else
@@ -92,12 +92,12 @@ local function init(): void
   input.setup()
 
   if options.fast_forward then
-    framelimiter.override_fps_limit(RIV_FPS_UNLIMITED)
+    framelimiter.override_fps_limit(240)
   end
 
-  if options.recording then
+  if options.recording then -- start recording
     input.start_recording()
-  elseif options.replaying then
+  elseif options.replaying then -- start replaying
     input.load_replay(options.replay_filename)
   end
 end
@@ -126,7 +126,9 @@ local function machine_frame(): boolean
       -- execute control event from the yield
       switch machine:read_yield_reason() do
       case RIV_CONTROL_PRESENT then
-        -- video will be presented in frame function
+        -- copy frame buffer from guest memory into host memory
+        video.update_framebuffer()
+        -- must break the loop so we can present the video
         return true
       case RIV_CONTROL_AUDIO then
         audio.control()
@@ -136,17 +138,20 @@ local function machine_frame(): boolean
     case CM_BREAK_REASON_HALTED then
       io.stderr:printf('Halted\n')
       sapp_quit()
-      return
+      return false
     else
       io.stderr:printf('Unexpected machine run break reason\n')
       sapp_quit()
-      return
+      return false
     end
   end
 end
 
--- Poll next frame.
-local function frame(): void
+-- Advance to the next frame.
+local function advance_frame(): void
+  if machine:is_halted() then return end
+
+  -- check if is the last replay frame
   local finished: boolean = input.is_replay_at_end()
 
   -- poll input events into machine device memory
@@ -160,22 +165,26 @@ local function frame(): void
   local time_elapsed: float64 = now - time_start
   local mcycle_elapsed: uint64 = machine:read_mcycle() - mcycle_start
 
+  -- force quit when replay ends
   if finished then
     io.stderr:printf('Replay finished\n')
     sapp_quit()
   end
 
-  -- stop when machine is not running
-  if not running then return end
-
   -- log fps
-  framelimiter.print_stats(now, time_elapsed, mcycle_elapsed)
+  if running then
+    framelimiter.print_stats(now, time_elapsed, mcycle_elapsed)
+  end
+end
 
+-- Poll next frame.
+local function frame(): void
+  if framelimiter.should_process_next_frame() then
+    -- advance to next frame
+    advance_frame()
+  end
   -- display the frame
   video.present()
-
-  -- limit fps
-  framelimiter.wait_next_frame()
 end
 
 do

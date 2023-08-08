@@ -9,7 +9,7 @@ require '.machine'
 global framelimiter = @record{}
 
 -- Frame limiter state.
-local next_frame_time: float64
+local last_frame_time: float64
 local time_elapsed_sum: float64
 local mcycle_elapsed_sum: uint64
 local mcycle_sum: uint64
@@ -17,24 +17,29 @@ local fps: uint64
 local last_time: float64
 local max_fps: uint64
 local max_fps_overriden: boolean
+local first_frame_processed: boolean
 
 function framelimiter.override_fps_limit(fps: uint64): void
   max_fps = fps
   max_fps_overriden = true
 end
 
--- Limit frame rate by sleeping while necessary.
-function framelimiter.wait_next_frame(): void
+-- Return true when we should process the next frame.
+function framelimiter.should_process_next_frame(): boolean
   local max_fps: uint64 = max_fps_overriden and max_fps or machine.mmio_driver.framebuffer_desc.fps
-  if max_fps == RIV_FPS_UNLIMITED then return end
-  local frame_delay: float64 = 1.0/max_fps
   local now: float64 = os.now()
-  if next_frame_time > now then
-    local delay: float64 = next_frame_time - now
-    os.sleep(delay)
-    next_frame_time = next_frame_time + frame_delay
+  if max_fps == RIV_FPS_UNLIMITED or max_fps == RIV_FPS_INVALID then
+    last_frame_time = now
+    return true
+  elseif not first_frame_processed then
+    first_frame_processed = true
+    last_frame_time = now
+    return true
   else
-    next_frame_time = now + frame_delay
+    local frame_delay: float64 = 1.0/max_fps
+    if now < last_frame_time + frame_delay then return false end
+    last_frame_time = now
+    return true
   end
 end
 

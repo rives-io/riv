@@ -29,14 +29,6 @@ function video.setup(): void
   assert(sg_isvalid(), 'failed to initialize Sokol GFX')
   sgp_setup(sgp_desc{})
   assert(sgp_is_valid(), 'failed to initialize SGP')
-
-  -- TODO: do this properly
-cemit![[
-#ifdef _SAPP_LINUX
-   /* Disable swap interval */
-   _sapp_glx_swapinterval(0);
-#endif
-]]
 end
 
 -- Terminate video subsystem.
@@ -87,15 +79,15 @@ local function update_framebuffer_mem(): void
   if fb_pixel_count == 0 then return end
   local fb_machine_mem: span(byte) = {data=&framebuffer,size=fb_pixel_count}
   machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_FRAMEBUFFER, fb_machine_mem)
+  for i: int64=0,<fb_pixel_count do
+    framebuffer_rgba[i] = machine.mmio_driver.palette[framebuffer[i]]
+  end
 end
 
 -- Update the framebuffer into GPU memory.
 local function update_framebuffer_video_mem(): void
   if fb_pixel_count == 0 then return end
   -- update the framebuffer pixels using palette
-  for i: int64=0,<fb_pixel_count do
-    framebuffer_rgba[i] = machine.mmio_driver.palette[framebuffer[i]]
-  end
   sg_update_image(fb_image, sg_image_data{{{{ptr=&framebuffer_rgba, size=fb_pixel_count*4}}}})
 end
 
@@ -122,10 +114,13 @@ local function draw_framebuffer(screen_width: int64, screen_height: int64): void
   sgp_reset_image(0)
 end
 
-function video.present(): void
-  -- update framebuffer
+function video.update_framebuffer()
+  if not machine:is_mmio_ready() then return end
   update_framebuffer_desc()
   update_framebuffer_mem()
+end
+
+function video.present(): void
   update_framebuffer_video_mem()
 
   -- prepare for drawing
