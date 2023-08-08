@@ -29,6 +29,14 @@ function video.setup(): void
   assert(sg_isvalid(), 'failed to initialize Sokol GFX')
   sgp_setup(sgp_desc{})
   assert(sgp_is_valid(), 'failed to initialize SGP')
+
+  -- TODO: do this properly
+cemit![[
+#ifdef _SAPP_LINUX
+   /* Disable swap interval */
+   _sapp_glx_swapinterval(0);
+#endif
+]]
 end
 
 -- Terminate video subsystem.

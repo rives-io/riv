@@ -15,11 +15,19 @@ local mcycle_elapsed_sum: uint64
 local mcycle_sum: uint64
 local fps: uint64
 local last_time: float64
+local max_fps: uint64
+local max_fps_overriden: boolean
+
+function framelimiter.override_fps_limit(fps: uint64): void
+  max_fps = fps
+  max_fps_overriden = true
+end
 
 -- Limit frame rate by sleeping while necessary.
-function framelimiter.limit_fps()
-  if machine.mmio_driver.framebuffer_desc.fps == RIV_FPS_UNLIMITED then return end
-  local frame_delay: float64 = 1.0/machine.mmio_driver.framebuffer_desc.fps
+function framelimiter.wait_next_frame(): void
+  local max_fps: uint64 = max_fps_overriden and max_fps or machine.mmio_driver.framebuffer_desc.fps
+  if max_fps == RIV_FPS_UNLIMITED then return end
+  local frame_delay: float64 = 1.0/max_fps
   local now: float64 = os.now()
   if next_frame_time > now then
     local delay: float64 = next_frame_time - now
@@ -30,8 +38,8 @@ function framelimiter.limit_fps()
   end
 end
 
--- Log the frame rate statistics to stderr every second.
-function framelimiter.log_fps(now: float64, time_elapsed: float64, mcycle_elapsed: uint64)
+-- Print the frame rate statistics to stderr every second.
+function framelimiter.print_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64)
   fps = fps + 1
   time_elapsed_sum = time_elapsed_sum + time_elapsed
   mcycle_elapsed_sum = mcycle_elapsed_sum + mcycle_elapsed

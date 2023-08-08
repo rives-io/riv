@@ -29,6 +29,14 @@ global RIV_MEMSIZE_RAM: uint64 <comptime> = 128*1024*1024
   end
 ## end
 
+global function hexhash(hash: [32]byte): string
+  local sb: stringbuilder
+  for _, b: byte in ipairs(hash) do
+    sb:writef('%02x', b)
+  end
+  return sb:promote()
+end
+
 --------------------------------------------------------------------------------
 
 -- Machine.
@@ -96,6 +104,13 @@ function Machine:is_halted(): boolean
   local halted: boolean
   cm_assert!(cm_read_iflags_H(self.machine, &halted))
   return halted
+end
+
+-- Get the machine root hash as a hexadecimal string.
+function Machine:get_root_hash_as_hex(): [32]byte
+  local hash: [32]byte
+  cm_assert!(cm_get_root_hash(self.machine, &hash))
+  return hash
 end
 
 -- Get machine yield reason.

@@ -2,6 +2,9 @@
 
 require 'sokol'
 require 'hashmap'
+require 'vector'
+require 'io'
+require 'arg'
 
 require '.machine'
 
@@ -118,34 +121,58 @@ local function translate_keycode_to_riv(keycode: sapp_keycode): riv_key_code
   else return RIV_KEYCODE_INVALID end
 end
 
+## function fn_assert(v)
+  local expr_ret, expr_err: string = #[v]#
+  if #expr_err ~= 0 then
+    ## local funcname = context.scope:get_up_scope_of_kind('is_function').funcsym.name
+    error(#[funcname .. ': ']# .. expr_err)
+  end
+  in expr_ret
+## end
+
 --------------------------------------------------------------------------------
+
+local riv_event_key40: type = @record{
+  key_event: uint8,
+  frame: uint32,
+}
+
+local riv_input_log_header = @record{
+  last_frame: uint32,
+  num_events: uint32,
+}
 
 -- Input subsystem.
 global input = @record{}
 
 -- Input subsystem state.
-local events: vector(sapp_event)
-local event_index_by_key_code: hashmap(uint8, uint8)
+local poll_events: vector(sapp_event)
+local poll_event_index_by_key_code: hashmap(uint8, uint8)
+local input_log_events: vector(riv_event_key40)
+local input_log_last_frame: uint64
+local replay_log_index: usize
+local recording: boolean
+local replaying: boolean
 
 -- Initialize input subsystem.
 function input.setup(): void
-
 end
 
 -- Terminate input subsystem.
 function input.shutdown(): void
-  events:destroy()
-  event_index_by_key_code:destroy()
+  poll_events:destroy()
+  poll_event_index_by_key_code:destroy()
 end
 
+-- Poll keyboards events coming from the application window.
 local function poll_keyboard_events(): void
-  defer event_index_by_key_code:clear() end
+  defer poll_event_index_by_key_code:clear() end
   local index: uint8 = 0
 
   --TODO: save key modifiers
 
   -- poll keyboard events
-  for _, event: *sapp_event in mipairs(events) do
+  for _, event: *sapp_event in mipairs(poll_events) do
     -- ignore key repeat
     if event.key_repeat then continue end
     -- ignore non key up/down events
@@ -158,12 +185,12 @@ local function poll_keyboard_events(): void
     if not machine.mmio_driver.tracked_keys[key_code] then continue end
     -- compute key event
     local key_event: uint8 = key_code | (event.type == SAPP_EVENTTYPE_KEY_UP and 128_u8 or 0_u8)
-    local found: boolean, prev_index: uint8 = event_index_by_key_code:has_and_get(key_code)
+    local found: boolean, prev_index: uint8 = poll_event_index_by_key_code:has_and_get(key_code)
     if found then -- replace previous event
       machine.mmio_device.key_events[prev_index] = key_event
     else -- append new event
       machine.mmio_device.key_events[index] = key_event
-      event_index_by_key_code[key_code] = index
+      poll_event_index_by_key_code[key_code] = index
       index = index + 1
       -- stop when event list is full, this is almost impossible, here just for sanity
       if index >= #machine.mmio_device.key_events then break end
@@ -178,18 +205,100 @@ local function poll_keyboard_events(): void
   end
 end
 
+-- Poll events coming from replay input log.
+local function poll_replay_events(): void
+  local frame: uint64 = machine.mmio_driver.frame
+
+  -- fill events
+  local index: uint8 = 0
+  while replay_log_index < #input_log_events do
+    local next_event: riv_event_key40 = input_log_events[replay_log_index]
+    if next_event.frame ~= frame then break end
+    replay_log_index = replay_log_index + 1
+    -- append event
+    machine.mmio_device.key_events[index] = next_event.key_event
+    index = index + 1
+    -- stop when event list is full, this is almost impossible, here just for sanity
+    if index >= #machine.mmio_device.key_events then break end
+  end
+  machine.mmio_device.key_event_count = index
+
+  -- fill remaining key events with 0
+  while index < #machine.mmio_device.key_events do
+    machine.mmio_device.key_events[index] = 0
+    index = index + 1
+  end
+end
+
+-- Record polled events in this frame.
+local function poll_record_events(): void
+  local frame: uint64 = machine.mmio_driver.frame
+  input_log_last_frame = frame
+  for i: uint32=0,<machine.mmio_device.key_event_count do
+    input_log_events:push{
+      key_event = machine.mmio_device.key_events[i],
+      frame=frame,
+    }
+  end
+end
+
+-- Returns true if replaying and the replay is in the last frame or above last frame.
+function input.is_replay_at_end(): boolean
+  return replaying and machine.mmio_driver.frame >= input_log_last_frame
+end
+
 -- Poll for keyboard/mouse input events.
 function input.poll(): void
   -- poll always destroy events in queue
-  defer events:clear() end
+  defer poll_events:clear() end
 
   -- ignore events when machine is not ready
   if not machine:is_mmio_ready() then return end
 
-  poll_keyboard_events()
+  if replaying then
+    poll_replay_events()
+
+  else
+    poll_keyboard_events()
+    if recording then
+      poll_record_events()
+    end
+  end
 end
 
 -- Poll keyboard/mouse input events.
 function input.append_event(event: *sapp_event): void
-  events:push($event)
+  if not replaying then
+    poll_events:push($event)
+  end
+end
+
+-- Start recording.
+function input.start_recording()
+  recording = true
+end
+
+-- Save replay log to a file.
+function input.save_replay(filename: string): void
+  local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
+  local header_bytes: string <close> = string.pack('<I4I4', input_log_last_frame, input_log_events.size)
+  fn_assert!(file:write(header_bytes))
+  for _, event: riv_event_key40 in ipairs(input_log_events) do
+    local event_bytes: string <close> = string.pack('<I1I4', event.key_event, event.frame)
+    fn_assert!(file:write(event_bytes))
+  end
+end
+
+-- Load replay log from a file.
+function input.load_replay(filename: string): void
+  replaying = true
+  local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
+  local num_events: uint32
+  local header_bytes: string <close> = fn_assert!(file:read(8))
+  input_log_last_frame, num_events = string.unpack('<I4I4', header_bytes)
+  input_log_events:resize(num_events)
+  for _, event: *riv_event_key40 in mipairs(input_log_events) do
+    local event_bytes: string <close> = fn_assert!(file:read(5))
+    event.key_event, event.frame = string.unpack('<I1I4', event_bytes)
+  end
 end

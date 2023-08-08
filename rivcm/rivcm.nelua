@@ -13,27 +13,108 @@ require '.video'
 require '.input'
 require '.framelimiter'
 
+local rivcm_options: type = @record{
+  cartridge: string,
+  entrypoint: string,
+  fast_forward: boolean,
+  replay_filename: string,
+  recording: boolean,
+  replaying: boolean,
+}
+
+local function parse_options(): rivcm_options
+  local opts: rivcm_options
+  local entrypoint_args: boolean = false
+  local entrypoint_sb: stringbuilder <close>
+  local argi: usize = 1
+  while argi <= #arg do
+    local a: string = arg[argi]
+    if not entrypoint_args then
+      if a == '-record' then
+        assert(not opts.replaying, 'already replaying')
+        assert(argi + 1 <= #arg, 'missing filename parameter')
+        opts.recording = true
+        opts.replay_filename = arg[argi + 1]
+        argi = argi + 1
+      elseif a == '-replay' then
+        assert(not opts.recording, 'already recording')
+        assert(argi + 1 <= #arg, 'missing filename parameter')
+        opts.replaying = true
+        opts.replay_filename = arg[argi + 1]
+        argi = argi + 1
+      elseif a == '-cartridge' then
+        assert(argi + 1 <= #arg, 'missing filename parameter')
+        entrypoint_sb:write('cartridge-run')
+        opts.cartridge = arg[argi + 1]
+        argi = argi + 1
+      elseif a == '-fast-forward' then
+        opts.fast_forward = true
+      elseif a == '--' then
+        entrypoint_args = true
+      elseif a == '--help' then
+        io.stderr:printf("Usage: %s [options]\n", arg[0])
+        io.stderr:write[[
+-cartridge <filename>
+    Cartridge to run.
+
+-record <filename>
+    Record input log to a replay file.
+
+-replay <filename>
+    Replay using input log from a replay file.
+
+-fast-forward
+    Fast forward replay.
+]]
+        os.exit(0)
+      else
+        error(string.format("unknown command line option '%s'", a))
+      end
+    else
+      entrypoint_sb:write(' ', a)
+    end
+    argi = argi + 1
+  end
+  opts.entrypoint = entrypoint_sb:promote()
+  return opts
+end
+
+local options: rivcm_options
+
 -- Initialize application.
 local function init(): void
-  -- prepare cartridge drive and command line
-  local cartridge: string = "./demos/snake.sqfs"
-  local args: string <close> = string.concat(arg, " ")
-  local entrypoint: string <close> = 'cartridge-run '..args
-
   -- initialize the machine
-  machine = Machine.create(cartridge, entrypoint)
+  machine = Machine.create(options.cartridge, options.entrypoint)
 
   -- init subsystems
   video.setup()
   audio.setup()
   input.setup()
+
+  if options.fast_forward then
+    framelimiter.override_fps_limit(RIV_FPS_UNLIMITED)
+  end
+
+  if options.recording then
+    input.start_recording()
+  elseif options.replaying then
+    input.load_replay(options.replay_filename)
+  end
 end
 
 -- Terminate application.
 local function terminate(): void
+  if options.recording then
+    input.save_replay(options.replay_filename)
+  end
+
   input.shutdown()
   video.shutdown()
   audio.shutdown()
+
+  local mcycle: uint64 = machine:read_mcycle()
+  local root_hash: string <close> = hexhash(machine:get_root_hash_as_hex())
+  io.stderr:printf('%d: %s\n', mcycle, root_hash)
   machine:destroy()
 end
 
@@ -54,11 +135,10 @@ local function machine_frame(): boolean
       end
     case CM_BREAK_REASON_HALTED then
       io.stderr:printf('Halted\n')
-      io.stderr:printf('Cycles: %d\n', machine:read_mcycle())
       sapp_quit()
       return
     else
-      io.stderr:printf('unexpected machine break reason\n')
+      io.stderr:printf('Unexpected machine run break reason\n')
       sapp_quit()
       return
     end
@@ -67,37 +147,49 @@ end
 
 -- Poll next frame.
 local function frame(): void
+  local finished: boolean = input.is_replay_at_end()
+
   -- poll input events into machine device memory
   input.poll()
 
   -- poll next frame from machine driver memory
   local mcycle_start: uint64 = machine:read_mcycle()
   local time_start: float64 = os.now()
-  local running: boolean  = machine_frame()
+  local running: boolean = machine_frame()
   local now: float64 = os.now()
   local time_elapsed: float64 = now - time_start
   local mcycle_elapsed: uint64 = machine:read_mcycle() - mcycle_start
+
+  if finished then
+    io.stderr:printf('Replay finished\n')
+    sapp_quit()
+  end
 
   -- stop when machine is not running
   if not running then return end
 
   -- log fps
-  framelimiter.log_fps(now, time_elapsed, mcycle_elapsed)
+  framelimiter.print_stats(now, time_elapsed, mcycle_elapsed)
 
   -- display the frame
   video.present()
 
   -- limit fps
-  framelimiter.limit_fps()
+  framelimiter.wait_next_frame()
 end
 
--- Application main loop.
-sapp_run(sapp_desc{
-  init_cb = init,
-  frame_cb = frame,
-  cleanup_cb = terminate,
-  event_cb = input.append_event,
-  width = 320,
-  height = 240,
-  window_title = "RIVCM",
-})
+do
+  -- parse options
+  options = parse_options()
+
+  -- Application main loop.
+  sapp_run(sapp_desc{
+    init_cb = init,
+    frame_cb = frame,
+    cleanup_cb = terminate,
+    event_cb = input.append_event,
+    width = 320,
+    height = 240,
+    window_title = "RIVCM",
+  })
+end
