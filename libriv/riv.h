@@ -237,10 +237,19 @@ typedef enum riv_constants {
   RIV_DEFAULT_FPS = 60,
 } riv_constants;
 
+typedef enum riv_card_format {
+  RIV_CARDFORMAT_NONE = 0,
+  RIV_CARDFORMAT_DATA,
+  RIV_CARDFORMAT_TEXT,
+  RIV_CARDFORMAT_JSON,
+} riv_card_format;
+
 // The next constants are used to implement the driver
 
 typedef enum riv_control_reason {
   RIV_CONTROL_NONE = 0,
+  RIV_CONTROL_START,
+  RIV_CONTROL_FINISH,
   RIV_CONTROL_PRESENT,
   RIV_CONTROL_AUDIO,
 } riv_control_reason;
@@ -255,21 +264,24 @@ typedef enum riv_mem_size {
   RIV_MEMSIZE_HUGEPAGE     = 2*1024*1024, // 2 MB
   RIV_MEMSIZE_MMIO_DRIVER  =    128*1024, // 128 KB
   RIV_MEMSIZE_MMIO_DEVICE  =    128*1024, // 128 KB
-  RIV_MEMSIZE_AUDIOBUFFER  =    768*1024, // 768 KB
+  RIV_MEMSIZE_INOUTBUFFER  =    256*1024, // 256 KB
+  RIV_MEMSIZE_AUDIOBUFFER  =    512*1024, // 512 KB
   RIV_MEMSIZE_FRAMEBUFFER  =   1024*1024, // 1 MB
 } riv_mem_size;
 
 typedef enum riv_mmio_offset {
   RIV_MMIOSTART_MMIO_DRIVER  = 0,
-  RIV_MMIOSTART_MMIO_DEVICE  = RIV_MEMSIZE_MMIO_DRIVER,
-  RIV_MMIOSTART_AUDIOBUFFER  = RIV_MEMSIZE_MMIO_DRIVER + RIV_MEMSIZE_MMIO_DEVICE,
-  RIV_MMIOSTART_FRAMEBUFFER  = RIV_MEMSIZE_MMIO_DRIVER + RIV_MEMSIZE_MMIO_DEVICE + RIV_MEMSIZE_AUDIOBUFFER,
+  RIV_MMIOSTART_MMIO_DEVICE  = RIV_MMIOSTART_MMIO_DRIVER + RIV_MEMSIZE_MMIO_DRIVER,
+  RIV_MMIOSTART_INOUTBUFFER  = RIV_MMIOSTART_MMIO_DEVICE + RIV_MEMSIZE_MMIO_DEVICE,
+  RIV_MMIOSTART_AUDIOBUFFER  = RIV_MMIOSTART_INOUTBUFFER + RIV_MEMSIZE_INOUTBUFFER,
+  RIV_MMIOSTART_FRAMEBUFFER  = RIV_MMIOSTART_AUDIOBUFFER + RIV_MEMSIZE_AUDIOBUFFER,
 } riv_mmio_offset;
 
 typedef enum riv_vaddr_base {
   RIV_VADDR_BASE         = 0x10000000,
   RIV_VADDR_MMIO_DRIVER  = RIV_VADDR_BASE + RIV_MMIOSTART_MMIO_DRIVER,
   RIV_VADDR_MMIO_DEVICE  = RIV_VADDR_BASE + RIV_MMIOSTART_MMIO_DEVICE,
+  RIV_VADDR_INOUTBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_INOUTBUFFER,
   RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_AUDIOBUFFER,
   RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_FRAMEBUFFER,
 } riv_vaddr_base;
@@ -323,6 +335,8 @@ typedef struct riv_mmio_driver {
   uint64_t frame;
   riv_framebuffer_desc framebuffer_desc;
   riv_audio_ctl_desc audio_ctl;
+  riv_card_format outcard_format;
+  uint32_t outcard_len;
   bool tracked_keys[RIV_NUM_KEYCODE];
   uint32_t palette[256];
 } riv_mmio_driver;
@@ -330,6 +344,7 @@ typedef struct riv_mmio_driver {
 // Only device writes, only driver reads.
 typedef struct riv_mmio_device {
   riv_mmio_header header;
+  uint32_t incard_len;
   uint32_t key_event_count;
   uint8_t key_events[RIV_NUM_KEYCODE];
 } riv_mmio_device;
@@ -355,9 +370,14 @@ typedef struct riv_context {
   riv_key_state keys[RIV_NUM_KEYCODE];
   uint32_t key_modifiers; // NIY
   uint64_t frame;
+  uint32_t incard_len;
+  riv_card_format incard_format;
   // Public read/write fields
-  bool running;
+  uint32_t outcard_len;
+  riv_card_format outcard_format;
+  bool quit;
   riv_framebuffer_desc* framebuffer_desc;
+  riv_unbounded_uint8 inoutbuffer;
   riv_unbounded_uint8 framebuffer;
   riv_unbounded_uint8 audiobuffer;
   riv_unbounded_bool tracked_keys;
@@ -384,7 +404,8 @@ typedef struct riv_run_desc {
 // Utilities
 RIV_API uint64_t riv_version(void);            // Get the RIV library version
 RIV_API uint64_t riv_rdcycle(void);            // Get the current machine cycle, THIS IS NOT REPRODUCIBLE, use for benchmarking only.
-RIV_API int32_t riv_printf(char* format, ...); // Print to standard output, use for debugging.
+RIV_API uintptr_t riv_printf(const char* format, ...); // Print to standard output, use for debugging.
+RIV_API uintptr_t riv_snprintf(char* s, uintptr_t maxlen, const char* format, ...); // Print to standard output, use for debugging.
 
 // Basic
 RIV_API void riv_setup(riv_context* self);

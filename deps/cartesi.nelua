@@ -1,6 +1,6 @@
 ##[[
 cinclude 'cartesi.h'
-linklib 'cartesi'
+linklib 'cartesi-0.14'
 ]]
 global cm_hash: type <cimport,nodecl> = @[32]uint8
 global cm_hash_array: type <cimport,nodecl> = @record{
@@ -94,7 +94,7 @@ global CM_PROC_CSR: type <cimport,nodecl,using> = @enum(cint){
 }
 global CM_UARCH_BREAK_REASON: type <cimport,nodecl,using> = @enum(cint){
   CM_UARCH_BREAK_REASON_REACHED_TARGET_CYCLE = 0,
-  CM_UARCH_BREAK_REASON_HALTED = 1
+  CM_UARCH_BREAK_REASON_UARCH_HALTED = 1
 }
 global cm_processor_config: type <cimport,nodecl> = @record{
   x: [32]uint64,
@@ -145,7 +145,7 @@ global cm_memory_range_config: type <cimport,nodecl> = @record{
   image_filename: cstring
 }
 global cm_memory_range_config_array: type <cimport,nodecl> = @record{
-  entry: *[8]cm_memory_range_config,
+  entry: *cm_memory_range_config,
   count: csize
 }
 global cm_tlb_config: type <cimport,nodecl> = @record{
@@ -247,11 +247,17 @@ global cm_access_log: type <cimport,nodecl> = @record{
   notes: cm_note_array,
   log_type: cm_access_log_type
 }
-global cm_concurrency_config: type <cimport,nodecl> = @record{
+global cm_concurrency_runtime_config: type <cimport,nodecl> = @record{
   update_merkle_tree: uint64
 }
+global cm_htif_runtime_config: type <cimport,nodecl> = @record{
+  no_console_putchar: boolean
+}
 global cm_machine_runtime_config: type <cimport,nodecl> = @record{
-  concurrency: cm_concurrency_config
+  concurrency: cm_concurrency_runtime_config,
+  htif: cm_htif_runtime_config,
+  skip_root_hash_check: boolean,
+  skip_version_check: boolean
 }
 global cm_machine: type <cimport,nodecl,forwarddecl> = @record{}
 global cm_semantic_version: type <cimport,nodecl> = @record{
@@ -379,7 +385,7 @@ global function cm_get_initial_config(m: *cm_machine, config: **cm_machine_confi
 global function cm_get_default_config(config: **cm_machine_config, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_replace_memory_range(m: *cm_machine, new_range: *cm_memory_range_config, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_delete_memory_range_config(config: *cm_memory_range_config): void <cimport,nodecl> end
-global function cm_delete_error_message(err_msg: cstring): void <cimport,nodecl> end
+global function cm_delete_cstring(err_msg: cstring): void <cimport,nodecl> end
 global function cm_delete_machine_runtime_config(config: *cm_machine_runtime_config): void <cimport,nodecl> end
 global function cm_delete_uarch_ram_config(config: *cm_uarch_ram_config): void <cimport,nodecl> end
 global function cm_delete_uarch_config(config: *cm_uarch_config): void <cimport,nodecl> end
@@ -406,3 +412,9 @@ global CM_TREE_LOG2_WORD_SIZE: cint <comptime> = 3
 global CM_TREE_LOG2_PAGE_SIZE: cint <comptime> = 12
 global CM_TREE_LOG2_ROOT_SIZE: cint <comptime> = 64
 global CM_FLASH_DRIVE_CONFIGS_MAX_SIZE: cint <comptime> = 8
+global CM_MARCHID: cint <comptime> = 15
+global CM_VERSION_MAJOR: cint <comptime> = 0
+global CM_VERSION_MINOR: cint <comptime> = 14
+global CM_VERSION_PATCH: cint <comptime> = 0
+global CM_VERSION_LABEL: cstring <comptime> = ""
+global CM_MIMPID: cint <comptime> = 14000

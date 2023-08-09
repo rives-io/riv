@@ -6,13 +6,10 @@ nldecl.generate_bindings_file{
   includes = {'cartesi.h'},
   include_dirs = {'.'},
   include_names = {'^cm', '^CM'},
-  gsubs = {
-    {'entry: %*cm_memory_range_config', 'entry: *[8]cm_memory_range_config'},
-  },
   output_head = [==[
 ##[[
 cinclude 'cartesi.h'
-linklib 'cartesi'
+linklib 'cartesi-0.14'
 ]]
 ]==]
 }

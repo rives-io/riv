@@ -137,7 +137,7 @@ local riv_event_key40: type = @record{
   frame: uint32,
 }
 
-local riv_input_log_header = @record{
+local riv_input_log_header: type = @record{
   last_frame: uint32,
   num_events: uint32,
 }

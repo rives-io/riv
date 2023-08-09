@@ -28,6 +28,7 @@ nldecl.generate_bindings_file{
     {'<cimport,nodecl,', '<'},
     {' <cimport,nodecl>', ''},
     -- sized arrays
+    {'inoutbuffer: %*', 'inoutbuffer: *[RIV_MEMSIZE_INOUTBUFFER]'},
     {'framebuffer: %*', 'framebuffer: *[RIV_MEMSIZE_FRAMEBUFFER]'},
     {'audiobuffer: %*', 'audiobuffer: *[RIV_MEMSIZE_AUDIOBUFFER]'},
     {'tracked_keys: %*', 'tracked_keys: *[RIV_NUM_KEYCODE]'},

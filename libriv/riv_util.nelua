@@ -13,10 +13,20 @@ global function riv_rdcycle(): uint64 <cexport'riv_rdcycle'>
   return cycle
 end
 
-global function riv_printf(format: cstring, ...: cvarargs): int32 <cexport'riv_printf'>
+global function riv_printf(format: cstring <const>, ...: cvarargs): usize <cexport'riv_printf'>
   local args: cvalist
   C.va_start(args, format)
   local ret: cint = C.vprintf(format, args)
   C.va_end(args)
+  if ret < 0 then ret = 0 end
+  return ret
+end
+
+global function riv_snprintf(s: cstring, maxlen: usize, format: cstring <const>, ...: cvarargs): usize <cexport'riv_snprintf'>
+  local args: cvalist
+  C.va_start(args, format)
+  local ret: cint = C.vsnprintf(s, maxlen, format, args)
+  C.va_end(args)
+  if ret < 0 then ret = 0 end
   return ret
 end

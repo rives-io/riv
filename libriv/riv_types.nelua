@@ -163,10 +163,18 @@ global riv_constants: type <using> = @enum(uint32){
   RIV_DEFAULT_HEIGHT = 256,
   RIV_DEFAULT_FPS = 60
 }
+global riv_card_format: type <using> = @enum(uint32){
+  RIV_CARDFORMAT_NONE = 0,
+  RIV_CARDFORMAT_DATA = 1,
+  RIV_CARDFORMAT_TEXT = 2,
+  RIV_CARDFORMAT_JSON = 3
+}
 global riv_control_reason: type <using> = @enum(uint32){
   RIV_CONTROL_NONE = 0,
-  RIV_CONTROL_PRESENT = 1,
-  RIV_CONTROL_AUDIO = 2
+  RIV_CONTROL_START = 1,
+  RIV_CONTROL_FINISH = 2,
+  RIV_CONTROL_PRESENT = 3,
+  RIV_CONTROL_AUDIO = 4
 }
 global riv_audio_command: type <using> = @enum(uint32){
   RIV_AUDIOCOMMAND_NONE = 0,
@@ -177,20 +185,23 @@ global riv_mem_size: type <using> = @enum(uint64){
   RIV_MEMSIZE_HUGEPAGE = 2097152,
   RIV_MEMSIZE_MMIO_DRIVER = 131072,
   RIV_MEMSIZE_MMIO_DEVICE = 131072,
-  RIV_MEMSIZE_AUDIOBUFFER = 786432,
+  RIV_MEMSIZE_INOUTBUFFER = 262144,
+  RIV_MEMSIZE_AUDIOBUFFER = 524288,
   RIV_MEMSIZE_FRAMEBUFFER = 1048576
 }
 global riv_mmio_offset: type <using> = @enum(uint64){
   RIV_MMIOSTART_MMIO_DRIVER = 0,
   RIV_MMIOSTART_MMIO_DEVICE = 131072,
-  RIV_MMIOSTART_AUDIOBUFFER = 262144,
+  RIV_MMIOSTART_INOUTBUFFER = 262144,
+  RIV_MMIOSTART_AUDIOBUFFER = 524288,
   RIV_MMIOSTART_FRAMEBUFFER = 1048576
 }
 global riv_vaddr_base: type <using> = @enum(uint64){
   RIV_VADDR_BASE = 268435456,
   RIV_VADDR_MMIO_DRIVER = 268435456,
   RIV_VADDR_MMIO_DEVICE = 268566528,
-  RIV_VADDR_AUDIOBUFFER = 268697600,
+  RIV_VADDR_INOUTBUFFER = 268697600,
+  RIV_VADDR_AUDIOBUFFER = 268959744,
   RIV_VADDR_FRAMEBUFFER = 269484032
 }
 global riv_framebuffer_desc: type = @record{
@@ -223,11 +234,14 @@ global riv_mmio_driver: type = @record{
   frame: uint64,
   framebuffer_desc: riv_framebuffer_desc,
   audio_ctl: riv_audio_ctl_desc,
+  outcard_format: riv_card_format,
+  outcard_len: uint32,
   tracked_keys: [128]boolean,
   palette: [256]uint32
 }
 global riv_mmio_device: type = @record{
   header: riv_mmio_header,
+  incard_len: uint32,
   key_event_count: uint32,
   key_events: [128]uint8
 }
@@ -245,8 +259,13 @@ global riv_context: type = @record{
   keys: [128]riv_key_state,
   key_modifiers: uint32,
   frame: uint64,
-  running: boolean,
+  incard_len: uint32,
+  incard_format: riv_card_format,
+  outcard_len: uint32,
+  outcard_format: riv_card_format,
+  quit: boolean,
   framebuffer_desc: *riv_framebuffer_desc,
+  inoutbuffer: *[RIV_MEMSIZE_INOUTBUFFER]uint8,
   framebuffer: *[RIV_MEMSIZE_FRAMEBUFFER]uint8,
   audiobuffer: *[RIV_MEMSIZE_AUDIOBUFFER]uint8,
   tracked_keys: *[RIV_NUM_KEYCODE]boolean,

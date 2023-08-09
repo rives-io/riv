@@ -29,6 +29,20 @@ local function init_default_palette(self: *riv_context): void
   self.mmio_driver.palette[RIV_PAL16_LIGHTPEACH] = RIV_RGB_PAL16_LIGHTPEACH
 end
 
+function riv_context:_ctl(reason: riv_control_reason): void
+  assert(self.mmio_driver, 'riv not initialized')
+  local IOCTL_YIELD: usize <comptime> = 0xc008d100
+  local HTIF_DEVICE_YIELD: uint8 <comptime> = 2
+  local HTIF_YIELD_AUTOMATIC: uint8 <comptime> = 0
+  local swap_yield_req: riv_yield_request = {
+    dev = HTIF_DEVICE_YIELD,
+    mode = HTIF_YIELD_AUTOMATIC,
+    reason = reason,
+    data = 0,
+  }
+  assert(ioctl(self.yield_fd, IOCTL_YIELD, (@usize)(&swap_yield_req)) == 0, 'yield ioctl failed')
+end
+
 function riv_context:setup(): void <cexport'riv_setup'>
   $self = {}
   assert(not self.mmio_driver, 'riv already initialized')
@@ -58,6 +72,7 @@ function riv_context:setup(): void <cexport'riv_setup'>
     fps = RIV_DEFAULT_FPS,
     pixel_format = RIV_DEFAULT_PIXELFORMAT,
   }
+  self.inoutbuffer = (@*[RIV_MEMSIZE_INOUTBUFFER]byte)(RIV_VADDR_INOUTBUFFER)
   self.framebuffer = (@*[RIV_MEMSIZE_FRAMEBUFFER]byte)(RIV_VADDR_FRAMEBUFFER)
   self.audiobuffer = (@*[RIV_MEMSIZE_AUDIOBUFFER]byte)(RIV_VADDR_AUDIOBUFFER)
   -- aliases
@@ -68,32 +83,24 @@ function riv_context:setup(): void <cexport'riv_setup'>
   memory.spanset((@span(boolean))(self.mmio_driver.tracked_keys), true)
   -- init palette
   init_default_palette(self)
+  -- tell host we are starting, this may populate inoutbuffer
+  self:_ctl(RIV_CONTROL_START)
 end
 
 function riv_context:shutdown(): void <cexport'riv_shutdown'>
   assert(self.mmio_driver, 'riv not initialized')
+  -- tell the host we finished, the host may use inoutbuffer
+  self:_ctl(RIV_CONTROL_FINISH)
+  -- unmap memory
   local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
   memory.zero(mmio, RIV_MEMSIZE_HUGEPAGE)
   assert(munmap(mmio, RIV_MEMSIZE_HUGEPAGE) == 0, 'munmap failed')
   assert(get_free_hugepages() == 1, 'no freed hugepage')
+  -- close yield device
   if self.yield_fd > 0 then
     assert(close(self.yield_fd) >= 0, 'close yield fd failed')
   end
   $self = {}
-end
-
-function riv_context:_ctl(reason: riv_control_reason): void
-  assert(self.mmio_driver, 'riv not initialized')
-  local IOCTL_YIELD: usize <comptime> = 0xc008d100
-  local HTIF_DEVICE_YIELD: uint8 <comptime> = 2
-  local HTIF_YIELD_AUTOMATIC: uint8 <comptime> = 0
-  local swap_yield_req: riv_yield_request = {
-    dev = HTIF_DEVICE_YIELD,
-    mode = HTIF_YIELD_AUTOMATIC,
-    reason = reason,
-    data = 0,
-  }
-  assert(ioctl(self.yield_fd, IOCTL_YIELD, (@usize)(&swap_yield_req)) == 0, 'yield ioctl failed')
 end
 
 function riv_context:_poll_inputs() : void
@@ -119,13 +126,14 @@ function riv_context:present(): void <cexport'riv_present'>
   self:_ctl(RIV_CONTROL_PRESENT)
   self.frame = self.frame + 1
   self.mmio_driver.frame = self.frame
+  self.mmio_driver.outcard_format = self.outcard_format
+  self.mmio_driver.outcard_len = self.outcard_len
   self:_poll_inputs()
 end
 
 function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cexport'riv_loop'>
   assert(self.mmio_driver, 'riv not initialized')
-  self.running = true
-  while self.running do
+  while not self.quit do
     frame_cb(self)
     self:present()
   end

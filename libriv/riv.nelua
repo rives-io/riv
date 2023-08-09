@@ -7,7 +7,8 @@ require '.riv_types'
 -- util
 global function riv_version(): uint64 <cimport'riv_version'> end
 global function riv_rdcycle(): uint64 <cimport'riv_rdcycle'> end
-global function riv_printf(format: cstring, ...: cvarargs): int32 <cimport'riv_printf'> end
+global function riv_printf(format: cstring, ...: cvarargs): usize <cimport'riv_printf'> end
+global function riv_snprintf(s: cstring, maxlen: usize, format: cstring <const>, ...: cvarargs): usize <cimport'riv_snprintf'> end
 
 -- context
 function riv_context:setup(): void <cimport'riv_setup'> end

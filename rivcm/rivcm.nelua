@@ -19,6 +19,7 @@ local rivcm_options: type = @record{
   replay_filename: string,
   recording: boolean,
   replaying: boolean,
+  print_stats: boolean,
   speed: float64,
 }
 
@@ -34,35 +35,46 @@ local function parse_options(): rivcm_options
     if not entrypoint_args then
       if a == '-record' then
         assert(not opts.replaying, 'already replaying')
-        assert(argi + 1 <= #arg, 'missing filename parameter')
+        assert(argi + 1 <= #arg, 'missing parameter for option -record')
         opts.recording = true
         opts.replay_filename = arg[argi + 1]
         argi = argi + 1
       elseif a == '-replay' then
         assert(not opts.recording, 'already recording')
-        assert(argi + 1 <= #arg, 'missing filename parameter')
+        assert(argi + 1 <= #arg, 'missing parameter for option -replay')
         opts.replaying = true
         opts.replay_filename = arg[argi + 1]
         argi = argi + 1
       elseif a == '-cartridge' then
-        assert(argi + 1 <= #arg, 'missing filename parameter')
+        assert(argi + 1 <= #arg, 'missing parameter for option -cartridge')
         entrypoint_sb:write('cartridge-run')
         opts.cartridge = arg[argi + 1]
         argi = argi + 1
       elseif a == '-speed' then
-        assert(argi + 1 <= #arg, 'missing speed parameter')
+        assert(argi + 1 <= #arg, 'missing parameter for option -speed')
         local numstr: string = arg[argi + 1]
         assert(numstr:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
         opts.speed = tonumber(arg[argi + 1])
         assert(opts.speed > 0.0, 'speed must be positive')
         argi = argi + 1
+      elseif a == '-print-stats' then
+        opts.print_stats = true
       elseif a == '--' then
         entrypoint_args = true
       elseif a == '--help' then
         io.stderr:printf("Usage: %s [options]\n", arg[0])
         io.stderr:write[[
+-print-fps
+    Print frame rate statistics every second.
+
 -cartridge <filename>
     Cartridge to run.
+
+-load-incard <filename>
+    Load input card from a file.
+
+-save-outcard <filename>
+    Save output card to a file.
 
 -record <filename>
     Record game to an input log.
@@ -88,11 +100,18 @@ end
 
 local options: rivcm_options
 local framelimiter: riv_framelimiter
+local quit: boolean
+
+local function copy_outcard(): void
+  local data: [1000]byte
+  machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, &data)
+  print((@cstring)(&data))
+end
 
 -- Initialize application.
-local function init(): void
+local function setup(): void
   -- initialize the machine
-  machine = Machine.create(options.cartridge, options.entrypoint)
+  machine = Machine.create(options.entrypoint, options.cartridge)
 
   -- init subsystems
   video.setup()
@@ -107,7 +126,9 @@ local function init(): void
 end
 
 -- Terminate application.
-local function terminate(): void
+local function shutdown(): void
+  io.stderr:printf('[RIVCM] Shutdown\n')
+
   if options.recording then
     input.save_replay(options.replay_filename)
   end
@@ -116,9 +137,7 @@ local function terminate(): void
   video.shutdown()
   audio.shutdown()
 
-  local mcycle: uint64 = machine:read_mcycle()
-  local root_hash: string <close> = hexhash(machine:get_root_hash_as_hex())
-  io.stderr:printf('%d: %s\n', mcycle, root_hash)
+  machine:print_cycle_hash()
   machine:destroy()
 end
 
@@ -129,7 +148,15 @@ local function machine_frame(): void
     case CM_BREAK_REASON_YIELDED_AUTOMATICALLY then
       -- execute control event from the yield
       switch machine:read_yield_reason() do
+      case RIV_CONTROL_START then
+        io.stderr:printf('[RIVCM] Start\n')
+      case RIV_CONTROL_FINISH then
+        io.stderr:printf('[RIVCM] Finish\n')
+        quit = true
+        return
       case RIV_CONTROL_PRESENT then
+        -- copy output card
+        copy_outcard()
         -- copy frame buffer from guest memory into host memory
         video.update_framebuffer()
         -- must break the loop so we can present the video
@@ -140,12 +167,12 @@ local function machine_frame(): void
         error 'unknown yield reason'
       end
     case CM_BREAK_REASON_HALTED then
-      io.stderr:printf('Halted\n')
-      sapp_quit()
+      io.stderr:printf('[RIVCM] Halted\n')
+      quit = true
       return
     else
-      io.stderr:printf('Unexpected machine run break reason\n')
-      sapp_quit()
+      error('unexpected machine break reason')
+      quit = true
       return
     end
   end
@@ -153,10 +180,10 @@ end
 
 -- Advance to the next frame.
 local function advance_frame(): void
-  if machine:is_halted() then return end
+  if quit or machine:is_halted() then return end
 
   -- check if is the last replay frame
-  local finished: boolean = input.is_replay_at_end()
+  local replay_finished: boolean = input.is_replay_at_end()
 
   -- poll input events into machine device memory
   input.poll()
@@ -170,15 +197,18 @@ local function advance_frame(): void
   local mcycle_elapsed: uint64 = machine:read_mcycle() - mcycle_start
 
   -- force quit when replay ends
-  if finished then
-    io.stderr:printf('Replay finished\n')
-    sapp_quit()
+  if not quit and replay_finished then
+    io.stderr:printf('[RIVCM] Finished Replay\n')
+    quit = true
   end
 
-  -- log fps
-  if machine:is_mmio_ready() then
+  if quit then
+    sapp_quit()
+  else
     framelimiter.max_fps = machine.mmio_driver.framebuffer_desc.fps * options.speed
-    framelimiter:print_stats(now, time_elapsed, mcycle_elapsed)
+    if options.print_stats then
+      framelimiter:print_stats(now, time_elapsed, mcycle_elapsed)
+    end
   end
 end
 
@@ -193,7 +223,7 @@ local function frame(): void
     if framelimiter:should_process_next_frame(os.now()) then
       advance_frame()
     end
-  else -- FPS is too big, advance any frames at once
+  else -- advance many frames at once when FPS is too big
     local now_start: float64 = os.now()
     local now_end: float64 = now_start + (1.0 / refresh_rate)
     local dt: float64 = 1.0 / (refresh_rate * options.speed)
@@ -214,9 +244,9 @@ do
 
   -- Application main loop.
   sapp_run(sapp_desc{
-    init_cb = init,
+    init_cb = setup,
     frame_cb = frame,
-    cleanup_cb = terminate,
+    cleanup_cb = shutdown,
     event_cb = input.append_event,
     width = 320,
     height = 240,

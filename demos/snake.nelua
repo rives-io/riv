@@ -9,7 +9,7 @@ local Color = @byte
 local TILE_SIZE <comptime> = 1
 local GRID_SIZE <comptime> = 16
 local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
-local MOVE_DELAY <comptime> = 1
+local MOVE_DELAY <comptime> = 3
 
 -- Game state variables
 local prng: riv_prng
@@ -60,13 +60,23 @@ local function respawn_apple()
   until not has_tile(applepos)
 end
 
+local function save_score(finished: boolean)
+  local finished_str: string = finished and 'true' or 'false'
+  riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MEMSIZE_INOUTBUFFER,
+    [[{"score": %d, "finished": %s}]],
+    score,
+    finished_str)
+  riv.outcard_format = RIV_CARDFORMAT_JSON
+end
+
 local function init_game()
   tiles = {}
   headpos = Point2D{x=GRID_SIZE//2, y=GRID_SIZE//2}
   tailpos = Point2D{x=headpos.x,    y=headpos.y+1}
   movedir = Direction.UP
-  score = 0
   nextmove = 0
+  score = 0
+  save_score(false)
   set_tile(headpos, Direction.UP)
   set_tile(tailpos, Direction.UP)
   respawn_apple()
@@ -74,8 +84,9 @@ local function init_game()
 end
 
 local function game_over()
+  save_score(true)
   riv_printf('GAME OVER\n')
-  riv.running = false
+  riv.quit = true
   -- init_game()
 end
 
@@ -129,6 +140,7 @@ local function poll_game()
   if headpos.x == applepos.x and headpos.y == applepos.y then
     respawn_apple()
     score = score + 1
+    save_score(false)
     riv_printf('SCORE %u\n', score)
   else
     -- eat tail
@@ -186,7 +198,9 @@ local function init(ctx: *riv_context)
   riv = ctx
   prng:seed()
   init_game()
-  riv.tracked_keys = {}
+  for i=0,<RIV_NUM_KEYCODE do
+    riv.tracked_keys[i] = false
+  end
   riv.tracked_keys[RIV_KEYCODE_UP] = true
   riv.tracked_keys[RIV_KEYCODE_DOWN] = true
   riv.tracked_keys[RIV_KEYCODE_LEFT] = true
@@ -199,7 +213,7 @@ riv_run(&(@riv_run_desc){
   framebuffer_desc = {
     width = SCREEN_SIZE,
     height = SCREEN_SIZE,
-    fps = 8,
+    fps = 24,
     pixel_format = RIV_PIXELFORMAT_PAL256,
   }
 })

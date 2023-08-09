@@ -1,5 +1,7 @@
 -- This file contains code related to machine being emulated.
 
+require 'string'
+require 'io'
 require 'cartesi'
 require 'riv_types'
 
@@ -48,21 +50,44 @@ global Machine = @record{
 }
 
 -- Creates a new machine.
-function Machine.create(cartridge: string, entrypoint: string): Machine
+function Machine.create(entrypoint: string, cartridge_filename: string): Machine
   -- get default config
   local defconfig: *cm_machine_config
   cm_assert!(cm_get_default_config(&defconfig))
   defer cm_delete_machine_config(defconfig) end
 
-  -- set custom configs
-  local config: cm_machine_config = $defconfig
+  -- rootfs flash drive
+  local flash_drive_entries: [8]cm_memory_range_config
+  local flash_drive_count: cint = 0
+  flash_drive_entries[0] = {
+    start = RIV_PADDR_ROOTFS,
+    length = (@uint64)(-1),
+    image_filename = "./rootfs/rootfs.ext2",
+  }
+  flash_drive_count = flash_drive_count + 1
+
+  -- cartridge flash drive
+  if #cartridge_filename > 0 then
+    flash_drive_entries[flash_drive_count] = {
+      start = RIV_PADDR_CARTRIDGE,
+      length = (@uint64)(-1),
+      image_filename = cartridge_filename,
+    }
+    flash_drive_count = flash_drive_count + 1
+  end
+
+  -- bootargs
   local bootargs: string <close> = "console=hvc0 \z
     rootfstype=ext2 \z
     root=/dev/mtdblock0 \z
     rw quiet \z
     swiotlb=noforce \z
     mtdparts=flash.0:-(root) \z
-    hugepagesz=2M hugepages=1 -- " .. entrypoint
+    hugepagesz=2M hugepages=1 \z
+    init=/sbin/init -- " .. entrypoint
+
+  -- set config
+  local config: cm_machine_config = $defconfig
   config.ram = {
     image_filename = './kernel/linux.bin',
     length = RIV_MEMSIZE_RAM
@@ -74,18 +99,10 @@ function Machine.create(cartridge: string, entrypoint: string): Machine
   config.htif = {
     yield_automatic = true,
   }
-  config.flash_drive = {count = 2, entry = {
-    {
-      start = RIV_PADDR_ROOTFS,
-      length = (@uint64)(-1),
-      image_filename = "./rootfs/rootfs.ext2",
-    },
-    {
-      start = RIV_PADDR_CARTRIDGE,
-      length = (@uint64)(-1),
-      image_filename = cartridge,
-    }
-  }}
+  config.flash_drive = {
+    count = flash_drive_count,
+    entry = &flash_drive_entries,
+  }
 
   -- create the machine
   local self: Machine
@@ -107,7 +124,7 @@ function Machine:is_halted(): boolean
 end
 
 -- Get the machine root hash as a hexadecimal string.
-function Machine:get_root_hash_as_hex(): [32]byte
+function Machine:get_root_hash(): [32]byte
   local hash: [32]byte
   cm_assert!(cm_get_root_hash(self.machine, &hash))
   return hash
@@ -223,6 +240,12 @@ function Machine:run(): CM_BREAK_REASON
   end
   -- return break reason
   return break_reason
+end
+
+function Machine:print_cycle_hash(): void
+  local mcycle: uint64 = self:read_mcycle()
+  local root_hash: string <close> = hexhash(self:get_root_hash())
+  io.stderr:printf('%d: %s\n', mcycle, root_hash)
 end
 
 -- Global machine.
