@@ -156,8 +156,7 @@ global riv_fps_limit: type <using> = @enum(uint32){
   RIV_FPS_24 = 24,
   RIV_FPS_30 = 30,
   RIV_FPS_48 = 48,
-  RIV_FPS_60 = 60,
-  RIV_FPS_UNLIMITED = 2147483647
+  RIV_FPS_60 = 60
 }
 global riv_constants: type <using> = @enum(uint32){
   RIV_DEFAULT_WIDTH = 256,

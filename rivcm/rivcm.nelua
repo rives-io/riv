@@ -16,14 +16,16 @@ require '.framelimiter'
 local rivcm_options: type = @record{
   cartridge: string,
   entrypoint: string,
-  fast_forward: boolean,
   replay_filename: string,
   recording: boolean,
   replaying: boolean,
+  speed: float64,
 }
 
 local function parse_options(): rivcm_options
-  local opts: rivcm_options
+  local opts: rivcm_options = {
+    speed = 1.0
+  }
   local entrypoint_args: boolean = false
   local entrypoint_sb: stringbuilder <close>
   local argi: usize = 1
@@ -48,7 +50,12 @@ local function parse_options(): rivcm_options
         opts.cartridge = arg[argi + 1]
         argi = argi + 1
       elseif a == '-speed' then
-        opts.fast_forward = true
+        assert(argi + 1 <= #arg, 'missing speed parameter')
+        local numstr: string = arg[argi + 1]
+        assert(numstr:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
+        opts.speed = tonumber(arg[argi + 1])
+        assert(opts.speed > 0.0, 'speed must be positive')
+        argi = argi + 1
       elseif a == '--' then
         entrypoint_args = true
       elseif a == '--help' then
@@ -58,10 +65,10 @@ local function parse_options(): rivcm_options
     Cartridge to run.
 
 -record <filename>
-    Record input log to a replay file.
+    Record game to an input log.
 
 -replay <filename>
-    Replay using input log from a replay file.
+    Replay game from an input log.
 
 -speed <speed>
     Set replay speed.
@@ -80,6 +87,7 @@ local function parse_options(): rivcm_options
 end
 
 local options: rivcm_options
+local framelimiter: riv_framelimiter
 
 -- Initialize application.
 local function init(): void
@@ -90,10 +98,6 @@ local function init(): void
   video.setup()
   audio.setup()
   input.setup()
-
-  if options.fast_forward then
-    framelimiter.override_fps_limit(240)
-  end
 
   if options.recording then -- start recording
     input.start_recording()
@@ -119,7 +123,7 @@ local function terminate(): void
 end
 
 -- Run the machine until it yields the next frame.
-local function machine_frame(): boolean
+local function machine_frame(): void
   while true do
     switch machine:run() do
     case CM_BREAK_REASON_YIELDED_AUTOMATICALLY then
@@ -129,7 +133,7 @@ local function machine_frame(): boolean
         -- copy frame buffer from guest memory into host memory
         video.update_framebuffer()
         -- must break the loop so we can present the video
-        return true
+        return
       case RIV_CONTROL_AUDIO then
         audio.control()
       else
@@ -138,11 +142,11 @@ local function machine_frame(): boolean
     case CM_BREAK_REASON_HALTED then
       io.stderr:printf('Halted\n')
       sapp_quit()
-      return false
+      return
     else
       io.stderr:printf('Unexpected machine run break reason\n')
       sapp_quit()
-      return false
+      return
     end
   end
 end
@@ -160,7 +164,7 @@ local function advance_frame(): void
   -- poll next frame from machine driver memory
   local mcycle_start: uint64 = machine:read_mcycle()
   local time_start: float64 = os.now()
-  local running: boolean = machine_frame()
+  machine_frame()
   local now: float64 = os.now()
   local time_elapsed: float64 = now - time_start
   local mcycle_elapsed: uint64 = machine:read_mcycle() - mcycle_start
@@ -172,16 +176,33 @@ local function advance_frame(): void
   end
 
   -- log fps
-  if running then
-    framelimiter.print_stats(now, time_elapsed, mcycle_elapsed)
+  if machine:is_mmio_ready() then
+    framelimiter.max_fps = machine.mmio_driver.framebuffer_desc.fps * options.speed
+    framelimiter:print_stats(now, time_elapsed, mcycle_elapsed)
   end
 end
 
 -- Poll next frame.
 local function frame(): void
-  if framelimiter.should_process_next_frame() then
-    -- advance to next frame
+  -- TODO: get display refresh rate
+  local refresh_rate: float64 = 60
+  if not machine:is_mmio_ready() then -- first frame
     advance_frame()
+    framelimiter.last_frame_time = os.now()
+  elseif framelimiter.max_fps <= refresh_rate then
+    if framelimiter:should_process_next_frame(os.now()) then
+      advance_frame()
+    end
+  else -- FPS is too big, advance any frames at once
+    local now_start: float64 = os.now()
+    local now_end: float64 = now_start + (1.0 / refresh_rate)
+    local dt: float64 = 1.0 / (refresh_rate * options.speed)
+    for now=now_start,<now_end,dt do
+      if framelimiter:should_process_next_frame(now) then
+        -- advance to next frame
+        advance_frame()
+      end
+    end
   end
   -- display the frame
   video.present()

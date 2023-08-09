@@ -229,7 +229,6 @@ typedef enum riv_fps_limit {
   RIV_FPS_30 = 30,
   RIV_FPS_48 = 48,
   RIV_FPS_60 = 60,
-  RIV_FPS_UNLIMITED = 0x7fffffff,
 } riv_fps_limit;
 
 typedef enum riv_constants {

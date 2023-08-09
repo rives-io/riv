@@ -1,64 +1,54 @@
 -- This file contains all code related to frame limiting and frame counting.
 
 require 'io'
-require 'os'
-
-require '.machine'
+require 'math'
 
 -- Frame limiter.
-global framelimiter = @record{}
+global riv_framelimiter = @record{
+  max_fps: float64,
+  last_frame_time: float64,
 
--- Frame limiter state.
-local last_frame_time: float64
-local time_elapsed_sum: float64
-local mcycle_elapsed_sum: uint64
-local mcycle_sum: uint64
-local fps: uint64
-local last_time: float64
-local max_fps: uint64
-local max_fps_overriden: boolean
-local first_frame_processed: boolean
-
-function framelimiter.override_fps_limit(fps: uint64): void
-  max_fps = fps
-  max_fps_overriden = true
-end
+  -- used by print_stats
+  time_elapsed_sum: float64,
+  mcycle_elapsed_sum: uint64,
+  frame_counter: uint64,
+  stats_last_time: float64,
+}
 
 -- Return true when we should process the next frame.
-function framelimiter.should_process_next_frame(): boolean
-  local max_fps: uint64 = max_fps_overriden and max_fps or machine.mmio_driver.framebuffer_desc.fps
-  local now: float64 = os.now()
-  if max_fps == RIV_FPS_UNLIMITED or max_fps == RIV_FPS_INVALID then
-    last_frame_time = now
-    return true
-  elseif not first_frame_processed then
-    first_frame_processed = true
-    last_frame_time = now
+function riv_framelimiter:should_process_next_frame(now: float64): boolean
+  if self.max_fps == 0 then
+    self.last_frame_time = now
     return true
   else
-    local frame_delay: float64 = 1.0/max_fps
-    if now < last_frame_time + frame_delay then return false end
-    last_frame_time = now
+    local frame_delay: float64 = 1.0 / self.max_fps
+    local wait_time: float64 = self.last_frame_time + frame_delay - now
+    local wait_factor: float64 = wait_time / frame_delay
+    -- the following attempts to stabilize fps
+    -- while making wait time converge 0 between frames
+    if wait_factor > 0.05 then return false end
+    self.last_frame_time = now + math.min(wait_time, 0)*0.95
     return true
   end
 end
 
 -- Print the frame rate statistics to stderr every second.
-function framelimiter.print_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64)
-  fps = fps + 1
-  time_elapsed_sum = time_elapsed_sum + time_elapsed
-  mcycle_elapsed_sum = mcycle_elapsed_sum + mcycle_elapsed
-  local last_time_elapsed: float64 = now - last_time
+function riv_framelimiter:print_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64)
+  self.frame_counter = self.frame_counter + 1
+  self.time_elapsed_sum = self.time_elapsed_sum + time_elapsed
+  self.mcycle_elapsed_sum = self.mcycle_elapsed_sum + mcycle_elapsed
+  local last_time_elapsed: float64 = now - self.stats_last_time
   if last_time_elapsed >= 1.0 then
     if not machine:is_halted() then
-      local mips: float64 = mcycle_elapsed_sum / (time_elapsed_sum * 1000000.0)
-      local cpu_usage: float64 = (time_elapsed_sum * 100.0) / last_time_elapsed
+      local fps: float64 = self.frame_counter / last_time_elapsed
+      local mips: float64 = self.mcycle_elapsed_sum / (self.time_elapsed_sum * 1000000.0)
+      local cpu_usage: float64 = (self.time_elapsed_sum * 100.0) / last_time_elapsed
       io.printf('frame=%d fps=%.2f guest_cpu_clock=%.2fMHz host_cpu_usage=%.2f%%\n',
         machine.mmio_driver.frame, fps / last_time_elapsed, mips, cpu_usage)
     end
-    fps = 0
-    time_elapsed_sum = 0
-    mcycle_elapsed_sum = 0
-    last_time = now
+    self.frame_counter = 0
+    self.time_elapsed_sum = 0
+    self.mcycle_elapsed_sum = 0
+    self.stats_last_time = now
   end
 end
