@@ -21,11 +21,11 @@ global function riv_stdrun(frame_cb: function(riv: *riv_context)): void <cimport
 global function riv_run(run_desc: *riv_run_desc): void <cimport'riv_run'> end
 
 -- prng
-function riv_prng:rand(): uint64 <cimport'riv_prng_rand'> end
-function riv_prng:rand_uint(high: uint64): uint64 <cimport'riv_prng_rand_uint'> end
-function riv_prng:rand_int(low: int64, high: int64): int64 <cimport'riv_prng_rand_int'> end
-function riv_prng:rand_float(): float64 <cimport'riv_prng_rand_float'> end
-function riv_prng:seed(a: uint64, b: uint64): void <cimport'riv_prng_seed'> end
+function riv_prng:srand(a: uint64, b: uint64): void <cimport'riv_srand'> end
+function riv_prng:rand(): uint64 <cimport'riv_rand'> end
+function riv_prng:rand_uint(high: uint64): uint64 <cimport'riv_rand_uint'> end
+function riv_prng:rand_int(low: int64, high: int64): int64 <cimport'riv_rand_int'> end
+function riv_prng:rand_float(): float64 <cimport'riv_rand_float'> end
 
 -- Macro for generating tiny binaries.
 ## function nostartfiles(libc) cflags '-nostartfiles'

@@ -264,6 +264,7 @@ global riv_context: type = @record{
   outcard_len: uint32,
   outcard_format: riv_card_format,
   quit: boolean,
+  prng: riv_prng,
   framebuffer_desc: *riv_framebuffer_desc,
   inoutbuffer: *[RIV_MEMSIZE_INOUTBUFFER]uint8,
   framebuffer: *[RIV_MEMSIZE_FRAMEBUFFER]uint8,

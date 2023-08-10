@@ -12,13 +12,13 @@ local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
 local MOVE_DELAY <comptime> = 3
 
 -- Game state variables
-local prng: riv_prng
 local riv: *riv_context
 local nextmove: uint64
 local headpos: Point2D, tailpos: Point2D, applepos: Point2D
 local score: uint32
 local movedir: Direction
 local tiles: [GRID_SIZE][GRID_SIZE]Direction
+local last_turn_frame: uint64
 
 local function move_point(pos: Point2D, dir: Direction)
   switch dir
@@ -51,21 +51,20 @@ local function has_tile(pos: Point2D)
 end
 
 local function respawn_apple()
+  -- return when there is not enough space to spawn anymore
+  if score + 2 >= GRID_SIZE * GRID_SIZE then return end
   -- respawn until there is no collision with its body
   repeat
     applepos = Point2D{
-      x = prng:rand_uint(GRID_SIZE-1),
-      y = prng:rand_uint(GRID_SIZE-1)
+      x = riv.prng:rand_uint(GRID_SIZE-1),
+      y = riv.prng:rand_uint(GRID_SIZE-1)
     }
   until not has_tile(applepos)
 end
 
 local function save_score(finished: boolean)
   local finished_str: string = finished and 'true' or 'false'
-  riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MEMSIZE_INOUTBUFFER,
-    [[{"score": %d, "finished": %s}]],
-    score,
-    finished_str)
+  riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MEMSIZE_INOUTBUFFER, [[{"score": %u, "finished": %s}]], score, finished_str)
   riv.outcard_format = RIV_CARDFORMAT_JSON
 end
 
@@ -90,25 +89,26 @@ local function game_over()
   -- init_game()
 end
 
-local function poll_events()
+local function check_turn(keycode: uint8, dir: Direction)
+  if not riv.keys[keycode].press then return end
+  local frame = riv.keys[keycode].down_frame
+  if frame < last_turn_frame then return end
   local headdir = get_tile(headpos)
-  if riv.keys[RIV_KEYCODE_UP].press then
-    if headdir ~= Direction.DOWN then
-      movedir = Direction.UP
-    end
-  elseif riv.keys[RIV_KEYCODE_DOWN].press then
-    if headdir ~= Direction.UP then
-      movedir = Direction.DOWN
-    end
-  elseif riv.keys[RIV_KEYCODE_RIGHT].press then
-    if headdir ~= Direction.LEFT then
-      movedir = Direction.RIGHT
-    end
-  elseif riv.keys[RIV_KEYCODE_LEFT].press then
-    if headdir ~= Direction.RIGHT then
-      movedir = Direction.LEFT
-    end
-  end
+  switch dir do
+  case Direction.UP then if headdir == Direction.DOWN then return end
+  case Direction.DOWN then if headdir == Direction.UP then return end
+  case Direction.LEFT then if headdir == Direction.RIGHT then return end
+  case Direction.RIGHT then if headdir == Direction.LEFT then return end
+  else return end
+  movedir = dir
+  last_turn_frame = frame
+end
+
+local function poll_events()
+  check_turn(RIV_KEYCODE_UP, Direction.UP)
+  check_turn(RIV_KEYCODE_DOWN, Direction.DOWN)
+  check_turn(RIV_KEYCODE_RIGHT, Direction.RIGHT)
+  check_turn(RIV_KEYCODE_LEFT, Direction.LEFT)
 end
 
 local function poll_game()
@@ -138,10 +138,10 @@ local function poll_game()
 
   -- check collision with apple
   if headpos.x == applepos.x and headpos.y == applepos.y then
-    respawn_apple()
     score = score + 1
     save_score(false)
     riv_printf('SCORE %u\n', score)
+    respawn_apple()
   else
     -- eat tail
     local taildir = get_tile(tailpos)
@@ -196,7 +196,6 @@ end
 
 local function init(ctx: *riv_context)
   riv = ctx
-  prng:seed()
   init_game()
   for i=0,<RIV_NUM_KEYCODE do
     riv.tracked_keys[i] = false

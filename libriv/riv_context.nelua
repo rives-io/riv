@@ -2,6 +2,7 @@ require 'memory'
 
 require '.linux'
 require '.riv_types'
+require '.riv_prng'
 
 local riv_yield_request: type = @record{
   dev: uint8,
@@ -75,6 +76,8 @@ function riv_context:setup(): void <cexport'riv_setup'>
   self.inoutbuffer = (@*[RIV_MEMSIZE_INOUTBUFFER]byte)(RIV_VADDR_INOUTBUFFER)
   self.framebuffer = (@*[RIV_MEMSIZE_FRAMEBUFFER]byte)(RIV_VADDR_FRAMEBUFFER)
   self.audiobuffer = (@*[RIV_MEMSIZE_AUDIOBUFFER]byte)(RIV_VADDR_AUDIOBUFFER)
+  -- initialize prng
+  self.prng:srand(0xc4ceb9fe1a85ec53, 0xff51afd7ed558ccd)
   -- aliases
   self.framebuffer_desc = &self.mmio_driver.framebuffer_desc
   self.tracked_keys = &self.mmio_driver.tracked_keys
@@ -104,6 +107,8 @@ function riv_context:shutdown(): void <cexport'riv_shutdown'>
 end
 
 function riv_context:_poll_inputs() : void
+  -- TODO: seed prng based on inputs
+  local hash
   for i: uint32=0,<self.mmio_device.key_event_count do
     local key_event: uint8 = self.mmio_device.key_events[i]
     local key_code: uint8 = key_event & 127

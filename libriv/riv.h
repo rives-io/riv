@@ -376,6 +376,7 @@ typedef struct riv_context {
   uint32_t outcard_len;
   riv_card_format outcard_format;
   bool quit;
+  riv_prng prng;
   riv_framebuffer_desc* framebuffer_desc;
   riv_unbounded_uint8 inoutbuffer;
   riv_unbounded_uint8 framebuffer;
@@ -420,10 +421,10 @@ RIV_API uint64_t riv_sound_play_from_memory(riv_context* self, riv_span_uint8 da
 RIV_API void riv_sound_stop(riv_context* self, uint64_t sound_id);
 
 // Pseudo random number generator (PRNG)
-RIV_API uint64_t riv_prng_rand(riv_prng* self);
-RIV_API uint64_t riv_prng_rand_uint(riv_prng* self, uint64_t high);
-RIV_API int64_t riv_prng_rand_int(riv_prng* self, int64_t low, int64_t high);
-RIV_API double riv_prng_rand_float(riv_prng* self);
-RIV_API void riv_prng_seed(riv_prng* self, uint64_t a, uint64_t b);
+RIV_API void riv_srand(riv_prng* self, uint64_t a, uint64_t b);
+RIV_API uint64_t riv_rand(riv_prng* self);
+RIV_API uint64_t riv_rand_uint(riv_prng* self, uint64_t high);
+RIV_API int64_t riv_rand_int(riv_prng* self, int64_t low, int64_t high);
+RIV_API double riv_rand_float(riv_prng* self);
 
 #endif
