@@ -242,6 +242,7 @@ global riv_mmio_driver: type = @record{
 global riv_mmio_device: type = @record{
   header: riv_mmio_header,
   incard_len: uint32,
+  incard_format: riv_card_format,
   key_event_count: uint32,
   key_events: [128]uint8
 }

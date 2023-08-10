@@ -6,6 +6,7 @@ require 'vector'
 require 'io'
 require 'arg'
 
+require '.util'
 require '.machine'
 
 --------------------------------------------------------------------------------
@@ -120,15 +121,6 @@ local function translate_keycode_to_riv(keycode: sapp_keycode): riv_key_code
   case SAPP_KEYCODE_MENU then return RIV_KEYCODE_MENU
   else return RIV_KEYCODE_INVALID end
 end
-
-## function fn_assert(v)
-  local expr_ret, expr_err: string = #[v]#
-  if #expr_err ~= 0 then
-    ## local funcname = context.scope:get_up_scope_of_kind('is_function').funcsym.name
-    error(#[funcname .. ': ']# .. expr_err)
-  end
-  in expr_ret
-## end
 
 --------------------------------------------------------------------------------
 
@@ -275,6 +267,7 @@ end
 -- Start recording.
 function input.start_recording()
   recording = true
+  io.stderr:printf("[RIVCM] Recording\n")
 end
 
 -- Save replay log to a file.
@@ -286,6 +279,7 @@ function input.save_replay(filename: string): void
     local event_bytes: string <close> = string.pack('<I1I4', event.key_event, event.frame)
     fn_assert!(file:write(event_bytes))
   end
+  io.stderr:printf("[RIVCM] Saved replay '%s'\n", filename)
 end
 
 -- Load replay log from a file.
@@ -300,4 +294,5 @@ function input.load_replay(filename: string): void
     local event_bytes: string <close> = fn_assert!(file:read(5))
     event.key_event, event.frame = string.unpack('<I1I4', event_bytes)
   end
+  io.stderr:printf("[RIVCM] Loaded replay '%s'\n", filename)
 end

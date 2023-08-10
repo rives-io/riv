@@ -17,7 +17,7 @@ require '.machine'
 --------------------------------------------------------------------------------
 
 -- Audio subsystem.
-global audio = @record{}
+global audio: type = @record{}
 
 -- Audio subsystem state.
 local audio_engine: ma_engine

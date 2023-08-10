@@ -4,7 +4,7 @@ require 'io'
 require 'math'
 
 -- Frame limiter.
-global riv_framelimiter = @record{
+global riv_framelimiter: type = @record{
   max_fps: float64,
   last_frame_time: float64,
 

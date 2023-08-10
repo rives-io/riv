@@ -345,6 +345,7 @@ typedef struct riv_mmio_driver {
 typedef struct riv_mmio_device {
   riv_mmio_header header;
   uint32_t incard_len;
+  riv_card_format incard_format;
   uint32_t key_event_count;
   uint8_t key_events[RIV_NUM_KEYCODE];
 } riv_mmio_device;

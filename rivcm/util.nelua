@@ -1,0 +1,19 @@
+
+-- Macro to call a function returning its first result when successful,
+-- otherwise raise an error prefixed with the faild function name.
+## function fn_assert(v)
+  local expr_ret, expr_err: string = #[v]#
+  if #expr_err ~= 0 then
+    ## local funcname = context.scope:get_up_scope_of_kind('is_function').funcsym.name
+    error(#[funcname .. ': ']# .. expr_err)
+  end
+  in expr_ret
+## end
+
+global function hexhash(hash: [32]byte): string
+  local sb: stringbuilder
+  for _, b: byte in ipairs(hash) do
+    sb:writef('%02x', b)
+  end
+  return sb:promote()
+end

@@ -86,8 +86,10 @@ function riv_context:setup(): void <cexport'riv_setup'>
   memory.spanset((@span(boolean))(self.mmio_driver.tracked_keys), true)
   -- init palette
   init_default_palette(self)
-  -- tell host we are starting, this may populate inoutbuffer
+  -- retrieve input card from host
   self:_ctl(RIV_CONTROL_START)
+  self.incard_len = self.mmio_device.incard_len
+  self.incard_format = self.mmio_device.incard_format
 end
 
 function riv_context:shutdown(): void <cexport'riv_shutdown'>

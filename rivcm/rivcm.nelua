@@ -12,11 +12,14 @@ require '.audio'
 require '.video'
 require '.input'
 require '.framelimiter'
+require '.iocard'
 
 local rivcm_options: type = @record{
-  cartridge: string,
   entrypoint: string,
+  cartridge_filename: string,
   replay_filename: string,
+  incard_filename: string,
+  outcard_filename: string,
   recording: boolean,
   replaying: boolean,
   print_stats: boolean,
@@ -48,7 +51,15 @@ local function parse_options(): rivcm_options
       elseif a == '-cartridge' then
         assert(argi + 1 <= #arg, 'missing parameter for option -cartridge')
         entrypoint_sb:write('cartridge-run')
-        opts.cartridge = arg[argi + 1]
+        opts.cartridge_filename = arg[argi + 1]
+        argi = argi + 1
+      elseif a == '-incard' then
+        assert(argi + 1 <= #arg, 'missing parameter for option -incard')
+        opts.incard_filename = arg[argi + 1]
+        argi = argi + 1
+      elseif a == '-outcard' then
+        assert(argi + 1 <= #arg, 'missing parameter for option -outcard')
+        opts.outcard_filename = arg[argi + 1]
         argi = argi + 1
       elseif a == '-speed' then
         assert(argi + 1 <= #arg, 'missing parameter for option -speed')
@@ -70,10 +81,10 @@ local function parse_options(): rivcm_options
 -cartridge <filename>
     Cartridge to run.
 
--load-incard <filename>
+-incard <filename>
     Load input card from a file.
 
--save-outcard <filename>
+-outcard <filename>
     Save output card to a file.
 
 -record <filename>
@@ -102,18 +113,13 @@ local options: rivcm_options
 local framelimiter: riv_framelimiter
 local quit: boolean
 
-local function copy_outcard(): void
-  local data: [1000]byte
-  machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, &data)
-  print((@cstring)(&data))
-end
-
 -- Initialize application.
 local function setup(): void
   -- initialize the machine
-  machine = Machine.create(options.entrypoint, options.cartridge)
+  machine = Machine.create(options.entrypoint, options.cartridge_filename)
 
   -- init subsystems
+  iocard.setup()
   video.setup()
   audio.setup()
   input.setup()
@@ -133,6 +139,11 @@ local function shutdown(): void
     input.save_replay(options.replay_filename)
   end
 
+  if #options.outcard_filename > 0 then
+    iocard.save_outcard(options.outcard_filename)
+  end
+
+  iocard.shutdown()
   input.shutdown()
   video.shutdown()
   audio.shutdown()
@@ -150,13 +161,21 @@ local function machine_frame(): void
       switch machine:read_yield_reason() do
       case RIV_CONTROL_START then
         io.stderr:printf('[RIVCM] Start\n')
+        if #options.incard_filename > 0 then
+          iocard.load_incard(options.incard_filename)
+        end
       case RIV_CONTROL_FINISH then
         io.stderr:printf('[RIVCM] Finish\n')
+        -- copy output card from guest memory into host memory
+        iocard.update_outcard()
+        -- copy frame buffer from guest memory into host memory
+        video.update_framebuffer()
+        -- finish
         quit = true
         return
       case RIV_CONTROL_PRESENT then
-        -- copy output card
-        copy_outcard()
+        -- copy output card from guest memory into host memory
+        iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
         video.update_framebuffer()
         -- must break the loop so we can present the video

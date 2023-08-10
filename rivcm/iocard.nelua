@@ -1,0 +1,40 @@
+require 'io'
+
+require '.machine'
+require '.util'
+
+global iocard: type = @record{}
+
+local outbuffer: [RIV_MEMSIZE_INOUTBUFFER]byte
+local outcard_data: span(byte)
+local outcard_format: riv_card_format
+
+function iocard.setup(): void
+  outcard_data.data = &outbuffer[0]
+end
+
+function iocard.shutdown(): void
+
+end
+
+function iocard.update_outcard(): void
+  outcard_format = machine.mmio_driver.outcard_format
+  outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_MEMSIZE_INOUTBUFFER)
+  machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, outcard_data)
+end
+
+function iocard.load_incard(filename: string): void
+  local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
+  local contents: string <close> = fn_assert!(file:read('a'))
+  local data: span(byte) = {data=contents.data, size=math.min(RIV_MEMSIZE_INOUTBUFFER, contents.size)}
+  machine:write_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, data)
+  machine.mmio_device.incard_len = data.size
+  -- TODO: detect type from filename
+  machine.mmio_device.incard_format = RIV_CARDFORMAT_DATA
+  io.stderr:printf("[RIVCM] Loaded incard '%s'\n", filename)
+end
+
+function iocard.save_outcard(filename: string): void
+  local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))  fn_assert!(file:write(outcard_data))
+  io.stderr:printf("[RIVCM] Saved outcard '%s'\n", filename)
+end

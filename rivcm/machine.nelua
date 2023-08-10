@@ -5,6 +5,8 @@ require 'io'
 require 'cartesi'
 require 'riv_types'
 
+require '.util'
+
 global riv_paddr_base: type <using> = @enum(uint64) {
   RIV_PADDR_RAM        = 0x80000000,
   RIV_PADDR_ROOTFS     = 0x80000000000000,
@@ -30,14 +32,6 @@ global RIV_MEMSIZE_RAM: uint64 <comptime> = 128*1024*1024
     end
   end
 ## end
-
-global function hexhash(hash: [32]byte): string
-  local sb: stringbuilder
-  for _, b: byte in ipairs(hash) do
-    sb:writef('%02x', b)
-  end
-  return sb:promote()
-end
 
 --------------------------------------------------------------------------------
 
