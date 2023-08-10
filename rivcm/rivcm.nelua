@@ -20,6 +20,7 @@ local rivcm_options: type = @record{
   replay_filename: string,
   incard_filename: string,
   outcard_filename: string,
+  outhash_filename: string,
   recording: boolean,
   replaying: boolean,
   print_stats: boolean,
@@ -53,13 +54,17 @@ local function parse_options(): rivcm_options
         entrypoint_sb:write('cartridge-run')
         opts.cartridge_filename = arg[argi + 1]
         argi = argi + 1
-      elseif a == '-incard' then
-        assert(argi + 1 <= #arg, 'missing parameter for option -incard')
+      elseif a == '-load-incard' then
+        assert(argi + 1 <= #arg, 'missing parameter for option -load-incard')
         opts.incard_filename = arg[argi + 1]
         argi = argi + 1
-      elseif a == '-outcard' then
-        assert(argi + 1 <= #arg, 'missing parameter for option -outcard')
+      elseif a == '-save-outcard' then
+        assert(argi + 1 <= #arg, 'missing parameter for option -save-outcard')
         opts.outcard_filename = arg[argi + 1]
+        argi = argi + 1
+      elseif a == '-save-outhash' then
+        assert(argi + 1 <= #arg, 'missing parameter for option -save-outhash')
+        opts.outhash_filename = arg[argi + 1]
         argi = argi + 1
       elseif a == '-speed' then
         assert(argi + 1 <= #arg, 'missing parameter for option -speed')
@@ -81,11 +86,14 @@ local function parse_options(): rivcm_options
 -cartridge <filename>
     Cartridge to run.
 
--incard <filename>
+-load-incard <filename>
     Load input card from a file.
 
--outcard <filename>
+-save-outcard <filename>
     Save output card to a file.
+
+-save-outhash <filename>
+    Save output card Keccak-256 hash to a file as a hexadecimal string.
 
 -record <filename>
     Record game to an input log.
@@ -114,7 +122,9 @@ local framelimiter: riv_framelimiter
 local quit: boolean
 
 -- Initialize application.
-local function setup(): void
+local function startup(): void
+  io.stderr:printf('[RIVCM] Startup\n')
+
   -- initialize the machine
   machine = Machine.create(options.entrypoint, options.cartridge_filename)
 
@@ -139,9 +149,13 @@ local function shutdown(): void
     input.save_replay(options.replay_filename)
   end
 
+  if #options.outhash_filename > 0 then
+    iocard.save_outhash(options.outhash_filename)
+  end
   if #options.outcard_filename > 0 then
     iocard.save_outcard(options.outcard_filename)
   end
+  iocard.print_outcard()
 
   iocard.shutdown()
   input.shutdown()
@@ -159,13 +173,13 @@ local function machine_frame(): void
     case CM_BREAK_REASON_YIELDED_AUTOMATICALLY then
       -- execute control event from the yield
       switch machine:read_yield_reason() do
-      case RIV_CONTROL_START then
-        io.stderr:printf('[RIVCM] Start\n')
+      case RIV_CONTROL_OPEN then
+        io.stderr:printf('[RIVCM] Open RIV device\n')
         if #options.incard_filename > 0 then
           iocard.load_incard(options.incard_filename)
         end
-      case RIV_CONTROL_FINISH then
-        io.stderr:printf('[RIVCM] Finish\n')
+      case RIV_CONTROL_CLOSE then
+        io.stderr:printf('[RIVCM] Close RIV device\n')
         -- copy output card from guest memory into host memory
         iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
@@ -217,7 +231,7 @@ local function advance_frame(): void
 
   -- force quit when replay ends
   if not quit and replay_finished then
-    io.stderr:printf('[RIVCM] Finished Replay\n')
+    io.stderr:printf('[RIVCM] Finish replay\n')
     quit = true
   end
 
@@ -263,7 +277,7 @@ do
 
   -- Application main loop.
   sapp_run(sapp_desc{
-    init_cb = setup,
+    init_cb = startup,
     frame_cb = frame,
     cleanup_cb = shutdown,
     event_cb = input.append_event,

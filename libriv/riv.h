@@ -248,8 +248,8 @@ typedef enum riv_card_format {
 
 typedef enum riv_control_reason {
   RIV_CONTROL_NONE = 0,
-  RIV_CONTROL_START,
-  RIV_CONTROL_FINISH,
+  RIV_CONTROL_OPEN,
+  RIV_CONTROL_CLOSE,
   RIV_CONTROL_PRESENT,
   RIV_CONTROL_AUDIO,
 } riv_control_reason;

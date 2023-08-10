@@ -38,7 +38,7 @@ busybox mount -o nosuid,remount /dev
 if [ -n "$*" ]; then
   busybox setsid busybox cttyhack su -c "$*"
 else
-  echo "Nothing to do."
+  echo "[RIVOS] Nothing to do."
 fi
 
 # shutdown

@@ -171,8 +171,8 @@ global riv_card_format: type <using> = @enum(uint32){
 }
 global riv_control_reason: type <using> = @enum(uint32){
   RIV_CONTROL_NONE = 0,
-  RIV_CONTROL_START = 1,
-  RIV_CONTROL_FINISH = 2,
+  RIV_CONTROL_OPEN = 1,
+  RIV_CONTROL_CLOSE = 2,
   RIV_CONTROL_PRESENT = 3,
   RIV_CONTROL_AUDIO = 4
 }

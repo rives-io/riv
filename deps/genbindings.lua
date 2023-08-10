@@ -14,6 +14,20 @@ linklib 'cartesi-0.14'
 ]==]
 }
 
+-- sha3
+nldecl.generate_bindings_file{
+  output_file = 'sha3.nelua',
+  includes = {'sha3.h'},
+  include_dirs = {'.'},
+  include_names = {'^sha3', '^SHA3'},
+  output_head = [==[
+##[[
+cinclude 'sha3.h'
+cfile 'sha3.c'
+]]
+]==]
+}
+
 -- miniaudio
 nldecl.generate_bindings_file{
   output_file = 'miniaudio.nelua',

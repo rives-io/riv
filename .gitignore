@@ -17,6 +17,7 @@
 *.rivlog
 *.json
 *.txt
+*.hash
 
 # ignore generated binaries
 /rivcm/rivcm

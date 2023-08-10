@@ -87,7 +87,7 @@ function riv_context:setup(): void <cexport'riv_setup'>
   -- init palette
   init_default_palette(self)
   -- retrieve input card from host
-  self:_ctl(RIV_CONTROL_START)
+  self:_ctl(RIV_CONTROL_OPEN)
   self.incard_len = self.mmio_device.incard_len
   self.incard_format = self.mmio_device.incard_format
 end
@@ -95,7 +95,7 @@ end
 function riv_context:shutdown(): void <cexport'riv_shutdown'>
   assert(self.mmio_driver, 'riv not initialized')
   -- tell the host we finished, the host may use inoutbuffer
-  self:_ctl(RIV_CONTROL_FINISH)
+  self:_ctl(RIV_CONTROL_CLOSE)
   -- unmap memory
   local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
   memory.zero(mmio, RIV_MEMSIZE_HUGEPAGE)

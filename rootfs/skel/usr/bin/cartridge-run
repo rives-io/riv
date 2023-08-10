@@ -1,22 +1,22 @@
 #!/bin/sh
 run_cartridge() {
   if ! busybox mount -o ro,noatime,nosuid,nodev,exec /dev/mtdblock1 /cartridge; then
-    >&2 echo "Failed to mount cartridge filesystem."
+    >&2 echo "[RIVOS] Failed to mount cartridge filesystem."
     return 1
   fi
   local STATUS
   local EXE=$(busybox find /cartridge -maxdepth 1 -type f -executable -print -quit)
   if ! [[ $EXE =~ ^[-_./a-zA-Z0-9]+$ ]]; then
-    >&2 echo "Invalid executable filename \"$EXE\"."
+    >&2 echo "[RIVOS] Invalid executable filename \"$EXE\"."
     return 1
   fi
   if [[ -x "$EXE" ]]; then
-    echo "Running cartridge $EXE"
+    echo "[RIVOS] Running cartridge executable '$EXE'"
     bwrapbox-run "$EXE"
     STATUS=$?
-    echo "Cartridge finished with status $STATUS"
+    echo "[RIVOS] Cartridge finished with status $STATUS"
   else
-    >&2 echo "No executable file found in cartridge."
+    >&2 echo "[RIVOS] No executable file found in cartridge."
     STATUS=1
   fi
   busybox umount /cartridge

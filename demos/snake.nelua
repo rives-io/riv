@@ -79,12 +79,12 @@ local function init_game()
   set_tile(headpos, Direction.UP)
   set_tile(tailpos, Direction.UP)
   respawn_apple()
-  riv_printf('NEW GAME\n')
+  riv_printf('[SNAKE] NEW GAME\n')
 end
 
 local function game_over()
   save_score(true)
-  riv_printf('GAME OVER\n')
+  riv_printf('[SNAKE] GAME OVER\n')
   riv.quit = true
   -- init_game()
 end
@@ -140,7 +140,7 @@ local function poll_game()
   if headpos.x == applepos.x and headpos.y == applepos.y then
     score = score + 1
     save_score(false)
-    riv_printf('SCORE %u\n', score)
+    riv_printf('[SNAKE] SCORE %u\n', score)
     respawn_apple()
   else
     -- eat tail

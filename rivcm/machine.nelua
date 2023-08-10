@@ -239,7 +239,7 @@ end
 function Machine:print_cycle_hash(): void
   local mcycle: uint64 = self:read_mcycle()
   local root_hash: string <close> = hexhash(self:get_root_hash())
-  io.stderr:printf('%d: %s\n', mcycle, root_hash)
+  io.stderr:printf('[RIVCM] Cycles %d: %s\n', mcycle, root_hash)
 end
 
 -- Global machine.
