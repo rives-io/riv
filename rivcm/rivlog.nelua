@@ -1,0 +1,170 @@
+require 'io'
+require 'vector'
+require 'math'
+require 'riv_types'
+require '.util'
+
+local function ceil_log2(x: uint64): uint8
+  for i: uint8=1,63 do
+    if x <= (1_u64 << i) then return i end
+  end
+  return 64
+end
+
+global riv_key_toggle_event: type = @record{
+  key_code: uint8,
+  frame: uint64,
+}
+
+local riv_log_format: type <using> = @enum(uint8) {
+  RIV_LOGFORMAT_INVALID = 0,
+  RIV_LOGFORMAT_KEYTOGGLES,
+}
+
+local riv_key_map: type = @[RIV_NUM_KEYCODE]uint8
+
+-- 16 bytes
+local riv_log_header = @record{
+  format: uint8,
+  flags: uint8,
+  frame_delta_log2_size: uint8,
+  key_map_size: uint8,
+  key_events_size: uint32,
+  first_frame_delta: uint32,
+  last_frame_delta: uint32,
+}
+
+global riv_log: type = @record{}
+
+local function make_key_map(key_events: span(riv_key_toggle_event)): (riv_key_map, riv_key_map, usize)
+  local key2idx: riv_key_map
+  local idx2key: riv_key_map
+  local haskey: [RIV_NUM_KEYCODE]boolean
+  local len: usize = 0
+  for _, event: riv_key_toggle_event in ipairs(key_events) do
+    local key: uint8 = event.key_code
+    if key ~= 0 and not haskey[key] then
+      local idx: uint8 = (@uint8)(len)
+      haskey[key] = true
+      key2idx[key] = idx
+      idx2key[idx] = key
+      len = len + 1
+    end
+  end
+  return key2idx, idx2key, len
+end
+
+local function get_max_frame_delta(key_events: span(riv_key_toggle_event)): uint64
+  local max_frame_delta: uint64 = 0
+  for i: usize=1,<key_events.size do
+    local frame: uint64, prev_frame: uint64 = key_events[i].frame, key_events[i-1].frame
+    assert(frame >= prev_frame, 'frames are not sorted')
+    max_frame_delta = math.max(max_frame_delta, frame - prev_frame)
+  end
+  return max_frame_delta
+end
+
+function riv_log.save(filename: string, key_events: span(riv_key_toggle_event), last_frame: uint64): void
+  local last_frame_delta: uint64 = 0
+  local first_frame_delta: uint64 = 0
+  if key_events.size > 0 then
+    -- first frame delta
+    first_frame_delta = key_events[0].frame
+    assert(first_frame_delta <= 0xffffffff, 'first frame is too large')
+    -- last frame delta
+    local prev_last_frame: uint64 = key_events[key_events.size-1].frame
+    assert(last_frame >= prev_last_frame, 'last frame is invalid')
+    last_frame_delta = last_frame - prev_last_frame
+    assert(last_frame_delta <= 0xffffffff, 'last frame is too large')
+  end
+  local key2idx: riv_key_map, idx2key: riv_key_map, key_map_size: usize = make_key_map(key_events)
+  local key_map_log2_size: uint8 = ceil_log2(key_map_size)
+  local frame_delta_log2_size: uint8 = ceil_log2(get_max_frame_delta(key_events) + 1)
+  local event_log2_size: uint8 = key_map_log2_size + frame_delta_log2_size
+  local event_size: uint8 = (event_log2_size + 7) // 8
+  assert(event_size <= 5, 'event size is too large')
+  -- open file
+  local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
+  -- store header
+  local header: riv_log_header = {
+    format = RIV_LOGFORMAT_KEYTOGGLES,
+    flags = 0,
+    frame_delta_log2_size = frame_delta_log2_size,
+    key_map_size = key_map_size,
+    key_events_size = key_events.size,
+    first_frame_delta = first_frame_delta,
+    last_frame_delta = last_frame_delta,
+  }
+  local header_bytes: string <close> = string.pack('<I1I1I1I1I4I4I4',
+    header.format,
+    header.flags,
+    header.frame_delta_log2_size,
+    header.key_map_size,
+    header.key_events_size,
+    header.first_frame_delta,
+    header.last_frame_delta)
+  fn_assert!(file:write(header_bytes))
+  -- store key map
+  fn_assert!(file:write((@span(byte)){data=&idx2key, size=key_map_size}))
+  -- store key events
+  local prev_frame: uint64 = first_frame_delta
+  for _, event: riv_key_toggle_event in ipairs(key_events) do
+    local frame_delta: uint64 = event.frame - prev_frame
+    local key_event: uint64 = key2idx[event.key_code] | (frame_delta << key_map_log2_size)
+    prev_frame = event.frame
+    ## for i=1,5 do
+      if event_size == #[i]# then
+        local bytes: string <close> = string.pack(#['<I'..i]#, key_event)
+        fn_assert!(file:write(bytes))
+      end
+    ## end
+  end
+end
+
+function riv_log.load(filename: string): (vector(riv_key_toggle_event), uint64)
+  -- open file
+  local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
+  -- load header
+  local header_bytes: string <close> = fn_assert!(file:read(16))
+  local header: riv_log_header
+    header.format,
+    header.flags,
+    header.frame_delta_log2_size,
+    header.key_map_size,
+    header.key_events_size,
+    header.first_frame_delta,
+    header.last_frame_delta = string.unpack('<I1I1I1I1I4I4I4', header_bytes)
+  assert(header.format == RIV_LOGFORMAT_KEYTOGGLES, 'unsupported riv log format')
+  assert(header.flags == 0, 'unsupported riv flags format')
+  assert(header.frame_delta_log2_size <= 32, 'unsupported riv frame delta log2 size')
+  local key_map_log2_size: uint8 = ceil_log2(header.key_map_size)
+  local key_index_mask: uint64 = (1_u64 << key_map_log2_size) - 1
+  local event_log2_size: uint8 = key_map_log2_size + header.frame_delta_log2_size
+  local event_size: uint8 = (event_log2_size + 7) // 8
+  -- load key map
+  local idx2key_str: string <close> = fn_assert!(file:read(header.key_map_size))
+  local idx2key: span(uint8) = idx2key_str:span()
+  -- load key events
+  local key_events: vector(riv_key_toggle_event)
+  key_events:resize(header.key_events_size)
+  local prev_frame: uint64 = header.first_frame_delta
+  for _, event: *riv_key_toggle_event in mipairs(key_events) do
+    local key_event: uint64
+    ## for i=1,5 do
+      if event_size == #[i]# then
+        local bytes: string <close> = fn_assert!(file:read(#[i]#))
+        key_event = string.unpack(#['<I'..i]#, bytes)
+      end
+    ## end
+    local frame_delta: uint64 = key_event >> key_map_log2_size
+    event.key_code = idx2key[key_event & key_index_mask]
+    event.frame = prev_frame + frame_delta
+    prev_frame = event.frame
+  end
+  -- compute last frame
+  local last_frame: uint64 = 0
+  if key_events.size > 0 then
+    last_frame = key_events[key_events.size-1].frame + header.last_frame_delta
+  end
+  return key_events, last_frame
+end

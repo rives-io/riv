@@ -7,6 +7,7 @@ require 'arg'
 
 require '.util'
 require '.machine'
+require '.rivlog'
 
 --------------------------------------------------------------------------------
 
@@ -123,17 +124,7 @@ end
 
 --------------------------------------------------------------------------------
 
-local riv_event_key: type = @record{
-  key_toggle: uint8,
-  frame: uint64,
-}
-
-local riv_input_log_header: type = @record{
-  last_frame: uint32,
-  num_events: uint32,
-}
-
-local riv_input_log_format: type <using> = @enum(uint32){
+local riv_log_format: type <using> = @enum(uint32){
   RIV_INPUTLOG_INVALID = 0,
   RIV_INPUTLOG_PACKEDKEY_16,
   RIV_INPUTLOG_PACKEDKEY_24,
@@ -146,8 +137,8 @@ global input = @record{}
 
 -- Input subsystem state.
 local poll_events: vector(sapp_event)
-local input_log_events: vector(riv_event_key)
-local input_log_last_frame: uint64
+local log_key_events: vector(riv_key_toggle_event)
+local log_last_frame: uint64
 local replay_log_index: usize
 local recording: boolean
 local replaying: boolean
@@ -160,7 +151,7 @@ end
 -- Terminate input subsystem.
 function input.shutdown(): void
   poll_events:destroy()
-  input_log_events:destroy()
+  log_key_events:destroy()
 end
 
 function input.reset_state()
@@ -213,13 +204,13 @@ local function poll_replay_events(): void
 
   -- fill events
   local index: uint8 = 0
-  while replay_log_index < #input_log_events do
-    local next_event: riv_event_key = input_log_events[replay_log_index]
+  while replay_log_index < #log_key_events do
+    local next_event: riv_key_toggle_event = log_key_events[replay_log_index]
     if next_event.frame ~= frame then break end
     replay_log_index = replay_log_index + 1
     -- append event only when the list is not full, this is almost impossible, here just for sanity
     if index < #machine.mmio_device.key_toggles then
-      machine.mmio_device.key_toggles[index] = next_event.key_toggle
+      machine.mmio_device.key_toggles[index] = next_event.key_code
       index = index + 1
     end
   end
@@ -235,10 +226,10 @@ end
 -- Record polled events in this frame.
 local function poll_record_events(): void
   local frame: uint64 = machine.mmio_driver.frame
-  input_log_last_frame = frame
+  log_last_frame = frame
   for i: uint32=0,<machine.mmio_device.key_toggle_count do
-    input_log_events:push{
-      key_toggle = machine.mmio_device.key_toggles[i],
+    log_key_events:push{
+      key_code = machine.mmio_device.key_toggles[i],
       frame=frame,
     }
   end
@@ -246,7 +237,7 @@ end
 
 -- Returns true if replaying and the replay is in the last frame or above last frame.
 function input.is_replay_at_end(): boolean
-  return replaying and machine.mmio_driver.frame >= input_log_last_frame
+  return replaying and machine.mmio_driver.frame >= log_last_frame
 end
 
 -- Poll for keyboard/mouse input events.
@@ -280,101 +271,16 @@ function input.start_recording()
   io.stderr:printf("[RIVCM] Recording\n")
 end
 
-local function choose_best_inputlog_format(): riv_input_log_format
-  local max_frame_delta: uint64 = 0
-  for i: usize=1,<input_log_events.size do
-    local frame: uint64, prev_frame: uint64 = input_log_events[i].frame, input_log_events[i-1].frame
-    assert(frame >= prev_frame, 'frames are not sorted')
-    max_frame_delta = math.max(max_frame_delta, frame - prev_frame)
-  end
-  print(max_frame_delta)
-  assert(max_frame_delta <= 0xffffffff, 'max frame delta is too large')
-  if max_frame_delta > 0xffffff then
-    return RIV_INPUTLOG_PACKEDKEY_40
-  elseif max_frame_delta > 0xffff then
-    return RIV_INPUTLOG_PACKEDKEY_32
-  elseif max_frame_delta > 0xff then
-    return RIV_INPUTLOG_PACKEDKEY_24
-  else
-    return RIV_INPUTLOG_PACKEDKEY_16
-  end
-end
-
 -- Save replay log to a file.
 function input.save_replay(filename: string): void
-  -- open file
-  local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
-  -- choose format
-  local format: uint32 = choose_best_inputlog_format()
-  local first_frame: uint64 = #input_log_events > 0 and input_log_events[0].frame or 0
-  assert(first_frame <= 0xffffffff, 'first frame is too large')
-  -- header
-  local header_bytes: string <close> = string.pack('<I4I4I4I4',
-    format,
-    input_log_last_frame,
-    first_frame,
-    input_log_events.size)
-  fn_assert!(file:write(header_bytes))
-  -- frames
-  local prev_frame: uint64 = first_frame
-  for _, event: riv_event_key in ipairs(input_log_events) do
-    local frame_delta: uint32 = event.frame - prev_frame
-    prev_frame = event.frame
-    switch format do
-    case RIV_INPUTLOG_PACKEDKEY_40 then
-      local bytes: string <close> = string.pack('<I1I4', event.key_toggle, frame_delta)
-      fn_assert!(file:write(bytes))
-    case RIV_INPUTLOG_PACKEDKEY_32 then
-      local bytes: string <close> = string.pack('<I1I3', event.key_toggle, frame_delta)
-      fn_assert!(file:write(bytes))
-    case RIV_INPUTLOG_PACKEDKEY_24 then
-      local bytes: string <close> = string.pack('<I1I2', event.key_toggle, frame_delta)
-      fn_assert!(file:write(bytes))
-    case RIV_INPUTLOG_PACKEDKEY_16 then
-      local bytes: string <close> = string.pack('<I1I1', event.key_toggle, frame_delta)
-      fn_assert!(file:write(bytes))
-    end
-  end
-  -- saved
+  riv_log.save(filename, log_key_events, log_last_frame)
   io.stderr:printf("[RIVCM] Saved replay '%s'\n", filename)
 end
 
 -- Load replay log from a file.
 function input.load_replay(filename: string): void
-  -- open file
-  local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
-  -- header
-  local header_bytes: string <close> = fn_assert!(file:read(16))
-  local format: uint32
-  local first_frame: uint64
-  local num_events: uint32
-  format, input_log_last_frame, first_frame, num_events = string.unpack('<I4I4I4I4', header_bytes)
-  assert(format >= RIV_INPUTLOG_PACKEDKEY_16 and format <= RIV_INPUTLOG_PACKEDKEY_40,
-         'unsupported input log format')
-  input_log_events:resize(num_events)
-  -- frames
-  local prev_frame: uint64 = first_frame
-  for _, event: *riv_event_key in mipairs(input_log_events) do
-    local frame_delta: uint32
-    switch format do
-    case RIV_INPUTLOG_PACKEDKEY_40 then
-      local bytes: string <close> = fn_assert!(file:read(5))
-      event.key_toggle, frame_delta = string.unpack('<I1I4', bytes)
-    case RIV_INPUTLOG_PACKEDKEY_32 then
-      local bytes: string <close> = fn_assert!(file:read(4))
-      event.key_toggle, frame_delta = string.unpack('<I1I3', bytes)
-    case RIV_INPUTLOG_PACKEDKEY_24 then
-      local bytes: string <close> = fn_assert!(file:read(3))
-      event.key_toggle, frame_delta = string.unpack('<I1I2', bytes)
-    case RIV_INPUTLOG_PACKEDKEY_16 then
-      local bytes: string <close> = fn_assert!(file:read(2))
-      event.key_toggle, frame_delta = string.unpack('<I1I1', bytes)
-    end
-    print(frame_delta)
-    event.frame = prev_frame + frame_delta
-    prev_frame = event.frame
-  end
-  -- loaded
+  log_key_events:destroy()
+  log_key_events, log_last_frame = riv_log.load(filename)
   replaying = true
   io.stderr:printf("[RIVCM] Loaded replay '%s'\n", filename)
 end
