@@ -151,13 +151,6 @@ global riv_pixel_format: type <using> = @enum(uint32){
   RIV_NUM_PIXELFORMAT = 2,
   RIV_DEFAULT_PIXELFORMAT = 1
 }
-global riv_fps_limit: type <using> = @enum(uint32){
-  RIV_FPS_INVALID = 0,
-  RIV_FPS_24 = 24,
-  RIV_FPS_30 = 30,
-  RIV_FPS_48 = 48,
-  RIV_FPS_60 = 60
-}
 global riv_constants: type <using> = @enum(uint32){
   RIV_DEFAULT_WIDTH = 256,
   RIV_DEFAULT_HEIGHT = 256,
@@ -243,8 +236,8 @@ global riv_mmio_device: type = @record{
   header: riv_mmio_header,
   incard_len: uint32,
   incard_format: riv_card_format,
-  key_event_count: uint32,
-  key_events: [128]uint8
+  key_toggle_count: uint32,
+  key_toggles: [128]uint8
 }
 global riv_prng: type = @record{
   state: [4]uint64

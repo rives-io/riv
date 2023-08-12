@@ -9,7 +9,7 @@ local Color = @byte
 local TILE_SIZE <comptime> = 1
 local GRID_SIZE <comptime> = 16
 local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
-local MOVE_DELAY <comptime> = 3
+local MOVE_DELAY <comptime> = 1
 
 -- Game state variables
 local riv: *riv_context
@@ -89,26 +89,27 @@ local function game_over()
   -- init_game()
 end
 
-local function check_turn(keycode: uint8, dir: Direction)
-  if not riv.keys[keycode].press then return end
-  local frame = riv.keys[keycode].down_frame
-  if frame < last_turn_frame then return end
-  local headdir = get_tile(headpos)
-  switch dir do
-  case Direction.UP then if headdir == Direction.DOWN then return end
-  case Direction.DOWN then if headdir == Direction.UP then return end
-  case Direction.LEFT then if headdir == Direction.RIGHT then return end
-  case Direction.RIGHT then if headdir == Direction.LEFT then return end
-  else return end
-  movedir = dir
-  last_turn_frame = frame
+local function check_turn(keycode: uint8, dir: Direction, turned: boolean)
+  if riv.keys[keycode].down or (not turned and riv.keys[keycode].press) then
+    local headdir = get_tile(headpos)
+    switch dir do
+    case Direction.UP then if headdir == Direction.DOWN then return end
+    case Direction.DOWN then if headdir == Direction.UP then return end
+    case Direction.LEFT then if headdir == Direction.RIGHT then return end
+    case Direction.RIGHT then if headdir == Direction.LEFT then return end
+    else return end
+    movedir = dir
+    return true
+  end
+  return false
 end
 
 local function poll_events()
-  check_turn(RIV_KEYCODE_UP, Direction.UP)
-  check_turn(RIV_KEYCODE_DOWN, Direction.DOWN)
-  check_turn(RIV_KEYCODE_RIGHT, Direction.RIGHT)
-  check_turn(RIV_KEYCODE_LEFT, Direction.LEFT)
+  local turned = false
+  turned = check_turn(RIV_KEYCODE_UP, Direction.UP, turned)
+  turned = check_turn(RIV_KEYCODE_DOWN, Direction.DOWN, turned)
+  turned = check_turn(RIV_KEYCODE_RIGHT, Direction.RIGHT, turned)
+  turned = check_turn(RIV_KEYCODE_LEFT, Direction.LEFT, turned)
 end
 
 local function poll_game()
@@ -212,7 +213,7 @@ riv_run(&(@riv_run_desc){
   framebuffer_desc = {
     width = SCREEN_SIZE,
     height = SCREEN_SIZE,
-    fps = 24,
+    fps = 8,
     pixel_format = RIV_PIXELFORMAT_PAL256,
   }
 })

@@ -110,19 +110,18 @@ end
 
 function riv_context:_poll_inputs() : void
   -- TODO: seed prng based on inputs
-  local hash
-  for i: uint32=0,<self.mmio_device.key_event_count do
-    local key_event: uint8 = self.mmio_device.key_events[i]
-    local key_code: uint8 = key_event & 127
-    local down: boolean = (key_event & 128) == 0
-    if down then
-      self.keys[key_code].press = true
+  for i: uint32=0,<#self.keys do
+    self.keys[i].down = false
+    self.keys[i].up = false
+  end
+  for i: uint32=0,<self.mmio_device.key_toggle_count do
+    local key_code: uint8 = self.mmio_device.key_toggles[i]
+    local press: boolean = not self.keys[key_code].press
+    self.keys[key_code].press = press
+    if press then
       self.keys[key_code].down = true
-      self.keys[key_code].up = false
       self.keys[key_code].down_frame = self.frame
-    else -- up
-      self.keys[key_code].press = false
-      self.keys[key_code].down = false
+    else
       self.keys[key_code].up = true
       self.keys[key_code].up_frame = self.frame
     end

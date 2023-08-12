@@ -223,14 +223,6 @@ typedef enum riv_pixel_format {
   RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PAL256
 } riv_pixel_format;
 
-typedef enum riv_fps_limit {
-  RIV_FPS_INVALID = 0,
-  RIV_FPS_24 = 24,
-  RIV_FPS_30 = 30,
-  RIV_FPS_48 = 48,
-  RIV_FPS_60 = 60,
-} riv_fps_limit;
-
 typedef enum riv_constants {
   RIV_DEFAULT_WIDTH = 256,
   RIV_DEFAULT_HEIGHT = 256,
@@ -346,8 +338,8 @@ typedef struct riv_mmio_device {
   riv_mmio_header header;
   uint32_t incard_len;
   riv_card_format incard_format;
-  uint32_t key_event_count;
-  uint8_t key_events[RIV_NUM_KEYCODE];
+  uint32_t key_toggle_count;
+  uint8_t key_toggles[RIV_NUM_KEYCODE];
 } riv_mmio_device;
 
 ////////////////////////////////////////////////////////////////////////////////

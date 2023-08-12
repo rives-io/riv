@@ -178,6 +178,8 @@ local function machine_frame(): void
         if #options.incard_filename > 0 then
           iocard.load_incard(options.incard_filename)
         end
+        -- reset input state
+        input.reset_state()
       case RIV_CONTROL_CLOSE then
         io.stderr:printf('[RIVCM] Close RIV device\n')
         -- copy output card from guest memory into host memory
