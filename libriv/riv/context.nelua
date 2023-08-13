@@ -1,8 +1,8 @@
 require 'memory'
 
-require '.linux'
-require '.riv_types'
-require '.riv_prng'
+require 'linux'
+require '.types'
+require '.prng'
 
 local riv_yield_request: type = @record{
   dev: uint8,

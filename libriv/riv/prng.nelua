@@ -1,6 +1,6 @@
 -- This module uses an algorithm based on *xoshiro256* to produce pseudo-random 64-bit integers.
 
-require '.riv_types'
+require '.types'
 
 -- Left bit rotation utility.
 ## local function rotl(x, n)

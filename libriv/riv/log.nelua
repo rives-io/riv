@@ -3,8 +3,8 @@ require 'vector'
 require 'math'
 require 'miniz'
 
-require '.riv_types'
-require '.riv_macros'
+require '.types'
+require 'macros'
 
 --------------------------------------------------------------------------------
 

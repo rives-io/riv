@@ -17,24 +17,24 @@ require '.machine'
 --------------------------------------------------------------------------------
 
 -- Audio subsystem.
-global audio: type = @record{}
+global rivcm_audio: type = @record{}
 
 -- Audio subsystem state.
 local audio_engine: ma_engine
 local audiobuffer: [RIV_MEMSIZE_AUDIOBUFFER]byte
 
 -- Initialize audio subsystem.
-function audio.setup(): void
+function rivcm_audio.setup(): void
   ma_assert!(ma_engine_init(nilptr, &audio_engine))
 end
 
 -- Terminate audio subsystem.
-function audio.shutdown(): void
+function rivcm_audio.shutdown(): void
   ma_engine_uninit(&audio_engine)
 end
 
 -- Control audio subsystem.
-function audio.control(): void
+function rivcm_audio.control(): void
   local data: span(byte) = {data=&audiobuffer[0],size=machine.mmio_driver.audio_ctl.buf_len}
   machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_AUDIOBUFFER, data)
 

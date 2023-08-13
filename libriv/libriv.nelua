@@ -1,4 +1,4 @@
-require '.riv_types'
-require '.riv_util'
-require '.riv_context'
-require '.riv_prng'
+require '.riv.types'
+require '.riv.util'
+require '.riv.context'
+require '.riv.prng'

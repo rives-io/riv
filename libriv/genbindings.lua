@@ -1,7 +1,7 @@
 local nldecl = require 'nelua.plugins.nldecl'
 
 nldecl.generate_bindings_file{
-  output_file = 'riv_types.nelua',
+  output_file = 'riv/types.nelua',
   includes = {'riv.h'},
   include_dirs = {'.'},
   include_names = {'^riv_', '^RIV_'},

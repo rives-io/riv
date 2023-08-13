@@ -1,7 +1,7 @@
 require 'C.stdio'
 require 'C.stdarg'
 
-require '.riv_types'
+require '.types'
 
 global function riv_version(): uint64 <cexport'riv_version'>
   return RIV_VERSION

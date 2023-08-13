@@ -2,7 +2,7 @@
 
 require 'span'
 
-require '.riv_types'
+require '.riv.types'
 
 -- util
 global function riv_version(): uint64 <cimport'riv_version'> end

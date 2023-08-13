@@ -117,7 +117,7 @@ local function parse_options(): rivcm_options
 end
 
 local options: rivcm_options
-local framelimiter: riv_framelimiter
+local framelimiter: rivcm_framelimiter
 local quit: boolean
 
 -- Initialize application.
@@ -125,18 +125,18 @@ local function startup(): void
   io.stderr:printf('[RIVCM] Startup\n')
 
   -- initialize the machine
-  machine = Machine.create(options.entrypoint, options.cartridge_filename)
+  machine = rivcm_machine.create(options.entrypoint, options.cartridge_filename)
 
   -- init subsystems
-  iocard.setup()
-  video.setup()
-  audio.setup()
-  input.setup()
+  rivcm_iocard.setup()
+  rivcm_video.setup()
+  rivcm_audio.setup()
+  rivcm_input.setup()
 
   if options.recording then -- start recording
-    input.start_recording()
+    rivcm_input.start_recording()
   elseif options.replaying then -- start replaying
-    input.load_replay(options.replay_filename)
+    rivcm_input.load_replay(options.replay_filename)
   end
 end
 
@@ -145,21 +145,21 @@ local function shutdown(): void
   io.stderr:printf('[RIVCM] Shutdown\n')
 
   if options.recording then
-    input.save_replay(options.replay_filename)
+    rivcm_input.save_replay(options.replay_filename)
   end
 
   if #options.outhash_filename > 0 then
-    iocard.save_outhash(options.outhash_filename)
+    rivcm_iocard.save_outhash(options.outhash_filename)
   end
   if #options.outcard_filename > 0 then
-    iocard.save_outcard(options.outcard_filename)
+    rivcm_iocard.save_outcard(options.outcard_filename)
   end
-  iocard.print_outcard()
+  rivcm_iocard.print_outcard()
 
-  iocard.shutdown()
-  input.shutdown()
-  video.shutdown()
-  audio.shutdown()
+  rivcm_iocard.shutdown()
+  rivcm_input.shutdown()
+  rivcm_video.shutdown()
+  rivcm_audio.shutdown()
 
   machine:print_cycle_hash()
   machine:destroy()
@@ -175,28 +175,28 @@ local function machine_frame(): void
       case RIV_CONTROL_OPEN then
         io.stderr:printf('[RIVCM] Open RIV device\n')
         if #options.incard_filename > 0 then
-          iocard.load_incard(options.incard_filename)
+          rivcm_iocard.load_incard(options.incard_filename)
         end
         -- reset input state
-        input.reset_state()
+        rivcm_input.reset_state()
       case RIV_CONTROL_CLOSE then
         io.stderr:printf('[RIVCM] Close RIV device\n')
         -- copy output card from guest memory into host memory
-        iocard.update_outcard()
+        rivcm_iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
-        video.update_framebuffer()
+        rivcm_video.update_framebuffer()
         -- finish
         quit = true
         return
       case RIV_CONTROL_PRESENT then
         -- copy output card from guest memory into host memory
-        iocard.update_outcard()
+        rivcm_iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
-        video.update_framebuffer()
+        rivcm_video.update_framebuffer()
         -- must break the loop so we can present the video
         return
       case RIV_CONTROL_AUDIO then
-        audio.control()
+        rivcm_audio.control()
       else
         error 'unknown yield reason'
       end
@@ -217,10 +217,10 @@ local function advance_frame(): void
   if quit or machine:is_halted() then return end
 
   -- check if is the last replay frame
-  local replay_finished: boolean = input.is_replay_at_end()
+  local replay_finished: boolean = rivcm_input.is_replay_at_end()
 
   -- poll input events into machine device memory
-  input.poll()
+  rivcm_input.poll()
 
   -- poll next frame from machine driver memory
   local mcycle_start: uint64 = machine:read_mcycle()
@@ -269,7 +269,7 @@ local function frame(): void
     end
   end
   -- display the frame
-  video.present()
+  rivcm_video.present()
 end
 
 do
@@ -281,7 +281,7 @@ do
     init_cb = startup,
     frame_cb = frame,
     cleanup_cb = shutdown,
-    event_cb = input.append_event,
+    event_cb = rivcm_input.append_event,
     width = 320,
     height = 240,
     window_title = "RIVCM",

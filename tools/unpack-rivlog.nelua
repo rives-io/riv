@@ -1,6 +1,6 @@
 require 'io'
 require 'arg'
-require 'riv_log'
+require 'riv.log'
 
 if #arg ~= 1 then
   io.stderr:writef("Usage: %s <input>\n", arg[1])

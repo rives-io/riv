@@ -1,30 +1,30 @@
 require 'io'
-require 'riv_macros'
+require 'macros'
 require 'keccak'
 
 require '.machine'
 
-global iocard: type = @record{}
+global rivcm_iocard: type = @record{}
 
 local outbuffer: [RIV_MEMSIZE_INOUTBUFFER]byte
 local outcard_data: span(byte)
 local outcard_format: riv_card_format
 
-function iocard.setup(): void
+function rivcm_iocard.setup(): void
   outcard_data.data = &outbuffer[0]
 end
 
-function iocard.shutdown(): void
+function rivcm_iocard.shutdown(): void
   -- nothing to do
 end
 
-function iocard.update_outcard(): void
+function rivcm_iocard.update_outcard(): void
   outcard_format = machine.mmio_driver.outcard_format
   outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_MEMSIZE_INOUTBUFFER)
   machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, outcard_data)
 end
 
-function iocard.load_incard(filename: string): void
+function rivcm_iocard.load_incard(filename: string): void
   local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
   local contents: string <close> = fn_assert!(file:read('a'))
   local data: span(byte) = {data=contents.data, size=math.min(RIV_MEMSIZE_INOUTBUFFER, contents.size)}
@@ -35,20 +35,20 @@ function iocard.load_incard(filename: string): void
   io.stderr:printf("[RIVCM] Loaded input card '%s'\n", filename)
 end
 
-function iocard.save_outhash(filename: string): void
+function rivcm_iocard.save_outhash(filename: string): void
   local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
   local hash: string <close> = hexhash(keccak256(outcard_data))
   fn_assert!(file:write(hash))
   io.stderr:printf("[RIVCM] Saved output card hash '%s'\n", filename)
 end
 
-function iocard.save_outcard(filename: string): void
+function rivcm_iocard.save_outcard(filename: string): void
   local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
   fn_assert!(file:write(outcard_data))
   io.stderr:printf("[RIVCM] Saved output card data '%s'\n", filename)
 end
 
-function iocard.print_outcard(): void
+function rivcm_iocard.print_outcard(): void
   local contents: string = {data=outcard_data.data, size=outcard_data.size}
   local hash: string <close> = hexhash(keccak256(outcard_data))
   io.stderr:printf([[

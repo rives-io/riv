@@ -4,7 +4,7 @@ require 'io'
 require 'math'
 
 -- Frame limiter.
-global riv_framelimiter: type = @record{
+global rivcm_framelimiter: type = @record{
   max_fps: float64,
   last_frame_time: float64,
 
@@ -16,7 +16,7 @@ global riv_framelimiter: type = @record{
 }
 
 -- Return true when we should process the next frame.
-function riv_framelimiter:should_process_next_frame(now: float64): boolean
+function rivcm_framelimiter:should_process_next_frame(now: float64): boolean
   if self.max_fps == 0 then
     self.last_frame_time = now
     return true
@@ -33,7 +33,7 @@ function riv_framelimiter:should_process_next_frame(now: float64): boolean
 end
 
 -- Print the frame rate statistics to stderr every second.
-function riv_framelimiter:print_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64): void
+function rivcm_framelimiter:print_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64): void
   self.frame_counter = self.frame_counter + 1
   self.time_elapsed_sum = self.time_elapsed_sum + time_elapsed
   self.mcycle_elapsed_sum = self.mcycle_elapsed_sum + mcycle_elapsed
