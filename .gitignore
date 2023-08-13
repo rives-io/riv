@@ -30,3 +30,4 @@
 /libriv/libriv.c
 /bwrapbox/bwrapbox.c
 /demos/*.c
+/tool/*.c

@@ -4,10 +4,10 @@ require 'sokol'
 require 'vector'
 require 'io'
 require 'arg'
+require 'riv_log'
+require 'riv_macros'
 
-require '.util'
 require '.machine'
-require '.rivlog'
 
 --------------------------------------------------------------------------------
 
@@ -123,14 +123,6 @@ local function translate_keycode_to_riv(keycode: sapp_keycode): riv_key_code
 end
 
 --------------------------------------------------------------------------------
-
-local riv_log_format: type <using> = @enum(uint32){
-  RIV_INPUTLOG_INVALID = 0,
-  RIV_INPUTLOG_PACKEDKEY_16,
-  RIV_INPUTLOG_PACKEDKEY_24,
-  RIV_INPUTLOG_PACKEDKEY_32,
-  RIV_INPUTLOG_PACKEDKEY_40,
-}
 
 -- Input subsystem.
 global input = @record{}

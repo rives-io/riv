@@ -2,9 +2,8 @@
 
 require 'io'
 require 'cartesi'
+require 'keccak'
 require 'riv_types'
-
-require '.util'
 
 global riv_paddr_base: type <using> = @enum(uint64) {
   RIV_PADDR_RAM        = 0x80000000,

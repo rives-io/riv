@@ -1,7 +1,8 @@
 require 'io'
+require 'riv_macros'
+require 'keccak'
 
 require '.machine'
-require '.util'
 
 global iocard: type = @record{}
 

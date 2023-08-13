@@ -70,9 +70,16 @@ RUN apk add libseccomp-dev bubblewrap
 COPY bwrapbox bwrapbox
 RUN make -C bwrapbox install PREFIX=/usr
 
+# Copy deps
+COPY deps/guest-host deps/guest-host
+
 # Install libriv
 COPY libriv libriv
 RUN make -C libriv install PREFIX=/usr
+
+# Install riv tools
+COPY tools tools
+RUN make -C tools install PREFIX=/usr
 
 ################################
 # Build rootfs

@@ -1,10 +1,12 @@
 require 'io'
 require 'vector'
 require 'math'
-require 'riv_types'
 require 'miniz'
 
-require '.util'
+require '.riv_types'
+require '.riv_macros'
+
+--------------------------------------------------------------------------------
 
 local function ceil_log2(x: uint64): uint8
   for i: uint8=1,63 do
@@ -12,11 +14,6 @@ local function ceil_log2(x: uint64): uint8
   end
   return 64
 end
-
-global riv_key_toggle_event: type = @record{
-  key_code: uint8,
-  frame: uint64,
-}
 
 local riv_log_flags: type <using> = @enum(uint8) {
   RIV_LOGFLAGS_COMPRESSED_MZ = 1
@@ -27,9 +24,6 @@ local riv_log_format: type <using> = @enum(uint8) {
   RIV_LOGFORMAT_KEYTOGGLES,
 }
 
-local riv_key_map: type = @[RIV_NUM_KEYCODE]uint8
-
--- 16 bytes
 local riv_log_header = @record{
   format: uint8,
   flags: uint8,
@@ -40,7 +34,16 @@ local riv_log_header = @record{
   last_frame_delta: uint32,
 }
 
+local riv_key_map: type = @[RIV_NUM_KEYCODE]uint8
+
+--------------------------------------------------------------------------------
+
 global riv_log: type = @record{}
+
+global riv_key_toggle_event: type = @record{
+  key_code: uint8,
+  frame: uint64,
+}
 
 local function make_key_map(key_events: span(riv_key_toggle_event)): (riv_key_map, riv_key_map, usize)
   local key2idx: riv_key_map

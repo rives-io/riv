@@ -10,7 +10,7 @@ CARTESI_MACHINE_INC_DIR=$(CARTESI_MACHINE_PREFIX)/include
 
 INCS=-I"$(CARTESI_MACHINE_INC_DIR)"
 LIBS=-L"$(CARTESI_MACHINE_LIB_DIR)" -Wl,-rpath,"$(CARTESI_MACHINE_LIB_DIR)"
-NELUA_LIBS=-L../libriv -L../deps
+NELUA_LIBS=-L../libriv -L../deps/host -L../deps/guest-host
 
 # for release
 # NELUA_FLAGS+= -Pnochecks -Pnoassertloc -Pnocstaticassert --release
