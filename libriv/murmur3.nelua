@@ -1,0 +1,61 @@
+require 'span'
+
+local function rotl64(x: uint64, r: int8): uint64 <inline>
+  return (x << r) | (x >> (64 - r))
+end
+
+global function murmur3_mix64(k: uint64): uint64 <inline>
+  k = k ~ (k >> 33)
+  k = k * 0xff51afd7ed558ccd_u64
+  k = k ~ (k >> 33)
+  k = k * 0xc4ceb9fe1a85ec53_u64
+  k = k ~ (k >> 33)
+  return k
+end
+
+global function murmur3_128(data: span(byte), seed: uint64): [2]uint64
+  local h1: uint64 = seed
+  local h2: uint64 = seed
+  local c1: uint64 = 0x87c37b91114253d5_u64
+  local c2: uint64 = 0x4cf5ad432745937f_u64
+  local nblocks: usize = data.size // 16
+  do -- body
+    local blocks: *[0]uint64 = (@*[0]uint64)(data.data)
+    for i: usize=0,<nblocks do
+      local k1: uint64, k2: uint64 = blocks[i*2+0], blocks[i*2+1]
+      k1 = k1 * c1; k1 = rotl64(k1,31); k1 = k1 * c2; h1 = h1 ~ k1
+      h1 = rotl64(h1,27); h1 = h1 + h2; h1 = h1*5+0x52dce729
+      k2 = k2 * c2; k2 = rotl64(k2,33); k2 = k2 * c1; h2 = h2 ~ k2
+      h2 = rotl64(h2,31); h2 = h2 + h1; h2 = h2*5+0x38495ab5
+    end
+  end
+  do -- tail
+    local tail: *[0]byte = &data.data[nblocks * 16]
+    local k1: uint64, k2: uint64 = 0, 0
+    switch data.size & 15 do
+    case 15 then k2 = k2 ~ (uint64(tail[14]) << 48); fallthrough
+    case 14 then k2 = k2 ~ (uint64(tail[13]) << 40); fallthrough
+    case 13 then k2 = k2 ~ (uint64(tail[12]) << 32); fallthrough
+    case 12 then k2 = k2 ~ (uint64(tail[11]) << 24); fallthrough
+    case 11 then k2 = k2 ~ (uint64(tail[10]) << 16); fallthrough
+    case 10 then k2 = k2 ~ (uint64(tail[ 9]) << 8); fallthrough
+    case  9 then k2 = k2 ~ (uint64(tail[ 8]) << 0);
+      k2 = k2 * c2; k2 = rotl64(k2,33); k2 = k2 * c1; h2 = h2 ~ k2; fallthrough
+    case  8 then k1 = k1 ~ (uint64(tail[ 7]) << 56); fallthrough
+    case  7 then k1 = k1 ~ (uint64(tail[ 6]) << 48); fallthrough
+    case  6 then k1 = k1 ~ (uint64(tail[ 5]) << 40); fallthrough
+    case  5 then k1 = k1 ~ (uint64(tail[ 4]) << 32); fallthrough
+    case  4 then k1 = k1 ~ (uint64(tail[ 3]) << 24); fallthrough
+    case  3 then k1 = k1 ~ (uint64(tail[ 2]) << 16); fallthrough
+    case  2 then k1 = k1 ~ (uint64(tail[ 1]) << 8); fallthrough
+    case  1 then k1 = k1 ~ (uint64(tail[ 0]) << 0);
+      k1 = k1 * c1; k1 = rotl64(k1,31); k1 = k1 * c2; h1 = h1 ~ k1;
+    end
+  end
+  -- finalization
+  h1 = h1 ~ data.size; h2 = h2 ~ data.size
+  h1 = h1 + h2; h2 = h2 + h1
+  h1 = murmur3_mix64(h1); h2 = murmur3_mix64(h2)
+  h1 = h1 + h2; h2 = h2 + h1
+  return (@[2]uint64){h1, h2}
+end
