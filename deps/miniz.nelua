@@ -1,0 +1,167 @@
+##[[
+cdefine 'MINIZ_NO_ARCHIVE_APIS'
+cdefine 'MINIZ_NO_ZLIB_APIS'
+cdefine 'MINIZ_NO_ZLIB_COMPATIBLE_NAME'
+cdefine 'MINIZ_NO_STDIO'
+cdefine 'MINIZ_NO_TIME'
+cinclude 'miniz.h'
+cinclude 'miniz.c'
+]]
+global TDEFL_HUFFMAN_ONLY: cint <comptime> = 0
+global TDEFL_DEFAULT_MAX_PROBES: cint <comptime> = 128
+global TDEFL_MAX_PROBES_MASK: cint <comptime> = 4095
+global TDEFL_WRITE_ZLIB_HEADER: cint <comptime> = 4096
+global TDEFL_COMPUTE_ADLER32: cint <comptime> = 8192
+global TDEFL_GREEDY_PARSING_FLAG: cint <comptime> = 16384
+global TDEFL_NONDETERMINISTIC_PARSING_FLAG: cint <comptime> = 32768
+global TDEFL_RLE_MATCHES: cint <comptime> = 65536
+global TDEFL_FILTER_MATCHES: cint <comptime> = 131072
+global TDEFL_FORCE_ALL_STATIC_BLOCKS: cint <comptime> = 262144
+global TDEFL_FORCE_ALL_RAW_BLOCKS: cint <comptime> = 524288
+global tdefl_put_buf_func_ptr: type <cimport,nodecl> = @function(pBuf: pointer, len: cint, pUser: pointer): cint
+global TDEFL_MAX_HUFF_TABLES: cint <comptime> = 3
+global TDEFL_MAX_HUFF_SYMBOLS_0: cint <comptime> = 288
+global TDEFL_MAX_HUFF_SYMBOLS_1: cint <comptime> = 32
+global TDEFL_MAX_HUFF_SYMBOLS_2: cint <comptime> = 19
+global TDEFL_LZ_DICT_SIZE: cint <comptime> = 32768
+global TDEFL_LZ_DICT_SIZE_MASK: cint <comptime> = 32767
+global TDEFL_MIN_MATCH_LEN: cint <comptime> = 3
+global TDEFL_MAX_MATCH_LEN: cint <comptime> = 258
+global TDEFL_LZ_CODE_BUF_SIZE: cint <comptime> = 65536
+global TDEFL_OUT_BUF_SIZE: cint <comptime> = 85196
+global TDEFL_MAX_HUFF_SYMBOLS: cint <comptime> = 288
+global TDEFL_LZ_HASH_BITS: cint <comptime> = 15
+global TDEFL_LEVEL1_HASH_SIZE_MASK: cint <comptime> = 4095
+global TDEFL_LZ_HASH_SHIFT: cint <comptime> = 5
+global TDEFL_LZ_HASH_SIZE: cint <comptime> = 32768
+global tdefl_status: type <cimport,nodecl,using> = @enum(cint){
+  TDEFL_STATUS_BAD_PARAM = -2,
+  TDEFL_STATUS_PUT_BUF_FAILED = -1,
+  TDEFL_STATUS_OKAY = 0,
+  TDEFL_STATUS_DONE = 1
+}
+global tdefl_flush: type <cimport,nodecl,using> = @enum(cint){
+  TDEFL_NO_FLUSH = 0,
+  TDEFL_SYNC_FLUSH = 2,
+  TDEFL_FULL_FLUSH = 3,
+  TDEFL_FINISH = 4
+}
+global tdefl_compressor: type <cimport,nodecl> = @record{
+  m_pPut_buf_func: tdefl_put_buf_func_ptr,
+  m_pPut_buf_user: pointer,
+  m_flags: cuint,
+  m_max_probes: [2]cuint,
+  m_greedy_parsing: cint,
+  m_adler32: cuint,
+  m_lookahead_pos: cuint,
+  m_lookahead_size: cuint,
+  m_dict_size: cuint,
+  m_pLZ_code_buf: *cuchar,
+  m_pLZ_flags: *cuchar,
+  m_pOutput_buf: *cuchar,
+  m_pOutput_buf_end: *cuchar,
+  m_num_flags_left: cuint,
+  m_total_lz_bytes: cuint,
+  m_lz_code_buf_dict_pos: cuint,
+  m_bits_in: cuint,
+  m_bit_buffer: cuint,
+  m_saved_match_dist: cuint,
+  m_saved_match_len: cuint,
+  m_saved_lit: cuint,
+  m_output_flush_ofs: cuint,
+  m_output_flush_remaining: cuint,
+  m_finished: cuint,
+  m_block_index: cuint,
+  m_wants_to_finish: cuint,
+  m_prev_return_status: tdefl_status,
+  m_pIn_buf: pointer,
+  m_pOut_buf: pointer,
+  m_pIn_buf_size: *csize,
+  m_pOut_buf_size: *csize,
+  m_flush: tdefl_flush,
+  m_pSrc: *cuchar,
+  m_src_buf_left: csize,
+  m_out_buf_ofs: csize,
+  m_dict: [33025]cuchar,
+  m_huff_count: [3][288]cushort,
+  m_huff_codes: [3][288]cushort,
+  m_huff_code_sizes: [3][288]cuchar,
+  m_lz_code_buf: [65536]cuchar,
+  m_next: [32768]cushort,
+  m_hash: [32768]cushort,
+  m_output_buf: [85196]cuchar
+}
+global TINFL_FLAG_PARSE_ZLIB_HEADER: cint <comptime> = 1
+global TINFL_FLAG_HAS_MORE_INPUT: cint <comptime> = 2
+global TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF: cint <comptime> = 4
+global TINFL_FLAG_COMPUTE_ADLER32: cint <comptime> = 8
+global tinfl_put_buf_func_ptr: type <cimport,nodecl> = @function(pBuf: pointer, len: cint, pUser: pointer): cint
+global tinfl_decompressor: type <cimport,nodecl,forwarddecl> = @record{}
+global tinfl_status: type <cimport,nodecl,using> = @enum(cint){
+  TINFL_STATUS_FAILED_CANNOT_MAKE_PROGRESS = -4,
+  TINFL_STATUS_BAD_PARAM = -3,
+  TINFL_STATUS_ADLER32_MISMATCH = -2,
+  TINFL_STATUS_FAILED = -1,
+  TINFL_STATUS_DONE = 0,
+  TINFL_STATUS_NEEDS_MORE_INPUT = 1,
+  TINFL_STATUS_HAS_MORE_OUTPUT = 2
+}
+global TINFL_MAX_HUFF_TABLES: cint <comptime> = 3
+global TINFL_MAX_HUFF_SYMBOLS_0: cint <comptime> = 288
+global TINFL_MAX_HUFF_SYMBOLS_1: cint <comptime> = 32
+global TINFL_MAX_HUFF_SYMBOLS_2: cint <comptime> = 19
+global TINFL_FAST_LOOKUP_BITS: cint <comptime> = 10
+global TINFL_FAST_LOOKUP_SIZE: cint <comptime> = 1024
+global tinfl_bit_buf_t: type <cimport,nodecl> = @uint64
+tinfl_decompressor = @record{
+  m_state: cuint,
+  m_num_bits: cuint,
+  m_zhdr0: cuint,
+  m_zhdr1: cuint,
+  m_z_adler32: cuint,
+  m_final: cuint,
+  m_type: cuint,
+  m_check_adler32: cuint,
+  m_dist: cuint,
+  m_counter: cuint,
+  m_num_extra: cuint,
+  m_table_sizes: [3]cuint,
+  m_bit_buf: tinfl_bit_buf_t,
+  m_dist_from_out_buf_start: csize,
+  m_look_up: [3][1024]cshort,
+  m_tree_0: [576]cshort,
+  m_tree_1: [64]cshort,
+  m_tree_2: [38]cshort,
+  m_code_size_0: [288]cuchar,
+  m_code_size_1: [32]cuchar,
+  m_code_size_2: [19]cuchar,
+  m_raw_header: [4]cuchar,
+  m_len_codes: [457]cuchar
+}
+global function mz_free(p: pointer): void <cimport,nodecl> end
+global function mz_adler32(adler: culong, ptr: *cuchar, buf_len: csize): culong <cimport,nodecl> end
+global function mz_crc32(crc: culong, ptr: *cuchar, buf_len: csize): culong <cimport,nodecl> end
+global function tdefl_compress_mem_to_heap(pSrc_buf: pointer, src_buf_len: csize, pOut_len: *csize, flags: cint): pointer <cimport,nodecl> end
+global function tdefl_compress_mem_to_mem(pOut_buf: pointer, out_buf_len: csize, pSrc_buf: pointer, src_buf_len: csize, flags: cint): csize <cimport,nodecl> end
+global function tdefl_write_image_to_png_file_in_memory_ex(pImage: pointer, w: cint, h: cint, num_chans: cint, pLen_out: *csize, level: cuint, flip: cint): pointer <cimport,nodecl> end
+global function tdefl_write_image_to_png_file_in_memory(pImage: pointer, w: cint, h: cint, num_chans: cint, pLen_out: *csize): pointer <cimport,nodecl> end
+global function tdefl_compress_mem_to_output(pBuf: pointer, buf_len: csize, pPut_buf_func: tdefl_put_buf_func_ptr, pPut_buf_user: pointer, flags: cint): cint <cimport,nodecl> end
+global function tdefl_init(d: *tdefl_compressor, pPut_buf_func: tdefl_put_buf_func_ptr, pPut_buf_user: pointer, flags: cint): tdefl_status <cimport,nodecl> end
+global function tdefl_compress(d: *tdefl_compressor, pIn_buf: pointer, pIn_buf_size: *csize, pOut_buf: pointer, pOut_buf_size: *csize, flush: tdefl_flush): tdefl_status <cimport,nodecl> end
+global function tdefl_compress_buffer(d: *tdefl_compressor, pIn_buf: pointer, in_buf_size: csize, flush: tdefl_flush): tdefl_status <cimport,nodecl> end
+global function tdefl_get_prev_return_status(d: *tdefl_compressor): tdefl_status <cimport,nodecl> end
+global function tdefl_get_adler32(d: *tdefl_compressor): cuint <cimport,nodecl> end
+global function tdefl_create_comp_flags_from_zip_params(level: cint, window_bits: cint, strategy: cint): cuint <cimport,nodecl> end
+global function tdefl_compressor_alloc(): *tdefl_compressor <cimport,nodecl> end
+global function tdefl_compressor_free(pComp: *tdefl_compressor): void <cimport,nodecl> end
+global function tinfl_decompress_mem_to_heap(pSrc_buf: pointer, src_buf_len: csize, pOut_len: *csize, flags: cint): pointer <cimport,nodecl> end
+global function tinfl_decompress_mem_to_mem(pOut_buf: pointer, out_buf_len: csize, pSrc_buf: pointer, src_buf_len: csize, flags: cint): csize <cimport,nodecl> end
+global function tinfl_decompress_mem_to_callback(pIn_buf: pointer, pIn_buf_size: *csize, pPut_buf_func: tinfl_put_buf_func_ptr, pPut_buf_user: pointer, flags: cint): cint <cimport,nodecl> end
+global function tinfl_decompressor_alloc(): *tinfl_decompressor <cimport,nodecl> end
+global function tinfl_decompressor_free(pDecomp: *tinfl_decompressor): void <cimport,nodecl> end
+global function tinfl_decompress(r: *tinfl_decompressor, pIn_buf_next: *cuchar, pIn_buf_size: *csize, pOut_buf_start: *cuchar, pOut_buf_next: *cuchar, pOut_buf_size: *csize, decomp_flags: cuint): tinfl_status <cimport,nodecl> end
+global TDEFL_LESS_MEMORY: cint <comptime> = 0
+global TINFL_DECOMPRESS_MEM_TO_MEM_FAILED: csize <cimport,nodecl,const>
+global TINFL_LZ_DICT_SIZE: cint <comptime> = 32768
+global TINFL_USE_64BIT_BITBUF: cint <comptime> = 1
+global TINFL_BITBUF_SIZE: cint <comptime> = 64

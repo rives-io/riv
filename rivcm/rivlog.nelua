@@ -2,6 +2,8 @@ require 'io'
 require 'vector'
 require 'math'
 require 'riv_types'
+require 'miniz'
+
 require '.util'
 
 local function ceil_log2(x: uint64): uint8
@@ -14,6 +16,10 @@ end
 global riv_key_toggle_event: type = @record{
   key_code: uint8,
   frame: uint64,
+}
+
+local riv_log_flags: type <using> = @enum(uint8) {
+  RIV_LOGFLAGS_COMPRESSED_MZ = 1
 }
 
 local riv_log_format: type <using> = @enum(uint8) {
@@ -65,27 +71,30 @@ local function get_max_frame_delta(key_events: span(riv_key_toggle_event)): uint
 end
 
 function riv_log.save(filename: string, key_events: span(riv_key_toggle_event), last_frame: uint64): void
-  local last_frame_delta: uint64 = 0
+  -- compute first and last frame deltas
   local first_frame_delta: uint64 = 0
+  local last_frame_delta: uint64 = last_frame
   if key_events.size > 0 then
     -- first frame delta
     first_frame_delta = key_events[0].frame
     assert(first_frame_delta <= 0xffffffff, 'first frame is too large')
+
     -- last frame delta
     local prev_last_frame: uint64 = key_events[key_events.size-1].frame
     assert(last_frame >= prev_last_frame, 'last frame is invalid')
     last_frame_delta = last_frame - prev_last_frame
     assert(last_frame_delta <= 0xffffffff, 'last frame is too large')
   end
+
+  -- compute key maps
   local key2idx: riv_key_map, idx2key: riv_key_map, key_map_size: usize = make_key_map(key_events)
-  local key_map_log2_size: uint8 = ceil_log2(key_map_size)
+
+  -- compute frame delta size
   local frame_delta_log2_size: uint8 = ceil_log2(get_max_frame_delta(key_events) + 1)
-  local event_log2_size: uint8 = key_map_log2_size + frame_delta_log2_size
-  local event_size: uint8 = (event_log2_size + 7) // 8
-  assert(event_size <= 5, 'event size is too large')
-  -- open file
-  local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
-  -- store header
+  local frame_delta_size: usize = (frame_delta_log2_size + 7) // 8
+  assert(frame_delta_size <= 4, 'event size is too large')
+
+  -- pack header
   local header: riv_log_header = {
     format = RIV_LOGFORMAT_KEYTOGGLES,
     flags = 0,
@@ -95,76 +104,109 @@ function riv_log.save(filename: string, key_events: span(riv_key_toggle_event), 
     first_frame_delta = first_frame_delta,
     last_frame_delta = last_frame_delta,
   }
-  local header_bytes: string <close> = string.pack('<I1I1I1I1I4I4I4',
-    header.format,
-    header.flags,
-    header.frame_delta_log2_size,
-    header.key_map_size,
-    header.key_events_size,
-    header.first_frame_delta,
-    header.last_frame_delta)
-  fn_assert!(file:write(header_bytes))
-  -- store key map
-  fn_assert!(file:write((@span(byte)){data=&idx2key, size=key_map_size}))
-  -- store key events
+
+  -- pack key events
+  local packed_key_events: span(byte) = new(@byte, (1 + frame_delta_size) * key_events.size)
+  defer delete(packed_key_events) end
   local prev_frame: uint64 = first_frame_delta
-  for _, event: riv_key_toggle_event in ipairs(key_events) do
+  for i: usize=0,<key_events.size do
+    local event: riv_key_toggle_event = key_events[i]
+    local key_idx: uint8 = key2idx[event.key_code]
     local frame_delta: uint64 = event.frame - prev_frame
-    local key_event: uint64 = key2idx[event.key_code] | (frame_delta << key_map_log2_size)
-    prev_frame = event.frame
-    ## for i=1,5 do
-      if event_size == #[i]# then
-        local bytes: string <close> = string.pack(#['<I'..i]#, key_event)
-        fn_assert!(file:write(bytes))
+    packed_key_events[i] = key_idx
+    ## for j=1,4 do
+      if #[j]# <= frame_delta_size then
+        packed_key_events[key_events.size + i*frame_delta_size + #[j-1]#] = (frame_delta >> #[(j-1)*8]#) & 0xff
       end
     ## end
+    prev_frame = event.frame
+  end
+
+  -- compress key events
+  local compress_flags: cint = TDEFL_MAX_PROBES_MASK | TDEFL_FILTER_MATCHES
+  local compressed_len: csize = 0
+  local compressed_ptr: *[0]uint8 = (@*[0]uint8)(tdefl_compress_mem_to_heap(packed_key_events.data, packed_key_events.size, &compressed_len, compress_flags))
+  assert(compressed_ptr ~= nilptr, 'compression failed')
+  defer mz_free(compressed_ptr) end
+  if compressed_len < packed_key_events.size then
+    header.flags = header.flags | RIV_LOGFLAGS_COMPRESSED_MZ
+  end
+
+  -- save file
+  local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
+  fn_assert!(file:write((@span(byte)){data=(@*[0]uint8)(&header), size=#@riv_log_header}))
+  fn_assert!(file:write((@span(byte)){data=&idx2key, size=key_map_size}))
+  if header.flags & RIV_LOGFLAGS_COMPRESSED_MZ ~= 0 then
+    fn_assert!(file:write((@span(byte)){data=compressed_ptr, size=compressed_len}))
+  else
+    fn_assert!(file:write(packed_key_events))
   end
 end
 
 function riv_log.load(filename: string): (vector(riv_key_toggle_event), uint64)
   -- open file
   local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
+
   -- load header
   local header_bytes: string <close> = fn_assert!(file:read(16))
-  local header: riv_log_header
-    header.format,
-    header.flags,
-    header.frame_delta_log2_size,
-    header.key_map_size,
-    header.key_events_size,
-    header.first_frame_delta,
-    header.last_frame_delta = string.unpack('<I1I1I1I1I4I4I4', header_bytes)
+  local header: riv_log_header = $(@*riv_log_header)(header_bytes.data)
   assert(header.format == RIV_LOGFORMAT_KEYTOGGLES, 'unsupported riv log format')
-  assert(header.flags == 0, 'unsupported riv flags format')
+  assert((header.flags & ~(RIV_LOGFLAGS_COMPRESSED_MZ)) == 0, 'unsupported riv flags format')
   assert(header.frame_delta_log2_size <= 32, 'unsupported riv frame delta log2 size')
-  local key_map_log2_size: uint8 = ceil_log2(header.key_map_size)
-  local key_index_mask: uint64 = (1_u64 << key_map_log2_size) - 1
-  local event_log2_size: uint8 = key_map_log2_size + header.frame_delta_log2_size
-  local event_size: uint8 = (event_log2_size + 7) // 8
+
   -- load key map
-  local idx2key_str: string <close> = fn_assert!(file:read(header.key_map_size))
-  local idx2key: span(uint8) = idx2key_str:span()
-  -- load key events
+  local idx2key: riv_key_map
+  if header.key_map_size > 0 then
+    local idx2key_str: string <close> = fn_assert!(file:read(header.key_map_size))
+    memory.spancopy((@span(byte)){data=&idx2key, size=#idx2key}, idx2key_str:span())
+  end
+
+  -- compute masks
+  local key_index_log2_size: uint8 = ceil_log2(header.key_map_size)
+  local key_index_mask: uint64 = (1_u64 << key_index_log2_size) - 1
+  local frame_delta_size: uint64 = (header.frame_delta_log2_size + 7) // 8
+  local frame_delta_mask: uint64 = (1_u64 << header.frame_delta_log2_size) - 1
+
+  -- decompress key events
+  local packed_key_events: span(byte) = new(@byte, (1 + frame_delta_size) * header.key_events_size)
+  defer delete(packed_key_events) end
+  if header.key_events_size > 0 then
+    local packed_key_events_str: string <close> = fn_assert!(file:read('a'))
+    if header.flags & RIV_LOGFLAGS_COMPRESSED_MZ ~= 0 then
+      local uncompressed_len: csize = tinfl_decompress_mem_to_mem(
+        packed_key_events.data, packed_key_events.size,
+        packed_key_events_str.data, packed_key_events_str.size,
+        TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF)
+      assert(uncompressed_len == packed_key_events.size, 'uncompress failed')
+    else
+      memory.spancopy(packed_key_events, packed_key_events_str:span())
+    end
+  end
+
+  -- unpack key events
   local key_events: vector(riv_key_toggle_event)
   key_events:resize(header.key_events_size)
   local prev_frame: uint64 = header.first_frame_delta
-  for _, event: *riv_key_toggle_event in mipairs(key_events) do
-    local key_event: uint64
-    ## for i=1,5 do
-      if event_size == #[i]# then
-        local bytes: string <close> = fn_assert!(file:read(#[i]#))
-        key_event = string.unpack(#['<I'..i]#, bytes)
+  for i: usize=0,<key_events.size do
+    local key_idx: uint8 = packed_key_events[i]
+    local frame_delta: uint64 = 0
+    ## for j=1,4 do
+      if #[j]# <= frame_delta_size then
+        frame_delta = frame_delta | (packed_key_events[key_events.size + i*frame_delta_size + #[j-1]#] << #[(j-1)*8]#)
       end
     ## end
-    local frame_delta: uint64 = key_event >> key_map_log2_size
-    event.key_code = idx2key[key_event & key_index_mask]
-    event.frame = prev_frame + frame_delta
-    prev_frame = event.frame
+    frame_delta = frame_delta & frame_delta_mask
+    local key_code: uint8 = idx2key[key_idx & key_index_mask]
+    local frame: uint64 = prev_frame + frame_delta
+    key_events[i] = {key_code=key_code, frame=frame}
+    prev_frame = frame
   end
+
   -- compute last frame
-  local last_frame: uint64 = 0
+  local last_frame: uint64 = header.last_frame_delta
   if key_events.size > 0 then
     last_frame = key_events[key_events.size-1].frame + header.last_frame_delta
   end
+
   return key_events, last_frame
 end

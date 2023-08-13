@@ -76,8 +76,6 @@ function riv_context:setup(): void <cexport'riv_setup'>
   self.inoutbuffer = (@*[RIV_MEMSIZE_INOUTBUFFER]byte)(RIV_VADDR_INOUTBUFFER)
   self.framebuffer = (@*[RIV_MEMSIZE_FRAMEBUFFER]byte)(RIV_VADDR_FRAMEBUFFER)
   self.audiobuffer = (@*[RIV_MEMSIZE_AUDIOBUFFER]byte)(RIV_VADDR_AUDIOBUFFER)
-  -- initialize prng
-  self.prng:srand(0xc4ceb9fe1a85ec53, 0xff51afd7ed558ccd)
   -- aliases
   self.framebuffer_desc = &self.mmio_driver.framebuffer_desc
   self.tracked_keys = &self.mmio_driver.tracked_keys
@@ -90,6 +88,9 @@ function riv_context:setup(): void <cexport'riv_setup'>
   self:_ctl(RIV_CONTROL_OPEN)
   self.incard_len = self.mmio_device.incard_len
   self.incard_format = self.mmio_device.incard_format
+  -- initialize prng
+  self.prng:srand(0xc4ceb9fe1a85ec53, 0xff51afd7ed558ccd)
+  -- TODO: PRNG could use a seed based on command line arguments + incard
 end
 
 function riv_context:shutdown(): void <cexport'riv_shutdown'>

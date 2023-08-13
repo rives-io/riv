@@ -5,7 +5,6 @@ require 'io'
 require 'os'
 require 'arg'
 require 'sokol'
-require 'vector'
 
 require '.machine'
 require '.audio'
@@ -77,7 +76,7 @@ local function parse_options(): rivcm_options
         opts.print_stats = true
       elseif a == '--' then
         entrypoint_args = true
-      elseif a == '--help' then
+      elseif a == '-help' or a == '--help' or a == '-h' then
         io.stderr:printf("Usage: %s [options]\n", arg[0])
         io.stderr:write[[
 -print-fps

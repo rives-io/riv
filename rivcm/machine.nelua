@@ -1,6 +1,5 @@
 -- This file contains code related to machine being emulated.
 
-require 'string'
 require 'io'
 require 'cartesi'
 require 'riv_types'

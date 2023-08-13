@@ -8,6 +8,8 @@ local Color = @byte
 -- Game constants
 local TILE_SIZE <comptime> = 1
 local GRID_SIZE <comptime> = 16
+local APPLE_SCORE <comptime> = 32
+local TILE_SCORE_PENALITY <comptime> = 1
 local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
 local MOVE_DELAY <comptime> = 1
 
@@ -15,7 +17,9 @@ local MOVE_DELAY <comptime> = 1
 local riv: *riv_context
 local nextmove: uint64
 local headpos: Point2D, tailpos: Point2D, applepos: Point2D
-local score: uint32
+local score: uint64
+local max_score: uint64
+local apples: uint64
 local movedir: Direction
 local tiles: [GRID_SIZE][GRID_SIZE]Direction
 local last_turn_frame: uint64
@@ -52,7 +56,7 @@ end
 
 local function respawn_apple()
   -- return when there is not enough space to spawn anymore
-  if score + 2 >= GRID_SIZE * GRID_SIZE then return end
+  if apples + 2 >= GRID_SIZE * GRID_SIZE then return end
   -- respawn until there is no collision with its body
   repeat
     applepos = Point2D{
@@ -64,8 +68,11 @@ end
 
 local function save_score(finished: boolean)
   local finished_str: string = finished and 'true' or 'false'
-  riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MEMSIZE_INOUTBUFFER, [[{"score": %u, "finished": %s}]], score, finished_str)
+  riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MEMSIZE_INOUTBUFFER,
+    [[{"score":%u,"apples":%u,"frames":%u,"max_score":%u,"finished":%s}]],
+      score, apples, riv.frame, max_score, finished_str)
   riv.outcard_format = RIV_CARDFORMAT_JSON
+  riv_printf("%s\n", (@cstring)(riv.inoutbuffer))
 end
 
 local function init_game()
@@ -139,11 +146,18 @@ local function poll_game()
 
   -- check collision with apple
   if headpos.x == applepos.x and headpos.y == applepos.y then
-    score = score + 1
+    apples = apples + 1
+    score = score + APPLE_SCORE
+    if score > max_score then
+      max_score = score
+    end
     save_score(false)
-    riv_printf('[SNAKE] SCORE %u\n', score)
     respawn_apple()
   else
+    -- decrease score
+    if score > TILE_SCORE_PENALITY then
+      score = score - TILE_SCORE_PENALITY
+    end
     -- eat tail
     local taildir = get_tile(tailpos)
     reset_tile(tailpos)
