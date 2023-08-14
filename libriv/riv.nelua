@@ -4,6 +4,9 @@ require 'span'
 
 require '.riv.types'
 
+global argc: cint <cimport'argc'>
+global argv: *[0]cstring <cimport'argv'>
+
 -- util
 global function riv_version(): uint64 <cimport'riv_version'> end
 global function riv_rdcycle(): uint64 <cimport'riv_rdcycle'> end
@@ -11,13 +14,12 @@ global function riv_printf(format: cstring, ...: cvarargs): usize <cimport'riv_p
 global function riv_snprintf(s: cstring, maxlen: usize, format: cstring <const>, ...: cvarargs): usize <cimport'riv_snprintf'> end
 
 -- context
-function riv_context:setup(): void <cimport'riv_setup'> end
+function riv_context:setup(argc: int32, argv: *[0]cstring): void <cimport'riv_setup'> end
 function riv_context:shutdown(): void <cimport'riv_shutdown'> end
 function riv_context:present(): void <cimport'riv_present'> end
 function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cimport'riv_loop'> end
 function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): uint64 <cimport'riv_sound_play_from_memory'> end
 function riv_context:sound_stop(source: uint64): void <cimport'riv_sound_stop'> end
-global function riv_stdrun(frame_cb: function(riv: *riv_context)): void <cimport'riv_stdrun'> end
 global function riv_run(run_desc: *riv_run_desc): void <cimport'riv_run'> end
 
 -- prng
@@ -29,7 +31,7 @@ function riv_prng:rand_float(): float64 <cimport'riv_rand_float'> end
 
 -- Macro for generating tiny binaries.
 ## function nostartfiles(libc) cflags '-nostartfiles'
-  local function _start(sp: pointer, argc: uint32, argv: *[0]cstring) <entrypoint,noreturn,cattribute'externally_visible,naked'>
+  local function _start() <entrypoint,noreturn,cattribute'externally_visible,naked'>
     ##[=[ cemit[[
   asm volatile(
     ".weak __global_pointer$;\n"
@@ -42,16 +44,19 @@ function riv_prng:rand_float(): float64 <cimport'riv_rand_float'> end
     "addi a2, sp, 8;\n" // argv
     "andi sp, sp, -16;\n" // make stack 16-byte aligned
     ".option pop;\n"
-  : : : "a6");
+  );
 ]] ]=]
+    local sp: pointer <register'a0',nodce,noinit>
+    local argc: cint <register'a1',nodce,noinit>
+    local argv: *[0]cstring <register'a2',nodce,noinit>
     local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl,noinline> end
     ## if libc then
       local function __libc_start_main(main: function(cint, *cstring): cint, argc: cint, argv: pointer, init: function(), fini: function(), rtld_fini: function(), stack_end: pointer) <cimport,noreturn> end
       __libc_start_main(nelua_main, (@cint)(argc), argv, nilptr, nilptr, nilptr, sp)
     ## else
-      local res: isize = (@isize)(nelua_main(argc, argv))
-      local function exit_syscall(status: int64): void <inline,noreturn>
-        local a0: int64 <register'a0',nodce> = status
+      local res: cint = nelua_main(argc, argv)
+      local function exit_syscall(status: isize): void <inline,noreturn>
+        local a0: isize <register'a0',nodce> = status
         ## cemit[[  asm volatile("li a7, 93; scall; ebreak;" : : "r"(a0));]]
         ## cemit[[__builtin_unreachable();]]
       end

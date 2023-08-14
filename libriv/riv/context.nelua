@@ -4,6 +4,8 @@ require 'linux'
 require '.types'
 require '.prng'
 
+local span_uint8: type = @span(uint8)
+
 local riv_yield_request: type = @record{
   dev: uint8,
   mode: uint8,
@@ -11,7 +13,7 @@ local riv_yield_request: type = @record{
   data: uint32,
 }
 
-local function init_default_palette(self: *riv_context): void
+function riv_context:_init_default_palette(): void
   self.mmio_driver.palette[RIV_PAL16_BLACK] = RIV_RGB_PAL16_BLACK
   self.mmio_driver.palette[RIV_PAL16_DARKBLUE] = RIV_RGB_PAL16_DARKBLUE
   self.mmio_driver.palette[RIV_PAL16_DARKPURPLE] = RIV_RGB_PAL16_DARKPURPLE
@@ -44,7 +46,22 @@ function riv_context:_ctl(reason: riv_control_reason): void
   assert(ioctl(self.yield_fd, IOCTL_YIELD, (@usize)(&swap_yield_req)) == 0, 'yield ioctl failed')
 end
 
-function riv_context:setup(): void <cexport'riv_setup'>
+function riv_context:_init_prng(argc: int32, argv: *[0]cstring): void
+  local hash: [2]uint64 = {self.incard_format, self.incard_format}
+  if self.incard_len > 0 then
+    hash = murmur3_128(span_uint8{data=(self.inoutbuffer), size=self.incard_len}, hash)
+  end
+  if argc > 0 and argv ~= nilptr then
+    for i: int32=1,<argc do
+      if argv[i] ~= nilptr then
+        hash = murmur3_128(span_uint8{data=(@*[0]byte)(argv[i]), size=#argv[i]}, hash)
+      end
+    end
+  end
+  self.prng:srand(hash[0], hash[1])
+end
+
+function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_setup'>
   $self = {}
   assert(not self.mmio_driver, 'riv already initialized')
   -- yield
@@ -83,14 +100,13 @@ function riv_context:setup(): void <cexport'riv_setup'>
   -- track all keys by default
   memory.spanset((@span(boolean))(self.mmio_driver.tracked_keys), true)
   -- init palette
-  init_default_palette(self)
+  self:_init_default_palette()
   -- retrieve input card from host
   self:_ctl(RIV_CONTROL_OPEN)
-  self.incard_len = self.mmio_device.incard_len
+  self.incard_len = self.mmio_device.incard_len & (RIV_MEMSIZE_INOUTBUFFER-1)
   self.incard_format = self.mmio_device.incard_format
   -- initialize prng
-  self.prng:srand(0xc4ceb9fe1a85ec53, 0xff51afd7ed558ccd)
-  -- TODO: PRNG could use a seed based on command line arguments + incard
+  self:_init_prng(argc, argv)
 end
 
 function riv_context:shutdown(): void <cexport'riv_shutdown'>
@@ -109,23 +125,40 @@ function riv_context:shutdown(): void <cexport'riv_shutdown'>
   $self = {}
 end
 
-function riv_context:_poll_inputs() : void
-  -- TODO: seed prng based on inputs
+function riv_context:_append_keystroke_entropy(key_code: uint8, down: boolean, frame: uint64): void
+  local h: uint64 = 0
+  h = h | key_code
+  h = h | (down and (1_u64 << 8) or 0_u64)
+  h = h | (frame << 9)
+  self.entropy[self.entropy_index] = h
+  self.entropy_index = (self.entropy_index + 1) & (#self.entropy - 1)
+  if self.entropy_size < #self.entropy then
+    self.entropy_size = self.entropy_size + 1
+  end
+end
+
+function riv_context:_poll_inputs(): void
   for i: uint32=0,<#self.keys do
     self.keys[i].down = false
     self.keys[i].up = false
   end
-  for i: uint32=0,<self.mmio_device.key_toggle_count do
-    local key_code: uint8 = self.mmio_device.key_toggles[i]
-    local press: boolean = not self.keys[key_code].press
-    self.keys[key_code].press = press
-    if press then
-      self.keys[key_code].down = true
-      self.keys[key_code].down_frame = self.frame
-    else
-      self.keys[key_code].up = true
-      self.keys[key_code].up_frame = self.frame
+  if self.mmio_device.key_toggle_count > 0 then
+    for i: uint32=0,<self.mmio_device.key_toggle_count do
+      local key_code: uint8 = self.mmio_device.key_toggles[i]
+      local press: boolean = not self.keys[key_code].press
+      local frame: uint64 = self.frame
+      self.keys[key_code].press = press
+      if press then
+        self.keys[key_code].down = true
+        self.keys[key_code].down_frame = frame
+      else
+        self.keys[key_code].up = true
+        self.keys[key_code].up_frame = frame
+      end
+      self:_append_keystroke_entropy(key_code, press, frame)
     end
+    local entropy: span(byte) = {data=(@*[0]uint8)(&self.entropy),size=self.entropy_size * #@uint64}
+    self.prng:srand_entropy(entropy)
   end
 end
 
@@ -149,7 +182,7 @@ end
 function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): uint64 <cexport'riv_sound_play_from_memory'>
   local handle_id: uint64 = self.sound_handle_gen + 1
   self.sound_handle_gen = handle_id
-  memory.spancopy((@span(byte))(self.audiobuffer), data)
+  memory.spancopy(span_uint8(self.audiobuffer), data)
   self.mmio_driver.audio_ctl = {command=RIV_AUDIOCOMMAND_SOUND_PLAY, handle_id=handle_id, buf_len=#data}
   self:_ctl(RIV_CONTROL_AUDIO)
   return handle_id
@@ -167,7 +200,7 @@ global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>
   if run_desc.framebuffer_desc.fps == 0 then run_desc.framebuffer_desc.fps = RIV_DEFAULT_FPS end
   if run_desc.framebuffer_desc.pixel_format == 0 then run_desc.framebuffer_desc.pixel_format = RIV_DEFAULT_PIXELFORMAT end
   if not self.mmio_driver then
-    self:setup()
+    self:setup(run_desc.argc, run_desc.argv)
   end
   if run_desc.init_cb then
     run_desc.init_cb(self)
@@ -181,8 +214,4 @@ global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>
   end
   self:shutdown()
   exit(0)
-end
-
-global function riv_stdrun(frame_cb: riv_context_callback): void <cexport'riv_stdrun'>
-  riv_run(&(@riv_run_desc){frame_cb=frame_cb})
 end

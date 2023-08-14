@@ -1,5 +1,6 @@
 -- This module uses an algorithm based on *xoshiro256* to produce pseudo-random 64-bit integers.
 
+require 'murmur3'
 require '.types'
 
 -- Left bit rotation utility.
@@ -68,4 +69,12 @@ function riv_prng:srand(a: uint64, b: uint64): void <cexport'riv_srand'>
   for i: usize=0,<16 do
     self:rand()
   end
+end
+
+-- Reinitialize the generator seed by adding entropy from a pool of bytes.
+function riv_prng:srand_entropy(entropy: span(byte)): void <cexport'riv_srand_entropy'>
+  local hash: [2]uint64
+  hash = murmur3_128((@span(byte)){data=(@*[0]byte)(&self.state), #@[4]uint64}, hash)
+  hash = murmur3_128(entropy, hash)
+  self:srand(hash[0], hash[1])
 end

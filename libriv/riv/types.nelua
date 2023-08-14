@@ -268,14 +268,19 @@ global riv_context: type = @record{
   mmio_driver: *riv_mmio_driver,
   mmio_device: *riv_mmio_device,
   yield_fd: int32,
-  sound_handle_gen: uint64
+  sound_handle_gen: uint64,
+  entropy_index: uint32,
+  entropy_size: uint32,
+  entropy: [128]uint64
 }
 global riv_context_callback: type = @function(a1: *riv_context): void
 global riv_run_desc: type = @record{
   init_cb: riv_context_callback,
   cleanup_cb: riv_context_callback,
   frame_cb: riv_context_callback,
-  framebuffer_desc: riv_framebuffer_desc
+  framebuffer_desc: riv_framebuffer_desc,
+  argc: int32,
+  argv: *cstring
 }
 global RIV_VERSION_MAJOR: cint <comptime> = 0
 global RIV_VERSION_MINOR: cint <comptime> = 1

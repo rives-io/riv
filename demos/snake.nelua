@@ -229,7 +229,9 @@ riv_run(&(@riv_run_desc){
     height = SCREEN_SIZE,
     fps = 8,
     pixel_format = RIV_PIXELFORMAT_PAL256,
-  }
+  },
+  argc = argc,
+  argv = argv,
 })
 
 ## nostartfiles()

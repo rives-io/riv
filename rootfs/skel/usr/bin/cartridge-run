@@ -11,8 +11,8 @@ run_cartridge() {
     return 1
   fi
   if [[ -x "$EXE" ]]; then
-    echo "[RIVOS] Running cartridge executable '$EXE'"
-    bwrapbox-run "$EXE"
+    echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
+    bwrapbox-run "$EXE" "$@"
     STATUS=$?
     echo "[RIVOS] Cartridge finished with status $STATUS"
   else
@@ -23,7 +23,7 @@ run_cartridge() {
   return $STATUS
 }
 # run cartridge
-run_cartridge &
+run_cartridge "$@" &
 CARTRIDGE_PID=$!
 # wait cartridge
 wait $CARTRIDGE_PID

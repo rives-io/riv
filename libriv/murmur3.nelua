@@ -13,9 +13,9 @@ global function murmur3_mix64(k: uint64): uint64 <inline>
   return k
 end
 
-global function murmur3_128(data: span(byte), seed: uint64): [2]uint64
-  local h1: uint64 = seed
-  local h2: uint64 = seed
+global function murmur3_128(data: span(byte), seed: [2]uint64): [2]uint64
+  local h1: uint64 = seed[0]
+  local h2: uint64 = seed[1]
   local c1: uint64 = 0x87c37b91114253d5_u64
   local c2: uint64 = 0x4cf5ad432745937f_u64
   local nblocks: usize = data.size // 16

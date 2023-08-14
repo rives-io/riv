@@ -381,6 +381,9 @@ typedef struct riv_context {
   riv_mmio_device* mmio_device;
   int32_t yield_fd;
   uint64_t sound_handle_gen;
+  uint32_t entropy_index;
+  uint32_t entropy_size;
+  uint64_t entropy[128];
 } riv_context;
 
 typedef void (*riv_context_callback)(riv_context*);
@@ -390,6 +393,8 @@ typedef struct riv_run_desc {
   riv_context_callback cleanup_cb;
   riv_context_callback frame_cb;
   riv_framebuffer_desc framebuffer_desc;
+  int32_t argc;
+  char** argv;
 } riv_run_desc;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -402,12 +407,11 @@ RIV_API uintptr_t riv_printf(const char* format, ...); // Print to standard outp
 RIV_API uintptr_t riv_snprintf(char* s, uintptr_t maxlen, const char* format, ...); // Print to standard output, use for debugging.
 
 // Basic
-RIV_API void riv_setup(riv_context* self);
+RIV_API void riv_setup(riv_context* self, int32_t argc, const char** argv);
 RIV_API void riv_shutdown(riv_context* self);
 RIV_API void riv_present(riv_context* self);
 RIV_API void riv_loop(riv_context* self, riv_context_callback frame_cb);
 RIV_API void riv_run(riv_run_desc* run_desc);
-RIV_API void riv_stdrun(riv_context_callback frame_cb);
 
 // Sound system
 RIV_API uint64_t riv_sound_play_from_memory(riv_context* self, riv_span_uint8 data, uint32_t vol);
