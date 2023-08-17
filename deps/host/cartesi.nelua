@@ -1,6 +1,6 @@
 ##[[
 cinclude 'cartesi.h'
-linklib 'cartesi-0.14'
+linklib 'cartesi-0.15'
 ]]
 global cm_hash: type <cimport,nodecl> = @[32]uint8
 global cm_hash_array: type <cimport,nodecl> = @record{
@@ -404,6 +404,12 @@ global function cm_read_uarch_halt_flag(m: *cm_machine, val: *boolean, err_msg: 
 global function cm_set_uarch_halt_flag(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_reset_uarch_state(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_machine_run_uarch(m: *cm_machine, uarch_cycle_end: uint64, status_result: *CM_UARCH_BREAK_REASON, err_msg: *cstring): cint <cimport,nodecl> end
+global CM_MARCHID: cint <comptime> = 15
+global CM_VERSION_MAJOR: cint <comptime> = 0
+global CM_VERSION_MINOR: cint <comptime> = 15
+global CM_VERSION_PATCH: cint <comptime> = 0
+global CM_VERSION_LABEL: cstring <comptime> = ""
+global CM_MIMPID: cint <comptime> = 15000
 global CM_MACHINE_HASH_BYTE_SIZE: cint <comptime> = 32
 global CM_MACHINE_X_REG_COUNT: cint <comptime> = 32
 global CM_MACHINE_F_REG_COUNT: cint <comptime> = 32
@@ -412,9 +418,3 @@ global CM_TREE_LOG2_WORD_SIZE: cint <comptime> = 3
 global CM_TREE_LOG2_PAGE_SIZE: cint <comptime> = 12
 global CM_TREE_LOG2_ROOT_SIZE: cint <comptime> = 64
 global CM_FLASH_DRIVE_CONFIGS_MAX_SIZE: cint <comptime> = 8
-global CM_MARCHID: cint <comptime> = 15
-global CM_VERSION_MAJOR: cint <comptime> = 0
-global CM_VERSION_MINOR: cint <comptime> = 14
-global CM_VERSION_PATCH: cint <comptime> = 0
-global CM_VERSION_LABEL: cstring <comptime> = ""
-global CM_MIMPID: cint <comptime> = 14000

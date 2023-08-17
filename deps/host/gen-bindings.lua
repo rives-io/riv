@@ -9,7 +9,7 @@ nldecl.generate_bindings_file{
   output_head = [==[
 ##[[
 cinclude 'cartesi.h'
-linklib 'cartesi-0.14'
+linklib 'cartesi-0.15'
 ]]
 ]==]
 }

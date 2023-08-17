@@ -1,35 +1,54 @@
-// Copyright 2021 Cartesi Pte. Ltd.
+// Copyright Cartesi and individual authors (see AUTHORS)
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// This file is part of the machine-emulator. The machine-emulator is free
-// software: you can redistribute it and/or modify it under the terms of the GNU
-// Lesser General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Lesser General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
 //
-// The machine-emulator is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-// FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
-// for more details.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU Lesser General Public License
-// along with the machine-emulator. If not, see http://www.gnu.org/licenses/.
+// You should have received a copy of the GNU Lesser General Public License along
+// with this program (see COPYING). If not, see <https://www.gnu.org/licenses/>.
 //
 
-/// \file
-/// \brief Cartesi machine emulator C API interface
+#ifndef MACHINE_EMULATOR_SDK_MACHINE_C_VERSION_H
+#define MACHINE_EMULATOR_SDK_MACHINE_C_VERSION_H
+// NOLINTBEGIN
 
-#ifndef CM_C_API_H
-#define CM_C_API_H
+#define CM_MARCHID 15
 
-#ifndef __cplusplus
-#include <assert.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#else
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
-#endif
+#define CM_VERSION_MAJOR 0
+#define CM_VERSION_MINOR 15
+#define CM_VERSION_PATCH 0
+#define CM_VERSION_LABEL ""
+
+#define _CM_STR_HELPER(x) #x
+#define _CM_STR(x) _CM_STR_HELPER(x)
+#define CM_VERSION                                                                                                     \
+    _CM_STR(CM_VERSION_MAJOR) "." _CM_STR(CM_VERSION_MINOR) "." _CM_STR(CM_VERSION_PATCH) CM_VERSION_LABEL
+
+#define CM_MIMPID (CM_VERSION_MAJOR * 1000000 + CM_VERSION_MINOR * 1000 + CM_VERSION_PATCH)
+
+// NOLINTEND
+#endif // MACHINE_EMULATOR_SDK_MACHINE_C_VERSION_H
+// Copyright Cartesi and individual authors (see AUTHORS)
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Lesser General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License along
+// with this program (see COPYING). If not, see <https://www.gnu.org/licenses/>.
+//
 
 #ifndef MACHINE_EMULATOR_SDK_MACHINE_C_DEFINES_H
 #define MACHINE_EMULATOR_SDK_MACHINE_C_DEFINES_H
@@ -49,28 +68,38 @@
 #define CM_TREE_LOG2_ROOT_SIZE 64         // NOLINT(cppcoreguidelines-macro-usage, modernize-macro-to-enum)
 #define CM_FLASH_DRIVE_CONFIGS_MAX_SIZE 8 // NOLINT(cppcoreguidelines-macro-usage, modernize-macro-to-enum)
 
-#ifndef MACHINE_EMULATOR_SDK_MACHINE_C_VERSION_H
-#define MACHINE_EMULATOR_SDK_MACHINE_C_VERSION_H
-// NOLINTBEGIN
-
-#define CM_MARCHID 15
-
-#define CM_VERSION_MAJOR 0
-#define CM_VERSION_MINOR 14
-#define CM_VERSION_PATCH 0
-#define CM_VERSION_LABEL ""
-
-#define _CM_STR_HELPER(x) #x
-#define _CM_STR(x) _CM_STR_HELPER(x)
-#define CM_VERSION                                                                                                     \
-    _CM_STR(CM_VERSION_MAJOR) "." _CM_STR(CM_VERSION_MINOR) "." _CM_STR(CM_VERSION_PATCH) CM_VERSION_LABEL
-
-#define CM_MIMPID (CM_VERSION_MAJOR * 1000000 + CM_VERSION_MINOR * 1000 + CM_VERSION_PATCH)
-
-// NOLINTEND
-#endif // MACHINE_EMULATOR_SDK_MACHINE_C_VERSION_H
 
 #endif // MACHINE_EMULATOR_SDK_MACHINE_C_DEFINES_H
+// Copyright Cartesi and individual authors (see AUTHORS)
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Lesser General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License along
+// with this program (see COPYING). If not, see <https://www.gnu.org/licenses/>.
+//
+
+#ifndef CM_C_API_H
+#define CM_C_API_H
+
+#ifndef __cplusplus
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#else
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {

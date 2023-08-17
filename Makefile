@@ -16,6 +16,10 @@ clean:
 	$(MAKE) -C rivcm clean
 	$(MAKE) -C demos clean
 	$(MAKE) -C tools clean
+	$(MAKE) -C deps clean
+
+update-libs:
+	$(MAKE) -C deps update-libs
 
 update-bindings:
 	$(MAKE) -C libriv update-bindings
