@@ -5,11 +5,10 @@ READELF=readelf
 SIZE=size
 STRINGS=strings
 ELFTOC=elftoc
-NELUA_FLAGS=-Pnogc -Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
-NELUA_LIBS=-L../libriv
 OBJDUMP_FLAGS=--all-headers --disassemble --disassemble-zeroes
 
-# all of the following flags are known to help generating the small RISC-V ELF binaries
+# All of the following flags are known to help generating the small RISC-V ELF binaries
+NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 CFLAGS+=-Os -DNDEBUG -ffast-math -flto=auto
 CFLAGS+=-ffunction-sections -fdata-sections
 CFLAGS+=-fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables
@@ -26,7 +25,7 @@ LDFLAGS+=-z norelro -z noseparate-code -z lazy
 all: snake.sqfs
 
 %.elf: %.nelua ../libriv/*.nelua ../libriv/*.h
-	nelua $(NELUA_FLAGS) $(NELUA_LIBS) \
+	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
 		--ldflags="$(LDFLAGS)" \

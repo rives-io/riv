@@ -1,9 +1,11 @@
+PREFIX=/usr
+
+# Release flags
 CC=gcc
-CFLAGS=-O2 -fno-stack-protector -Wall -Werror
-LDFLAGS=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now -rdynamic
-STRIPFLAGS=--strip-unneeded --remove-section=.comment
-NELUA_FLAGS=-Pnogc -Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
-PREFIX=/usr/local
+CFLAGS+=-O2 -fno-stack-protector -Wall -Werror
+LDFLAGS+=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now -rdynamic
+STRIPFLAGS+=--strip-unneeded --remove-section=.comment
+NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 
 libriv.so: libriv.nelua *.nelua
 	nelua $(NELUA_FLAGS) \

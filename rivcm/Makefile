@@ -1,15 +1,13 @@
-CC=gcc
-CFLAGS=-Wall -Werror
-LDFLAGS=-Wl,-O1,--sort-common,--build-id=none -z relro -z now
-NELUA_FLAGS=-Pnogc --verbose
 PREFIX=/usr/local
-NELUA_LIBS=-L../libriv -L../deps/host -L../deps/guest-host
 
-# for release
-# NELUA_FLAGS+= -Pnochecks -Pnoassertloc -Pnocstaticassert --release
+# Release flags
+CC=gcc
+CFLAGS+=-Wall -Werror
+LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none -z relro -z now
+NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 
 rivcm: rivcm.nelua *.nelua
-	nelua $(NELUA_FLAGS) $(NELUA_LIBS) \
+	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS) $(INCS)" \
 		--ldflags="$(LDFLAGS) $(LIBS)" \

@@ -1,3 +1,8 @@
+##[[
+pragma{nogc=true}
+libpath(fs.join(fs.scriptdir(2), 'libriv', '?.nelua'))
+]]
+
 require 'riv'
 
 -- Game types

@@ -2,12 +2,11 @@ CC=gcc
 CFLAGS=-O2 -fno-stack-protector -Wall -Werror
 LDFLAGS=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now -rdynamic
 STRIPFLAGS=--strip-unneeded --remove-section=.comment
-NELUA_FLAGS=-Pnogc -Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
-NELUA_LIBS=-L../deps/guest-host -L../libriv
+NELUA_FLAGS=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 PREFIX=/usr/local
 
 unpack-rivlog: unpack-rivlog.nelua ../deps/guest-host/* ../libriv/*
-	nelua $(NELUA_FLAGS) $(NELUA_LIBS) \
+	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
 		--binary \

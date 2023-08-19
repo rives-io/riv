@@ -1,3 +1,5 @@
+## pragma{nogc=true}
+
 require '.riv.types'
 require '.riv.util'
 require '.riv.context'

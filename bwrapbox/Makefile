@@ -1,9 +1,11 @@
-CC=gcc
-CFLAGS=-Wall -Werror
-LDFLAGS=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now
-STRIPFLAGS=--strip-unneeded --remove-section=.comment
-NELUA_FLAGS=-Pnogc -Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 PREFIX=/usr/local
+
+# Release flags
+CC=gcc
+CFLAGS+=-Wall -Werror
+LDFLAGS+=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now
+STRIPFLAGS+=--strip-unneeded --remove-section=.comment
+NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 
 all: bwrapbox seccomp-filter seccomp-filter.bpf
 

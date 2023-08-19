@@ -1,3 +1,5 @@
+## pragma{nogc = true}
+
 require 'io'
 require 'arg'
 require 'hashmap'
