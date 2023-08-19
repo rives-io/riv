@@ -71,8 +71,8 @@ RUN tar -xf linux-headers.tar.xz && \
 COPY bwrapbox bwrapbox
 RUN make -C bwrapbox install PREFIX=/usr
 
-# Copy deps
-COPY deps/guest-host deps/guest-host
+# Copy libs
+COPY libs/guest-host libs/guest-host
 
 # Install libriv
 COPY libriv libriv

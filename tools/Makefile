@@ -5,7 +5,7 @@ STRIPFLAGS=--strip-unneeded --remove-section=.comment
 NELUA_FLAGS=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 PREFIX=/usr/local
 
-unpack-rivlog: unpack-rivlog.nelua ../deps/guest-host/* ../libriv/*
+unpack-rivlog: unpack-rivlog.nelua ../libs/guest-host/* ../libriv/*
 	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
