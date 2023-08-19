@@ -1,8 +1,8 @@
 require 'memory'
-
 require 'linux'
-require '.types'
-require '.prng'
+
+require '.riv_types'
+require '.riv_prng'
 
 local span_uint8: type = @span(uint8)
 

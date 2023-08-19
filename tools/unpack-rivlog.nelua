@@ -6,7 +6,7 @@ pragma{nogc=true}
 
 require 'io'
 require 'arg'
-require 'riv.log'
+require 'riv_log'
 
 if #arg ~= 1 then
   io.stderr:writef("Usage: %s <input>\n", arg[1])

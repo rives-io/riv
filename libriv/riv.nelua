@@ -2,7 +2,7 @@
 
 require 'span'
 
-require '.riv.types'
+require 'riv_types'
 
 global argc: cint <cimport'argc'>
 global argv: *[0]cstring <cimport'argv'>

@@ -1,4 +1,4 @@
-## pragmas.unitname = ''
+## pragma{unitname = ''}
 global riv_key_code: type <using> = @enum(uint8){
   RIV_KEYCODE_INVALID = 0,
   RIV_KEYCODE_F1 = 1,

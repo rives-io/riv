@@ -4,8 +4,9 @@ require 'sokol'
 require 'vector'
 require 'io'
 require 'arg'
-require 'riv.log'
 require 'macros'
+
+require 'riv_log'
 
 require '.machine'
 

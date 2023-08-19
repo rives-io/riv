@@ -2,9 +2,9 @@ require 'io'
 require 'vector'
 require 'math'
 require 'miniz'
-
-require '.types'
 require 'macros'
+
+require '.riv_types'
 
 --------------------------------------------------------------------------------
 

@@ -1,7 +1,8 @@
 -- This module uses an algorithm based on *xoshiro256* to produce pseudo-random 64-bit integers.
 
 require 'murmur3'
-require '.types'
+
+require '.riv_types'
 
 -- Left bit rotation utility.
 ## local function rotl(x, n)
