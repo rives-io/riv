@@ -19,11 +19,11 @@ rootfs.ext2: rootfs.Dockerfile toolchain-rootfs.Dockerfile $(LIBRIV_FILES) $(SKE
 	cat rootfs.hash.txt
 
 shell: rootfs.ext2
-	/opt/cartesi/bin/cartesi-machine \
+	cartesi-machine \
 		--flash-drive=label:root,filename:$< \
 		--ram-image=../kernel/linux.bin \
 		--rom-image=../kernel/rom.bin \
-		--append-rom-bootargs="init=/sbin/init TERM=$(TERM) LINES=$(shell tput lines) COLUMNS=$(shell tput cols) RUN_SHELL=1" \
+		--append-rom-bootargs="init=/sbin/init TERM=$(TERM) LINES=$(shell tput lines) COLUMNS=$(shell tput cols)" \
 		--htif-yield-automatic \
 		-i exec /bin/ash
 

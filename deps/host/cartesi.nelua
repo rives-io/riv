@@ -407,9 +407,9 @@ global function cm_machine_run_uarch(m: *cm_machine, uarch_cycle_end: uint64, st
 global CM_MARCHID: cint <comptime> = 15
 global CM_VERSION_MAJOR: cint <comptime> = 0
 global CM_VERSION_MINOR: cint <comptime> = 15
-global CM_VERSION_PATCH: cint <comptime> = 0
+global CM_VERSION_PATCH: cint <comptime> = 1
 global CM_VERSION_LABEL: cstring <comptime> = ""
-global CM_MIMPID: cint <comptime> = 15000
+global CM_MIMPID: cint <comptime> = 15001
 global CM_MACHINE_HASH_BYTE_SIZE: cint <comptime> = 32
 global CM_MACHINE_X_REG_COUNT: cint <comptime> = 32
 global CM_MACHINE_F_REG_COUNT: cint <comptime> = 32

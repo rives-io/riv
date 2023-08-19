@@ -2,12 +2,13 @@ KERNEL_VERSION=0.17.0
 ROM_VERSION=0.17.0
 LINUX_VERSION=5.15.63-ctsi-2
 IMAGE_KERNEL=image-kernel-$(KERNEL_VERSION)
+KERNEL_TIMESTAMP=Thu, 01 Jan 1970 00:00:00 +000
 
 .NOTPARALLEL: all
 all: build copy rom.bin
 
 build: $(IMAGE_KERNEL)/cartesi-linux-config
-	$(MAKE) -C $(IMAGE_KERNEL)
+	$(MAKE) -C $(IMAGE_KERNEL) KERNEL_TIMESTAMP="$(KERNEL_TIMESTAMP)"
 
 copy:
 	cp -u $(IMAGE_KERNEL)/artifacts/linux-$(LINUX_VERSION)-v$(KERNEL_VERSION).bin linux.bin

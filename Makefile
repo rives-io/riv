@@ -4,9 +4,11 @@ all:
 	$(MAKE) demos
 	$(MAKE) rivcm
 
+# Targets that uses the host toolchain
 deps kernel rootfs rivcm:
 	$(MAKE) -C $@
 
+# Targets that uses RISC-V toolchain
 libriv bwrapbox demos tools:
 	$(MAKE) -C rootfs toolchain-exec COMMAND="make -C $@"
 
