@@ -1,6 +1,10 @@
-all: rootfs rivcm demos
+all:
+	$(MAKE) kernel
+	$(MAKE) rootfs
+	$(MAKE) demos
+	$(MAKE) rivcm
 
-rootfs rivcm deps:
+deps kernel rootfs rivcm:
 	$(MAKE) -C $@
 
 libriv bwrapbox demos tools:
@@ -8,6 +12,13 @@ libriv bwrapbox demos tools:
 
 toolchain toolchain-exec toolchain-env toolchain-env-asroot shell:
 	$(MAKE) -C rootfs $@
+
+update-libs:
+	$(MAKE) -C deps update-libs
+
+update-bindings:
+	$(MAKE) -C libriv update-bindings
+	$(MAKE) -C deps update-bindings
 
 clean:
 	$(MAKE) -C bwrapbox clean
@@ -18,11 +29,7 @@ clean:
 	$(MAKE) -C tools clean
 	$(MAKE) -C deps clean
 
-update-libs:
-	$(MAKE) -C deps update-libs
+distclean: clean
+	$(MAKE) -C kernel distclean
 
-update-bindings:
-	$(MAKE) -C libriv update-bindings
-	$(MAKE) -C deps update-bindings
-
-.PHONY: rootfs rivcm libriv bwrapbox demos tools deps
+.PHONY: kernel rootfs demos rivcm deps libriv bwrapbox tools

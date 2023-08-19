@@ -31,3 +31,6 @@
 /bwrapbox/bwrapbox.c
 /demos/*.c
 /tool/*.c
+
+# ignore kernel stuff
+kernel/image-kernel-*

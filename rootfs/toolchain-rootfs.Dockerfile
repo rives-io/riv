@@ -12,10 +12,13 @@ RUN apk update && apk upgrade
 RUN apk add gcc g++ git libc-dev make cmake pkgconfig automake autoconf
 
 # Install utilities
-RUN apk add bash squashfs-tools su-exec
+RUN apk add bash squashfs-tools su-exec bubblewrap
 
 # Install other languages
 RUN apk add clang go rust nim
+
+# Install development dependencies
+RUN apk add libarchive-dev libseccomp-dev
 
 # Musl link aliases
 RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
@@ -37,7 +40,6 @@ RUN wget -O BR903-ELFkickers.tar.gz https://github.com/BR903/ELFkickers/tarball/
     rm -rf BR903-ELFkickers-*
 
 # Install genext2fs
-RUN apk add libarchive-dev
 RUN wget -O genext2fs-1.5.2.tar.gz https://github.com/cartesi/genext2fs/archive/refs/tags/v1.5.2.tar.gz && \
     tar -xzf genext2fs-1.5.2.tar.gz && \
     cd genext2fs-* && \
@@ -58,15 +60,14 @@ RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarba
     rm -rf nelua-lang-latest.tar.gz edubart-nelua-lang-*
 
 # Install linux-headers
-COPY kernel/linux-headers-5.15.63-ctsi-2.tar.xz linux-headers-5.15.63-ctsi-2.tar.xz
+COPY kernel/linux-headers.tar.xz linux-headers.tar.xz
 RUN apk add linux-headers && \
     cd / && rm `apk info -L linux-headers | grep -F ".h"`
-RUN tar -xf linux-headers-5.15.63-ctsi-2.tar.xz && \
+RUN tar -xf linux-headers.tar.xz && \
     cp -R opt/riscv/kernel/work/linux-headers/include/* /usr/include/ && \
     rm -rf opt linux-headers*
 
 # Install bwrapbox
-RUN apk add libseccomp-dev bubblewrap
 COPY bwrapbox bwrapbox
 RUN make -C bwrapbox install PREFIX=/usr
 
