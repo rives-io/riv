@@ -271,9 +271,9 @@ function rivcm_input.save_replay(filename: string): void
 end
 
 -- Load replay log from a file.
-function rivcm_input.load_replay(filename: string): void
+function rivcm_input.load_replay_from_file(filename: string): void
   log_key_events:destroy()
-  log_key_events, log_last_frame = riv_log.load(filename)
+  log_key_events, log_last_frame = riv_log.load_from_file(filename)
   replaying = true
   io.stderr:printf("[RIVCM] Loaded replay '%s'\n", filename)
 end

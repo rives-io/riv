@@ -146,10 +146,7 @@ function riv_log.save(filename: string, key_events: span(riv_key_toggle_event), 
   end
 end
 
-function riv_log.load(filename: string): (vector(riv_key_toggle_event), uint64)
-  -- open file
-  local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
-
+function riv_log.load_from_filestream(file: filestream): (vector(riv_key_toggle_event), uint64)
   -- load header
   local header_bytes: string <close> = fn_assert!(file:read(16))
   local header: riv_log_header = $(@*riv_log_header)(header_bytes.data)
@@ -212,4 +209,10 @@ function riv_log.load(filename: string): (vector(riv_key_toggle_event), uint64)
   end
 
   return key_events, last_frame
+end
+
+function riv_log.load_from_file(filename: string): (vector(riv_key_toggle_event), uint64)
+  -- open file
+  local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
+  return riv_log.load_from_filestream(file)
 end

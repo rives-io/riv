@@ -29,8 +29,7 @@
 /rivcm/rivcm.c
 /libriv/libriv.c
 /bwrapbox/bwrapbox.c
-/demos/*.c
-/tool/*.c
+/demos/*/*.c
 
 # ignore kernel stuff
 kernel/image-kernel-*

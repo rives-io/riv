@@ -1,0 +1,22 @@
+require 'riv'
+
+local function frame(riv: *riv_context)
+  local framebuffer: auto, frame: usize = riv.framebuffer, riv.frame
+  local width: usize, height: usize = riv.framebuffer_desc.width, riv.framebuffer_desc.height
+  for y: usize=0,<height do
+    for x: usize=0,<width do
+      framebuffer[y*width+x] = ((frame + x + y) // 8) % 16
+    end
+  end
+end
+
+riv_run(&riv_run_desc{
+  frame_cb = frame,
+  framebuffer_desc = {
+    width = 256,
+    height = 256,
+    fps = 60,
+  }
+})
+
+## nostartfiles()

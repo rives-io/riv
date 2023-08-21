@@ -145,7 +145,7 @@ local function startup(): void
   if options.recording then -- start recording
     rivcm_input.start_recording()
   elseif options.replaying then -- start replaying
-    rivcm_input.load_replay(options.replay_filename)
+    rivcm_input.load_replay_from_file(options.replay_filename)
   end
 end
 
@@ -281,18 +281,16 @@ local function frame(): void
   rivcm_video.present()
 end
 
-do
-  -- parse options
-  options = parse_options()
+-- parse options
+options = parse_options()
 
-  -- Application main loop.
-  sapp_run(sapp_desc{
-    init_cb = startup,
-    frame_cb = frame,
-    cleanup_cb = shutdown,
-    event_cb = rivcm_input.append_event,
-    width = 320,
-    height = 240,
-    window_title = "RIVCM",
-  })
-end
+-- Application main loop.
+sapp_run(sapp_desc{
+  init_cb = startup,
+  frame_cb = frame,
+  cleanup_cb = shutdown,
+  event_cb = rivcm_input.append_event,
+  width = 320,
+  height = 240,
+  window_title = "RIVCM",
+})

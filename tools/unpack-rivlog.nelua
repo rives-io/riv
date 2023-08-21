@@ -5,17 +5,11 @@ pragma{nogc=true}
 ]]
 
 require 'io'
-require 'arg'
 require 'riv_log'
 
-if #arg ~= 1 then
-  io.stderr:writef("Usage: %s <input>\n", arg[1])
-  return -1
-end
-
-local key_events: vector(riv_key_toggle_event), last_frame: uint64 = riv_log.load(arg[1])
+local key_events: vector(riv_key_toggle_event), last_frame: uint64 = riv_log.load_from_filestream(io.stdin)
 local key_events_size: uint64 = key_events.size
-assert(io.write((@span(byte)){data=(@*[0]byte)(&last_frame), size=8}))
-assert(io.write((@span(byte)){data=(@*[0]byte)(&key_events_size), size=8}))
-assert(io.write((@span(byte)){data=(@*[0]byte)(key_events.data.data), size=key_events.data.size * #@riv_key_toggle_event}))
-assert(io.flush())
+assert(io.stdout:write((@span(byte)){data=(@*[0]byte)(&last_frame), size=8}))
+assert(io.stdout:write((@span(byte)){data=(@*[0]byte)(&key_events_size), size=8}))
+assert(io.stdout:write((@span(byte)){data=(@*[0]byte)(key_events.data.data), size=key_events.data.size * #@riv_key_toggle_event}))
+assert(io.stdout:flush())

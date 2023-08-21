@@ -13,6 +13,7 @@ global riv_paddr_base: type <using> = @enum(uint64) {
 }
 
 global RIV_MEMSIZE_RAM: uint64 <comptime> = 128*1024*1024
+global RIV_MEMSIZE_CARTRIDGE: uint64< comptime> = 2*1024*1024
 
 --------------------------------------------------------------------------------
 
@@ -60,14 +61,11 @@ function rivcm_machine.create(entrypoint: string, cartridge_filename: string): r
   flash_drive_count = flash_drive_count + 1
 
   -- cartridge flash drive
-  if #cartridge_filename > 0 then
-    flash_drive_entries[flash_drive_count] = {
-      start = RIV_PADDR_CARTRIDGE,
-      length = (@uint64)(-1),
-      image_filename = cartridge_filename,
-    }
-    flash_drive_count = flash_drive_count + 1
-  end
+  flash_drive_entries[flash_drive_count] = {
+    start = RIV_PADDR_CARTRIDGE,
+    length = RIV_MEMSIZE_CARTRIDGE,
+  }
+  flash_drive_count = flash_drive_count + 1
 
   -- bootargs
   local bootargs: string <close> = "console=hvc0 \z
@@ -100,6 +98,14 @@ function rivcm_machine.create(entrypoint: string, cartridge_filename: string): r
   -- create the machine
   local self: rivcm_machine
   cm_assert!(cm_create_machine(config, cm_machine_runtime_config{}, &self.machine))
+
+  -- write cartridge
+  if #cartridge_filename > 0 then
+    local file: filestream <close> = io.open(cartridge_filename, 'rb')
+    local cartridge_contents: string <close> = file:read('a')
+    cm_assert!(cm_write_memory(self.machine, RIV_PADDR_CARTRIDGE, cartridge_contents.data, cartridge_contents.size))
+  end
+
   return self
 end
 
