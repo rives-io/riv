@@ -198,14 +198,17 @@ local function machine_frame(): void
         quit = true
         return
       case RIV_CONTROL_PRESENT then
+        -- poll audio
+        rivcm_audio.poll_commands()
         -- copy output card from guest memory into host memory
         rivcm_iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
         rivcm_video.update_framebuffer()
         -- must break the loop so we can present the video
         return
-      case RIV_CONTROL_AUDIO then
-        rivcm_audio.control()
+      case RIV_CONTROL_FLUSH_AUDIO then
+        -- poll audio
+        rivcm_audio.poll_commands()
       else
         error 'unknown yield reason'
       end
@@ -277,6 +280,8 @@ local function frame(): void
       end
     end
   end
+  -- poll audio
+  rivcm_audio.poll()
   -- display the frame
   rivcm_video.present()
 end

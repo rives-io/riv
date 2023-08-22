@@ -1,0 +1,40 @@
+require 'math'
+
+global mathx = @record{}
+global mathx.TAU: float32 <comptime> = 6.28318530717958647693
+
+function mathx.qsin(x: auto): auto <inline,nosideeffect>
+  -- Quadratic sin approximation (imprecise), using the following constrains:
+  -- f(0) = 0, f(pi) = 0, f(pi/2) = 1
+  local line = x*#[1/math.pi]#
+  local stair = math.floor(line)
+  local saw = line - stair
+  local wave = 4*saw*(1-saw)
+  local signal = 1-2*(stair - 2*math.floor(line*0.5))
+  return signal*wave
+end
+
+function mathx.linearstep(a: auto, b: auto, x: auto) <inline,nosideeffect>
+  return math.clamp((x-a)/(b-a), 0, 1)
+end
+
+function mathx.mix(a: auto, b: auto, t: auto) <inline,nosideeffect>
+  return a + (b-a) * t
+end
+
+function mathx.hash1(x: float32): float32 <inline,nosideeffect>
+  local v: uint32 = ((@union{f: float32, i: uint32}){f = x}).i
+  v = 1103515245_u32 * (v ~ (v>>1_u))
+  local h: uint32 = 1103515245_u32 * (v ~ (v>>3_u32))
+  h = h ~ (h>>16_u32)
+  return (h & 0x7fffffff_u32)*(@float32)(#[1.0/0x7fffffff]#)
+end
+
+function mathx.valuenoise(x: auto) <inline,nosideeffect>
+  local i, f = math.floor(x), math.fract(x)
+  local I = math.floor(i + 1)
+  local a = mathx.hash1(i)
+  local b = mathx.hash1(I)
+  local u = f*f*(3-2*f) -- cubic interpolation
+  return mathx.mix(a, b, u)
+end

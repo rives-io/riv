@@ -22,7 +22,11 @@ linklib '{{CARTESI_LINKLIB}}'
 -- miniaudio
 nldecl.generate_bindings_file{
   output_file = 'miniaudio.nelua',
-  defines = {'MA_NO_PTHREAD_IN_HEADER'},
+  defines = {
+    'MA_NO_PTHREAD_IN_HEADER',
+    'MA_NO_GENERATION',
+    'MA_NO_RESOURCE_MANAGER',
+  },
   includes = {'miniaudio.h'},
   include_dirs = {'.'},
   include_names = {'^ma_', '^MA_'},
@@ -32,6 +36,8 @@ if not MINIAUDIO_NO_IMPL then
   cdefine 'MA_API static'
   cdefine 'MA_PRIVATE static'
   cdefine 'MA_NO_PTHREAD_IN_HEADER'
+  cdefine 'MA_NO_GENERATION'
+  cdefine 'MA_NO_RESOURCE_MANAGER'
   cdefine 'MINIAUDIO_IMPLEMENTATION'
 end
 cinclude 'miniaudio.h'

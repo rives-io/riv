@@ -1,8 +1,10 @@
 -- This file contains all code related to the audio subsystem.
 
+require 'vector'
 require 'miniaudio'
 
 require '.machine'
+require '.mathx'
 
 --------------------------------------------------------------------------------
 
@@ -16,43 +18,237 @@ require '.machine'
 
 --------------------------------------------------------------------------------
 
+function riv_waveform_desc:fill_defaults()
+  self.attack = math.max(self.attack, 1e-6)
+  self.decay = math.max(self.decay, 1e-6)
+  self.sustain = math.max(self.sustain, 1e-6)
+  self.release = math.max(self.release, 1e-6)
+  if self.amplitude == 0 then self.amplitude = 1.0_f32 end
+  if self.sustain_level == 0 then self.sustain_level = 1.0_f32 end
+  if self.end_frequency == 0 then self.end_frequency = self.start_frequency end
+  if self.duty_cycle == 0 then self.duty_cycle = 0.5_f32 end
+end
+
+function riv_waveform_desc:total_duration(): float32
+  return self.attack + self.decay + self.sustain + self.release
+end
+
+-- Compute a sample point for the wave.
+function riv_waveform_desc:sample(time: float32, sample_rate: float32): float32 <inline>
+  -- compute amplitude from ADSR
+  local a_duration: float32 = self.attack
+  local ad_duration: float32 = a_duration + self.decay
+  local ads_duration: float32 = ad_duration + self.sustain
+  local adsr_duration: float32 = ads_duration + self.release
+  local attack: float32 = mathx.linearstep(0.0_f32, a_duration, time)
+  local release: float32 = mathx.linearstep(adsr_duration, ads_duration, time)
+  local decay: float32 = mathx.mix(1.0_f32, self.sustain_level, mathx.linearstep(self.attack, ad_duration, time))
+  local amplitude: float32 = self.amplitude * attack * decay * release
+  -- compute frequency
+  local freq: float32 = mathx.mix(self.start_frequency, self.end_frequency, time / adsr_duration)
+  local x: float32 = time * freq
+  -- compute wave
+  local wave: float32
+  switch self.type do
+  case RIV_WAVEFORM_SINE then
+    wave = mathx.qsin(x * mathx.TAU) -- sine
+  case RIV_WAVEFORM_SQUARE then
+    local d1: float32 = self.duty_cycle
+    local d2: float32 = 0.5_f32 - d1
+    wave = 2*(math.fract(x+d1)-math.fract(x)+d2) -- square
+  case RIV_WAVEFORM_TRIANGLE then
+    wave = math.abs(4*math.fract(x-0.25_f32)-2)-1 -- triangle
+  case RIV_WAVEFORM_SAWTOOTH then
+    wave = 2*math.fract(x-0.5_f32)-1 -- sawtooth
+  case RIV_WAVEFORM_PULSE then
+    local d = 0.5_f32/(1-self.duty_cycle)
+    local t = math.mod(x*d, d) -- infinite repetition
+    local p = 8*t*(1-2*t) -- parabola
+    wave = math.max(p, 0_f32)
+    wave = 2*wave - 1
+  case RIV_WAVEFORM_NOISE then
+    if freq >= sample_rate then -- white noise
+      wave = mathx.hash1(x)
+    else
+      wave = mathx.valuenoise(x * 16) -- value noise
+    end
+    wave = 2*wave - 1
+  end
+  -- combine amplitude and wave
+  return math.clamp(amplitude * wave, -1.0_f32, 1.0_f32)
+end
+
+--------------------------------------------------------------------------------
+-- WaveForm
+
+local WaveForm: type = @record{
+  ds: ma_data_source_base,
+  frame: uint64,
+  length: uint64,
+  sample_rate: uint32,
+  waveform_desc: riv_waveform_desc,
+}
+
+local WaveSound: type = @record{
+  wave: *WaveForm,
+  sound: *ma_sound,
+}
+
+function WaveSound:destroy()
+  ma_sound_uninit(self.sound)
+  delete(self.wave)
+  delete(self.sound)
+  $self = {}
+end
+
+function WaveForm:_on_read(frames_out: *[0]float32, frame_count: uint64, frames_read: *uint64): ma_result
+  -- ignore invalid arguments
+  if self == nilptr or frame_count == 0 then return MA_INVALID_ARGS end
+  -- end of sound?
+  if self.frame > self.length then
+    memory.zero(frames_out, frame_count*#@float32)
+    $frames_read = 0
+    return MA_AT_END
+  end
+  -- localize variables
+  local sample_rate: float32 = self.sample_rate
+  local sample_rate_inverse: float32 = 1.0_f32 / sample_rate
+  local wave: riv_waveform_desc = self.waveform_desc
+  local frame: uint64 = self.frame
+  -- fill the sample buffer
+  if frames_out ~= nilptr and frames_read ~= nilptr then
+    for i: uint64=0,<frame_count do
+      local time: float32 = (frame + i) * sample_rate_inverse
+      frames_out[i] = wave:sample(time, sample_rate)
+    end
+    $frames_read = frame_count
+  end
+  self.frame = self.frame + frame_count
+  return MA_SUCCESS
+end
+
+function WaveForm:_get_data_format(format: *ma_format, channels: *uint32, sample_rate: *uint32, channel_map: *ma_channel, channel_map_cap: csize): ma_result
+  $format = ma_format_f32
+  $channels = 1
+  $sample_rate = self.sample_rate
+  if channel_map ~= nilptr then
+    ma_channel_map_init_standard(ma_standard_channel_map_default, channel_map, channel_map_cap, 1)
+  end
+  return MA_SUCCESS
+end
+
+local monowave_data_source_vtable: ma_data_source_vtable = {
+  onRead = (@decltype(ma_data_source_read_pcm_frames))(WaveForm._on_read),
+  onSeek = nilptr,
+  onGetDataFormat = (@decltype(ma_data_source_get_data_format))(WaveForm._get_data_format),
+  onGetCursor = nilptr,
+  onGetLength = nilptr,
+  onSetLooping = nilptr,
+  flags = 0
+}
+
+function WaveForm:init(sample_rate: uint32, waveform_desc: riv_waveform_desc): ma_result
+  waveform_desc:fill_defaults()
+  self.waveform_desc = waveform_desc
+  self.sample_rate = sample_rate
+  local duration: float64 = self.waveform_desc.attack + self.waveform_desc.decay + self.waveform_desc.sustain + self.waveform_desc.release
+  self.length = math.iceil(duration * sample_rate)
+  local data_source_config: ma_data_source_config = ma_data_source_config_init()
+  data_source_config.vtable = &monowave_data_source_vtable
+  ma_assert!(ma_data_source_init(&data_source_config, &self.ds))
+  return MA_SUCCESS
+end
+
+function WaveForm:uninit(): void
+  ma_data_source_uninit(&self.ds)
+end
+
+--------------------------------------------------------------------------------
+
 -- Audio subsystem.
 global rivcm_audio: type = @record{}
 
 -- Audio subsystem state.
-local audio_engine: ma_engine
+local engine: ma_engine
 local audiobuffer: [RIV_MEMSIZE_AUDIOBUFFER]byte
+local waves: vector(WaveSound)
 
 -- Initialize audio subsystem.
 function rivcm_audio.setup(): void
-  ma_assert!(ma_engine_init(nilptr, &audio_engine))
+  local config: ma_engine_config = ma_engine_config_init()
+  config.periodSizeInMilliseconds = 16
+  ma_assert!(ma_engine_init(&config, &engine))
+  ma_engine_set_volume(&engine, 0.5)
 end
 
 -- Terminate audio subsystem.
 function rivcm_audio.shutdown(): void
-  ma_engine_uninit(&audio_engine)
+  for i: usize, wave: *WaveSound in mipairs(waves) do
+    wave:destroy()
+  end
+  waves:destroy()
+  ma_engine_uninit(&engine)
+end
+
+-- Poll audio subsystem.
+function rivcm_audio.poll(): void
+  for i: usize, wave: *WaveSound in mipairs(waves) do
+    if ma_sound_at_end(wave.sound) == MA_TRUE then
+      wave:destroy()
+    end
+  end
+  waves:removeif(function(wave: WaveSound)
+    return wave.sound == nilptr
+  end)
+end
+
+--------------------------------------------------------------------------------
+
+local function handle_waveform(waveform_desc: riv_waveform_desc): void
+  local sample_rate: uint32 = ma_engine_get_sample_rate(&engine)
+  local wave: *WaveForm = new(@WaveForm)
+  ma_assert!(WaveForm.init(wave, sample_rate, waveform_desc))
+  local flags: uint32 = 0 | MA_SOUND_FLAG_NO_PITCH
+  if waveform_desc.pan == 0 then
+    flags = MA_SOUND_FLAG_NO_SPATIALIZATION
+  end
+  local sound: *ma_sound = new(@ma_sound)
+  ma_assert!(ma_sound_init_from_data_source(&engine, wave, flags, nilptr, sound))
+  if waveform_desc.pan ~= 0 then
+    ma_sound_set_pan(sound, waveform_desc.pan)
+  end
+  ma_assert!(ma_sound_start(sound))
+  waves:push{wave,sound}
+end
+
+local function handle_sound_play(sound_play_desc: riv_sound_play_desc): void
+  -- FIXME: collect audio buffers when sound stops
+  local data: span(byte) = {data=&audiobuffer[0],size=sound_play_desc.buf_len}
+  machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_AUDIOBUFFER, data)
+  local sound = new(@ma_sound)
+  local audio_buffer = new(@ma_audio_buffer)
+  local config: ma_audio_buffer_config = ma_audio_buffer_config_init(ma_format_u8, 1, data.size, data.data, nilptr)
+  config.sampleRate = 11025
+  ma_assert!(ma_audio_buffer_init_copy(&config, audio_buffer))
+  local flags: uint32 = MA_SOUND_FLAG_NO_SPATIALIZATION
+  ma_assert!(ma_sound_init_from_data_source(&engine, &audio_buffer.ref.ds, flags, nilptr, sound))
+  ma_sound_set_volume(sound, 0.2)
+  ma_assert!(ma_sound_start(sound))
 end
 
 -- Control audio subsystem.
-function rivcm_audio.control(): void
-  local data: span(byte) = {data=&audiobuffer[0],size=machine.mmio_driver.audio_ctl.buf_len}
-  machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_AUDIOBUFFER, data)
-
-  switch machine.mmio_driver.audio_ctl.command do
-  case RIV_AUDIOCOMMAND_SOUND_PLAY then
-    -- FIXME: collect audio buffers when sound stops
-    local sound = new(@ma_sound)
-    local audio_buffer = new(@ma_audio_buffer)
-    local config: ma_audio_buffer_config = ma_audio_buffer_config_init(ma_format_u8, 1, data.size, data.data, nilptr)
-    config.sampleRate = 11025
-    ma_assert!(ma_audio_buffer_init_copy(&config, audio_buffer))
-    local flags: uint32 = MA_SOUND_FLAG_NO_SPATIALIZATION
-    ma_assert!(ma_sound_init_from_data_source(&audio_engine, &audio_buffer.ref.ds, flags, nilptr, sound))
-    ma_sound_set_volume(sound, 0.2)
-    ma_assert!(ma_sound_start(sound))
-  case RIV_AUDIOCOMMAND_SOUND_STOP then
-    -- TODO
-  else
-    error 'unknown audio command'
+function rivcm_audio.poll_commands(): void
+  for i: usize=0,<machine.mmio_driver.audio_command_len do
+    local command: riv_audio_command = machine.mmio_driver.audio_commands[i]
+    switch command.type do
+    case RIV_AUDIOCOMMAND_SOUND_PLAY then
+      handle_sound_play(command.desc.sound_play)
+    case RIV_AUDIOCOMMAND_SOUND_STOP then
+      -- TODO
+    case RIV_AUDIOCOMMAND_WAVEFORM then
+      handle_waveform(command.desc.waveform)
+    else
+      error 'unknown audio command'
+    end
   end
 end

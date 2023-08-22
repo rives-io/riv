@@ -236,6 +236,16 @@ typedef enum riv_card_format {
   RIV_CARDFORMAT_JSON,
 } riv_card_format;
 
+typedef enum riv_waveform_type {
+  RIV_WAVEFORM_NONE = 0,
+  RIV_WAVEFORM_SINE,
+  RIV_WAVEFORM_SQUARE,
+  RIV_WAVEFORM_TRIANGLE,
+  RIV_WAVEFORM_SAWTOOTH,
+  RIV_WAVEFORM_NOISE,
+  RIV_WAVEFORM_PULSE,
+} riv_waveform_type;
+
 // The next constants are used to implement the driver
 
 typedef enum riv_control_reason {
@@ -243,14 +253,15 @@ typedef enum riv_control_reason {
   RIV_CONTROL_OPEN,
   RIV_CONTROL_CLOSE,
   RIV_CONTROL_PRESENT,
-  RIV_CONTROL_AUDIO,
+  RIV_CONTROL_FLUSH_AUDIO,
 } riv_control_reason;
 
-typedef enum riv_audio_command {
+typedef enum riv_audio_command_type {
   RIV_AUDIOCOMMAND_NONE = 0,
+  RIV_AUDIOCOMMAND_WAVEFORM,
   RIV_AUDIOCOMMAND_SOUND_PLAY,
   RIV_AUDIOCOMMAND_SOUND_STOP,
-} riv_audio_command;
+} riv_audio_command_type;
 
 typedef enum riv_mem_size {
   RIV_MEMSIZE_HUGEPAGE     = 2*1024*1024, // 2 MB
@@ -300,19 +311,44 @@ typedef struct riv_framebuffer_desc {
   riv_pixel_format pixel_format;
 } riv_framebuffer_desc;
 
-typedef struct riv_audio_ctl_desc {
-  riv_audio_command command;
-  uint32_t flags; // NIY
+typedef struct riv_waveform_desc {
+  riv_waveform_type type; // Waveform type
+  float attack;           // Attack duration in seconds
+  float decay;            // Decay duration in seconds
+  float sustain;          // Sustain duration in seconds
+  float release;          // Release duration in seconds
+  float start_frequency;  // Starting frequency in Hz
+  float end_frequency;    // Starting frequency in Hz
+  float amplitude;        // Maximum amplitude, in range [0.0, 1.0]
+  float sustain_level;    // Sustain level, in range [0.0, 1.0]
+  float duty_cycle;       // Duty cycle, in range [0.0, 1.0]
+  float pan;              // Panning, in range [-1.0, 1.0]
+  // float pwm;              // Pulse width modulation (NIY)
+  // float pam;              // Pulse amplitude modulation (NIY)
+} riv_waveform_desc;
+
+typedef struct riv_sound_play_desc {
   uint64_t handle_id;
+  uint32_t flags; // NIY
   uint32_t channel_id;
   uint32_t buf_off; // NIY
   uint32_t buf_len;
-  uint32_t volume;
-  uint32_t pitch; // NIY
-  uint32_t pan; // NIY
   uint32_t seek; // NIY
   uint32_t fade_in; // NIY
-} riv_audio_ctl_desc;
+  float amplitude;
+  float pitch; // NIY
+  float pan; // NIY
+} riv_sound_play_desc;
+
+typedef union riv_audio_command_desc {
+  riv_waveform_desc waveform;
+  riv_sound_play_desc sound_play;
+} riv_audio_command_desc;
+
+typedef struct riv_audio_command {
+  riv_audio_command_type type;
+  riv_audio_command_desc desc;
+} riv_audio_command;
 
 typedef struct riv_mmio_header {
   uint8_t magic[32];
@@ -325,11 +361,17 @@ typedef struct riv_mmio_header {
 typedef struct riv_mmio_driver {
   riv_mmio_header header;
   uint64_t frame;
+  // Video
   riv_framebuffer_desc framebuffer_desc;
-  riv_audio_ctl_desc audio_ctl;
+  // Audio
+  riv_audio_command audio_commands[32];
+  uint32_t audio_command_len;
+  // Outcard
   riv_card_format outcard_format;
   uint32_t outcard_len;
+  // Keyboard
   bool tracked_keys[RIV_NUM_KEYCODE];
+  // Palette
   uint32_t palette[256];
 } riv_mmio_driver;
 
@@ -416,6 +458,7 @@ RIV_API void riv_run(riv_run_desc* run_desc);
 // Sound system
 RIV_API uint64_t riv_sound_play_from_memory(riv_context* self, riv_span_uint8 data, uint32_t vol);
 RIV_API void riv_sound_stop(riv_context* self, uint64_t sound_id);
+RIV_API void riv_waveform(riv_context* self, riv_waveform_desc waveform);
 
 // Pseudo random number generator (PRNG)
 RIV_API void riv_srand(riv_prng* self, uint64_t a, uint64_t b);

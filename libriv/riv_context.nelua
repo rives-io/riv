@@ -163,11 +163,17 @@ function riv_context:_poll_inputs(): void
 end
 
 function riv_context:present(): void <cexport'riv_present'>
-  self:_ctl(RIV_CONTROL_PRESENT)
-  self.frame = self.frame + 1
-  self.mmio_driver.frame = self.frame
+  -- copy outcard description to driver
   self.mmio_driver.outcard_format = self.outcard_format
   self.mmio_driver.outcard_len = self.outcard_len
+  -- present
+  self:_ctl(RIV_CONTROL_PRESENT)
+  -- advance frame
+  self.frame = self.frame + 1
+  self.mmio_driver.frame = self.frame
+  -- audio commands was flushed
+  self.mmio_driver.audio_command_len = 0
+  -- poll keyboard inputs
   self:_poll_inputs()
 end
 
@@ -179,18 +185,53 @@ function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cexport'
   end
 end
 
-function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): uint64 <cexport'riv_sound_play_from_memory'>
+function riv_context:_queue_audio_command(command: riv_audio_command): void
+  local command_idx: uint32 = self.mmio_driver.audio_command_len
+  self.mmio_driver.audio_commands[command_idx] = command
+  self.mmio_driver.audio_command_len = command_idx + 1
+  if command_idx >= #self.mmio_driver.audio_commands then
+    self:_ctl(RIV_CONTROL_FLUSH_AUDIO)
+    self.mmio_driver.audio_command_len = 0
+  end
+end
+
+function riv_context:sound_play_from_memory(data: span(byte), amplitude: uint32): uint64 <cexport'riv_sound_play_from_memory'>
   local handle_id: uint64 = self.sound_handle_gen + 1
   self.sound_handle_gen = handle_id
   memory.spancopy(span_uint8(self.audiobuffer), data)
-  self.mmio_driver.audio_ctl = {command=RIV_AUDIOCOMMAND_SOUND_PLAY, handle_id=handle_id, buf_len=#data}
-  self:_ctl(RIV_CONTROL_AUDIO)
+  local command: riv_audio_command = {
+    type = RIV_AUDIOCOMMAND_SOUND_PLAY,
+    desc = {
+      sound_play = {
+        handle_id = handle_id,
+        buf_off = 0,
+        buf_len = #data,
+        amplitude = amplitude,
+      }
+    }
+  }
+  self:_queue_audio_command(command)
   return handle_id
 end
 
-function riv_context:sound_stop(sound_id: uint64): void <cexport'riv_sound_stop'>
-  self.mmio_driver.audio_ctl = {command=RIV_AUDIOCOMMAND_SOUND_STOP, handle_id=sound_id}
-  self:_ctl(RIV_CONTROL_AUDIO)
+function riv_context:sound_stop(handle_id: uint64): void <cexport'riv_sound_stop'>
+  local command: riv_audio_command = {
+    type = RIV_AUDIOCOMMAND_SOUND_STOP,
+    desc = {
+      sound_play = {
+        handle_id = handle_id,
+      }
+    }
+  }
+  self:_queue_audio_command(command)
+end
+
+function riv_context:waveform(waveform: riv_waveform_desc): void <cexport'riv_waveform'>
+    local command: riv_audio_command = {
+    type = RIV_AUDIOCOMMAND_WAVEFORM,
+    desc = {waveform = waveform}
+  }
+  self:_queue_audio_command(command)
 end
 
 global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>

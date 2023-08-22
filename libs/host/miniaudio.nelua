@@ -3,6 +3,8 @@ if not MINIAUDIO_NO_IMPL then
   cdefine 'MA_API static'
   cdefine 'MA_PRIVATE static'
   cdefine 'MA_NO_PTHREAD_IN_HEADER'
+  cdefine 'MA_NO_GENERATION'
+  cdefine 'MA_NO_RESOURCE_MANAGER'
   cdefine 'MINIAUDIO_IMPLEMENTATION'
 end
 cinclude 'miniaudio.h'
@@ -1790,215 +1792,6 @@ ma_encoder = @record{
     }
   }
 }
-global ma_waveform_type: type <cimport,nodecl,using> = @enum(cint){
-  ma_waveform_type_sine = 0,
-  ma_waveform_type_square = 1,
-  ma_waveform_type_triangle = 2,
-  ma_waveform_type_sawtooth = 3
-}
-global ma_waveform_config: type <cimport,nodecl> = @record{
-  format: ma_format,
-  channels: ma_uint32,
-  sampleRate: ma_uint32,
-  type: ma_waveform_type,
-  amplitude: float64,
-  frequency: float64
-}
-global ma_waveform: type <cimport,nodecl> = @record{
-  ds: ma_data_source_base,
-  config: ma_waveform_config,
-  advance: float64,
-  time: float64
-}
-global ma_pulsewave_config: type <cimport,nodecl> = @record{
-  format: ma_format,
-  channels: ma_uint32,
-  sampleRate: ma_uint32,
-  dutyCycle: float64,
-  amplitude: float64,
-  frequency: float64
-}
-global ma_pulsewave: type <cimport,nodecl> = @record{
-  waveform: ma_waveform,
-  config: ma_pulsewave_config
-}
-global ma_noise_type: type <cimport,nodecl,using> = @enum(cint){
-  ma_noise_type_white = 0,
-  ma_noise_type_pink = 1,
-  ma_noise_type_brownian = 2
-}
-global ma_noise_config: type <cimport,nodecl> = @record{
-  format: ma_format,
-  channels: ma_uint32,
-  type: ma_noise_type,
-  seed: ma_int32,
-  amplitude: float64,
-  duplicateChannels: ma_bool32
-}
-global ma_noise: type <cimport,nodecl> = @record{
-  ds: ma_data_source_vtable,
-  config: ma_noise_config,
-  lcg: ma_lcg,
-  state: union{
-    pink: record{
-      bin: **float64,
-      accumulation: *float64,
-      counter: *ma_uint32
-    },
-    brownian: record{
-      accumulation: *float64
-    }
-  },
-  _pHeap: pointer,
-  _ownsHeap: ma_bool32
-}
-global ma_resource_manager: type <cimport,nodecl,forwarddecl> = @record{}
-global ma_resource_manager_data_buffer_node: type <cimport,nodecl,forwarddecl> = @record{}
-global ma_resource_manager_data_buffer: type <cimport,nodecl,forwarddecl> = @record{}
-global ma_resource_manager_data_stream: type <cimport,nodecl,forwarddecl> = @record{}
-global ma_resource_manager_data_source: type <cimport,nodecl,forwarddecl> = @record{}
-global ma_resource_manager_data_source_flags: type <cimport,nodecl,using> = @enum(cint){
-  MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_STREAM = 1,
-  MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE = 2,
-  MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_ASYNC = 4,
-  MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_WAIT_INIT = 8,
-  MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_UNKNOWN_LENGTH = 16
-}
-global ma_resource_manager_pipeline_stage_notification: type <cimport,nodecl> = @record{
-  pNotification: *ma_async_notification,
-  pFence: *ma_fence
-}
-global ma_resource_manager_pipeline_notifications: type <cimport,nodecl> = @record{
-  init: ma_resource_manager_pipeline_stage_notification,
-  done: ma_resource_manager_pipeline_stage_notification
-}
-global ma_resource_manager_flags: type <cimport,nodecl,using> = @enum(cint){
-  MA_RESOURCE_MANAGER_FLAG_NON_BLOCKING = 1,
-  MA_RESOURCE_MANAGER_FLAG_NO_THREADING = 2
-}
-global ma_resource_manager_data_source_config: type <cimport,nodecl> = @record{
-  pFilePath: cstring,
-  pFilePathW: *cwchar_t,
-  pNotifications: *ma_resource_manager_pipeline_notifications,
-  initialSeekPointInPCMFrames: ma_uint64,
-  rangeBegInPCMFrames: ma_uint64,
-  rangeEndInPCMFrames: ma_uint64,
-  loopPointBegInPCMFrames: ma_uint64,
-  loopPointEndInPCMFrames: ma_uint64,
-  isLooping: ma_bool32,
-  flags: ma_uint32
-}
-global ma_resource_manager_data_supply_type: type <cimport,nodecl,using> = @enum(cint){
-  ma_resource_manager_data_supply_type_unknown = 0,
-  ma_resource_manager_data_supply_type_encoded = 1,
-  ma_resource_manager_data_supply_type_decoded = 2,
-  ma_resource_manager_data_supply_type_decoded_paged = 3
-}
-global ma_resource_manager_data_supply: type <cimport,nodecl> = @record{
-  type: ma_resource_manager_data_supply_type,
-  backend: union{
-    encoded: record{
-      pData: pointer,
-      sizeInBytes: csize
-    },
-    decoded: record{
-      pData: pointer,
-      totalFrameCount: ma_uint64,
-      decodedFrameCount: ma_uint64,
-      format: ma_format,
-      channels: ma_uint32,
-      sampleRate: ma_uint32
-    },
-    decodedPaged: record{
-      data: ma_paged_audio_buffer_data,
-      decodedFrameCount: ma_uint64,
-      sampleRate: ma_uint32
-    }
-  }
-}
-ma_resource_manager_data_buffer_node = @record{
-  hashedName32: ma_uint32,
-  refCount: ma_uint32,
-  result: ma_result,
-  executionCounter: ma_uint32,
-  executionPointer: ma_uint32,
-  isDataOwnedByResourceManager: ma_bool32,
-  data: ma_resource_manager_data_supply,
-  pParent: *ma_resource_manager_data_buffer_node,
-  pChildLo: *ma_resource_manager_data_buffer_node,
-  pChildHi: *ma_resource_manager_data_buffer_node
-}
-ma_resource_manager_data_buffer = @record{
-  ds: ma_data_source_base,
-  pResourceManager: *ma_resource_manager,
-  pNode: *ma_resource_manager_data_buffer_node,
-  flags: ma_uint32,
-  executionCounter: ma_uint32,
-  executionPointer: ma_uint32,
-  seekTargetInPCMFrames: ma_uint64,
-  seekToCursorOnNextRead: ma_bool32,
-  result: ma_result,
-  isLooping: ma_bool32,
-  isConnectorInitialized: ma_atomic_bool32,
-  connector: union{
-    decoder: ma_decoder,
-    buffer: ma_audio_buffer,
-    pagedBuffer: ma_paged_audio_buffer
-  }
-}
-ma_resource_manager_data_stream = @record{
-  ds: ma_data_source_base,
-  pResourceManager: *ma_resource_manager,
-  flags: ma_uint32,
-  decoder: ma_decoder,
-  isDecoderInitialized: ma_bool32,
-  totalLengthInPCMFrames: ma_uint64,
-  relativeCursor: ma_uint32,
-  absoluteCursor: ma_uint64,
-  currentPageIndex: ma_uint32,
-  executionCounter: ma_uint32,
-  executionPointer: ma_uint32,
-  isLooping: ma_bool32,
-  pPageData: pointer,
-  pageFrameCount: [2]ma_uint32,
-  result: ma_result,
-  isDecoderAtEnd: ma_bool32,
-  isPageValid: [2]ma_bool32,
-  seekCounter: ma_bool32
-}
-ma_resource_manager_data_source = @record{
-  backend: union{
-    buffer: ma_resource_manager_data_buffer,
-    stream: ma_resource_manager_data_stream
-  },
-  flags: ma_uint32,
-  executionCounter: ma_uint32,
-  executionPointer: ma_uint32
-}
-global ma_resource_manager_config: type <cimport,nodecl> = @record{
-  allocationCallbacks: ma_allocation_callbacks,
-  pLog: *ma_log,
-  decodedFormat: ma_format,
-  decodedChannels: ma_uint32,
-  decodedSampleRate: ma_uint32,
-  jobThreadCount: ma_uint32,
-  jobThreadStackSize: csize,
-  jobQueueCapacity: ma_uint32,
-  flags: ma_uint32,
-  pVFS: *ma_vfs,
-  ppCustomDecodingBackendVTables: **ma_decoding_backend_vtable,
-  customDecodingBackendCount: ma_uint32,
-  pCustomDecodingBackendUserData: pointer
-}
-ma_resource_manager = @record{
-  config: ma_resource_manager_config,
-  pRootDataBufferNode: *ma_resource_manager_data_buffer_node,
-  dataBufferBSTLock: ma_mutex,
-  jobThreads: [64]ma_thread,
-  jobQueue: ma_job_queue,
-  defaultVFS: ma_default_vfs,
-  log: ma_log
-}
 global ma_node_graph: type <cimport,nodecl,forwarddecl> = @record{}
 global ma_node: type <cimport,nodecl> = @void
 global ma_node_flags: type <cimport,nodecl,using> = @enum(cint){
@@ -2243,7 +2036,6 @@ global ma_sound_config: type <cimport,nodecl> = @record{
   isLooping: ma_bool32,
   endCallback: ma_sound_end_proc,
   pEndCallbackUserData: pointer,
-  initNotifications: ma_resource_manager_pipeline_notifications,
   pDoneFence: *ma_fence
 }
 ma_sound = @record{
@@ -2253,8 +2045,7 @@ ma_sound = @record{
   atEnd: ma_bool32,
   endCallback: ma_sound_end_proc,
   pEndCallbackUserData: pointer,
-  ownsDataSource: ma_bool8,
-  pResourceManagerDataSource: *ma_resource_manager_data_source
+  ownsDataSource: ma_bool8
 }
 global ma_sound_inlined: type <cimport,nodecl,forwarddecl> = @record{}
 ma_sound_inlined = @record{
@@ -2266,7 +2057,6 @@ global ma_sound_group_config: type <cimport,nodecl> = @ma_sound_config
 global ma_sound_group: type <cimport,nodecl> = @ma_sound
 global ma_engine_process_proc: type <cimport,nodecl> = @function(pUserData: pointer, pFramesOut: *float32, frameCount: ma_uint64): void
 global ma_engine_config: type <cimport,nodecl> = @record{
-  pResourceManager: *ma_resource_manager,
   pContext: *ma_context,
   pDevice: *ma_device,
   pPlaybackDeviceID: *ma_device_id,
@@ -2291,7 +2081,6 @@ global ma_engine_config: type <cimport,nodecl> = @record{
 }
 ma_engine = @record{
   nodeGraph: ma_node_graph,
-  pResourceManager: *ma_resource_manager,
   pDevice: *ma_device,
   pLog: *ma_log,
   sampleRate: ma_uint32,
@@ -2882,95 +2671,6 @@ global function ma_encoder_init_file(pFilePath: cstring, pConfig: *ma_encoder_co
 global function ma_encoder_init_file_w(pFilePath: *cwchar_t, pConfig: *ma_encoder_config, pEncoder: *ma_encoder): ma_result <cimport,nodecl> end
 global function ma_encoder_uninit(pEncoder: *ma_encoder): void <cimport,nodecl> end
 global function ma_encoder_write_pcm_frames(pEncoder: *ma_encoder, pFramesIn: pointer, frameCount: ma_uint64, pFramesWritten: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_waveform_config_init(format: ma_format, channels: ma_uint32, sampleRate: ma_uint32, type: ma_waveform_type, amplitude: float64, frequency: float64): ma_waveform_config <cimport,nodecl> end
-global function ma_waveform_init(pConfig: *ma_waveform_config, pWaveform: *ma_waveform): ma_result <cimport,nodecl> end
-global function ma_waveform_uninit(pWaveform: *ma_waveform): void <cimport,nodecl> end
-global function ma_waveform_read_pcm_frames(pWaveform: *ma_waveform, pFramesOut: pointer, frameCount: ma_uint64, pFramesRead: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_waveform_seek_to_pcm_frame(pWaveform: *ma_waveform, frameIndex: ma_uint64): ma_result <cimport,nodecl> end
-global function ma_waveform_set_amplitude(pWaveform: *ma_waveform, amplitude: float64): ma_result <cimport,nodecl> end
-global function ma_waveform_set_frequency(pWaveform: *ma_waveform, frequency: float64): ma_result <cimport,nodecl> end
-global function ma_waveform_set_type(pWaveform: *ma_waveform, type: ma_waveform_type): ma_result <cimport,nodecl> end
-global function ma_waveform_set_sample_rate(pWaveform: *ma_waveform, sampleRate: ma_uint32): ma_result <cimport,nodecl> end
-global function ma_pulsewave_config_init(format: ma_format, channels: ma_uint32, sampleRate: ma_uint32, dutyCycle: float64, amplitude: float64, frequency: float64): ma_pulsewave_config <cimport,nodecl> end
-global function ma_pulsewave_init(pConfig: *ma_pulsewave_config, pWaveform: *ma_pulsewave): ma_result <cimport,nodecl> end
-global function ma_pulsewave_uninit(pWaveform: *ma_pulsewave): void <cimport,nodecl> end
-global function ma_pulsewave_read_pcm_frames(pWaveform: *ma_pulsewave, pFramesOut: pointer, frameCount: ma_uint64, pFramesRead: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_pulsewave_seek_to_pcm_frame(pWaveform: *ma_pulsewave, frameIndex: ma_uint64): ma_result <cimport,nodecl> end
-global function ma_pulsewave_set_amplitude(pWaveform: *ma_pulsewave, amplitude: float64): ma_result <cimport,nodecl> end
-global function ma_pulsewave_set_frequency(pWaveform: *ma_pulsewave, frequency: float64): ma_result <cimport,nodecl> end
-global function ma_pulsewave_set_sample_rate(pWaveform: *ma_pulsewave, sampleRate: ma_uint32): ma_result <cimport,nodecl> end
-global function ma_pulsewave_set_duty_cycle(pWaveform: *ma_pulsewave, dutyCycle: float64): ma_result <cimport,nodecl> end
-global function ma_noise_config_init(format: ma_format, channels: ma_uint32, type: ma_noise_type, seed: ma_int32, amplitude: float64): ma_noise_config <cimport,nodecl> end
-global function ma_noise_get_heap_size(pConfig: *ma_noise_config, pHeapSizeInBytes: *csize): ma_result <cimport,nodecl> end
-global function ma_noise_init_preallocated(pConfig: *ma_noise_config, pHeap: pointer, pNoise: *ma_noise): ma_result <cimport,nodecl> end
-global function ma_noise_init(pConfig: *ma_noise_config, pAllocationCallbacks: *ma_allocation_callbacks, pNoise: *ma_noise): ma_result <cimport,nodecl> end
-global function ma_noise_uninit(pNoise: *ma_noise, pAllocationCallbacks: *ma_allocation_callbacks): void <cimport,nodecl> end
-global function ma_noise_read_pcm_frames(pNoise: *ma_noise, pFramesOut: pointer, frameCount: ma_uint64, pFramesRead: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_noise_set_amplitude(pNoise: *ma_noise, amplitude: float64): ma_result <cimport,nodecl> end
-global function ma_noise_set_seed(pNoise: *ma_noise, seed: ma_int32): ma_result <cimport,nodecl> end
-global function ma_noise_set_type(pNoise: *ma_noise, type: ma_noise_type): ma_result <cimport,nodecl> end
-global function ma_resource_manager_pipeline_notifications_init(): ma_resource_manager_pipeline_notifications <cimport,nodecl> end
-global function ma_resource_manager_data_source_config_init(): ma_resource_manager_data_source_config <cimport,nodecl> end
-global function ma_resource_manager_config_init(): ma_resource_manager_config <cimport,nodecl> end
-global function ma_resource_manager_init(pConfig: *ma_resource_manager_config, pResourceManager: *ma_resource_manager): ma_result <cimport,nodecl> end
-global function ma_resource_manager_uninit(pResourceManager: *ma_resource_manager): void <cimport,nodecl> end
-global function ma_resource_manager_get_log(pResourceManager: *ma_resource_manager): *ma_log <cimport,nodecl> end
-global function ma_resource_manager_register_file(pResourceManager: *ma_resource_manager, pFilePath: cstring, flags: ma_uint32): ma_result <cimport,nodecl> end
-global function ma_resource_manager_register_file_w(pResourceManager: *ma_resource_manager, pFilePath: *cwchar_t, flags: ma_uint32): ma_result <cimport,nodecl> end
-global function ma_resource_manager_register_decoded_data(pResourceManager: *ma_resource_manager, pName: cstring, pData: pointer, frameCount: ma_uint64, format: ma_format, channels: ma_uint32, sampleRate: ma_uint32): ma_result <cimport,nodecl> end
-global function ma_resource_manager_register_decoded_data_w(pResourceManager: *ma_resource_manager, pName: *cwchar_t, pData: pointer, frameCount: ma_uint64, format: ma_format, channels: ma_uint32, sampleRate: ma_uint32): ma_result <cimport,nodecl> end
-global function ma_resource_manager_register_encoded_data(pResourceManager: *ma_resource_manager, pName: cstring, pData: pointer, sizeInBytes: csize): ma_result <cimport,nodecl> end
-global function ma_resource_manager_register_encoded_data_w(pResourceManager: *ma_resource_manager, pName: *cwchar_t, pData: pointer, sizeInBytes: csize): ma_result <cimport,nodecl> end
-global function ma_resource_manager_unregister_file(pResourceManager: *ma_resource_manager, pFilePath: cstring): ma_result <cimport,nodecl> end
-global function ma_resource_manager_unregister_file_w(pResourceManager: *ma_resource_manager, pFilePath: *cwchar_t): ma_result <cimport,nodecl> end
-global function ma_resource_manager_unregister_data(pResourceManager: *ma_resource_manager, pName: cstring): ma_result <cimport,nodecl> end
-global function ma_resource_manager_unregister_data_w(pResourceManager: *ma_resource_manager, pName: *cwchar_t): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_init_ex(pResourceManager: *ma_resource_manager, pConfig: *ma_resource_manager_data_source_config, pDataBuffer: *ma_resource_manager_data_buffer): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_init(pResourceManager: *ma_resource_manager, pFilePath: cstring, flags: ma_uint32, pNotifications: *ma_resource_manager_pipeline_notifications, pDataBuffer: *ma_resource_manager_data_buffer): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_init_w(pResourceManager: *ma_resource_manager, pFilePath: *cwchar_t, flags: ma_uint32, pNotifications: *ma_resource_manager_pipeline_notifications, pDataBuffer: *ma_resource_manager_data_buffer): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_init_copy(pResourceManager: *ma_resource_manager, pExistingDataBuffer: *ma_resource_manager_data_buffer, pDataBuffer: *ma_resource_manager_data_buffer): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_uninit(pDataBuffer: *ma_resource_manager_data_buffer): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_read_pcm_frames(pDataBuffer: *ma_resource_manager_data_buffer, pFramesOut: pointer, frameCount: ma_uint64, pFramesRead: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_seek_to_pcm_frame(pDataBuffer: *ma_resource_manager_data_buffer, frameIndex: ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_get_data_format(pDataBuffer: *ma_resource_manager_data_buffer, pFormat: *ma_format, pChannels: *ma_uint32, pSampleRate: *ma_uint32, pChannelMap: *ma_channel, channelMapCap: csize): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_get_cursor_in_pcm_frames(pDataBuffer: *ma_resource_manager_data_buffer, pCursor: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_get_length_in_pcm_frames(pDataBuffer: *ma_resource_manager_data_buffer, pLength: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_result(pDataBuffer: *ma_resource_manager_data_buffer): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_set_looping(pDataBuffer: *ma_resource_manager_data_buffer, isLooping: ma_bool32): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_is_looping(pDataBuffer: *ma_resource_manager_data_buffer): ma_bool32 <cimport,nodecl> end
-global function ma_resource_manager_data_buffer_get_available_frames(pDataBuffer: *ma_resource_manager_data_buffer, pAvailableFrames: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_init_ex(pResourceManager: *ma_resource_manager, pConfig: *ma_resource_manager_data_source_config, pDataStream: *ma_resource_manager_data_stream): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_init(pResourceManager: *ma_resource_manager, pFilePath: cstring, flags: ma_uint32, pNotifications: *ma_resource_manager_pipeline_notifications, pDataStream: *ma_resource_manager_data_stream): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_init_w(pResourceManager: *ma_resource_manager, pFilePath: *cwchar_t, flags: ma_uint32, pNotifications: *ma_resource_manager_pipeline_notifications, pDataStream: *ma_resource_manager_data_stream): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_uninit(pDataStream: *ma_resource_manager_data_stream): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_read_pcm_frames(pDataStream: *ma_resource_manager_data_stream, pFramesOut: pointer, frameCount: ma_uint64, pFramesRead: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_seek_to_pcm_frame(pDataStream: *ma_resource_manager_data_stream, frameIndex: ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_get_data_format(pDataStream: *ma_resource_manager_data_stream, pFormat: *ma_format, pChannels: *ma_uint32, pSampleRate: *ma_uint32, pChannelMap: *ma_channel, channelMapCap: csize): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_get_cursor_in_pcm_frames(pDataStream: *ma_resource_manager_data_stream, pCursor: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_get_length_in_pcm_frames(pDataStream: *ma_resource_manager_data_stream, pLength: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_result(pDataStream: *ma_resource_manager_data_stream): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_set_looping(pDataStream: *ma_resource_manager_data_stream, isLooping: ma_bool32): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_stream_is_looping(pDataStream: *ma_resource_manager_data_stream): ma_bool32 <cimport,nodecl> end
-global function ma_resource_manager_data_stream_get_available_frames(pDataStream: *ma_resource_manager_data_stream, pAvailableFrames: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_init_ex(pResourceManager: *ma_resource_manager, pConfig: *ma_resource_manager_data_source_config, pDataSource: *ma_resource_manager_data_source): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_init(pResourceManager: *ma_resource_manager, pName: cstring, flags: ma_uint32, pNotifications: *ma_resource_manager_pipeline_notifications, pDataSource: *ma_resource_manager_data_source): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_init_w(pResourceManager: *ma_resource_manager, pName: *cwchar_t, flags: ma_uint32, pNotifications: *ma_resource_manager_pipeline_notifications, pDataSource: *ma_resource_manager_data_source): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_init_copy(pResourceManager: *ma_resource_manager, pExistingDataSource: *ma_resource_manager_data_source, pDataSource: *ma_resource_manager_data_source): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_uninit(pDataSource: *ma_resource_manager_data_source): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_read_pcm_frames(pDataSource: *ma_resource_manager_data_source, pFramesOut: pointer, frameCount: ma_uint64, pFramesRead: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_seek_to_pcm_frame(pDataSource: *ma_resource_manager_data_source, frameIndex: ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_get_data_format(pDataSource: *ma_resource_manager_data_source, pFormat: *ma_format, pChannels: *ma_uint32, pSampleRate: *ma_uint32, pChannelMap: *ma_channel, channelMapCap: csize): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_get_cursor_in_pcm_frames(pDataSource: *ma_resource_manager_data_source, pCursor: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_get_length_in_pcm_frames(pDataSource: *ma_resource_manager_data_source, pLength: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_result(pDataSource: *ma_resource_manager_data_source): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_set_looping(pDataSource: *ma_resource_manager_data_source, isLooping: ma_bool32): ma_result <cimport,nodecl> end
-global function ma_resource_manager_data_source_is_looping(pDataSource: *ma_resource_manager_data_source): ma_bool32 <cimport,nodecl> end
-global function ma_resource_manager_data_source_get_available_frames(pDataSource: *ma_resource_manager_data_source, pAvailableFrames: *ma_uint64): ma_result <cimport,nodecl> end
-global function ma_resource_manager_post_job(pResourceManager: *ma_resource_manager, pJob: *ma_job): ma_result <cimport,nodecl> end
-global function ma_resource_manager_post_job_quit(pResourceManager: *ma_resource_manager): ma_result <cimport,nodecl> end
-global function ma_resource_manager_next_job(pResourceManager: *ma_resource_manager, pJob: *ma_job): ma_result <cimport,nodecl> end
-global function ma_resource_manager_process_job(pResourceManager: *ma_resource_manager, pJob: *ma_job): ma_result <cimport,nodecl> end
-global function ma_resource_manager_process_next_job(pResourceManager: *ma_resource_manager): ma_result <cimport,nodecl> end
 global function ma_node_config_init(): ma_node_config <cimport,nodecl> end
 global function ma_node_get_heap_size(pNodeGraph: *ma_node_graph, pConfig: *ma_node_config, pHeapSizeInBytes: *csize): ma_result <cimport,nodecl> end
 global function ma_node_init_preallocated(pNodeGraph: *ma_node_graph, pConfig: *ma_node_config, pHeap: pointer, pNode: *ma_node): ma_result <cimport,nodecl> end
@@ -3065,7 +2765,6 @@ global function ma_engine_init(pConfig: *ma_engine_config, pEngine: *ma_engine):
 global function ma_engine_uninit(pEngine: *ma_engine): void <cimport,nodecl> end
 global function ma_engine_read_pcm_frames(pEngine: *ma_engine, pFramesOut: pointer, frameCount: ma_uint64, pFramesRead: *ma_uint64): ma_result <cimport,nodecl> end
 global function ma_engine_get_node_graph(pEngine: *ma_engine): *ma_node_graph <cimport,nodecl> end
-global function ma_engine_get_resource_manager(pEngine: *ma_engine): *ma_resource_manager <cimport,nodecl> end
 global function ma_engine_get_device(pEngine: *ma_engine): *ma_device <cimport,nodecl> end
 global function ma_engine_get_log(pEngine: *ma_engine): *ma_log <cimport,nodecl> end
 global function ma_engine_get_endpoint(pEngine: *ma_engine): *ma_node <cimport,nodecl> end
@@ -3097,11 +2796,6 @@ global function ma_engine_listener_set_world_up(pEngine: *ma_engine, listenerInd
 global function ma_engine_listener_get_world_up(pEngine: *ma_engine, listenerIndex: ma_uint32): ma_vec3f <cimport,nodecl> end
 global function ma_engine_listener_set_enabled(pEngine: *ma_engine, listenerIndex: ma_uint32, isEnabled: ma_bool32): void <cimport,nodecl> end
 global function ma_engine_listener_is_enabled(pEngine: *ma_engine, listenerIndex: ma_uint32): ma_bool32 <cimport,nodecl> end
-global function ma_engine_play_sound_ex(pEngine: *ma_engine, pFilePath: cstring, pNode: *ma_node, nodeInputBusIndex: ma_uint32): ma_result <cimport,nodecl> end
-global function ma_engine_play_sound(pEngine: *ma_engine, pFilePath: cstring, pGroup: *ma_sound_group): ma_result <cimport,nodecl> end
-global function ma_sound_init_from_file(pEngine: *ma_engine, pFilePath: cstring, flags: ma_uint32, pGroup: *ma_sound_group, pDoneFence: *ma_fence, pSound: *ma_sound): ma_result <cimport,nodecl> end
-global function ma_sound_init_from_file_w(pEngine: *ma_engine, pFilePath: *cwchar_t, flags: ma_uint32, pGroup: *ma_sound_group, pDoneFence: *ma_fence, pSound: *ma_sound): ma_result <cimport,nodecl> end
-global function ma_sound_init_copy(pEngine: *ma_engine, pExistingSound: *ma_sound, flags: ma_uint32, pGroup: *ma_sound_group, pSound: *ma_sound): ma_result <cimport,nodecl> end
 global function ma_sound_init_from_data_source(pEngine: *ma_engine, pDataSource: *ma_data_source, flags: ma_uint32, pGroup: *ma_sound_group, pSound: *ma_sound): ma_result <cimport,nodecl> end
 global function ma_sound_init_ex(pEngine: *ma_engine, pConfig: *ma_sound_config, pSound: *ma_sound): ma_result <cimport,nodecl> end
 global function ma_sound_uninit(pSound: *ma_sound): void <cimport,nodecl> end
@@ -3247,19 +2941,6 @@ global MA_DATA_SOURCE_SELF_MANAGED_RANGE_AND_LOOP_POINT: cint <comptime> = 1
 global MA_BACKEND_COUNT: cint <comptime> = 15
 global MA_DATA_FORMAT_FLAG_EXCLUSIVE_MODE: cint <comptime> = 2
 global MA_MAX_DEVICE_NAME_LENGTH: cint <comptime> = 255
-global ma_resource_manager_job: type = ma_job
-global function ma_resource_manager_job_init(code: ma_uint16): ma_job <cimport,nodecl> end
-global MA_JOB_TYPE_RESOURCE_MANAGER_QUEUE_FLAG_NON_BLOCKING: cint <comptime> = 1
-global ma_resource_manager_job_queue_config: type = ma_job_queue_config
-global function ma_resource_manager_job_queue_config_init(flags: ma_uint32, capacity: ma_uint32): ma_job_queue_config <cimport,nodecl> end
-global ma_resource_manager_job_queue: type = ma_job_queue
-global function ma_resource_manager_job_queue_get_heap_size(pConfig: *ma_job_queue_config, pHeapSizeInBytes: *csize): ma_result <cimport,nodecl> end
-global function ma_resource_manager_job_queue_init_preallocated(pConfig: *ma_job_queue_config, pHeap: pointer, pQueue: *ma_job_queue): ma_result <cimport,nodecl> end
-global function ma_resource_manager_job_queue_init(pConfig: *ma_job_queue_config, pAllocationCallbacks: *ma_allocation_callbacks, pQueue: *ma_job_queue): ma_result <cimport,nodecl> end
-global function ma_resource_manager_job_queue_uninit(pQueue: *ma_job_queue, pAllocationCallbacks: *ma_allocation_callbacks): void <cimport,nodecl> end
-global function ma_resource_manager_job_queue_post(pQueue: *ma_job_queue, pJob: *ma_job): ma_result <cimport,nodecl> end
-global function ma_resource_manager_job_queue_next(pQueue: *ma_job_queue, pJob: *ma_job): ma_result <cimport,nodecl> end
-global MA_RESOURCE_MANAGER_MAX_JOB_THREAD_COUNT: cint <comptime> = 64
 global MA_MAX_NODE_BUS_COUNT: cint <comptime> = 254
 global MA_MAX_NODE_LOCAL_BUS_COUNT: cint <comptime> = 2
 global MA_NODE_BUS_COUNT_UNKNOWN: cint <comptime> = 255

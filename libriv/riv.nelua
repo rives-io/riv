@@ -20,6 +20,8 @@ function riv_context:present(): void <cimport'riv_present'> end
 function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cimport'riv_loop'> end
 function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): uint64 <cimport'riv_sound_play_from_memory'> end
 function riv_context:sound_stop(source: uint64): void <cimport'riv_sound_stop'> end
+function riv_context:waveform(waveform: riv_waveform_desc): void <cimport'riv_waveform'> end
+
 global function riv_run(run_desc: *riv_run_desc): void <cimport'riv_run'> end
 
 -- prng
