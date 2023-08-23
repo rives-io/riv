@@ -1,8 +1,17 @@
 PREFIX=/usr/local
 
+# Auto detect toolchain to use
+HOST_ARCH=$(shell uname -m)
+ifeq ($(HOST_ARCH),riscv64)
+	TOOLCHAIN_PREFIX=
+	CC=$(TOOLCHAIN_PREFIX)gcc
+else
+	CC=riscv64-linux-musl-gcc
+	TOOLCHAIN_PREFIX=$(shell $(CC) -dumpmachine)-
+endif
+
 # Release flags
-CC=gcc
-CFLAGS+=-Wall -Werror
+CFLAGS+=-Wall
 LDFLAGS+=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now
 STRIPFLAGS+=--strip-unneeded --remove-section=.comment
 NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose

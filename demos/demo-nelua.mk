@@ -1,9 +1,18 @@
-CC=gcc
+# Auto detect toolchain to use
+HOST_ARCH=$(shell uname -m)
+ifeq ($(HOST_ARCH),riscv64)
+	TOOLCHAIN_PREFIX=
+	CC=$(TOOLCHAIN_PREFIX)gcc
+else
+	CC=riscv64-linux-musl-gcc
+	TOOLCHAIN_PREFIX=$(shell $(CC) -dumpmachine)-
+endif
+
+OBJDUMP=$(TOOLCHAIN_PREFIX)objdump
+READELF=$(TOOLCHAIN_PREFIX)readelf
+SIZE=$(TOOLCHAIN_PREFIX)size
+STRINGS=$(TOOLCHAIN_PREFIX)strings
 SSTRIP=sstrip
-OBJDUMP=objdump
-READELF=readelf
-SIZE=size
-STRINGS=strings
 ELFTOC=elftoc
 OBJDUMP_FLAGS=--all-headers --disassemble --disassemble-zeroes
 
@@ -19,6 +28,10 @@ LDFLAGS+=-Wl,-O1,--gc-sections,--as-needed,--no-eh-frame-hdr,--build-id=none,--h
 LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=alignment,--spare-dynamic-tags=0
 LDFLAGS+=-Wl,--dynamic-linker=/lib/ld.so
 LDFLAGS+=-z norelro -z noseparate-code -z lazy
+
+# Add RIV library path (required when cross compiling)
+NELUA_FLAGS+=-L '../../libriv/?.nelua'
+CFLAGS+=-L '../../libriv'
 
 all: $(DEMO_NAME).sqfs
 
@@ -58,6 +71,9 @@ all: $(DEMO_NAME).sqfs
 	stat -c "%s %n" $*.elf $@ > $*.hash.txt
 	sha1sum $*.elf $@ >> $*.hash.txt
 	cat $*.hash.txt
+
+run:
+	cd ../.. && ./rivcm/rivcm -cartridge demos/$(DEMO_NAME)/$(DEMO_NAME).sqfs $(DEMO_ARGS)
 
 clean:
 	rm -f *.c *.txt *.elf *.sqfs
