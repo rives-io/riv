@@ -176,7 +176,8 @@ local waves: vector(WaveSound)
 -- Initialize audio subsystem.
 function rivcm_audio.setup(): void
   local config: ma_engine_config = ma_engine_config_init()
-  config.periodSizeInMilliseconds = 16
+  config.sampleRate = 48000
+  config.periodSizeInFrames = 48000 // 60 * 2
   ma_assert!(ma_engine_init(&config, &engine))
   ma_engine_set_volume(&engine, 0.5)
 end

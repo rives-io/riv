@@ -5587,7 +5587,7 @@ _SOKOL_PRIVATE void _sapp_emsc_webgl_init(void) {
     emscripten_webgl_make_context_current(ctx);
 
     /* some WebGL extension are not enabled automatically by emscripten */
-    emscripten_webgl_enable_extension(ctx, "WEBKIT_WEBGL_compressed_texture_pvrtc");
+    // emscripten_webgl_enable_extension(ctx, "WEBKIT_WEBGL_compressed_texture_pvrtc");
 }
 #endif
 
@@ -5840,7 +5840,19 @@ _SOKOL_PRIVATE void _sapp_emsc_run(const sapp_desc* desc) {
     sapp_set_icon(&desc->icon);
 
     /* start the frame loop */
-    emscripten_request_animation_frame_loop(_sapp_emsc_frame, 0);
+    if (emscripten_has_asyncify()) {
+        while (true) {
+            double frame_time = emscripten_get_now();
+            if (_sapp_emsc_frame(frame_time / 1000.0, 0) == EM_FALSE) {
+                break;
+            }
+            double next_frame_time = frame_time + 1000.0/60.0;
+            double sleep_time = next_frame_time - emscripten_get_now();
+            emscripten_sleep(sleep_time > 0 ? sleep_time : 0);
+        }
+    } else {
+        emscripten_request_animation_frame_loop(_sapp_emsc_frame, 0);
+    }
 
     /* NOT A BUG: do not call _sapp_discard_state() here, instead this is
        called in _sapp_emsc_frame() when the application is ordered to quit

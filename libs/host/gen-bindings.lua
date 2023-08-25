@@ -54,12 +54,13 @@ end
 -- sokol
 nldecl.generate_bindings_file{
   output_file = 'sokol.nelua',
-  includes = {'sokol_gfx.h', 'sokol_gp.h', 'sokol_app.h'},
+  includes = {'sokol_gfx.h', 'sokol_gp.h', 'sokol_app.h', 'sokol_args.h'},
   include_dirs = {'.'},
   include_names = {
     '^sg_', '^SG_',
     '^sapp_', '^SAPP_',
     '^sgp_', '^SGP_',
+    '^sargs_', '^SARGS_',
   },
   output_head =
 [==[
@@ -73,28 +74,22 @@ else
   cdefine 'SOKOL_GLCORE33'
 end
 -- sokol_gfx
-if not SOKOL_GFX_NO_IMPL then
-  cdefine 'SOKOL_GFX_API_DECL static'
-  cdefine 'SOKOL_GFX_IMPL'
-end
+cdefine 'SOKOL_GFX_API_DECL static'
+cdefine 'SOKOL_GFX_IMPL'
 cinclude 'sokol_gfx.h'
 if ccinfo.is_windows then
   linklib 'gdi32'
   linklib 'opengl32'
-else
+elseif not ccinfo.is_emscripten then
   linklib 'GL'
 end
 -- sokol_gp
-if not SOKOL_GP_NO_IMPL then
-  cdefine 'SOKOL_GP_API_DECL static'
-  cdefine 'SOKOL_GP_IMPL'
-end
+cdefine 'SOKOL_GP_API_DECL static'
+cdefine 'SOKOL_GP_IMPL'
 cinclude 'sokol_gp.h'
 -- sokol_app
-if not SOKOL_APP_NO_IMPL then
-  cdefine 'SOKOL_APP_API_DECL static'
-  cdefine 'SOKOL_APP_IMPL'
-end
+cdefine 'SOKOL_APP_API_DECL static'
+cdefine 'SOKOL_APP_IMPL'
 cdefine 'SOKOL_NO_ENTRY'
 cinclude 'sokol_app.h'
 if ccinfo.is_linux then
@@ -108,6 +103,10 @@ elseif ccinfo.is_windows then
   linklib 'user32'
   linklib 'shell32'
 end
+-- sokol_args
+cdefine 'SOKOL_ARGS_API_DECL static'
+cdefine 'SOKOL_ARGS_IMPL'
+cinclude 'sokol_args.h'
 ]]
 ]==],
   output_foot =

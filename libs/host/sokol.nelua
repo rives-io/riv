@@ -8,28 +8,22 @@ else
   cdefine 'SOKOL_GLCORE33'
 end
 -- sokol_gfx
-if not SOKOL_GFX_NO_IMPL then
-  cdefine 'SOKOL_GFX_API_DECL static'
-  cdefine 'SOKOL_GFX_IMPL'
-end
+cdefine 'SOKOL_GFX_API_DECL static'
+cdefine 'SOKOL_GFX_IMPL'
 cinclude 'sokol_gfx.h'
 if ccinfo.is_windows then
   linklib 'gdi32'
   linklib 'opengl32'
-else
+elseif not ccinfo.is_emscripten then
   linklib 'GL'
 end
 -- sokol_gp
-if not SOKOL_GP_NO_IMPL then
-  cdefine 'SOKOL_GP_API_DECL static'
-  cdefine 'SOKOL_GP_IMPL'
-end
+cdefine 'SOKOL_GP_API_DECL static'
+cdefine 'SOKOL_GP_IMPL'
 cinclude 'sokol_gp.h'
 -- sokol_app
-if not SOKOL_APP_NO_IMPL then
-  cdefine 'SOKOL_APP_API_DECL static'
-  cdefine 'SOKOL_APP_IMPL'
-end
+cdefine 'SOKOL_APP_API_DECL static'
+cdefine 'SOKOL_APP_IMPL'
 cdefine 'SOKOL_NO_ENTRY'
 cinclude 'sokol_app.h'
 if ccinfo.is_linux then
@@ -43,6 +37,10 @@ elseif ccinfo.is_windows then
   linklib 'user32'
   linklib 'shell32'
 end
+-- sokol_args
+cdefine 'SOKOL_ARGS_API_DECL static'
+cdefine 'SOKOL_ARGS_IMPL'
+cinclude 'sokol_args.h'
 ]]
 global sg_buffer: type <cimport,nodecl> = @record{
   id: uint32
@@ -1480,6 +1478,18 @@ global sapp_mouse_cursor: type <cimport,nodecl,using> = @enum(cint){
   SAPP_MOUSECURSOR_NOT_ALLOWED = 10,
   _SAPP_MOUSECURSOR_NUM = 11
 }
+global sargs_allocator: type <cimport,nodecl> = @record{
+  alloc: function(size: csize, user_data: pointer): pointer,
+  free: function(ptr: pointer, user_data: pointer): void,
+  user_data: pointer
+}
+global sargs_desc: type <cimport,nodecl> = @record{
+  argc: cint,
+  argv: *cstring,
+  max_args: cint,
+  buf_size: cint,
+  allocator: sargs_allocator
+}
 global function sg_setup(desc: *sg_desc): void <cimport,nodecl> end
 global function sg_shutdown(): void <cimport,nodecl> end
 global function sg_isvalid(): boolean <cimport,nodecl> end
@@ -1681,6 +1691,18 @@ global function sapp_wgpu_get_render_view(): pointer <cimport,nodecl> end
 global function sapp_wgpu_get_resolve_view(): pointer <cimport,nodecl> end
 global function sapp_wgpu_get_depth_stencil_view(): pointer <cimport,nodecl> end
 global function sapp_android_get_native_activity(): pointer <cimport,nodecl> end
+global function sargs_setup(desc: *sargs_desc): void <cimport,nodecl> end
+global function sargs_shutdown(): void <cimport,nodecl> end
+global function sargs_isvalid(): boolean <cimport,nodecl> end
+global function sargs_exists(key: cstring): boolean <cimport,nodecl> end
+global function sargs_value(key: cstring): cstring <cimport,nodecl> end
+global function sargs_value_def(key: cstring, def: cstring): cstring <cimport,nodecl> end
+global function sargs_equals(key: cstring, val: cstring): boolean <cimport,nodecl> end
+global function sargs_boolean(key: cstring): boolean <cimport,nodecl> end
+global function sargs_find(key: cstring): cint <cimport,nodecl> end
+global function sargs_num_args(): cint <cimport,nodecl> end
+global function sargs_key_at(index: cint): cstring <cimport,nodecl> end
+global function sargs_value_at(index: cint): cstring <cimport,nodecl> end
 global SGP_BATCH_OPTIMIZER_DEPTH: cint <comptime> = 8
 global SGP_UNIFORM_CONTENT_SLOTS: cint <comptime> = 4
 global SGP_TEXTURE_SLOTS: cint <comptime> = 4

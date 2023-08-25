@@ -21,6 +21,7 @@ update-sha3:
 update-sokol:
 	wget -O host/sokol_gfx.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_gfx.h
 	wget -O host/sokol_app.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_app.h
+	wget -O host/sokol_args.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_args.h
 
 update-miniaudio:
 	wget -O host/miniaudio.h https://raw.githubusercontent.com/mackron/miniaudio/$(MINIAUDIO_BRANCH)/miniaudio.h

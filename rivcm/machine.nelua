@@ -12,7 +12,7 @@ global riv_paddr_base: type <using> = @enum(uint64) {
   RIV_PADDR_CARTRIDGE  = 0x90000000000000,
 }
 
-global RIV_MEMSIZE_RAM: uint64 <comptime> = 128*1024*1024
+global RIV_MEMSIZE_RAM: uint64 <comptime> = 96*1024*1024
 global RIV_MEMSIZE_CARTRIDGE: uint64< comptime> = 2*1024*1024
 
 --------------------------------------------------------------------------------

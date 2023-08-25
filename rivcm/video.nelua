@@ -36,8 +36,6 @@ function rivcm_video.shutdown(): void
   destroy_framebuffer_image()
   fb_desc = {}
   fb_pixel_count = 0
-  framebuffer = {}
-  framebuffer_rgba = {}
 
   sgp_shutdown()
   sg_shutdown()
