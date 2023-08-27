@@ -38,6 +38,7 @@ distclean: clean
 
 ##################
 # Demo testing
+DEMO=snake
 
 demo:
 	$(MAKE) -C rootfs toolchain-exec COMMAND="make -C demos/$(DEMO)"
@@ -46,4 +47,4 @@ demo-clean:
 	$(MAKE) -C rootfs toolchain-exec COMMAND="make -C demos/$(DEMO) clean"
 
 demo-run:
-	./rivcm/rivcm -cartridge demos/$(DEMO)/$(DEMO).sqfs $(DEMO_ARGS)
+	$(MAKE) -C demos/$(DEMO) run

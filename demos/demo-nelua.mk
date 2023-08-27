@@ -73,7 +73,7 @@ all: $(DEMO_NAME).sqfs
 	cat $*.hash.txt
 
 run:
-	cd ../.. && ./rivcm/rivcm -cartridge demos/$(DEMO_NAME)/$(DEMO_NAME).sqfs $(DEMO_ARGS)
+	cd ../.. && ./rivcm/rivcm -cartridge=demos/$(DEMO_NAME)/$(DEMO_NAME).sqfs $(DEMO_ARGS)
 
 clean:
 	rm -f *.c *.txt *.elf *.sqfs
