@@ -33,3 +33,7 @@
 
 # ignore kernel stuff
 kernel/image-kernel-*
+
+demos/doom
+demos/antcopter
+cartesi-machine-*_wasm

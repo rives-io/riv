@@ -41,7 +41,7 @@ distclean: clean
 DEMO=snake
 
 demo:
-	$(MAKE) -C rootfs toolchain-exec COMMAND="make -C demos/$(DEMO)"
+	$(MAKE) -C rootfs toolchain-exec COMMAND="make -C demos/$(DEMO) -j4"
 
 demo-clean:
 	$(MAKE) -C rootfs toolchain-exec COMMAND="make -C demos/$(DEMO) clean"

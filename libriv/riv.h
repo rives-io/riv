@@ -449,7 +449,7 @@ RIV_API uintptr_t riv_printf(const char* format, ...); // Print to standard outp
 RIV_API uintptr_t riv_snprintf(char* s, uintptr_t maxlen, const char* format, ...); // Print to standard output, use for debugging.
 
 // Basic
-RIV_API void riv_setup(riv_context* self, int32_t argc, const char** argv);
+RIV_API void riv_setup(riv_context* self, int32_t argc, char** argv);
 RIV_API void riv_shutdown(riv_context* self);
 RIV_API void riv_present(riv_context* self);
 RIV_API void riv_loop(riv_context* self, riv_context_callback frame_cb);

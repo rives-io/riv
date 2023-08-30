@@ -62,7 +62,7 @@ function riv_context:_init_prng(argc: int32, argv: *[0]cstring): void
 end
 
 function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_setup'>
-  $self = {}
+  memory.zero(self, #@riv_context)
   assert(not self.mmio_driver, 'riv already initialized')
   -- yield
   self.yield_fd = open("/dev/yield", O_RDWR, 0)
@@ -110,7 +110,8 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
 end
 
 function riv_context:shutdown(): void <cexport'riv_shutdown'>
-  assert(self.mmio_driver, 'riv not initialized')
+  -- ignore when not initialized
+  if not self.mmio_driver then return end
   -- tell the host we finished, the host may use inoutbuffer
   self:_ctl(RIV_CONTROL_CLOSE)
   -- unmap memory
@@ -122,7 +123,7 @@ function riv_context:shutdown(): void <cexport'riv_shutdown'>
   if self.yield_fd > 0 then
     assert(close(self.yield_fd) >= 0, 'close yield fd failed')
   end
-  $self = {}
+  memory.zero(self, #@riv_context)
 end
 
 function riv_context:_append_keystroke_entropy(key_code: uint8, down: boolean, frame: uint64): void

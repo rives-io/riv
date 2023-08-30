@@ -14,7 +14,8 @@ if ccinfo.is_emscripten then
   ldflags '-L./cartesi-machine-v0.15.2_wasm/lib'
 
   -- basic flags
-  cflags '-sFULL_ES3 -sTOTAL_MEMORY=134217728 -sNO_DISABLE_EXCEPTION_CATCHING=1'
+  local WASM_MEM = 384*1024*1024
+  cflags('-sFULL_ES3 -sTOTAL_MEMORY='..WASM_MEM..' -sNO_DISABLE_EXCEPTION_CATCHING=1')
 
   -- miniaudio worklets
   -- cdefine 'MA_ENABLE_AUDIO_WORKLETS'
@@ -26,8 +27,9 @@ if ccinfo.is_emscripten then
   cflags '--embed-file ./rootfs/rootfs.ext2'
   cflags '--embed-file ./kernel/linux.bin'
   cflags '--embed-file ./kernel/rom.bin'
-  cflags '--embed-file demos/antcopter/antcopter.sqfs'
-  cflags '--embed-file antcopter.rivlog'
+  -- cflags '--embed-file demos/antcopter/antcopter.sqfs'
+  cflags '--embed-file demos/doom/doom.sqfs'
+  -- cflags '--embed-file antcopter.rivlog'
   cflags '--shell-file ./rivcm/shell_minimal.html'
 end
 ]]
@@ -61,80 +63,75 @@ local function parse_options(): rivcm_options
   local opts: rivcm_options = {
     speed = 1.0
   }
-  local entrypoint_args: boolean = false
-  local entrypoint_sb: stringbuilder <close>
-  local argi: usize = 1
+  local entrypoint_args: string
   for i=0,<sargs_num_args() do
     local a: string = sargs_key_at(i)
-    if not entrypoint_args then
-      if a == '-record' then
-        assert(not opts.replaying, 'already replaying')
-        opts.recording = true
-        opts.replay_filename = sargs_value_at(i)
-        argi = argi + 1
-      elseif a == '-replay' then
-        assert(not opts.recording, 'already recording')
-        opts.replaying = true
-        opts.replay_filename = sargs_value_at(i)
-        argi = argi + 1
-      elseif a == '-cartridge' then
-        entrypoint_sb:write('cartridge-run')
-        opts.cartridge_filename = sargs_value_at(i)
-        argi = argi + 1
-      elseif a == '-load-incard' then
-        opts.incard_filename = sargs_value_at(i)
-        argi = argi + 1
-      elseif a == '-save-outcard' then
-        opts.outcard_filename = sargs_value_at(i)
-        argi = argi + 1
-      elseif a == '-save-outhash' then
-        opts.outhash_filename = sargs_value_at(i)
-        argi = argi + 1
-      elseif a == '-speed' then
-        local numstr: string = sargs_value_at(i)
-        assert(numstr:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
-        opts.speed = tonumber(numstr)
-        assert(opts.speed > 0.0, 'speed must be positive')
-        argi = argi + 1
-      elseif a == '-print-stats' then
-        opts.print_stats = true
-      elseif a == '--' then
-        entrypoint_args = true
-      elseif a == '-help' or a == '--help' or a == '-h' then
-        io.stderr:printf("Usage: rivcm [options]\n")
-        io.stderr:write[[
+    if a == '-record' then
+      assert(not opts.replaying, 'already replaying')
+      opts.recording = true
+      opts.replay_filename = sargs_value_at(i)
+    elseif a == '-replay' then
+      assert(not opts.recording, 'already recording')
+      opts.replaying = true
+      opts.replay_filename = sargs_value_at(i)
+    elseif a == '-cartridge' then
+      opts.cartridge_filename = sargs_value_at(i)
+    elseif a == '-load-incard' then
+      opts.incard_filename = sargs_value_at(i)
+    elseif a == '-save-outcard' then
+      opts.outcard_filename = sargs_value_at(i)
+    elseif a == '-save-outhash' then
+      opts.outhash_filename = sargs_value_at(i)
+    elseif a == '-speed' then
+      local numstr: string = sargs_value_at(i)
+      assert(numstr:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
+      opts.speed = tonumber(numstr)
+      assert(opts.speed > 0.0, 'speed must be positive')
+    elseif a == '-print-stats' then
+      opts.print_stats = true
+    elseif a == '-args' then
+      entrypoint_args = sargs_value_at(i)
+    elseif a == '-help' or a == '--help' or a == '-h' then
+      io.stderr:printf("Usage: rivcm [options]\n")
+      io.stderr:write[[
 -print-fps
-    Print frame rate statistics every second.
+  Print frame rate statistics every second.
 
 -cartridge <filename>
-    Cartridge to run.
+  Cartridge to run.
 
 -load-incard <filename>
-    Load input card from a file.
+  Load input card from a file.
 
 -save-outcard <filename>
-    Save output card to a file.
+  Save output card to a file.
 
 -save-outhash <filename>
-    Save output card Keccak-256 hash to a file as a hexadecimal string.
+  Save output card Keccak-256 hash to a file as a hexadecimal string.
 
 -record <filename>
-    Record game to an input log.
+  Record game to an input log.
 
 -replay <filename>
-    Replay game from an input log.
+  Replay game from an input log.
 
 -speed <speed>
-    Set replay speed.
+  Set replay speed.
 ]]
-        os.exit(0)
-      else
-        error(string.format("unknown command line option '%s'", a))
-      end
+      os.exit(0)
     else
-      entrypoint_sb:write(' ', a)
+      error(string.format("unknown command line option '%s'", a))
     end
-    argi = argi + 1
+  end
+  local entrypoint_sb: stringbuilder <close>
+  if #opts.cartridge_filename > 0 then
+    entrypoint_sb:write('cartridge-run')
+  end
+  if #entrypoint_args > 0 then
+    if #entrypoint_sb > 0 then
+      entrypoint_sb:write(' ')
+    end
+    entrypoint_sb:write(entrypoint_args)
   end
   opts.entrypoint = entrypoint_sb:promote()
   return opts
@@ -256,6 +253,10 @@ local function advance_frame(): void
   local now: float64 = os.now()
   local time_elapsed: float64 = now - time_start
   local mcycle_elapsed: uint64 = machine:read_mcycle() - mcycle_start
+
+  if time_elapsed > 1.0/24.0 then
+    io.stderr:printf('[RIVCM] slow frame: %.2f ms, %.2f MHz\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
+  end
 
   -- force quit when replay ends
   if not quit and replay_finished then
