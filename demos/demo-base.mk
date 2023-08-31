@@ -1,7 +1,7 @@
 # Auto detect toolchain to use
 HOST_ARCH=$(shell uname -m)
 ifeq ($(HOST_ARCH),riscv64)
-	TOOLCHAIN_PREFIX=
+	TOOLCHAIN_PREFIX?=
 	CC=$(TOOLCHAIN_PREFIX)gcc
 else
 	CC=riscv64-linux-musl-gcc
@@ -15,7 +15,8 @@ STRIP=$(TOOLCHAIN_PREFIX)strip
 STRINGS=$(TOOLCHAIN_PREFIX)strings
 SSTRIP=sstrip
 ELFTOC=elftoc
-OBJDUMP_FLAGS=--all-headers --disassemble --disassemble-zeroes
+OBJDUMP_FLAGS+=--all-headers --disassemble --disassemble-zeroes
+COMP?=xz
 
 # All of the following flags are known to help generating the small RISC-V ELF binaries
 CFLAGS+=-Os -ffast-math -DNDEBUG -flto=auto
@@ -75,11 +76,12 @@ $(NAME).hash.txt: $(NAME).min.elf $(NAME).sqfs
 $(NAME).sqfs: $(NAME).fs
 	mksquashfs $< $@ \
 	    -quiet \
-	    -comp xz \
+	    -comp $(COMP) \
 	    -mkfs-time 0 \
 	    -all-time 0 \
 	    -all-root \
 	    -nopad \
+	    -noappend \
 	    -no-fragments \
 	    -no-exports \
 	    -no-progress
