@@ -246,6 +246,19 @@ typedef enum riv_waveform_type {
   RIV_WAVEFORM_PULSE,
 } riv_waveform_type;
 
+typedef enum riv_sound_format {
+  RIV_SOUNDFORMAT_NONE = 0,
+  RIV_SOUNDFORMAT_U8,  // 8-bit unsigned integer                 [0, 255]
+  RIV_SOUNDFORMAT_S16, // 16-bit signed integer                  [-32768, 32767]
+  RIV_SOUNDFORMAT_S24, // 24-bit signed integer (tightly packed) [-8388608, 8388607]
+  RIV_SOUNDFORMAT_S32, // 32-bit signed integer                  [-2147483648, 2147483647]
+  RIV_SOUNDFORMAT_F32, // 32-bit floating point                  [-1, 1]
+  RIV_SOUNDFORMAT_WAV,
+  RIV_SOUNDFORMAT_FLAC,
+  RIV_SOUNDFORMAT_MP3,
+  RIV_SOUNDFORMAT_VORBIS,
+} riv_sound_format;
+
 // The next constants are used to implement the driver
 
 typedef enum riv_control_reason {
@@ -258,9 +271,10 @@ typedef enum riv_control_reason {
 
 typedef enum riv_audio_command_type {
   RIV_AUDIOCOMMAND_NONE = 0,
+  RIV_AUDIOCOMMAND_MAKE_SOUND_BUFFER,
+  RIV_AUDIOCOMMAND_DESTROY_SOUND_BUFFER,
+  RIV_AUDIOCOMMAND_SOUND,
   RIV_AUDIOCOMMAND_WAVEFORM,
-  RIV_AUDIOCOMMAND_SOUND_PLAY,
-  RIV_AUDIOCOMMAND_SOUND_STOP,
 } riv_audio_command_type;
 
 typedef enum riv_mem_size {
@@ -297,8 +311,8 @@ typedef uint32_t* riv_unbounded_uint32;
 typedef bool* riv_unbounded_bool;
 
 typedef struct riv_span_uint8 {
-  riv_unbounded_uint8 data;
-  uintptr_t size;
+  uint8_t* data;
+  uint64_t size;
 } riv_span_uint8;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -311,8 +325,31 @@ typedef struct riv_framebuffer_desc {
   riv_pixel_format pixel_format;
 } riv_framebuffer_desc;
 
+typedef struct riv_sound_buffer_desc {
+  uint64_t id;              // Sound buffer id (filled automatically)
+  riv_sound_format format;  // Sound format
+  uint32_t channels;        // Sound channels (0 = auto detect)
+  uint32_t sample_rate;     // Sound sample rate (0 = auto detect)
+  riv_span_uint8 data;      // Sound data
+} riv_sound_buffer_desc;
+
+typedef struct riv_sound_desc {
+  uint64_t id;        // Sound id (used only when updating a sound)
+  uint64_t buffer_id; // Sound buffer id
+  uint32_t delay;     // Start delay time in milliseconds (0 = no delay)
+  uint32_t duration;  // Duration in milliseconds (0 = let id end, 0xffffffff = loop)
+  uint32_t fade_in;   // Fade in time in milliseconds (0 = no fade in)
+  uint32_t fade_out;  // Fade out time in milliseconds (0 = no fade out)
+  uint32_t seek;      // Seek in time in milliseconds (0 = no seek, 0xfffffffe = rewind, 0xffffffff = stop)
+  float volume;       // Volume gain in range 0.0 - 1.0
+  float pan;          // Pan (-1.0 = pan left, 0.0 = no pan, 1.0 = pan right)
+  float pitch;        // Pitch (0.0 = no pitch change)
+} riv_sound_desc;
+
 typedef struct riv_waveform_desc {
+  uint64_t id;            // Sound id (filled automatically)
   riv_waveform_type type; // Waveform type
+  float delay;            // Start delay in seconds
   float attack;           // Attack duration in seconds
   float decay;            // Decay duration in seconds
   float sustain;          // Sustain duration in seconds
@@ -323,26 +360,12 @@ typedef struct riv_waveform_desc {
   float sustain_level;    // Sustain level, in range [0.0, 1.0]
   float duty_cycle;       // Duty cycle, in range [0.0, 1.0]
   float pan;              // Panning, in range [-1.0, 1.0]
-  // float pwm;              // Pulse width modulation (NIY)
-  // float pam;              // Pulse amplitude modulation (NIY)
 } riv_waveform_desc;
 
-typedef struct riv_sound_play_desc {
-  uint64_t handle_id;
-  uint32_t flags; // NIY
-  uint32_t channel_id;
-  uint32_t buf_off; // NIY
-  uint32_t buf_len;
-  uint32_t seek; // NIY
-  uint32_t fade_in; // NIY
-  float amplitude;
-  float pitch; // NIY
-  float pan; // NIY
-} riv_sound_play_desc;
-
 typedef union riv_audio_command_desc {
+  riv_sound_buffer_desc sound_buffer;
+  riv_sound_desc sound;
   riv_waveform_desc waveform;
-  riv_sound_play_desc sound_play;
 } riv_audio_command_desc;
 
 typedef struct riv_audio_command {
@@ -422,7 +445,9 @@ typedef struct riv_context {
   riv_mmio_driver* mmio_driver;
   riv_mmio_device* mmio_device;
   int32_t yield_fd;
-  uint64_t sound_handle_gen;
+  uint32_t audiobuffer_off;
+  uint64_t sound_gen;
+  uint64_t sound_buffer_gen;
   uint32_t entropy_index;
   uint32_t entropy_size;
   uint64_t entropy[128];
@@ -443,10 +468,10 @@ typedef struct riv_run_desc {
 // API
 
 // Utilities
-RIV_API uint64_t riv_version(void);            // Get the RIV library version
-RIV_API uint64_t riv_rdcycle(void);            // Get the current machine cycle, THIS IS NOT REPRODUCIBLE, use for benchmarking only.
-RIV_API uintptr_t riv_printf(const char* format, ...); // Print to standard output, use for debugging.
-RIV_API uintptr_t riv_snprintf(char* s, uintptr_t maxlen, const char* format, ...); // Print to standard output, use for debugging.
+RIV_API uint64_t riv_version(void); // Get the RIV library version
+RIV_API uint64_t riv_rdcycle(void); // Get the current machine cycle, THIS IS NOT REPRODUCIBLE, use for benchmarking only.
+RIV_API uint64_t riv_printf(const char* format, ...); // Print to standard output, use for debugging.
+RIV_API uint64_t riv_snprintf(char* s, uint64_t maxlen, const char* format, ...); // Print to standard output, use for debugging.
 
 // Basic
 RIV_API void riv_setup(riv_context* self, int32_t argc, char** argv);
@@ -456,9 +481,10 @@ RIV_API void riv_loop(riv_context* self, riv_context_callback frame_cb);
 RIV_API void riv_run(riv_run_desc* run_desc);
 
 // Sound system
-RIV_API uint64_t riv_sound_play_from_memory(riv_context* self, riv_span_uint8 data, uint32_t vol);
-RIV_API void riv_sound_stop(riv_context* self, uint64_t sound_id);
-RIV_API void riv_waveform(riv_context* self, riv_waveform_desc waveform);
+RIV_API uint64_t riv_make_sound_buffer(riv_context* self, riv_sound_buffer_desc desc);
+RIV_API void riv_destroy_sound_buffer(riv_context* self, uint64_t id);
+RIV_API uint64_t riv_sound(riv_context* self, riv_sound_desc desc);
+RIV_API uint64_t riv_waveform(riv_context* self, riv_waveform_desc desc);
 
 // Pseudo random number generator (PRNG)
 RIV_API void riv_srand(riv_prng* self, uint64_t a, uint64_t b);

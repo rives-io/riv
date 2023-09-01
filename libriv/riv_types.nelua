@@ -171,6 +171,18 @@ global riv_waveform_type: type <using> = @enum(uint32){
   RIV_WAVEFORM_NOISE = 5,
   RIV_WAVEFORM_PULSE = 6
 }
+global riv_sound_format: type <using> = @enum(uint32){
+  RIV_SOUNDFORMAT_NONE = 0,
+  RIV_SOUNDFORMAT_U8 = 1,
+  RIV_SOUNDFORMAT_S16 = 2,
+  RIV_SOUNDFORMAT_S24 = 3,
+  RIV_SOUNDFORMAT_S32 = 4,
+  RIV_SOUNDFORMAT_F32 = 5,
+  RIV_SOUNDFORMAT_WAV = 6,
+  RIV_SOUNDFORMAT_FLAC = 7,
+  RIV_SOUNDFORMAT_MP3 = 8,
+  RIV_SOUNDFORMAT_VORBIS = 9
+}
 global riv_control_reason: type <using> = @enum(uint32){
   RIV_CONTROL_NONE = 0,
   RIV_CONTROL_OPEN = 1,
@@ -180,9 +192,10 @@ global riv_control_reason: type <using> = @enum(uint32){
 }
 global riv_audio_command_type: type <using> = @enum(uint32){
   RIV_AUDIOCOMMAND_NONE = 0,
-  RIV_AUDIOCOMMAND_WAVEFORM = 1,
-  RIV_AUDIOCOMMAND_SOUND_PLAY = 2,
-  RIV_AUDIOCOMMAND_SOUND_STOP = 3
+  RIV_AUDIOCOMMAND_MAKE_SOUND_BUFFER = 1,
+  RIV_AUDIOCOMMAND_DESTROY_SOUND_BUFFER = 2,
+  RIV_AUDIOCOMMAND_SOUND = 3,
+  RIV_AUDIOCOMMAND_WAVEFORM = 4
 }
 global riv_mem_size: type <using> = @enum(uint64){
   RIV_MEMSIZE_HUGEPAGE = 2097152,
@@ -207,14 +220,39 @@ global riv_vaddr_base: type <using> = @enum(uint64){
   RIV_VADDR_AUDIOBUFFER = 268959744,
   RIV_VADDR_FRAMEBUFFER = 269484032
 }
+global riv_span_uint8: type = @record{
+  data: *uint8,
+  size: uint64
+}
 global riv_framebuffer_desc: type = @record{
   height: uint32,
   width: uint32,
   fps: uint32,
   pixel_format: riv_pixel_format
 }
+global riv_sound_buffer_desc: type = @record{
+  id: uint64,
+  format: riv_sound_format,
+  channels: uint32,
+  sample_rate: uint32,
+  data: riv_span_uint8
+}
+global riv_sound_desc: type = @record{
+  id: uint64,
+  buffer_id: uint64,
+  delay: uint32,
+  duration: uint32,
+  fade_in: uint32,
+  fade_out: uint32,
+  seek: uint32,
+  volume: float32,
+  pan: float32,
+  pitch: float32
+}
 global riv_waveform_desc: type = @record{
+  id: uint64,
   type: riv_waveform_type,
+  delay: float32,
   attack: float32,
   decay: float32,
   sustain: float32,
@@ -226,21 +264,10 @@ global riv_waveform_desc: type = @record{
   duty_cycle: float32,
   pan: float32
 }
-global riv_sound_play_desc: type = @record{
-  handle_id: uint64,
-  flags: uint32,
-  channel_id: uint32,
-  buf_off: uint32,
-  buf_len: uint32,
-  seek: uint32,
-  fade_in: uint32,
-  amplitude: float32,
-  pitch: float32,
-  pan: float32
-}
 global riv_audio_command_desc: type = @union{
-  waveform: riv_waveform_desc,
-  sound_play: riv_sound_play_desc
+  sound_buffer: riv_sound_buffer_desc,
+  sound: riv_sound_desc,
+  waveform: riv_waveform_desc
 }
 global riv_audio_command: type = @record{
   type: riv_audio_command_type,
@@ -299,7 +326,9 @@ global riv_context: type = @record{
   mmio_driver: *riv_mmio_driver,
   mmio_device: *riv_mmio_device,
   yield_fd: int32,
-  sound_handle_gen: uint64,
+  audiobuffer_off: uint32,
+  sound_gen: uint64,
+  sound_buffer_gen: uint64,
   entropy_index: uint32,
   entropy_size: uint32,
   entropy: [128]uint64

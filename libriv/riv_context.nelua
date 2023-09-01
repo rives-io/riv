@@ -163,6 +163,12 @@ function riv_context:_poll_inputs(): void
   end
 end
 
+function riv_context:_flush_audio():  void
+  self:_ctl(RIV_CONTROL_FLUSH_AUDIO)
+  self.mmio_driver.audio_command_len = 0
+  self.audiobuffer_off = 0
+end
+
 function riv_context:present(): void <cexport'riv_present'>
   -- copy outcard description to driver
   self.mmio_driver.outcard_format = self.outcard_format
@@ -174,6 +180,7 @@ function riv_context:present(): void <cexport'riv_present'>
   self.mmio_driver.frame = self.frame
   -- audio commands was flushed
   self.mmio_driver.audio_command_len = 0
+  self.audiobuffer_off = 0
   -- poll keyboard inputs
   self:_poll_inputs()
 end
@@ -190,49 +197,71 @@ function riv_context:_queue_audio_command(command: riv_audio_command): void
   local command_idx: uint32 = self.mmio_driver.audio_command_len
   self.mmio_driver.audio_commands[command_idx] = command
   self.mmio_driver.audio_command_len = command_idx + 1
-  if command_idx >= #self.mmio_driver.audio_commands then
-    self:_ctl(RIV_CONTROL_FLUSH_AUDIO)
-    self.mmio_driver.audio_command_len = 0
+  if self.mmio_driver.audio_command_len >= #self.mmio_driver.audio_commands then
+    self:_flush_audio()
   end
 end
 
-function riv_context:sound_play_from_memory(data: span(byte), amplitude: uint32): uint64 <cexport'riv_sound_play_from_memory'>
-  local handle_id: uint64 = self.sound_handle_gen + 1
-  self.sound_handle_gen = handle_id
-  memory.spancopy(span_uint8(self.audiobuffer), data)
-  local command: riv_audio_command = {
-    type = RIV_AUDIOCOMMAND_SOUND_PLAY,
-    desc = {
-      sound_play = {
-        handle_id = handle_id,
-        buf_off = 0,
-        buf_len = #data,
-        amplitude = amplitude,
-      }
-    }
+function riv_context:make_sound_buffer(desc: riv_sound_buffer_desc): uint64 <cexport'riv_make_sound_buffer'>
+  -- silently ignore invalid id field
+  if desc.id ~= 0 then return 0 end
+  -- TODO: we could send in multiple chunks
+  assert(desc.data.size <= RIV_MEMSIZE_AUDIOBUFFER, 'sound buffer is too large')
+  -- flush previous audio buffer if there is not enough space
+  if self.audiobuffer_off + desc.data.size > RIV_MEMSIZE_AUDIOBUFFER then
+    self:_flush_audio()
+  end
+  -- copy buffer
+  memory.copy(&self.audiobuffer[self.audiobuffer_off], desc.data.data, desc.data.size)
+  desc.data.data = (@*byte)((@usize)(self.audiobuffer_off))
+  self.audiobuffer_off = self.audiobuffer_off + desc.data.size
+  -- choose sound buffer id
+  local id: uint64 = self.sound_buffer_gen + 1
+  self.sound_buffer_gen = id
+  desc.id = id
+  -- queue command
+  self:_queue_audio_command{
+    type = RIV_AUDIOCOMMAND_MAKE_SOUND_BUFFER,
+    desc = {sound_buffer = desc},
   }
-  self:_queue_audio_command(command)
-  return handle_id
+  return desc.id
 end
 
-function riv_context:sound_stop(handle_id: uint64): void <cexport'riv_sound_stop'>
-  local command: riv_audio_command = {
-    type = RIV_AUDIOCOMMAND_SOUND_STOP,
-    desc = {
-      sound_play = {
-        handle_id = handle_id,
-      }
-    }
+function riv_context:destroy_sound_buffer(id: uint64): void <cexport'riv_destroy_sound_buffer'>
+  -- queue command
+  self:_queue_audio_command{
+    type = RIV_AUDIOCOMMAND_DESTROY_SOUND_BUFFER,
+    desc = {sound_buffer = {id=id}},
   }
-  self:_queue_audio_command(command)
 end
 
-function riv_context:waveform(waveform: riv_waveform_desc): void <cexport'riv_waveform'>
-    local command: riv_audio_command = {
+function riv_context:sound(desc: riv_sound_desc): uint64 <cexport'riv_sound'>
+  -- choose sound id
+  if desc.id == 0 then
+    if desc.buffer_id == 0 then return 0 end -- nothing to play
+    local id: uint64 = self.sound_gen + 1
+    self.sound_gen = id
+    desc.id = id
+  end
+  -- queue command
+  self:_queue_audio_command{
+    type = RIV_AUDIOCOMMAND_SOUND,
+    desc = {sound = desc}
+  }
+  return desc.id
+end
+
+function riv_context:waveform(desc: riv_waveform_desc): uint64 <cexport'riv_waveform'>
+  -- choose sound id
+  local id: uint64 = self.sound_gen + 1
+  self.sound_gen = id
+  desc.id = id
+  -- queue command
+  self:_queue_audio_command{
     type = RIV_AUDIOCOMMAND_WAVEFORM,
-    desc = {waveform = waveform}
+    desc = {waveform = desc}
   }
-  self:_queue_audio_command(command)
+  return id
 end
 
 global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>

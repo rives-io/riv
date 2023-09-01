@@ -18,11 +18,14 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cimport'riv_se
 function riv_context:shutdown(): void <cimport'riv_shutdown'> end
 function riv_context:present(): void <cimport'riv_present'> end
 function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cimport'riv_loop'> end
-function riv_context:sound_play_from_memory(data: span(byte), vol: uint32): uint64 <cimport'riv_sound_play_from_memory'> end
-function riv_context:sound_stop(source: uint64): void <cimport'riv_sound_stop'> end
-function riv_context:waveform(waveform: riv_waveform_desc): void <cimport'riv_waveform'> end
 
 global function riv_run(run_desc: *riv_run_desc): void <cimport'riv_run'> end
+
+-- sound system
+function riv_context:make_sound_buffer(desc: riv_sound_buffer_desc): uint64 <cimport'riv_make_sound_buffer'> end
+function riv_context:destroy_sound_buffer(id: uint64): void <cimport'riv_destroy_sound_buffer'> end
+function riv_context:sound(desc: riv_sound_desc): uint64 <cimport'riv_sound'> end
+function riv_context:waveform(desc: riv_waveform_desc): uint64 <cimport'riv_waveform'> end
 
 -- prng
 function riv_prng:srand(a: uint64, b: uint64): void <cimport'riv_srand'> end

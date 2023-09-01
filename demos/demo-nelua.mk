@@ -3,7 +3,7 @@ include ../demo-base.mk
 NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 NELUA_FLAGS+=-L../../libriv/?.nelua
 
-%.elf: %.nelua *.nelua ../../libriv/*.nelua ../../libriv/*.h
+$(NAME).elf: $(NAME).nelua *.nelua ../../libriv/*.nelua ../../libriv/*.h
 	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
