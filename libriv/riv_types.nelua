@@ -240,11 +240,11 @@ global riv_sound_buffer_desc: type = @record{
 global riv_sound_desc: type = @record{
   id: uint64,
   buffer_id: uint64,
-  delay: uint32,
-  duration: uint32,
-  fade_in: uint32,
-  fade_out: uint32,
-  seek: uint32,
+  delay: float32,
+  duration: float32,
+  fade_in: float32,
+  fade_out: float32,
+  seek: float32,
   volume: float32,
   pan: float32,
   pitch: float32

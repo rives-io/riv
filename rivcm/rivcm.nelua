@@ -27,7 +27,7 @@ if ccinfo.is_emscripten then
   cflags '--embed-file ./rootfs/rootfs.ext2'
   cflags '--embed-file ./kernel/linux.bin'
   cflags '--embed-file ./kernel/rom.bin'
-  -- cflags '--embed-file demos/antcopter/antcopter.sqfs'
+  cflags '--embed-file demos/antcopter/antcopter.sqfs'
   cflags '--embed-file demos/doom/doom.sqfs'
   -- cflags '--embed-file antcopter.rivlog'
   cflags '--shell-file ./rivcm/shell_minimal.html'

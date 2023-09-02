@@ -336,11 +336,11 @@ typedef struct riv_sound_buffer_desc {
 typedef struct riv_sound_desc {
   uint64_t id;        // Sound id (used only when updating a sound)
   uint64_t buffer_id; // Sound buffer id
-  uint32_t delay;     // Start delay time in milliseconds (0 = no delay)
-  uint32_t duration;  // Duration in milliseconds (0 = let id end, 0xffffffff = loop)
-  uint32_t fade_in;   // Fade in time in milliseconds (0 = no fade in)
-  uint32_t fade_out;  // Fade out time in milliseconds (0 = no fade out)
-  uint32_t seek;      // Seek in time in milliseconds (0 = no seek, 0xfffffffe = rewind, 0xffffffff = stop)
+  float delay;        // Start delay time in seconds (0 = no delay)
+  float duration;     // Duration in seconds (0 = let id end, -1 = loop)
+  float fade_in;      // Fade in time in seconds (0 = no fade in)
+  float fade_out;     // Fade out time in seconds (0 = no fade out)
+  float seek;         // Seek in time in seconds (0 = no seek, -1 = stop)
   float volume;       // Volume gain in range 0.0 - 1.0
   float pan;          // Pan (-1.0 = pan left, 0.0 = no pan, 1.0 = pan right)
   float pitch;        // Pitch (0.0 = no pitch change)
