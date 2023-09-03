@@ -267,7 +267,7 @@ local function advance_frame(): void
   if quit then
     sapp_quit()
   else
-    framelimiter.max_fps = machine.mmio_driver.framebuffer_desc.fps * options.speed
+    framelimiter.target_fps = machine.mmio_driver.framebuffer_desc.target_fps * options.speed
     if options.print_stats then
       framelimiter:print_stats(now, time_elapsed, mcycle_elapsed)
     end
@@ -281,7 +281,7 @@ local function frame(): void
   if not machine:is_mmio_ready() then -- first frame
     advance_frame()
     framelimiter.last_frame_time = os.now()
-  elseif framelimiter.max_fps <= refresh_rate then
+  elseif framelimiter.target_fps <= refresh_rate then
     if framelimiter:should_process_next_frame(os.now()) then
       advance_frame()
     end

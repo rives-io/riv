@@ -6,7 +6,7 @@ require '.machine'
 
 global rivcm_iocard: type = @record{}
 
-local outbuffer: [RIV_MEMSIZE_INOUTBUFFER]byte
+local outbuffer: [RIV_MMIOSIZE_INOUTBUFFER]byte
 local outcard_data: span(byte)
 local outcard_format: riv_card_format
 
@@ -20,14 +20,14 @@ end
 
 function rivcm_iocard.update_outcard(): void
   outcard_format = machine.mmio_driver.outcard_format
-  outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_MEMSIZE_INOUTBUFFER)
+  outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_MMIOSIZE_INOUTBUFFER)
   machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, outcard_data)
 end
 
 function rivcm_iocard.load_incard(filename: string): void
   local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
   local contents: string <close> = fn_assert!(file:read('a'))
-  local data: span(byte) = {data=contents.data, size=math.min(RIV_MEMSIZE_INOUTBUFFER, contents.size)}
+  local data: span(byte) = {data=contents.data, size=math.min(RIV_MMIOSIZE_INOUTBUFFER, contents.size)}
   machine:write_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, data)
   machine.mmio_device.incard_len = data.size
   -- TODO: detect type from filename

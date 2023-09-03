@@ -32,7 +32,7 @@ function riv_context:_init_default_palette(): void
   self.mmio_driver.palette[RIV_PAL16_LIGHTPEACH] = RIV_RGB_PAL16_LIGHTPEACH
 end
 
-function riv_context:_ctl(reason: riv_control_reason): void
+function riv_context:_ctl(reason: riv_control_command): void
   assert(self.mmio_driver, 'riv not initialized')
   local IOCTL_YIELD: usize <comptime> = 0xc008d100
   local HTIF_DEVICE_YIELD: uint8 <comptime> = 2
@@ -72,10 +72,10 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
   local prot: cint = PROT_READ | PROT_WRITE
   local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE | MAP_HUGETLB
   local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
-  assert(mmap(mmio, RIV_MEMSIZE_HUGEPAGE, prot, flags, -1, 0) == mmio, 'mmap failed')
+  assert(mmap(mmio, RIV_MMIOSIZE_HUGEPAGE, prot, flags, -1, 0) == mmio, 'mmap failed')
   assert(get_free_hugepages() == 0, 'no used hugepage')
   -- initialize device
-  memory.zero(mmio, RIV_MEMSIZE_HUGEPAGE)
+  memory.zero(mmio, RIV_MMIOSIZE_HUGEPAGE)
   self.mmio_driver = (@*riv_mmio_driver)(RIV_VADDR_MMIO_DRIVER)
   self.mmio_device = (@*riv_mmio_device)(RIV_VADDR_MMIO_DEVICE)
   self.mmio_driver.header = {
@@ -87,12 +87,12 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
   self.mmio_driver.framebuffer_desc = {
     width = RIV_DEFAULT_WIDTH,
     height = RIV_DEFAULT_HEIGHT,
-    fps = RIV_DEFAULT_FPS,
+    target_fps = RIV_DEFAULT_TARGET_FPS,
     pixel_format = RIV_DEFAULT_PIXELFORMAT,
   }
-  self.inoutbuffer = (@*[RIV_MEMSIZE_INOUTBUFFER]byte)(RIV_VADDR_INOUTBUFFER)
-  self.framebuffer = (@*[RIV_MEMSIZE_FRAMEBUFFER]byte)(RIV_VADDR_FRAMEBUFFER)
-  self.audiobuffer = (@*[RIV_MEMSIZE_AUDIOBUFFER]byte)(RIV_VADDR_AUDIOBUFFER)
+  self.inoutbuffer = (@*[RIV_MMIOSIZE_INOUTBUFFER]byte)(RIV_VADDR_INOUTBUFFER)
+  self.framebuffer = (@*[RIV_MMIOSIZE_FRAMEBUFFER]byte)(RIV_VADDR_FRAMEBUFFER)
+  self.audiobuffer = (@*[RIV_MMIOSIZE_AUDIOBUFFER]byte)(RIV_VADDR_AUDIOBUFFER)
   -- aliases
   self.framebuffer_desc = &self.mmio_driver.framebuffer_desc
   self.tracked_keys = &self.mmio_driver.tracked_keys
@@ -103,10 +103,11 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
   self:_init_default_palette()
   -- retrieve input card from host
   self:_ctl(RIV_CONTROL_OPEN)
-  self.incard_len = self.mmio_device.incard_len & (RIV_MEMSIZE_INOUTBUFFER-1)
+  self.incard_len = self.mmio_device.incard_len & (RIV_MMIOSIZE_INOUTBUFFER-1)
   self.incard_format = self.mmio_device.incard_format
   -- initialize prng
   self:_init_prng(argc, argv)
+  self.valid = true
 end
 
 function riv_context:shutdown(): void <cexport'riv_shutdown'>
@@ -116,8 +117,8 @@ function riv_context:shutdown(): void <cexport'riv_shutdown'>
   self:_ctl(RIV_CONTROL_CLOSE)
   -- unmap memory
   local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
-  memory.zero(mmio, RIV_MEMSIZE_HUGEPAGE)
-  assert(munmap(mmio, RIV_MEMSIZE_HUGEPAGE) == 0, 'munmap failed')
+  memory.zero(mmio, RIV_MMIOSIZE_HUGEPAGE)
+  assert(munmap(mmio, RIV_MMIOSIZE_HUGEPAGE) == 0, 'munmap failed')
   assert(get_free_hugepages() == 1, 'no freed hugepage')
   -- close yield device
   if self.yield_fd > 0 then
@@ -163,7 +164,7 @@ function riv_context:_poll_inputs(): void
   end
 end
 
-function riv_context:_flush_audio():  void
+function riv_context:_flush_audio(): void
   self:_ctl(RIV_CONTROL_FLUSH_AUDIO)
   self.mmio_driver.audio_command_len = 0
   self.audiobuffer_off = 0
@@ -202,13 +203,13 @@ function riv_context:_queue_audio_command(command: riv_audio_command): void
   end
 end
 
-function riv_context:make_sound_buffer(desc: riv_sound_buffer_desc): uint64 <cexport'riv_make_sound_buffer'>
+function riv_context:make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <cexport'riv_make_sound_buffer'>
   -- silently ignore invalid id field
   if desc.id ~= 0 then return 0 end
   -- TODO: we could send in multiple chunks
-  assert(desc.data.size <= RIV_MEMSIZE_AUDIOBUFFER, 'sound buffer is too large')
+  assert(desc.data.size <= RIV_MMIOSIZE_AUDIOBUFFER, 'sound buffer is too large')
   -- flush previous audio buffer if there is not enough space
-  if self.audiobuffer_off + desc.data.size > RIV_MEMSIZE_AUDIOBUFFER then
+  if self.audiobuffer_off + desc.data.size > RIV_MMIOSIZE_AUDIOBUFFER then
     self:_flush_audio()
   end
   -- copy buffer
@@ -216,13 +217,12 @@ function riv_context:make_sound_buffer(desc: riv_sound_buffer_desc): uint64 <cex
   desc.data.data = (@*byte)((@usize)(self.audiobuffer_off))
   self.audiobuffer_off = self.audiobuffer_off + desc.data.size
   -- choose sound buffer id
-  local id: uint64 = self.sound_buffer_gen + 1
-  self.sound_buffer_gen = id
-  desc.id = id
+  desc.id = self.sound_buffer_gen + 1
+  self.sound_buffer_gen = desc.id
   -- queue command
   self:_queue_audio_command{
     type = RIV_AUDIOCOMMAND_MAKE_SOUND_BUFFER,
-    desc = {sound_buffer = desc},
+    desc = {sound_buffer = $desc},
   }
   return desc.id
 end
@@ -231,57 +231,55 @@ function riv_context:destroy_sound_buffer(id: uint64): void <cexport'riv_destroy
   -- queue command
   self:_queue_audio_command{
     type = RIV_AUDIOCOMMAND_DESTROY_SOUND_BUFFER,
-    desc = {sound_buffer = {id=id}},
+    desc = {sound_buffer = {id = id}},
   }
 end
 
-function riv_context:sound(desc: riv_sound_desc): uint64 <cexport'riv_sound'>
+function riv_context:sound(desc: *riv_sound_desc): uint64 <cexport'riv_sound'>
   -- choose sound id
   if desc.id == 0 then
     if desc.buffer_id == 0 then return 0 end -- nothing to play
-    local id: uint64 = self.sound_gen + 1
-    self.sound_gen = id
-    desc.id = id
+    desc.id = self.sound_gen + 1
+    self.sound_gen = desc.id
   end
   -- queue command
   self:_queue_audio_command{
     type = RIV_AUDIOCOMMAND_SOUND,
-    desc = {sound = desc}
+    desc = {sound = $desc}
   }
   return desc.id
 end
 
-function riv_context:waveform(desc: riv_waveform_desc): uint64 <cexport'riv_waveform'>
+function riv_context:waveform(desc: *riv_waveform_desc): uint64 <cexport'riv_waveform'>
   -- choose sound id
-  local id: uint64 = self.sound_gen + 1
-  self.sound_gen = id
-  desc.id = id
+  desc.id = self.sound_gen + 1
+  self.sound_gen = desc.id
   -- queue command
   self:_queue_audio_command{
     type = RIV_AUDIOCOMMAND_WAVEFORM,
-    desc = {waveform = desc}
+    desc = {waveform = $desc}
   }
-  return id
+  return desc.id
 end
 
-global function riv_run(run_desc: *riv_run_desc): void <cexport'riv_run'>
+global function riv_run(desc: *riv_run_desc): void <cexport'riv_run'>
   local self: riv_context
-  if run_desc.framebuffer_desc.width == 0 then run_desc.framebuffer_desc.width = RIV_DEFAULT_WIDTH end
-  if run_desc.framebuffer_desc.height == 0 then run_desc.framebuffer_desc.height = RIV_DEFAULT_HEIGHT end
-  if run_desc.framebuffer_desc.fps == 0 then run_desc.framebuffer_desc.fps = RIV_DEFAULT_FPS end
-  if run_desc.framebuffer_desc.pixel_format == 0 then run_desc.framebuffer_desc.pixel_format = RIV_DEFAULT_PIXELFORMAT end
+  if desc.framebuffer_desc.width == 0 then desc.framebuffer_desc.width = RIV_DEFAULT_WIDTH end
+  if desc.framebuffer_desc.height == 0 then desc.framebuffer_desc.height = RIV_DEFAULT_HEIGHT end
+  if desc.framebuffer_desc.target_fps == 0 then desc.framebuffer_desc.target_fps = RIV_DEFAULT_TARGET_FPS end
+  if desc.framebuffer_desc.pixel_format == 0 then desc.framebuffer_desc.pixel_format = RIV_DEFAULT_PIXELFORMAT end
   if not self.mmio_driver then
-    self:setup(run_desc.argc, run_desc.argv)
+    self:setup(desc.argc, desc.argv)
   end
-  if run_desc.init_cb then
-    run_desc.init_cb(self)
+  if desc.init_cb then
+    desc.init_cb(self)
   end
-  self.mmio_driver.framebuffer_desc = run_desc.framebuffer_desc
-  if run_desc.frame_cb then
-    self:loop(run_desc.frame_cb)
+  self.mmio_driver.framebuffer_desc = desc.framebuffer_desc
+  if desc.frame_cb then
+    self:loop(desc.frame_cb)
   end
-  if run_desc.cleanup_cb then
-    run_desc.cleanup_cb(self)
+  if desc.cleanup_cb then
+    desc.cleanup_cb(self)
   end
   self:shutdown()
   exit(0)

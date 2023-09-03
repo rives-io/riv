@@ -12,8 +12,8 @@ global riv_paddr_base: type <using> = @enum(uint64) {
   RIV_PADDR_CARTRIDGE  = 0x90000000000000,
 }
 
-global RIV_MEMSIZE_RAM: uint64 <comptime> = 128*1024*1024
-global RIV_MEMSIZE_CARTRIDGE: uint64< comptime> = 2*1024*1024
+global RIV_MMIOSIZE_RAM: uint64 <comptime> = 128*1024*1024
+global RIV_MMIOSIZE_CARTRIDGE: uint64< comptime> = 2*1024*1024
 
 --------------------------------------------------------------------------------
 
@@ -63,7 +63,7 @@ function rivcm_machine.create(entrypoint: string, cartridge_filename: string): r
   -- cartridge flash drive
   flash_drive_entries[flash_drive_count] = {
     start = RIV_PADDR_CARTRIDGE,
-    length = RIV_MEMSIZE_CARTRIDGE,
+    length = RIV_MMIOSIZE_CARTRIDGE,
   }
   flash_drive_count = flash_drive_count + 1
 
@@ -81,7 +81,7 @@ function rivcm_machine.create(entrypoint: string, cartridge_filename: string): r
   local config: cm_machine_config = $defconfig
   config.ram = {
     image_filename = './kernel/linux.bin',
-    length = RIV_MEMSIZE_RAM
+    length = RIV_MMIOSIZE_RAM
   }
   config.rom = {
     image_filename = './kernel/rom.bin',
@@ -204,7 +204,7 @@ function rivcm_machine:_setup_mmio(): boolean
   self:_reset_mmio()
   local header: riv_mmio_header
   local data: span(byte) = {data=(@*[0]byte)(&header),size=#@riv_mmio_header}
-  for paddr: uint64 = RIV_PADDR_RAM,<RIV_PADDR_RAM+RIV_MEMSIZE_RAM,RIV_MEMSIZE_HUGEPAGE do
+  for paddr: uint64 = RIV_PADDR_RAM,<RIV_PADDR_RAM+RIV_MMIOSIZE_RAM,RIV_MMIOSIZE_HUGEPAGE do
     self:read_memory(paddr + RIV_MMIOSTART_MMIO_DRIVER, data)
     if header.magic == RIV_DRIVER_MAGIC then -- connected
       assert(header.version == RIV_VERSION, 'unsupported RIV version')

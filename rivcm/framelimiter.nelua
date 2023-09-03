@@ -5,7 +5,7 @@ require 'math'
 
 -- Frame limiter.
 global rivcm_framelimiter: type = @record{
-  max_fps: float64,
+  target_fps: float64,
   last_frame_time: float64,
 
   -- used by print_stats
@@ -17,11 +17,11 @@ global rivcm_framelimiter: type = @record{
 
 -- Return true when we should process the next frame.
 function rivcm_framelimiter:should_process_next_frame(now: float64): boolean
-  if self.max_fps == 0 then
+  if self.target_fps == 0 then
     self.last_frame_time = now
     return true
   else
-    local frame_delay: float64 = 1.0 / self.max_fps
+    local frame_delay: float64 = 1.0 / self.target_fps
     local wait_time: float64 = self.last_frame_time + frame_delay - now
     local wait_factor: float64 = wait_time / frame_delay
     -- the following attempts to stabilize fps

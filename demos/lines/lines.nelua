@@ -15,7 +15,7 @@ riv_run(&riv_run_desc{
   framebuffer_desc = {
     width = 256,
     height = 256,
-    fps = 60,
+    target_fps = 60,
   }
 })
 

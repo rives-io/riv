@@ -148,13 +148,7 @@ global riv_rgb_pal16_color: type <using> = @enum(uint32){
 global riv_pixel_format: type <using> = @enum(uint32){
   RIV_PIXELFORMAT_INVALID = 0,
   RIV_PIXELFORMAT_PAL256 = 1,
-  RIV_NUM_PIXELFORMAT = 2,
-  RIV_DEFAULT_PIXELFORMAT = 1
-}
-global riv_constants: type <using> = @enum(uint32){
-  RIV_DEFAULT_WIDTH = 256,
-  RIV_DEFAULT_HEIGHT = 256,
-  RIV_DEFAULT_FPS = 60
+  RIV_NUM_PIXELFORMAT = 2
 }
 global riv_card_format: type <using> = @enum(uint32){
   RIV_CARDFORMAT_NONE = 0,
@@ -183,7 +177,13 @@ global riv_sound_format: type <using> = @enum(uint32){
   RIV_SOUNDFORMAT_MP3 = 8,
   RIV_SOUNDFORMAT_VORBIS = 9
 }
-global riv_control_reason: type <using> = @enum(uint32){
+global riv_constants: type <using> = @enum(uint32){
+  RIV_DEFAULT_WIDTH = 256,
+  RIV_DEFAULT_HEIGHT = 256,
+  RIV_DEFAULT_TARGET_FPS = 60,
+  RIV_DEFAULT_PIXELFORMAT = 1
+}
+global riv_control_command: type <using> = @enum(uint32){
   RIV_CONTROL_NONE = 0,
   RIV_CONTROL_OPEN = 1,
   RIV_CONTROL_CLOSE = 2,
@@ -198,27 +198,27 @@ global riv_audio_command_type: type <using> = @enum(uint32){
   RIV_AUDIOCOMMAND_WAVEFORM = 4
 }
 global riv_mem_size: type <using> = @enum(uint64){
-  RIV_MEMSIZE_HUGEPAGE = 2097152,
-  RIV_MEMSIZE_MMIO_DRIVER = 131072,
-  RIV_MEMSIZE_MMIO_DEVICE = 131072,
-  RIV_MEMSIZE_INOUTBUFFER = 262144,
-  RIV_MEMSIZE_AUDIOBUFFER = 524288,
-  RIV_MEMSIZE_FRAMEBUFFER = 1048576
+  RIV_MMIOSIZE_HUGEPAGE = 2097152,
+  RIV_MMIOSIZE_MMIO_DRIVER = 65536,
+  RIV_MMIOSIZE_MMIO_DEVICE = 65536,
+  RIV_MMIOSIZE_INOUTBUFFER = 262144,
+  RIV_MMIOSIZE_AUDIOBUFFER = 786432,
+  RIV_MMIOSIZE_FRAMEBUFFER = 1048576
 }
 global riv_mmio_offset: type <using> = @enum(uint64){
   RIV_MMIOSTART_MMIO_DRIVER = 0,
-  RIV_MMIOSTART_MMIO_DEVICE = 131072,
-  RIV_MMIOSTART_INOUTBUFFER = 262144,
-  RIV_MMIOSTART_AUDIOBUFFER = 524288,
-  RIV_MMIOSTART_FRAMEBUFFER = 1048576
+  RIV_MMIOSTART_MMIO_DEVICE = 65536,
+  RIV_MMIOSTART_INOUTBUFFER = 131072,
+  RIV_MMIOSTART_AUDIOBUFFER = 393216,
+  RIV_MMIOSTART_FRAMEBUFFER = 1179648
 }
 global riv_vaddr_base: type <using> = @enum(uint64){
   RIV_VADDR_BASE = 268435456,
   RIV_VADDR_MMIO_DRIVER = 268435456,
-  RIV_VADDR_MMIO_DEVICE = 268566528,
-  RIV_VADDR_INOUTBUFFER = 268697600,
-  RIV_VADDR_AUDIOBUFFER = 268959744,
-  RIV_VADDR_FRAMEBUFFER = 269484032
+  RIV_VADDR_MMIO_DEVICE = 268500992,
+  RIV_VADDR_INOUTBUFFER = 268566528,
+  RIV_VADDR_AUDIOBUFFER = 268828672,
+  RIV_VADDR_FRAMEBUFFER = 269615104
 }
 global riv_span_uint8: type = @record{
   data: *uint8,
@@ -227,7 +227,7 @@ global riv_span_uint8: type = @record{
 global riv_framebuffer_desc: type = @record{
   height: uint32,
   width: uint32,
-  fps: uint32,
+  target_fps: uint32,
   pixel_format: riv_pixel_format
 }
 global riv_sound_buffer_desc: type = @record{
@@ -301,37 +301,38 @@ global riv_prng: type = @record{
   state: [4]uint64
 }
 global riv_key_state: type = @record{
+  down_frame: uint64,
+  up_frame: uint64,
   press: boolean,
   down: boolean,
-  up: boolean,
-  down_frame: uint64,
-  up_frame: uint64
+  up: boolean
 }
 global riv_context: type = @record{
+  frame: uint64,
   keys: [128]riv_key_state,
   key_modifiers: uint32,
-  frame: uint64,
   incard_len: uint32,
   incard_format: riv_card_format,
+  valid: boolean,
+  prng: riv_prng,
   outcard_len: uint32,
   outcard_format: riv_card_format,
   quit: boolean,
-  prng: riv_prng,
   framebuffer_desc: *riv_framebuffer_desc,
-  inoutbuffer: *[RIV_MEMSIZE_INOUTBUFFER]uint8,
-  framebuffer: *[RIV_MEMSIZE_FRAMEBUFFER]uint8,
-  audiobuffer: *[RIV_MEMSIZE_AUDIOBUFFER]uint8,
-  tracked_keys: *[RIV_NUM_KEYCODE]boolean,
+  inoutbuffer: *[RIV_MMIOSIZE_INOUTBUFFER]uint8,
+  framebuffer: *[RIV_MMIOSIZE_FRAMEBUFFER]uint8,
   palette: *[256]uint32,
+  tracked_keys: *[RIV_NUM_KEYCODE]boolean,
+  audiobuffer: *[RIV_MMIOSIZE_AUDIOBUFFER]uint8,
   mmio_driver: *riv_mmio_driver,
   mmio_device: *riv_mmio_device,
-  yield_fd: int32,
-  audiobuffer_off: uint32,
-  sound_gen: uint64,
-  sound_buffer_gen: uint64,
+  entropy: [128]uint64,
   entropy_index: uint32,
   entropy_size: uint32,
-  entropy: [128]uint64
+  sound_gen: uint64,
+  sound_buffer_gen: uint64,
+  audiobuffer_off: uint32,
+  yield_fd: int32
 }
 global riv_context_callback: type = @function(a1: *riv_context): void
 global riv_run_desc: type = @record{

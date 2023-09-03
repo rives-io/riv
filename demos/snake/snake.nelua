@@ -70,7 +70,7 @@ end
 
 local function save_score(finished: boolean)
   local finished_str: string = finished and 'true' or 'false'
-  riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MEMSIZE_INOUTBUFFER,
+  riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MMIOSIZE_INOUTBUFFER,
     [[{"score":%u,"apples":%u,"frames":%u,"max_score":%u,"finished":%s}]],
       score, apples, riv.frame, max_score, finished_str)
   riv.outcard_format = RIV_CARDFORMAT_JSON
@@ -155,6 +155,17 @@ local function poll_game()
     end
     save_score(false)
     respawn_apple()
+    riv:waveform(riv_waveform_desc{
+      type = RIV_WAVEFORM_SINE,
+      attack = 0.01,
+      decay = 0.01,
+      sustain = 0.1,
+      release = 0.01,
+      start_frequency = 220,
+      end_frequency = 220*3,
+      amplitude = 0.5,
+      sustain_level = 0.5,
+    })
   else
     -- decrease score
     if score > TILE_SCORE_PENALITY then
@@ -229,7 +240,7 @@ riv_run(&(@riv_run_desc){
   framebuffer_desc = {
     width = SCREEN_SIZE,
     height = SCREEN_SIZE,
-    fps = 8,
+    target_fps = 8,
     pixel_format = RIV_PIXELFORMAT_PAL256,
   },
   argc = argc,

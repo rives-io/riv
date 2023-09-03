@@ -1,2 +1,2 @@
-DEMO_NAME=lines
+NAME=lines
 include ../demo-nelua.mk

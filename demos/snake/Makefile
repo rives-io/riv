@@ -1,2 +1,2 @@
-DEMO_NAME=snake
+NAME=snake
 include ../demo-nelua.mk

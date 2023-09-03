@@ -57,18 +57,18 @@ function riv_waveform_desc:sample(time: float32, sample_rate: float32): float32 
     wave = math.abs(4*math.fract(x-0.25_f32)-2)-1 -- triangle
   case RIV_WAVEFORM_SAWTOOTH then
     wave = 2*math.fract(x-0.5_f32)-1 -- sawtooth
-  case RIV_WAVEFORM_PULSE then
-    local d = 0.5_f32/(1-self.duty_cycle)
-    local t = math.mod(x*d, d) -- infinite repetition
-    local p = 8*t*(1-2*t) -- parabola
-    wave = math.max(p, 0_f32)
-    wave = 2*wave - 1
   case RIV_WAVEFORM_NOISE then
     if freq >= sample_rate then -- white noise
       wave = mathx.hash1(x)
     else
       wave = mathx.valuenoise(x * 16) -- value noise
     end
+    wave = 2*wave - 1
+  case RIV_WAVEFORM_PULSE then
+    local d = 0.5_f32/(1-self.duty_cycle)
+    local t = math.mod(x*d, d) -- infinite repetition
+    local p = 8*t*(1-2*t) -- parabola
+    wave = math.max(p, 0_f32)
     wave = 2*wave - 1
   end
   -- combine amplitude and wave

@@ -12,8 +12,8 @@ global rivcm_video = @record{}
 local fb_desc: riv_framebuffer_desc
 local fb_pixel_count: int64
 local fb_image: sg_image
-local framebuffer: [RIV_MEMSIZE_FRAMEBUFFER]byte
-local framebuffer_rgba: [RIV_MEMSIZE_FRAMEBUFFER]uint32
+local framebuffer: [RIV_MMIOSIZE_FRAMEBUFFER]byte
+local framebuffer_rgba: [RIV_MMIOSIZE_FRAMEBUFFER]uint32
 
 -- Destroy the window framebuffer image.
 local function destroy_framebuffer_image(): void
