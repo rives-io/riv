@@ -113,6 +113,9 @@ end
 function riv_context:shutdown(): void <cexport'riv_shutdown'>
   -- ignore when not initialized
   if not self.mmio_driver then return end
+  -- copy outcard description to driver
+  self.mmio_driver.outcard_format = self.outcard_format
+  self.mmio_driver.outcard_len = self.outcard_len
   -- tell the host we finished, the host may use inoutbuffer
   self:_ctl(RIV_CONTROL_CLOSE)
   -- unmap memory
