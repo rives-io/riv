@@ -233,10 +233,10 @@ typedef enum riv_sound_format {
   RIV_SOUNDFORMAT_S24,      // 24-bit signed integer (tightly packed) [-8388608, 8388607]
   RIV_SOUNDFORMAT_S32,      // 32-bit signed integer                  [-2147483648, 2147483647]
   RIV_SOUNDFORMAT_F32,      // 32-bit floating point                  [-1, 1]
-  RIV_SOUNDFORMAT_WAV,      // NYI
-  RIV_SOUNDFORMAT_FLAC,     // NYI
-  RIV_SOUNDFORMAT_MP3,      // NYI
-  RIV_SOUNDFORMAT_VORBIS,   // NYI
+  RIV_SOUNDFORMAT_WAV,      // WAV file
+  RIV_SOUNDFORMAT_FLAC,     // FLAC file
+  RIV_SOUNDFORMAT_MP3,      // MP3 file
+  RIV_SOUNDFORMAT_OGG,      // OGG Vorbis file
 } riv_sound_format;
 
 // Default constants

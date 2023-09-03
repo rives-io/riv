@@ -175,7 +175,7 @@ global riv_sound_format: type <using> = @enum(uint32){
   RIV_SOUNDFORMAT_WAV = 6,
   RIV_SOUNDFORMAT_FLAC = 7,
   RIV_SOUNDFORMAT_MP3 = 8,
-  RIV_SOUNDFORMAT_VORBIS = 9
+  RIV_SOUNDFORMAT_OGG = 9
 }
 global riv_constants: type <using> = @enum(uint32){
   RIV_DEFAULT_WIDTH = 256,

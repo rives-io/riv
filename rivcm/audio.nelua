@@ -176,15 +176,22 @@ end
 local Sound: type = @record{
   asound: *ma_sound,
   abuffer: *ma_audio_buffer,
+  adecoder: *ma_decoder,
   waveform: *WaveForm,
   stopped: boolean,
 }
 
 function Sound:destroy(): void
   ma_sound_uninit(self.asound)
-  ma_audio_buffer_uninit(self.abuffer)
   delete(self.asound)
-  delete(self.abuffer)
+  if self.abuffer then
+    ma_audio_buffer_uninit(self.abuffer)
+    delete(self.abuffer)
+  end
+  if self.adecoder then
+    ma_decoder_uninit(self.adecoder)
+    delete(self.adecoder)
+  end
   delete(self.waveform)
   $self = {}
 end
@@ -204,7 +211,7 @@ end
 local DEFAULT_SAMPLE_RATE <comptime> = 48000
 local DEFAULT_CHANNELS <comptime> = 2
 local DEFAULT_PERIOD_SIZE <comptime> = DEFAULT_SAMPLE_RATE // 30
-local DEFAULT_VOLUME <comptime> = 0.5
+local DEFAULT_VOLUME <comptime> = 0.8
 
 -- Audio subsystem.
 global rivcm_audio: type = @record{}
@@ -275,6 +282,9 @@ local function handle_sound(desc: riv_sound_desc): void
     if desc.seek == -1 then return end -- silently ignore sound to be stopped
     local buffer: *riv_sound_buffer_desc = buffers:peek(desc.buffer_id)
     assert(buffer, 'invalid sound buffer id')
+    local abuffer: *ma_audio_buffer
+    local adecoder: *ma_decoder
+    local ds: *ma_data_source
     switch buffer.format do
     case RIV_SOUNDFORMAT_U8 then fallthrough
     case RIV_SOUNDFORMAT_S16 then fallthrough
@@ -283,50 +293,61 @@ local function handle_sound(desc: riv_sound_desc): void
     case RIV_SOUNDFORMAT_F32 then
       local sample_size: uint64 = (@uint64)(math.min(buffer.format, 4) * buffer.channels)
       local size_in_frames: uint64 = buffer.data.size // sample_size
-      local abuffer: *ma_audio_buffer = new(@ma_audio_buffer)
+      abuffer = new(@ma_audio_buffer)
       local aconfig: ma_audio_buffer_config = ma_audio_buffer_config_init(buffer.format, buffer.channels, size_in_frames, buffer.data.data, nilptr)
       aconfig.sampleRate = buffer.sample_rate
       ma_assert!(ma_audio_buffer_init(&aconfig, abuffer))
-      local asound: *ma_sound = new(@ma_sound)
-      local flags: uint32 = MA_SOUND_FLAG_NO_SPATIALIZATION
-      if desc.pitch ~= 0 then flags = flags | MA_SOUND_FLAG_NO_PITCH end
-      ma_assert!(ma_sound_init_from_data_source(&engine, &abuffer.ref.ds, flags, nilptr, asound))
-      ma_sound_set_volume(asound, desc.volume)
-      if desc.pan ~= 0 then ma_sound_set_pan(asound, desc.pan) end
-      if desc.pitch > 0 then ma_sound_set_pitch(asound, desc.pitch) end
-      if desc.seek > 0 then
-        local seek_frame: uint64 = math.ifloor(sample_size * desc.seek)
-        ma_assert!(ma_sound_seek_to_pcm_frame(asound, seek_frame))
-      end
-      -- start delay
-      local start_time: uint64 = global_pcm_frame + math.ifloor(desc.delay * global_sample_rate)
-      if desc.delay > 0 then
-        ma_sound_set_start_time_in_pcm_frames(asound, start_time)
-      end
-      -- fade in
-      if desc.fade_in > 0 then
-        local fade_in_time: uint64 = math.ifloor(desc.fade_in * global_sample_rate)
-        ma_sound_set_fade_in_pcm_frames(asound, 0.0, desc.volume, desc.fade_in)
-      end
-      -- duration
-      if desc.duration > 0 then
-        ma_sound_set_looping(asound, MA_TRUE)
-        local end_time: uint64 = start_time + math.ifloor(desc.duration * global_sample_rate)
-        -- fade out
-        if desc.fade_out > 0 then
-          local fade_out_time: uint64 = math.ifloor(desc.fade_out * global_sample_rate)
-          ma_sound_set_stop_time_with_fade_in_pcm_frames(asound, end_time, fade_out_time)
-        else
-          ma_sound_set_stop_time_in_pcm_frames(asound, end_time)
-        end
-      elseif desc.duration == -1 then
-        ma_sound_set_looping(asound, MA_TRUE)
-      end
-      -- start
-      ma_assert!(ma_sound_start(asound))
-      sounds[desc.id] = Sound{=asound, =abuffer}
-    else -- TODO: support other formats
+      ds = &abuffer.ref.ds
+    case RIV_SOUNDFORMAT_WAV then fallthrough
+    case RIV_SOUNDFORMAT_FLAC then fallthrough
+    case RIV_SOUNDFORMAT_MP3 then fallthrough
+    case RIV_SOUNDFORMAT_OGG then
+      adecoder = new(@ma_decoder)
+      local aconfig: ma_decoder_config = ma_decoder_config_init_default()
+      aconfig.encodingFormat = buffer.format - RIV_SOUNDFORMAT_WAV + 1
+      ma_assert!(ma_decoder_init_memory(buffer.data.data, buffer.data.size, &aconfig, adecoder))
+      ds = &adecoder.ds
     end
+    local asound: *ma_sound = new(@ma_sound)
+    local flags: uint32 = MA_SOUND_FLAG_NO_SPATIALIZATION
+    if desc.pitch ~= 0 then flags = flags | MA_SOUND_FLAG_NO_PITCH end
+    ma_assert!(ma_sound_init_from_data_source(&engine, ds, flags, nilptr, asound))
+    local sample_rate: uint32
+    ma_assert!(ma_sound_get_data_format(asound, nilptr, nilptr, &sample_rate, nilptr, 0))
+    ma_sound_set_volume(asound, desc.volume)
+    if desc.pan ~= 0 then ma_sound_set_pan(asound, desc.pan) end
+    if desc.pitch > 0 then ma_sound_set_pitch(asound, desc.pitch) end
+    if desc.seek > 0 then
+      local seek_frame: uint64 = math.ifloor(sample_rate * desc.seek)
+      ma_assert!(ma_sound_seek_to_pcm_frame(asound, seek_frame))
+    end
+    -- start delay
+    local start_time: uint64 = global_pcm_frame + math.ifloor(desc.delay * global_sample_rate)
+    if desc.delay > 0 then
+      ma_sound_set_start_time_in_pcm_frames(asound, start_time)
+    end
+    -- fade in
+    if desc.fade_in > 0 then
+      local fade_in_time: uint64 = math.ifloor(desc.fade_in * global_sample_rate)
+      ma_sound_set_fade_in_pcm_frames(asound, 0.0, desc.volume, desc.fade_in)
+    end
+    -- duration
+    if desc.duration > 0 then
+      ma_sound_set_looping(asound, MA_TRUE)
+      local end_time: uint64 = start_time + math.ifloor(desc.duration * global_sample_rate)
+      -- fade out
+      if desc.fade_out > 0 then
+        local fade_out_time: uint64 = math.ifloor(desc.fade_out * global_sample_rate)
+        ma_sound_set_stop_time_with_fade_in_pcm_frames(asound, end_time, fade_out_time)
+      else
+        ma_sound_set_stop_time_in_pcm_frames(asound, end_time)
+      end
+    elseif desc.duration == -1 then
+      ma_sound_set_looping(asound, MA_TRUE)
+    end
+    -- start
+    ma_assert!(ma_sound_start(asound))
+    sounds[desc.id] = Sound{=asound, =abuffer, =adecoder}
   else -- change sound
     local sound: *Sound = sounds:peek(desc.id)
     if not sound then return end -- silently ignore

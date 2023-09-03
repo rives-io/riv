@@ -14,14 +14,19 @@ if ccinfo.is_emscripten then
   ldflags '-L./cartesi-machine-v0.15.2_wasm/lib'
 
   -- basic flags
-  local WASM_MEM = 384*1024*1024
-  cflags('-sFULL_ES3 -sTOTAL_MEMORY='..WASM_MEM..' -sNO_DISABLE_EXCEPTION_CATCHING=1')
+  cflags('-sFULL_ES3 -sSTACK_SIZE=4MB -sTOTAL_MEMORY=384MB -sNO_DISABLE_EXCEPTION_CATCHING=1')
 
   -- miniaudio worklets
   -- cdefine 'MA_ENABLE_AUDIO_WORKLETS'
   -- cflags '-sAUDIO_WORKLET=1 -sWASM_WORKERS=1'
   -- cflags '-sASYNCIFY'
   cflags '-O3 -g0'
+
+  -- debugging
+  -- cflags '-Og -g'
+  -- cflags '-sSAFE_HEAP'
+  -- cflags '-sASSERTIONS=2'
+  -- cflags '-fsanitize=undefined,address'
 
   -- embed files
   cflags '--embed-file ./rootfs/rootfs.ext2'
@@ -350,7 +355,11 @@ sapp_run(sapp_desc{
   frame_cb = frame,
   cleanup_cb = shutdown,
   event_cb = rivcm_input.append_event,
-  width = 320,
-  height = 240,
+  width = 512,
+  height = 512,
   window_title = "RIVCM",
+
+  html5_canvas_name = "canvas",
+  -- html5_canvas_resize = true,
+  html5_preserve_drawing_buffer = true,
 })
