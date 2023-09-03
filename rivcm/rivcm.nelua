@@ -56,6 +56,8 @@ local rivcm_options: type = @record{
   recording: boolean,
   replaying: boolean,
   print_stats: boolean,
+  no_audio: boolean,
+  no_video: boolean,
   speed: float64,
 }
 
@@ -87,6 +89,10 @@ local function parse_options(): rivcm_options
       assert(numstr:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
       opts.speed = tonumber(numstr)
       assert(opts.speed > 0.0, 'speed must be positive')
+    elseif a == '-no-audio' then
+      opts.no_audio = true
+    elseif a == '-no-video' then
+      opts.no_video = true
     elseif a == '-print-stats' then
       opts.print_stats = true
     elseif a == '-args' then
@@ -117,6 +123,12 @@ local function parse_options(): rivcm_options
 
 -speed <speed>
   Set replay speed.
+
+-no-audio
+  Disable audio.
+
+-no-video
+  Disable video.
 ]]
       os.exit(0)
     else
@@ -150,8 +162,12 @@ local function startup(): void
 
   -- init subsystems
   rivcm_iocard.setup()
-  rivcm_video.setup()
-  rivcm_audio.setup()
+  if not options.no_video then
+    rivcm_video.setup()
+  end
+  if not options.no_audio then
+    rivcm_audio.setup(options.speed)
+  end
   rivcm_input.setup()
 
   if options.recording then -- start recording
@@ -179,8 +195,12 @@ local function shutdown(): void
 
   rivcm_iocard.shutdown()
   rivcm_input.shutdown()
-  rivcm_video.shutdown()
-  rivcm_audio.shutdown()
+  if not options.no_video then
+    rivcm_video.shutdown()
+  end
+  if not options.no_audio then
+    rivcm_audio.shutdown()
+  end
 
   machine:print_cycle_hash()
   machine:destroy()
@@ -205,22 +225,30 @@ local function machine_frame(): void
         -- copy output card from guest memory into host memory
         rivcm_iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
-        rivcm_video.update_framebuffer()
+        if not options.no_video then
+          rivcm_video.update_framebuffer()
+        end
         -- finish
         quit = true
         return
       case RIV_CONTROL_PRESENT then
         -- poll audio
-        rivcm_audio.poll_commands()
+        if not options.no_audio then
+          rivcm_audio.poll_commands()
+        end
         -- copy output card from guest memory into host memory
         rivcm_iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
-        rivcm_video.update_framebuffer()
+        if not options.no_video then
+          rivcm_video.update_framebuffer()
+        end
         -- must break the loop so we can present the video
         return
       case RIV_CONTROL_FLUSH_AUDIO then
         -- poll audio
-        rivcm_audio.poll_commands()
+        if not options.no_audio then
+          rivcm_audio.poll_commands()
+        end
       else
         error 'unknown yield reason'
       end
@@ -297,9 +325,13 @@ local function frame(): void
     end
   end
   -- poll audio
-  rivcm_audio.poll()
+  if not options.no_audio then
+    rivcm_audio.poll()
+  end
   -- display the frame
-  rivcm_video.present()
+  if not options.no_video then
+    rivcm_video.present()
+  end
 end
 
 local argc: cint <cimport'argc'>

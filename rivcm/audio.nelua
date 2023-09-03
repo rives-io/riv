@@ -213,16 +213,18 @@ global rivcm_audio: type = @record{}
 local engine: ma_engine
 local buffers: hashmap(uint64, riv_sound_buffer_desc)
 local sounds: hashmap(uint64, Sound)
+local global_pitch: float64
 local global_pcm_frame: uint64
 local global_sample_rate: uint64
 
 -- Initialize audio subsystem.
-function rivcm_audio.setup(): void
+function rivcm_audio.setup(pitch: float64): void
   -- initialize miniaudio
   local config: ma_engine_config = ma_engine_config_init()
   config.sampleRate = DEFAULT_SAMPLE_RATE
   config.channels = DEFAULT_CHANNELS
   config.periodSizeInFrames = DEFAULT_PERIOD_SIZE
+  global_pitch = pitch
   ma_assert!(ma_engine_init(&config, &engine))
   ma_engine_set_volume(&engine, DEFAULT_VOLUME)
   global_sample_rate = ma_engine_get_sample_rate(&engine)
@@ -349,11 +351,17 @@ end
 local function handle_waveform(desc: riv_waveform_desc): void
   local waveform: *WaveForm = new(@WaveForm)
   ma_assert!(WaveForm.init(waveform, global_sample_rate, desc))
-  local flags: uint32 = MA_SOUND_FLAG_NO_PITCH | MA_SOUND_FLAG_NO_SPATIALIZATION
+  local flags: uint32 = MA_SOUND_FLAG_NO_SPATIALIZATION
+  if global_pitch == 1.0 then
+    flags = flags | MA_SOUND_FLAG_NO_PITCH
+  end
   local asound: *ma_sound = new(@ma_sound)
   ma_assert!(ma_sound_init_from_data_source(&engine, &waveform.ds, flags, nilptr, asound))
   if desc.pan ~= 0 then
     ma_sound_set_pan(asound, desc.pan)
+  end
+  if global_pitch ~= 1.0 then
+    ma_sound_set_pitch(asound, global_pitch)
   end
   ma_assert!(ma_sound_start(asound))
   sounds[desc.id] = Sound{=asound, =waveform}
