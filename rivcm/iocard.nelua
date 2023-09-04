@@ -32,26 +32,26 @@ function rivcm_iocard.load_incard(filename: string): void
   machine.mmio_device.incard_len = data.size
   -- TODO: detect type from filename
   machine.mmio_device.incard_format = RIV_CARDFORMAT_DATA
-  io.stderr:printf("[RIVCM] Loaded input card '%s'\n", filename)
+  io.printf("[RIVCM] Loaded input card '%s'\n", filename)
 end
 
 function rivcm_iocard.save_outhash(filename: string): void
   local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
   local hash: string <close> = hexhash(keccak256(outcard_data))
   fn_assert!(file:write(hash))
-  io.stderr:printf("[RIVCM] Saved output card hash '%s'\n", filename)
+  io.printf("[RIVCM] Saved output card hash '%s'\n", filename)
 end
 
 function rivcm_iocard.save_outcard(filename: string): void
   local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
   fn_assert!(file:write(outcard_data))
-  io.stderr:printf("[RIVCM] Saved output card data '%s'\n", filename)
+  io.printf("[RIVCM] Saved output card data '%s'\n", filename)
 end
 
 function rivcm_iocard.print_outcard(): void
   local contents: string = {data=outcard_data.data, size=outcard_data.size}
   local hash: string <close> = hexhash(keccak256(outcard_data))
-  io.stderr:printf([[
+  io.printf([[
 ==== BEGIN OUTCARD ====
 %s
 ==== DATA ====

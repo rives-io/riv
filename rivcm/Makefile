@@ -1,4 +1,5 @@
 PREFIX=/usr/local
+WASM_CC=emcc
 
 # Release flags
 CC=gcc
@@ -12,6 +13,13 @@ rivcm: rivcm.nelua *.nelua
 		--cflags="$(CFLAGS) $(INCS)" \
 		--ldflags="$(LDFLAGS) $(LIBS)" \
 		--cache-dir . \
+		--output $@ $<
+
+web/index.html: rivcm.nelua *.nelua
+	mkdir -p web
+	nelua $(NELUA_FLAGS) \
+		--cc=$(WASM_CC) \
+		--cflags="$(CFLAGS) $(INCS)" \
 		--output $@ $<
 
 clean:

@@ -4,14 +4,15 @@
 pragma{
   nogc=true,
 }
-libpath(fs.join(fs.scriptdir(2), 'libriv', '?.nelua'))
-libpath(fs.join(fs.scriptdir(2), 'libs', 'host', '?.nelua'))
-libpath(fs.join(fs.scriptdir(2), 'libs', 'guest-host', '?.nelua'))
+local projdir = fs.scriptdir(2)
+libpath(fs.join(projdir, 'libriv', '?.nelua'))
+libpath(fs.join(projdir, 'libs', 'host', '?.nelua'))
+libpath(fs.join(projdir, 'libs', 'guest-host', '?.nelua'))
 
 if ccinfo.is_emscripten then
   -- cartesi machine
-  cflags '-I./cartesi-machine-v0.15.2_wasm/include'
-  ldflags '-L./cartesi-machine-v0.15.2_wasm/lib'
+  cflags('-I'..projdir..'/cartesi-machine-v0.15.2_wasm/include')
+  ldflags('-L'..projdir..'/cartesi-machine-v0.15.2_wasm/lib')
 
   -- basic flags
   cflags('-sFULL_ES3 -sSTACK_SIZE=4MB -sTOTAL_MEMORY=384MB -sNO_DISABLE_EXCEPTION_CATCHING=1')
@@ -29,14 +30,16 @@ if ccinfo.is_emscripten then
   -- cflags '-fsanitize=undefined,address'
 
   -- embed files
-  cflags '--embed-file ./rootfs/rootfs.ext2'
-  cflags '--embed-file ./kernel/linux.bin'
-  cflags '--embed-file ./kernel/rom.bin'
-  cflags '--embed-file demos/antcopter/antcopter.sqfs'
-  cflags '--embed-file demos/doom/doom.sqfs'
-  cflags '--embed-file antcopter.rivlog'
-  cflags '--embed-file doom.rivlog'
-  cflags '--shell-file ./rivcm/shell_minimal.html'
+  cflags('--embed-file '..projdir..'/rootfs/rootfs.ext2@rootfs/rootfs.ext2')
+  cflags('--embed-file '..projdir..'/kernel/linux.bin@kernel/linux.bin')
+  cflags('--embed-file '..projdir..'/kernel/rom.bin@kernel/rom.bin')
+  cflags('--embed-file '..projdir..'/demos/antcopter/antcopter.sqfs@demos/antcopter/antcopter.sqfs')
+  cflags('--embed-file '..projdir..'/demos/doom/doom.sqfs@demos/doom/doom.sqfs')
+  cflags('--embed-file '..projdir..'/demos/snake/snake.sqfs@demos/snake/snake.sqfs')
+  cflags('--embed-file '..projdir..'/antcopter.rivlog@antcopter.rivlog')
+  cflags('--embed-file '..projdir..'/doom.rivlog@doom.rivlog')
+  cflags('--embed-file '..projdir..'/snake.rivlog@snake.rivlog')
+  cflags('--shell-file '..projdir..'/rivcm/shell_minimal.html')
 end
 ]]
 
@@ -104,8 +107,8 @@ local function parse_options(): rivcm_options
     elseif a == '-args' then
       entrypoint_args = sargs_value_at(i)
     elseif a == '-help' or a == '--help' or a == '-h' then
-      io.stderr:printf("Usage: rivcm [options]\n")
-      io.stderr:write[[
+      io.printf("Usage: rivcm [options]\n")
+      io.write[[
 -print-fps
   Print frame rate statistics every second.
 
@@ -161,7 +164,7 @@ local quit: boolean
 
 -- Initialize application.
 local function startup(): void
-  io.stderr:printf('[RIVCM] Startup\n')
+  io.printf('[RIVCM] Startup\n')
 
   -- initialize the machine
   machine = rivcm_machine.create(options.entrypoint, options.cartridge_filename)
@@ -185,7 +188,7 @@ end
 
 -- Terminate application.
 local function shutdown(): void
-  io.stderr:printf('[RIVCM] Shutdown\n')
+  io.printf('[RIVCM] Shutdown\n')
 
   if options.recording then
     rivcm_input.save_replay(options.replay_filename)
@@ -220,14 +223,14 @@ local function machine_frame(): void
       -- execute control event from the yield
       switch machine:read_yield_reason() do
       case RIV_CONTROL_OPEN then
-        io.stderr:printf('[RIVCM] Open RIV device\n')
+        io.printf('[RIVCM] Open RIV device\n')
         if #options.incard_filename > 0 then
           rivcm_iocard.load_incard(options.incard_filename)
         end
         -- reset input state
         rivcm_input.reset_state()
       case RIV_CONTROL_CLOSE then
-        io.stderr:printf('[RIVCM] Close RIV device\n')
+        io.printf('[RIVCM] Close RIV device\n')
         -- copy output card from guest memory into host memory
         rivcm_iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
@@ -259,7 +262,7 @@ local function machine_frame(): void
         error 'unknown yield reason'
       end
     case CM_BREAK_REASON_HALTED then
-      io.stderr:printf('[RIVCM] Halted\n')
+      io.printf('[RIVCM] Halted\n')
       quit = true
       return
     else
@@ -294,7 +297,7 @@ local function advance_frame(): void
 
   -- force quit when replay ends
   if not quit and replay_finished then
-    io.stderr:printf('[RIVCM] Finish replay\n')
+    io.printf('[RIVCM] Finish replay\n')
     quit = true
   end
 

@@ -260,13 +260,13 @@ end
 -- Start recording.
 function rivcm_input.start_recording()
   recording = true
-  io.stderr:printf("[RIVCM] Recording\n")
+  io.printf("[RIVCM] Recording\n")
 end
 
 -- Save replay log to a file.
 function rivcm_input.save_replay(filename: string): void
   riv_log.save(filename, log_key_events, log_last_frame)
-  io.stderr:printf("[RIVCM] Saved replay '%s'\n", filename)
+  io.printf("[RIVCM] Saved replay '%s'\n", filename)
 end
 
 -- Load replay log from a file.
@@ -274,5 +274,5 @@ function rivcm_input.load_replay_from_file(filename: string): void
   log_key_events:destroy()
   log_key_events, log_last_frame = riv_log.load_from_file(filename)
   replaying = true
-  io.stderr:printf("[RIVCM] Loaded replay '%s'\n", filename)
+  io.printf("[RIVCM] Loaded replay '%s'\n", filename)
 end

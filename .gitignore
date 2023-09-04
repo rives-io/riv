@@ -21,6 +21,7 @@
 
 # ignore generated binaries
 /rivcm/rivcm
+/rivcm/web
 /bwrapbox/bwrapbox
 /bwrapbox/seccomp-filter
 /bwrapbox/seccomp-filter.bpf
