@@ -34,7 +34,8 @@ if ccinfo.is_emscripten then
   cflags '--embed-file ./kernel/rom.bin'
   cflags '--embed-file demos/antcopter/antcopter.sqfs'
   cflags '--embed-file demos/doom/doom.sqfs'
-  -- cflags '--embed-file antcopter.rivlog'
+  cflags '--embed-file antcopter.rivlog'
+  cflags '--embed-file doom.rivlog'
   cflags '--shell-file ./rivcm/shell_minimal.html'
 end
 ]]

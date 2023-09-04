@@ -22,17 +22,17 @@ busybox mount -o nosuid,remount /dev
 [ -f /etc/hostname    ] && busybox hostname -F /etc/hostname
 [ ! -z "$LINES" ] && [ ! -z "$COLUMNS" ] && busybox stty rows $LINES cols $COLUMNS
 
-# echo '
-#          .
-#         / \
-#       /    \
-# \---/---\  /----\
-#  \       X       \
-#   \----/  \---/---\
-#        \    / CARTESI
-#         \ /   MACHINE
-#          '"'"'
-# '
+echo '
+         .
+        / \
+      /    \
+\---/---\  /----\
+ \       X       \
+  \----/  \---/---\
+       \    / CARTESI
+        \ /   MACHINE
+         '"'"'
+'
 
 # run
 if [ -n "$*" ]; then
