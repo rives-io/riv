@@ -52,9 +52,8 @@ function rivcm_iocard.print_outcard(): void
   local contents: string = {data=outcard_data.data, size=outcard_data.size}
   local hash: string <close> = hexhash(keccak256(outcard_data))
   io.printf([[
+[RIVCM] Outcard hash: %s
 ==== BEGIN OUTCARD ====
-%s
-==== DATA ====
 %s
 ==== END OUTCARD ====
 ]], hash, contents)

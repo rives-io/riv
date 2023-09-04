@@ -65,8 +65,11 @@ local rivcm_options: type = @record{
   recording: boolean,
   replaying: boolean,
   print_stats: boolean,
+  print_hash: boolean,
   no_audio: boolean,
   no_video: boolean,
+  no_quit: boolean,
+  print_final_hash: boolean,
   speed: float64,
 }
 
@@ -102,8 +105,12 @@ local function parse_options(): rivcm_options
       opts.no_audio = true
     elseif a == '-no-video' then
       opts.no_video = true
+    elseif a == '-no-quit' then
+      opts.no_quit = true
     elseif a == '-print-stats' then
       opts.print_stats = true
+    elseif a == '-print-final-hash' then
+      opts.print_final_hash = true
     elseif a == '-args' then
       entrypoint_args = sargs_value_at(i)
     elseif a == '-help' or a == '--help' or a == '-h' then
@@ -138,6 +145,9 @@ local function parse_options(): rivcm_options
 
 -no-video
   Disable video.
+
+-no-quit
+  Don't quit when cartridge finishes.
 ]]
       os.exit(0)
     else
@@ -160,7 +170,7 @@ end
 
 local options: rivcm_options
 local framelimiter: rivcm_framelimiter
-local quit: boolean
+local finished: boolean
 
 -- Initialize application.
 local function startup(): void
@@ -186,9 +196,8 @@ local function startup(): void
   end
 end
 
--- Terminate application.
-local function shutdown(): void
-  io.printf('[RIVCM] Shutdown\n')
+local function finish(): void
+  finished = true
 
   if options.recording then
     rivcm_input.save_replay(options.replay_filename)
@@ -202,6 +211,22 @@ local function shutdown(): void
   end
   rivcm_iocard.print_outcard()
 
+  if options.print_final_hash then
+    local root_hash: string <close> = hexhash(machine:get_root_hash())
+    io.printf('[RIVCM] Cycles %d: %s\n', machine:read_mcycle(), root_hash)
+  else
+    io.printf('[RIVCM] Cycles %d\n', machine:read_mcycle())
+  end
+
+  if not options.no_quit then
+    sapp_quit()
+  end
+end
+
+-- Terminate application.
+local function shutdown(): void
+  io.printf('[RIVCM] Shutdown\n')
+
   rivcm_iocard.shutdown()
   rivcm_input.shutdown()
   if not options.no_video then
@@ -211,7 +236,6 @@ local function shutdown(): void
     rivcm_audio.shutdown()
   end
 
-  machine:print_cycle_hash()
   machine:destroy()
 end
 
@@ -238,7 +262,7 @@ local function machine_frame(): void
           rivcm_video.update_framebuffer()
         end
         -- finish
-        quit = true
+        finish()
         return
       case RIV_CONTROL_PRESENT then
         -- poll audio
@@ -263,11 +287,11 @@ local function machine_frame(): void
       end
     case CM_BREAK_REASON_HALTED then
       io.printf('[RIVCM] Halted\n')
-      quit = true
+      finish()
       return
     else
       error('unexpected machine break reason')
-      quit = true
+      finish()
       return
     end
   end
@@ -275,7 +299,7 @@ end
 
 -- Advance to the next frame.
 local function advance_frame(): void
-  if quit or machine:is_halted() then return end
+  if finished or machine:is_halted() then return end
 
   -- check if is the last replay frame
   local replay_finished: boolean = rivcm_input.is_replay_at_end()
@@ -295,15 +319,13 @@ local function advance_frame(): void
     io.stderr:printf('[RIVCM] slow frame: %.2f ms, %.2f MHz\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
   end
 
-  -- force quit when replay ends
-  if not quit and replay_finished then
+  -- force finish when replay ends
+  if not finished and replay_finished then
     io.printf('[RIVCM] Finish replay\n')
-    quit = true
+    finish()
   end
 
-  if quit then
-    sapp_quit()
-  else
+  if not finished then
     framelimiter.target_fps = machine.mmio_driver.framebuffer_desc.target_fps * options.speed
     if options.print_stats then
       framelimiter:print_stats(now, time_elapsed, mcycle_elapsed)
@@ -365,5 +387,4 @@ sapp_run(sapp_desc{
 
   html5_canvas_name = "canvas",
   -- html5_canvas_resize = true,
-  html5_preserve_drawing_buffer = true,
 })
