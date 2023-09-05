@@ -22,14 +22,16 @@
 # ignore generated binaries
 /rivcm/rivcm
 /rivcm/web
-/bwrapbox/bwrapbox
-/bwrapbox/seccomp-filter
-/bwrapbox/seccomp-filter.bpf
+/tools/bwrapbox/bwrapbox
+/tools/unpack-rivlog/unpack-rivlog
+/tools/bwrapbox/seccomp-filter
+/tools/bwrapbox/seccomp-filter.bpf
 
 # ignore generated C sources
 /rivcm/rivcm.c
 /libriv/libriv.c
-/bwrapbox/bwrapbox.c
+/tools/bwrapbox/bwrapbox.c
+/tools/unpack-rivlog/unpack-rivlog.c
 /demos/*/*.c
 
 # ignore kernel stuff

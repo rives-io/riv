@@ -21,8 +21,7 @@ RUN apk add clang go rust nim
 RUN apk add libarchive-dev libseccomp-dev
 
 # Musl link aliases
-RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
-    ln -s ld-musl-riscv64.so.1 /lib/ld.so
+RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so
 
 # Build other packages inside /root
 WORKDIR /root
@@ -67,10 +66,6 @@ RUN tar -xf linux-headers.tar.xz && \
     cp -R opt/riscv/kernel/work/linux-headers/include/* /usr/include/ && \
     rm -rf opt linux-headers*
 
-# Install bwrapbox
-COPY bwrapbox bwrapbox
-RUN make -C bwrapbox install PREFIX=/usr
-
 # Copy libs
 COPY libs/guest-host libs/guest-host
 
@@ -108,14 +103,13 @@ RUN cp -a /etc/apk etc/apk && \
 
 # Install musl utilities
 RUN ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
-    ln -s ld-musl-riscv64.so.1 lib/ld.so && \
     cp -a /usr/bin/ldd usr/bin/ldd
-
-# Install bwrapbox
-RUN make -C /root/bwrapbox install PREFIX=/usr DESTDIR=/rootfs
 
 # Install libriv
 RUN make -C /root/libriv install PREFIX=/usr DESTDIR=/rootfs
+
+# Install tools
+RUN make -C /root/tools install PREFIX=/usr DESTDIR=/rootfs
 
 # Install system configs
 COPY rootfs/skel/etc etc

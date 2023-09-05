@@ -381,8 +381,8 @@ sapp_run(sapp_desc{
   frame_cb = frame,
   cleanup_cb = shutdown,
   event_cb = rivcm_input.append_event,
-  width = 512,
-  height = 512,
+  width = 768,
+  height = 768,
   window_title = "RIVCM",
 
   html5_canvas_name = "canvas",

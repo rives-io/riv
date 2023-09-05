@@ -23,6 +23,7 @@ web/index.html: rivcm.nelua *.nelua
 		--output $@ $<
 
 clean:
+	rm -rf web
 	rm -f rivcm rivcm.c
 
 install: rivcm

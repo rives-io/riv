@@ -11,9 +11,12 @@ else
 endif
 
 # Release flags
-CFLAGS+=-Wall
-LDFLAGS+=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now
-STRIPFLAGS+=--strip-unneeded --remove-section=.comment
+CFLAGS+=-O2 -DNDEBUG -Wall
+LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
+LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
+LDFLAGS+=-Wl,--dynamic-linker=/lib/ld-musl.so
+LDFLAGS+=-z relro -z now
+STRIPFLAGS+=--strip-all --strip-unneeded --remove-section=.comment
 NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 
 all: bwrapbox seccomp-filter seccomp-filter.bpf

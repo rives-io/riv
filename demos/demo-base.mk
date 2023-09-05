@@ -28,8 +28,8 @@ STRIPFLAGS+=--strip-all --strip-unneeded
 STRIPFLAGS+=--remove-section=.note --remove-section=.comment
 STRIPFLAGS+=--remove-section=.riscv.attributes --remove-section=.eh_frame
 LDFLAGS+=-Wl,-O1,--gc-sections,--as-needed,--no-eh-frame-hdr,--build-id=none,--hash-style=gnu
-LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name,--spare-dynamic-tags=0
-LDFLAGS+=-Wl,--dynamic-linker=/lib/ld.so
+LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
+LDFLAGS+=-Wl,--dynamic-linker=/lib/ld-musl.so
 LDFLAGS+=-z norelro -z noseparate-code -z lazy
 
 # Add RIV library (required when cross compiling)

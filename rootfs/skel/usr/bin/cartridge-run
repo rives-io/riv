@@ -1,5 +1,5 @@
 #!/bin/sh
-run_cartridge() {
+run() {
   if ! busybox mount -o ro,noatime,nosuid,nodev,exec /dev/mtdblock1 /cartridge; then
     >&2 echo "[RIVOS] Failed to mount cartridge filesystem."
     return 1
@@ -23,7 +23,7 @@ run_cartridge() {
   return $STATUS
 }
 # run cartridge
-run_cartridge "$@" &
+run "$@" &
 CARTRIDGE_PID=$!
 # wait cartridge
 wait $CARTRIDGE_PID

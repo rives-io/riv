@@ -252,7 +252,7 @@ a game library and a sandboxing utility. Here is a list of each folder component
 - `libriv` - RIV library used as middle-layers, that every game must use for graphics, audio, inputs, time and random.
 - `demos` - Simple games made with RIV that are provable on-chain to showcase it.
 - `docs` - RIV documentation.
-- `bwrapbox` - Sandboxing on top of [bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) for running games, with additions for limiting CPU usage and memory usage.
+- `tools` - RIV Linux utilities, such as `bwrapbox`, a sandboxing on top of [bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) for running games with additions for limiting CPU usage and memory usage.
 
 Check README of each directory for more details on them.
 

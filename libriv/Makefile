@@ -11,8 +11,10 @@ else
 endif
 
 # Release flags
-CFLAGS+=-O2 -fno-stack-protector -Wall
-LDFLAGS+=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now -rdynamic
+CFLAGS+=-O2 -fno-stack-protector -DNDEBUG -Wall
+LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
+LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
+LDFLAGS+=-z relro -z now -rdynamic
 STRIPFLAGS+=--strip-unneeded --remove-section=.comment
 NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 

@@ -1,35 +1,15 @@
-PREFIX=/usr/local
+TOOLS=bwrapbox unpack-rivlog
+MAKETARGET=
 
-# Auto detect toolchain to use
-HOST_ARCH=$(shell uname -m)
-ifeq ($(HOST_ARCH),riscv64)
-	TOOLCHAIN_PREFIX=
-	CC=$(TOOLCHAIN_PREFIX)gcc
-else
-	CC=riscv64-linux-musl-gcc
-	TOOLCHAIN_PREFIX=$(shell $(CC) -dumpmachine)-
-endif
+all: $(TOOLS)
 
-# Release flags
-CFLAGS=-O2 -fno-stack-protector -Wall -Werror
-LDFLAGS=-s -Wl,-O1,--sort-common,--build-id=none -z relro -z now -rdynamic
-STRIPFLAGS=--strip-unneeded --remove-section=.comment
-NELUA_FLAGS=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
+$(TOOLS):
+	$(MAKE) -C $@ $(MAKETARGET)
 
-unpack-rivlog: unpack-rivlog.nelua ../libs/guest-host/* ../libriv/*
-	nelua $(NELUA_FLAGS) \
-		--cc=$(CC) \
-		--cflags="$(CFLAGS)" \
-		--binary \
-		--ldflags="$(LDFLAGS)" \
-		--strip-bin \
-		--stripflags="$(STRIPFLAGS)" \
-		--cache-dir . \
-		--output $@ $<
+install: MAKETARGET=install
+install: $(TOOLS)
 
-clean:
-	rm -f unpack-rivlog unpack-rivlog.c
+clean: MAKETARGET=clean
+clean: $(TOOLS)
 
-install: unpack-rivlog
-	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	install -m755 unpack-rivlog $(DESTDIR)$(PREFIX)/bin/unpack-rivlog
+.PHONY: $(TOOLS)

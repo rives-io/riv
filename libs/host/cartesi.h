@@ -22,7 +22,7 @@
 
 #define CM_VERSION_MAJOR 0
 #define CM_VERSION_MINOR 15
-#define CM_VERSION_PATCH 1
+#define CM_VERSION_PATCH 2
 #define CM_VERSION_LABEL ""
 
 #define _CM_STR_HELPER(x) #x
@@ -30,7 +30,7 @@
 #define CM_VERSION                                                                                                     \
     _CM_STR(CM_VERSION_MAJOR) "." _CM_STR(CM_VERSION_MINOR) "." _CM_STR(CM_VERSION_PATCH) CM_VERSION_LABEL
 
-#define CM_MIMPID (CM_VERSION_MAJOR * 1000000 + CM_VERSION_MINOR * 1000 + CM_VERSION_PATCH)
+#define CM_MIMPID (CM_VERSION_MAJOR * 1000000 + CM_VERSION_MINOR)
 
 // NOLINTEND
 #endif // MACHINE_EMULATOR_SDK_MACHINE_C_VERSION_H
