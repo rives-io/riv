@@ -1,4 +1,5 @@
 SKEL_FILES=$(shell find skel -type f)
+TOOL_FILES=$(shell find ../tools -type f)
 LIBRIV_FILES=../libriv/*.nelua ../libriv/*.h
 BWRAPBOX_FILES=../bwrapbox/*.nelua ../bwrapbox/seccomp-filter-rules.h
 DOCKER_RUN_FLAGS=--platform=linux/riscv64 \
@@ -10,7 +11,7 @@ DOCKER_USER_RUN_FLAGS=\
 
 rootfs: rootfs.ext2
 
-rootfs.ext2: rootfs.Dockerfile toolchain-rootfs.Dockerfile $(LIBRIV_FILES) $(SKEL_FILES)
+rootfs.ext2: rootfs.Dockerfile toolchain-rootfs.Dockerfile $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
 	$(MAKE) toolchain
 	docker build --target rootfs-stage -f $< --progress plain --output . ..
 	touch $@

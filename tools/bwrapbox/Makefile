@@ -15,8 +15,7 @@ CFLAGS+=-O2 -DNDEBUG -Wall
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
 LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
 LDFLAGS+=-Wl,--dynamic-linker=/lib/ld-musl.so
-LDFLAGS+=-z relro -z now
-STRIPFLAGS+=--strip-all --strip-unneeded --remove-section=.comment
+LDFLAGS+=-z relro -z now -s
 NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
 
 all: bwrapbox seccomp-filter seccomp-filter.bpf
@@ -26,8 +25,6 @@ bwrapbox: bwrapbox.nelua
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
 		--ldflags="$(LDFLAGS)" \
-		--strip-bin \
-		--stripflags="$(STRIPFLAGS)" \
 		--cache-dir . \
 		--output $@ $<
 

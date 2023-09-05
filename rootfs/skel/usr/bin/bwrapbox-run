@@ -49,12 +49,14 @@ exec bwrapbox \
   --unshare-uts \
   --unshare-user \
   --clearenv \
-  --setenv TERM $TERM \
+  --setenv TERM "$TERM" \
   --setenv SHELL "$BWRAPBOX_SHELL" \
   --setenv PATH "$BWRAPBOX_PATH" \
   --setenv HOME "$BWRAPBOX_HOME" \
-  --setenv USER $BWRAPBOX_USER \
-  --setenv LOGNAME $BWRAPBOX_USER \
+  --setenv USER "$BWRAPBOX_USER" \
+  --setenv LOGNAME "$BWRAPBOX_USER" \
+  --setenv RIV_REPLAY_FD "$RIV_REPLAY_FD" \
+  --setenv RIV_NO_YIELD "$RIV_NO_YIELD" \
   --chdir $BWRAPBOX_WORKDIR \
   --die-with-parent \
   --as-pid-1 \

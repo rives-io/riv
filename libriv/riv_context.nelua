@@ -1,4 +1,5 @@
 require 'memory'
+require 'string'
 require 'linux'
 
 require '.riv_types'
@@ -32,8 +33,8 @@ function riv_context:_init_default_palette(): void
   self.mmio_driver.palette[RIV_PAL16_LIGHTPEACH] = RIV_RGB_PAL16_LIGHTPEACH
 end
 
-function riv_context:_ctl(reason: riv_control_command): void
-  assert(self.mmio_driver, 'riv not initialized')
+function riv_context:_yield(reason: riv_control_command): void
+  if self.yield_fd <= 0 then return end
   local IOCTL_YIELD: usize <comptime> = 0xc008d100
   local HTIF_DEVICE_YIELD: uint8 <comptime> = 2
   local HTIF_YIELD_AUTOMATIC: uint8 <comptime> = 0
@@ -61,12 +62,22 @@ function riv_context:_init_prng(argc: int32, argv: *[0]cstring): void
   self.prng:srand(hash[0], hash[1])
 end
 
+function riv_context:_read_replay_next_key_event(): void
+  if self.replay_next_key_event.key_code == 0xff then return end
+  local ret: isize = read(self.replay_fd, &self.replay_next_key_event, #@riv_key_toggle_event)
+  assert(ret == #@riv_key_toggle_event, 'read replay fd failed')
+end
+
 function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_setup'>
+  assert(self, 'invalid riv context')
   memory.zero(self, #@riv_context)
-  assert(not self.mmio_driver, 'riv already initialized')
   -- yield
-  self.yield_fd = open("/dev/yield", O_RDWR, 0)
-  assert(self.yield_fd > 0, 'open yield device failed')
+  local no_yield_str: string = getenv('RIV_NO_YIELD')
+  if #no_yield_str == 0 then
+    self.yield_fd = open("/dev/yield", O_RDWR, 0)
+    assert(self.yield_fd > 0, 'open yield device failed')
+    self.yielding = true
+  end
   -- map memory
   assert(get_free_hugepages() == 1, 'no free hugepage')
   local prot: cint = PROT_READ | PROT_WRITE
@@ -82,7 +93,7 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
     magic = RIV_DRIVER_MAGIC,
     version = RIV_VERSION,
     features = 0,
-    uuid = riv_rdcycle()
+    uuid = 0
   }
   self.mmio_driver.framebuffer_desc = {
     width = RIV_DEFAULT_WIDTH,
@@ -102,22 +113,29 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
   -- init palette
   self:_init_default_palette()
   -- retrieve input card from host
-  self:_ctl(RIV_CONTROL_OPEN)
+  self:_yield(RIV_CONTROL_OPEN)
   self.incard_len = self.mmio_device.incard_len & (RIV_MMIOSIZE_INOUTBUFFER-1)
   self.incard_format = self.mmio_device.incard_format
   -- initialize prng
   self:_init_prng(argc, argv)
   self.valid = true
+
+  local replay_fd_str: string = getenv('RIV_REPLAY_FD')
+  if #replay_fd_str > 0 then
+    self.replaying = true
+    self.replay_fd = (@int32)(tointeger(replay_fd_str))
+    self:_read_replay_next_key_event()
+  end
 end
 
 function riv_context:shutdown(): void <cexport'riv_shutdown'>
   -- ignore when not initialized
-  if not self.mmio_driver then return end
+  if not self or not self.valid then return end
   -- copy outcard description to driver
   self.mmio_driver.outcard_format = self.outcard_format
   self.mmio_driver.outcard_len = self.outcard_len
   -- tell the host we finished, the host may use inoutbuffer
-  self:_ctl(RIV_CONTROL_CLOSE)
+  self:_yield(RIV_CONTROL_CLOSE)
   -- unmap memory
   local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
   memory.zero(mmio, RIV_MMIOSIZE_HUGEPAGE)
@@ -168,17 +186,34 @@ function riv_context:_poll_inputs(): void
 end
 
 function riv_context:_flush_audio(): void
-  self:_ctl(RIV_CONTROL_FLUSH_AUDIO)
+  self:_yield(RIV_CONTROL_FLUSH_AUDIO)
   self.mmio_driver.audio_command_len = 0
   self.audiobuffer_off = 0
 end
 
 function riv_context:present(): void <cexport'riv_present'>
+  assert(self and self.valid, 'invalid riv context')
+  -- force exit when replay ends
+  if self.replaying and self.replay_next_key_event.key_code == 0xff and self.frame >= self.replay_next_key_event.frame + 1 then
+    self:shutdown()
+    exit(0)
+    return
+  end
   -- copy outcard description to driver
   self.mmio_driver.outcard_format = self.outcard_format
   self.mmio_driver.outcard_len = self.outcard_len
   -- present
-  self:_ctl(RIV_CONTROL_PRESENT)
+  self:_yield(RIV_CONTROL_PRESENT)
+  -- fill with replay inputs
+  if self.replaying then
+    local key_index: uint32 = 0
+    while self.replay_next_key_event.frame == self.frame and self.replay_next_key_event.key_code ~= 0xff do
+      self.mmio_device.key_toggles[key_index] = self.replay_next_key_event.key_code
+      key_index = key_index + 1
+      self:_read_replay_next_key_event()
+    end
+    self.mmio_device.key_toggle_count = key_index
+  end
   -- advance frame
   self.frame = self.frame + 1
   self.mmio_driver.frame = self.frame
@@ -190,7 +225,7 @@ function riv_context:present(): void <cexport'riv_present'>
 end
 
 function riv_context:loop(frame_cb: function(riv: *riv_context)): void <cexport'riv_loop'>
-  assert(self.mmio_driver, 'riv not initialized')
+  assert(self and self.valid, 'invalid riv context')
   while not self.quit do
     frame_cb(self)
     self:present()
@@ -207,6 +242,7 @@ function riv_context:_queue_audio_command(command: riv_audio_command): void
 end
 
 function riv_context:make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <cexport'riv_make_sound_buffer'>
+  assert(self and self.valid, 'invalid riv context')
   -- silently ignore invalid id field
   if desc.id ~= 0 then return 0 end
   -- TODO: we could send in multiple chunks
@@ -231,6 +267,7 @@ function riv_context:make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <ce
 end
 
 function riv_context:destroy_sound_buffer(id: uint64): void <cexport'riv_destroy_sound_buffer'>
+  assert(self and self.valid, 'invalid riv context')
   -- queue command
   self:_queue_audio_command{
     type = RIV_AUDIOCOMMAND_DESTROY_SOUND_BUFFER,
@@ -239,6 +276,7 @@ function riv_context:destroy_sound_buffer(id: uint64): void <cexport'riv_destroy
 end
 
 function riv_context:sound(desc: *riv_sound_desc): uint64 <cexport'riv_sound'>
+  assert(self and self.valid, 'invalid riv context')
   -- choose sound id
   if desc.id == 0 then
     if desc.buffer_id == 0 then return 0 end -- nothing to play
@@ -254,6 +292,7 @@ function riv_context:sound(desc: *riv_sound_desc): uint64 <cexport'riv_sound'>
 end
 
 function riv_context:waveform(desc: *riv_waveform_desc): uint64 <cexport'riv_waveform'>
+  assert(self and self.valid, 'invalid riv context')
   -- choose sound id
   desc.id = self.sound_gen + 1
   self.sound_gen = desc.id

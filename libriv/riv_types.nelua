@@ -307,6 +307,10 @@ global riv_key_state: type = @record{
   down: boolean,
   up: boolean
 }
+global riv_key_toggle_event: type = @record{
+  key_code: uint8,
+  frame: uint64
+}
 global riv_context: type = @record{
   frame: uint64,
   keys: [128]riv_key_state,
@@ -314,6 +318,8 @@ global riv_context: type = @record{
   incard_len: uint32,
   incard_format: riv_card_format,
   valid: boolean,
+  replaying: boolean,
+  yielding: boolean,
   prng: riv_prng,
   outcard_len: uint32,
   outcard_format: riv_card_format,
@@ -332,7 +338,9 @@ global riv_context: type = @record{
   sound_gen: uint64,
   sound_buffer_gen: uint64,
   audiobuffer_off: uint32,
-  yield_fd: int32
+  yield_fd: int32,
+  replay_fd: int32,
+  replay_next_key_event: riv_key_toggle_event
 }
 global riv_context_callback: type = @function(a1: *riv_context): void
 global riv_run_desc: type = @record{

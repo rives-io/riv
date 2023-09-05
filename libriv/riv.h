@@ -439,6 +439,12 @@ typedef struct riv_key_state {
   bool up;              // True only in the frame the key is released
 } riv_key_state;
 
+// Key toggle event
+typedef struct riv_key_toggle_event {
+  uint8_t key_code;
+  uint64_t frame;
+} riv_key_toggle_event;
+
 // RIV context
 typedef struct riv_context {
   // Public read-only fields (can be read at any moment)
@@ -447,7 +453,9 @@ typedef struct riv_context {
   uint32_t key_modifiers;                 // NIY
   uint32_t incard_len;                    // Input card length
   riv_card_format incard_format;          // Input card format
-  bool valid;                             // Whether riv context is initialized
+  bool valid;                             // Whether riv is initialized
+  bool replaying;                         // Whether we are replaying
+  bool yielding;                          // Whether an audio and video device is connected and is being yielded
   // Public read/write fields (can be written at any moment)
   riv_prng prng;                          // Internal PRNG state
   uint32_t outcard_len;                   // Output card length
@@ -469,6 +477,8 @@ typedef struct riv_context {
   uint64_t sound_buffer_gen;
   uint32_t audiobuffer_off;
   int32_t yield_fd;
+  int32_t replay_fd;
+  riv_key_toggle_event replay_next_key_event;
 } riv_context;
 
 // RIV context callback

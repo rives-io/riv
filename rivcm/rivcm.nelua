@@ -59,16 +59,20 @@ local rivcm_options: type = @record{
   entrypoint: string,
   cartridge_filename: string,
   replay_filename: string,
+  record_filename: string,
+  verify_filename: string,
   incard_filename: string,
   outcard_filename: string,
   outhash_filename: string,
   recording: boolean,
   replaying: boolean,
+  verifying: boolean,
   print_stats: boolean,
   print_hash: boolean,
   no_audio: boolean,
   no_video: boolean,
   no_quit: boolean,
+  wait_halt: boolean,
   print_final_hash: boolean,
   speed: float64,
 }
@@ -82,12 +86,19 @@ local function parse_options(): rivcm_options
     local a: string = sargs_key_at(i)
     if a == '-record' then
       assert(not opts.replaying, 'already replaying')
+      assert(not opts.verifying, 'already verifying')
+      opts.record_filename = sargs_value_at(i)
       opts.recording = true
-      opts.replay_filename = sargs_value_at(i)
     elseif a == '-replay' then
       assert(not opts.recording, 'already recording')
-      opts.replaying = true
+      assert(not opts.verifying, 'already verifying')
       opts.replay_filename = sargs_value_at(i)
+      opts.replaying = true
+    elseif a == '-verify' then
+      assert(not opts.recording, 'already recording')
+      assert(not opts.recording, 'already recording')
+      opts.verify_filename = sargs_value_at(i)
+      opts.verifying = true
     elseif a == '-cartridge' then
       opts.cartridge_filename = sargs_value_at(i)
     elseif a == '-load-incard' then
@@ -107,6 +118,8 @@ local function parse_options(): rivcm_options
       opts.no_video = true
     elseif a == '-no-quit' then
       opts.no_quit = true
+    elseif a == '-wait-halt' then
+      opts.wait_halt = true
     elseif a == '-print-stats' then
       opts.print_stats = true
     elseif a == '-print-final-hash' then
@@ -137,6 +150,9 @@ local function parse_options(): rivcm_options
 -replay <filename>
   Replay game from an input log.
 
+-verify <filename>
+  Replay game from an input log.
+
 -speed <speed>
   Set replay speed.
 
@@ -148,6 +164,9 @@ local function parse_options(): rivcm_options
 
 -no-quit
   Don't quit when cartridge finishes.
+
+-wait-halt
+  Don't quit when RIV device is closed, wait for the machine to halt.
 ]]
       os.exit(0)
     else
@@ -156,7 +175,11 @@ local function parse_options(): rivcm_options
   end
   local entrypoint_sb: stringbuilder <close>
   if #opts.cartridge_filename > 0 then
-    entrypoint_sb:write('cartridge-run')
+    if opts.verifying then
+      entrypoint_sb:write('cartridge-replay')
+    else
+      entrypoint_sb:write('cartridge-run')
+    end
   end
   if #entrypoint_args > 0 then
     if #entrypoint_sb > 0 then
@@ -177,7 +200,7 @@ local function startup(): void
   io.printf('[RIVCM] Startup\n')
 
   -- initialize the machine
-  machine = rivcm_machine.create(options.entrypoint, options.cartridge_filename)
+  machine = rivcm_machine.create(options.entrypoint, options.cartridge_filename, options.verify_filename)
 
   -- init subsystems
   rivcm_iocard.setup()
@@ -200,7 +223,7 @@ local function finish(): void
   finished = true
 
   if options.recording then
-    rivcm_input.save_replay(options.replay_filename)
+    rivcm_input.save_replay(options.record_filename)
   end
 
   if #options.outhash_filename > 0 then
@@ -210,6 +233,10 @@ local function finish(): void
     rivcm_iocard.save_outcard(options.outcard_filename)
   end
   rivcm_iocard.print_outcard()
+
+  if options.wait_halt then
+    repeat until machine:run() == CM_BREAK_REASON_HALTED
+  end
 
   if options.print_final_hash then
     local root_hash: string <close> = hexhash(machine:get_root_hash())
@@ -225,6 +252,10 @@ end
 
 -- Terminate application.
 local function shutdown(): void
+  if not finished then
+    finish()
+  end
+
   io.printf('[RIVCM] Shutdown\n')
 
   rivcm_iocard.shutdown()

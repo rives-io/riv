@@ -5,15 +5,18 @@ require 'cartesi'
 require 'keccak'
 
 require 'riv_types'
+require 'macros'
 
 global riv_paddr_base: type <using> = @enum(uint64) {
   RIV_PADDR_RAM        = 0x80000000,
   RIV_PADDR_ROOTFS     = 0x80000000000000,
   RIV_PADDR_CARTRIDGE  = 0x90000000000000,
+  RIV_PADDR_INPUTLOG   = 0xa0000000000000,
 }
 
 global RIV_MMIOSIZE_RAM: uint64 <comptime> = 128*1024*1024
 global RIV_MMIOSIZE_CARTRIDGE: uint64< comptime> = 2*1024*1024
+global RIV_MMIOSIZE_INPUTLOG: uint64< comptime> = 2*1024*1024
 
 --------------------------------------------------------------------------------
 
@@ -44,7 +47,7 @@ global rivcm_machine = @record{
 }
 
 -- Creates a new machine.
-function rivcm_machine.create(entrypoint: string, cartridge_filename: string): rivcm_machine
+function rivcm_machine.create(entrypoint: string, cartridge_filename: string, inputlog_filename: string): rivcm_machine
   -- get default config
   local defconfig: *cm_machine_config
   cm_assert!(cm_get_default_config(&defconfig))
@@ -64,6 +67,13 @@ function rivcm_machine.create(entrypoint: string, cartridge_filename: string): r
   flash_drive_entries[flash_drive_count] = {
     start = RIV_PADDR_CARTRIDGE,
     length = RIV_MMIOSIZE_CARTRIDGE,
+  }
+  flash_drive_count = flash_drive_count + 1
+
+  -- input log flash drive
+  flash_drive_entries[flash_drive_count] = {
+    start = RIV_PADDR_INPUTLOG,
+    length = RIV_MMIOSIZE_INPUTLOG,
   }
   flash_drive_count = flash_drive_count + 1
 
@@ -101,9 +111,16 @@ function rivcm_machine.create(entrypoint: string, cartridge_filename: string): r
 
   -- write cartridge
   if #cartridge_filename > 0 then
-    local file: filestream <close> = io.open(cartridge_filename, 'rb')
-    local cartridge_contents: string <close> = file:read('a')
-    cm_assert!(cm_write_memory(self.machine, RIV_PADDR_CARTRIDGE, cartridge_contents.data, cartridge_contents.size))
+    local file: filestream <close> = fn_assert!(io.open(cartridge_filename, 'rb'))
+    local contents: string <close> = fn_assert!(file:read('a'))
+    cm_assert!(cm_write_memory(self.machine, RIV_PADDR_CARTRIDGE, contents.data, contents.size))
+  end
+
+  -- write input log
+  if #inputlog_filename > 0 then
+    local file: filestream <close> = fn_assert!(io.open(inputlog_filename, 'rb'))
+    local contents: string <close> = fn_assert!(file:read('a'))
+    cm_assert!(cm_write_memory(self.machine, RIV_PADDR_INPUTLOG, contents.data, contents.size))
   end
 
   return self

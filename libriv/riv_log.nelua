@@ -40,11 +40,6 @@ local riv_key_map: type = @[RIV_NUM_KEYCODE]uint8
 
 global riv_log: type = @record{}
 
-global riv_key_toggle_event: type = @record{
-  key_code: uint8,
-  frame: uint64,
-}
-
 local function make_key_map(key_events: span(riv_key_toggle_event)): (riv_key_map, riv_key_map, usize)
   local key2idx: riv_key_map
   local idx2key: riv_key_map
@@ -149,6 +144,7 @@ end
 function riv_log.load_from_filestream(file: filestream): (vector(riv_key_toggle_event), uint64)
   -- load header
   local header_bytes: string <close> = fn_assert!(file:read(16))
+  assert(header_bytes.size == 16, 'malformed riv log header')
   local header: riv_log_header = $(@*riv_log_header)(header_bytes.data)
   assert(header.format == RIV_LOGFORMAT_KEYTOGGLES, 'unsupported riv log format')
   assert((header.flags & ~(RIV_LOGFLAGS_COMPRESSED_MZ)) == 0, 'unsupported riv flags format')
@@ -158,6 +154,7 @@ function riv_log.load_from_filestream(file: filestream): (vector(riv_key_toggle_
   local idx2key: riv_key_map
   if header.key_map_size > 0 then
     local idx2key_str: string <close> = fn_assert!(file:read(header.key_map_size))
+    assert(idx2key_str.size == header.key_map_size, 'malformed riv log key map')
     memory.spancopy((@span(byte)){data=&idx2key, size=#idx2key}, idx2key_str:span())
   end
 
@@ -171,7 +168,8 @@ function riv_log.load_from_filestream(file: filestream): (vector(riv_key_toggle_
   local packed_key_events: span(byte) = new(@byte, (1 + frame_delta_size) * header.key_events_size)
   defer delete(packed_key_events) end
   if header.key_events_size > 0 then
-    local packed_key_events_str: string <close> = fn_assert!(file:read('a'))
+    local packed_key_events_str: string <close> = fn_assert!(file:read(packed_key_events.size))
+    assert(packed_key_events_str.size <= packed_key_events.size, 'malformed riv log key events')
     if header.flags & RIV_LOGFLAGS_COMPRESSED_MZ ~= 0 then
       local uncompressed_len: csize = tinfl_decompress_mem_to_mem(
         packed_key_events.data, packed_key_events.size,
