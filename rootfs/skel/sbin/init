@@ -9,6 +9,7 @@ busybox mountpoint -q /proc    || busybox mount -o nosuid,nodev,noexec -t proc p
 busybox mountpoint -q /sys     || busybox mount -o nosuid,nodev,noexec -t sysfs sys /sys
 busybox mountpoint -q /dev/pts || busybox mount -o nosuid,noexec,mode=620,gid=5 -t devpts devpts /dev/pts
 busybox mountpoint -q /dev/shm || busybox mount -o nosuid,nodev,mode=1777,inode64 -t tmpfs tmpfs /dev/shm
+busybox mountpoint -q /tmp     || busybox mount -o nosuid,nodev,mode=1777,inode64 -t tmpfs tmpfs /tmp
 busybox mountpoint -q /run     || busybox mount -o nosuid,nodev,mode=0755,inode64 -t tmpfs tmpfs /run
 busybox grep -Fq cgroup2 /proc/filesystems && busybox mountpoint -q /sys/fs/cgroup || busybox mount -o nosuid,nodev,noexec -t cgroup2 cgroup2 /sys/fs/cgroup
 busybox mount -o noatime,nosuid,remount /

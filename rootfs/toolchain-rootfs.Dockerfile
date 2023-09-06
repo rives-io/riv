@@ -71,7 +71,7 @@ COPY libs/guest-host libs/guest-host
 
 # Install libriv
 COPY libriv libriv
-RUN make -C libriv install PREFIX=/usr
+RUN make -C libriv install install-dev PREFIX=/usr
 
 # Install riv tools
 COPY tools tools

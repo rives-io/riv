@@ -44,6 +44,7 @@ install: libriv.so
 	ln -sf libriv.so.0.1 $(DESTDIR)$(PREFIX)/lib/libriv.so.0
 	ln -sf libriv.so.0 $(DESTDIR)$(PREFIX)/lib/libriv.so
 
+install-dev:
 	# C bindings
 	mkdir -p $(DESTDIR)$(PREFIX)/include
 	install -m644 riv.h $(DESTDIR)$(PREFIX)/include/riv.h
