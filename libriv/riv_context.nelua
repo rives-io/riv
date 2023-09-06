@@ -120,9 +120,9 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
   self:_init_prng(argc, argv)
   self.valid = true
 
-  local replay_fd_str: string = getenv('RIV_REPLAY_FD')
+  local replay_fd_str: string = getenv('RIV_VERIFY_FD')
   if #replay_fd_str > 0 then
-    self.replaying = true
+    self.verifying = true
     self.replay_fd = (@int32)(tointeger(replay_fd_str))
     self:_read_replay_next_key_event()
   end
@@ -194,7 +194,7 @@ end
 function riv_context:present(): void <cexport'riv_present'>
   assert(self and self.valid, 'invalid riv context')
   -- force exit when replay ends
-  if self.replaying and self.replay_next_key_event.key_code == 0xff and self.frame >= self.replay_next_key_event.frame + 1 then
+  if self.verifying and self.replay_next_key_event.key_code == 0xff and self.frame >= self.replay_next_key_event.frame + 1 then
     self:shutdown()
     exit(0)
     return
@@ -205,7 +205,7 @@ function riv_context:present(): void <cexport'riv_present'>
   -- present
   self:_yield(RIV_CONTROL_PRESENT)
   -- fill with replay inputs
-  if self.replaying then
+  if self.verifying then
     local key_index: uint32 = 0
     while self.replay_next_key_event.frame == self.frame and self.replay_next_key_event.key_code ~= 0xff do
       self.mmio_device.key_toggles[key_index] = self.replay_next_key_event.key_code

@@ -17,7 +17,9 @@ run() {
       return 1
     fi
     echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
-    RIV_REPLAY_FD=3 bwrapbox-run "$EXE" "$@" 3</run/rivlog
+    BWRAPBOX_RLIMIT_CPU_MAX=900 \
+    BWRAPBOX_FLAGS="--setenv RIV_VERIFY_FD 3" \
+      bwrapbox-run "$EXE" "$@" 3</run/rivlog
     STATUS=$?
     echo "[RIVOS] Cartridge finished with status $STATUS"
     rm -f /run/rivlog

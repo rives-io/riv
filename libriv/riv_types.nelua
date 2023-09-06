@@ -318,7 +318,7 @@ global riv_context: type = @record{
   incard_len: uint32,
   incard_format: riv_card_format,
   valid: boolean,
-  replaying: boolean,
+  verifying: boolean,
   yielding: boolean,
   prng: riv_prng,
   outcard_len: uint32,

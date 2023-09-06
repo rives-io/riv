@@ -12,7 +12,7 @@ run() {
   fi
   if [[ -x "$EXE" ]]; then
     echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
-    bwrapbox-run "$EXE" "$@"
+    BWRAPBOX_RLIMIT_CPU_MAX=600 bwrapbox-run "$EXE" "$@"
     STATUS=$?
     echo "[RIVOS] Cartridge finished with status $STATUS"
   else

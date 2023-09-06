@@ -454,8 +454,8 @@ typedef struct riv_context {
   uint32_t incard_len;                    // Input card length
   riv_card_format incard_format;          // Input card format
   bool valid;                             // Whether riv is initialized
-  bool replaying;                         // Whether we are replaying
-  bool yielding;                          // Whether an audio and video device is connected and is being yielded
+  bool verifying;                         // Whether we are verifying
+  bool yielding;                          // Whether an audio/video/input devices are connected and yielding
   // Public read/write fields (can be written at any moment)
   riv_prng prng;                          // Internal PRNG state
   uint32_t outcard_len;                   // Output card length

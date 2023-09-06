@@ -176,7 +176,7 @@ local function parse_options(): rivcm_options
   local entrypoint_sb: stringbuilder <close>
   if #opts.cartridge_filename > 0 then
     if opts.verifying then
-      entrypoint_sb:write('cartridge-replay')
+      entrypoint_sb:write('cartridge-verify')
     else
       entrypoint_sb:write('cartridge-run')
     end
