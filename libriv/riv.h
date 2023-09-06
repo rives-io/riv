@@ -477,8 +477,8 @@ typedef struct riv_context {
   uint64_t sound_buffer_gen;
   uint32_t audiobuffer_off;
   int32_t yield_fd;
-  int32_t replay_fd;
-  riv_key_toggle_event replay_next_key_event;
+  uint32_t verify_key_event_index;
+  riv_key_toggle_event *verify_key_events;
 } riv_context;
 
 // RIV context callback

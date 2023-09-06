@@ -62,18 +62,12 @@ function riv_context:_init_prng(argc: int32, argv: *[0]cstring): void
   self.prng:srand(hash[0], hash[1])
 end
 
-function riv_context:_read_replay_next_key_event(): void
-  if self.replay_next_key_event.key_code == 0xff then return end
-  local ret: isize = read(self.replay_fd, &self.replay_next_key_event, #@riv_key_toggle_event)
-  assert(ret == #@riv_key_toggle_event, 'read replay fd failed')
-end
-
 function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_setup'>
   assert(self, 'invalid riv context')
   memory.zero(self, #@riv_context)
   -- yield
   local no_yield_str: string = getenv('RIV_NO_YIELD')
-  if #no_yield_str == 0 then
+  if no_yield_str ~= 'y' then
     self.yield_fd = open("/dev/yield", O_RDWR, 0)
     assert(self.yield_fd > 0, 'open yield device failed')
     self.yielding = true
@@ -120,11 +114,15 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
   self:_init_prng(argc, argv)
   self.valid = true
 
-  local replay_fd_str: string = getenv('RIV_VERIFY_FD')
-  if #replay_fd_str > 0 then
+  local verify_fd_str: string = getenv('RIV_VERIFY_FD')
+  if #verify_fd_str > 0 then
     self.verifying = true
-    self.replay_fd = (@int32)(tointeger(replay_fd_str))
-    self:_read_replay_next_key_event()
+    local verify_fd: cint = (@cint)(tointeger(verify_fd_str))
+    local size: isize = lseek(verify_fd, 0, SEEK_END)
+    assert(size > #@riv_key_toggle_event, 'invalid verify fd size')
+    local verify_ptr: pointer = mmap(nilptr, size, PROT_READ, MAP_SHARED, verify_fd, 0)
+    assert(verify_ptr ~= MAP_FAILED, 'verify fd mmap failed')
+    self.verify_key_events = (@*[0]riv_key_toggle_event)(verify_ptr)
   end
 end
 
@@ -194,10 +192,13 @@ end
 function riv_context:present(): void <cexport'riv_present'>
   assert(self and self.valid, 'invalid riv context')
   -- force exit when replay ends
-  if self.verifying and self.replay_next_key_event.key_code == 0xff and self.frame >= self.replay_next_key_event.frame + 1 then
-    self:shutdown()
-    exit(0)
-    return
+  if self.verifying then
+    local event: riv_key_toggle_event = self.verify_key_events[self.verify_key_event_index]
+    if event.key_code == 0xff and self.frame >= event.frame + 1 then
+      self:shutdown()
+      exit(0)
+      return
+    end
   end
   -- copy outcard description to driver
   self.mmio_driver.outcard_format = self.outcard_format
@@ -207,10 +208,12 @@ function riv_context:present(): void <cexport'riv_present'>
   -- fill with replay inputs
   if self.verifying then
     local key_index: uint32 = 0
-    while self.replay_next_key_event.frame == self.frame and self.replay_next_key_event.key_code ~= 0xff do
-      self.mmio_device.key_toggles[key_index] = self.replay_next_key_event.key_code
+    while self.verify_key_event_index ~= 0xffffffff do
+      local event: riv_key_toggle_event = self.verify_key_events[self.verify_key_event_index]
+      if event.frame ~= self.frame or event.key_code == 0xff then break end
+      self.verify_key_event_index = self.verify_key_event_index + 1
+      self.mmio_device.key_toggles[key_index] = event.key_code
       key_index = key_index + 1
-      self:_read_replay_next_key_event()
     end
     self.mmio_device.key_toggle_count = key_index
   end

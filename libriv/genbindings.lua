@@ -31,6 +31,7 @@ nldecl.generate_bindings_file{
     {'framebuffer: %*', 'framebuffer: *[RIV_MMIOSIZE_FRAMEBUFFER]'},
     {'audiobuffer: %*', 'audiobuffer: *[RIV_MMIOSIZE_AUDIOBUFFER]'},
     {'tracked_keys: %*', 'tracked_keys: *[RIV_NUM_KEYCODE]'},
+    {'verify_key_events: %*', 'verify_key_events: *[0]'},
     {'palette: %*', 'palette: *[256]'},
   },
   output_head = [[
