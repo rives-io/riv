@@ -176,10 +176,11 @@ local function parse_options(): rivcm_options
   local entrypoint_sb: stringbuilder <close>
   if #opts.cartridge_filename > 0 then
     if opts.verifying then
-      entrypoint_sb:write('cartridge-verify')
+      entrypoint_sb:write('RUN_CARTRIDGE=/dev/mtdblock1 RUN_RIVLOG=/dev/mtdblock2 RUN_IOCARD=/run/iocard ')
     else
-      entrypoint_sb:write('cartridge-run')
+      entrypoint_sb:write('RUN_CARTRIDGE=/dev/mtdblock1 ')
     end
+    entrypoint_sb:write('cartridge-run')
   end
   if #entrypoint_args > 0 then
     if #entrypoint_sb > 0 then

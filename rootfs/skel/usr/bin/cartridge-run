@@ -1,6 +1,6 @@
 #!/bin/sh
 run() {
-  if ! busybox mount -o ro,noatime,nosuid,nodev,exec /dev/mtdblock1 /cartridge; then
+  if ! busybox mount -o ro,noatime,nosuid,nodev,exec "$RUN_CARTRIDGE" /cartridge; then
     >&2 echo "[RIVOS] Failed to mount cartridge filesystem."
     return 1
   fi
@@ -11,10 +11,27 @@ run() {
     return 1
   fi
   if [[ -x "$EXE" ]]; then
-    echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
-    bwrapbox-run "$EXE" "$@"
-    STATUS=$?
-    echo "[RIVOS] Cartridge finished with status $STATUS"
+    if [ -n "$RUN_RIVLOG" ]; then # verify
+      echo "[RIVOS] Unpacking rivlog..."
+      local RUN_EVENTLOG=$(mktemp --tmpdir=/run eventlog.XXXXXXXXXXX)
+      if ! unpack-rivlog <"$RUN_RIVLOG" >"$RUN_EVENTLOG"; then
+        >&2 echo "[RIVOS] Unable to unpack rivlog."
+        return 1
+      fi
+      echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
+      BWRAPBOX_VERIFY_LIMITS=y BWRAPBOX_FLAGS="--setenv RIV_EVENTLOG_FD 3 --setenv RIV_IOCARD_FD 4" \
+        bwrapbox-run "$EXE" "$@" \
+          3<"$RUN_EVENTLOG" \
+          4<>"$RUN_IOCARD"
+      STATUS=$?
+      echo "[RIVOS] Cartridge finished with status $STATUS"
+      rm -f "$RUN_EVENTLOG"
+    else # play
+      echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
+      bwrapbox-run "$EXE" "$@"
+      STATUS=$?
+      echo "[RIVOS] Cartridge finished with status $STATUS"
+    fi
   else
     >&2 echo "[RIVOS] No executable file found in cartridge."
     STATUS=1
