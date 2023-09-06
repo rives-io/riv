@@ -278,7 +278,7 @@ local function machine_frame(): void
     switch machine:run() do
     case CM_BREAK_REASON_YIELDED_AUTOMATICALLY then
       -- execute control event from the yield
-      switch machine:read_yield_reason() do
+      switch machine:read_yield_data() do
       case RIV_CONTROL_OPEN then
         io.printf('[RIVCM] Open RIV device\n')
         if #options.incard_filename > 0 then

@@ -81,7 +81,7 @@ function rivcm_machine.create(entrypoint: string, cartridge_filename: string, ev
   local bootargs: string <close> = "console=hvc0 \z
     rootfstype=ext2 \z
     root=/dev/mtdblock0 \z
-    rw quiet \z
+    ro quiet \z
     swiotlb=noforce \z
     mtdparts=flash.0:-(root) \z
     hugepagesz=2M hugepages=1 \z
@@ -147,10 +147,17 @@ function rivcm_machine:get_root_hash(): [32]byte
 end
 
 -- Get machine yield reason.
-function rivcm_machine:read_yield_reason(): uint32
+function rivcm_machine:read_yield_reason(): uint16
   local data: uint64
   cm_assert!(cm_read_htif_tohost_data(self.machine, &data))
-  return data >> 32
+  return (@uint16)((data >> 32) & 0xffff)
+end
+
+-- Get machine yield data.
+function rivcm_machine:read_yield_data(): uint32
+  local data: uint64
+  cm_assert!(cm_read_htif_tohost_data(self.machine, &data))
+  return (@uint32)(data & 0xffffffff)
 end
 
 -- Get machine mcycle.
@@ -244,7 +251,7 @@ function rivcm_machine:run(): CM_BREAK_REASON
   local break_reason: CM_BREAK_REASON
   cm_assert!(cm_machine_run(self.machine, (@uint64)(-1), &break_reason))
   -- load driver MMIO
-  if break_reason == CM_BREAK_REASON_YIELDED_AUTOMATICALLY then
+  if break_reason == CM_BREAK_REASON_YIELDED_AUTOMATICALLY and self:read_yield_reason() == 0 then
     if self:_check_mmio() then -- is the MMIO still valid?
       -- load MMIO from guest driver into host device
       self:_load_driver_mmio()

@@ -80,7 +80,6 @@ $(NAME).sqfs: $(NAME).fs
 	    -mkfs-time 0 \
 	    -all-time 0 \
 	    -all-root \
-	    -nopad \
 	    -noappend \
 	    -no-fragments \
 	    -no-exports \

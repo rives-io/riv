@@ -33,16 +33,17 @@ function riv_context:_init_default_palette(): void
   self.mmio_driver.palette[RIV_PAL16_LIGHTPEACH] = RIV_RGB_PAL16_LIGHTPEACH
 end
 
-function riv_context:_yield(reason: riv_control_command): void
+function riv_context:_yield(command: riv_control_command): void
   if self.yield_fd <= 0 then return end
   local IOCTL_YIELD: usize <comptime> = 0xc008d100
   local HTIF_DEVICE_YIELD: uint8 <comptime> = 2
   local HTIF_YIELD_AUTOMATIC: uint8 <comptime> = 0
+  local HTIF_YIELD_REASON_PROGRESS: uint8 <comptime> = 0
   local swap_yield_req: riv_yield_request = {
     dev = HTIF_DEVICE_YIELD,
     mode = HTIF_YIELD_AUTOMATIC,
-    reason = reason,
-    data = 0,
+    reason = HTIF_YIELD_REASON_PROGRESS,
+    data = command,
   }
   assert(ioctl(self.yield_fd, IOCTL_YIELD, (@usize)(&swap_yield_req)) == 0, 'yield ioctl failed')
 end
