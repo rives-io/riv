@@ -235,6 +235,7 @@ local function finish(): void
   rivcm_iocard.print_outcard()
 
   if options.wait_halt then
+    io.printf('[RIVCM] Waiting halt...\n')
     repeat until machine:run() == CM_BREAK_REASON_HALTED
   end
 

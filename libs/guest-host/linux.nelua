@@ -7,6 +7,8 @@ global function close(fd: cint): cint <cimport,cinclude'<unistd.h>'> end
 global function read(fd: cint, buf: pointer, n: usize): isize <cimport,cinclude'<unistd.h>'> end
 global function write(fd: cint, buf: pointer, n: usize): isize <cimport,cinclude'<unistd.h>'> end
 global function lseek(fd: cint, offset: isize, whence: cint): isize <cimport,cinclude'<unistd.h>'> end
+global function ftruncate(fd: cint, length: isize): cint <cimport,cinclude'<unistd.h>'> end
+global function fsync(fd: cint): cint <cimport,cinclude'<unistd.h>'> end
 global function ioctl(fd: cint, request: usize, ...: cvarargs): cint  <cimport,cinclude'<sys/ioctl.h>'> end
 global function getenv(name: cstring): cstring <cimport,cinclude'<stdlib.h>'> end
 
@@ -19,6 +21,7 @@ global MAP_POPULATE: cint <cimport,cinclude'<sys/mman.h>'>
 global MAP_HUGETLB: cint <cimport,cinclude'<sys/mman.h>'>
 global MAP_FAILED: pointer <cimport,cinclude'<sys/mman.h>'>
 
+global SEEK_SET: cint <cimport,cinclude'<stdlib.h>'>
 global SEEK_END: cint <cimport,cinclude'<stdlib.h>'>
 
 global function mmap(addr: pointer, len: csize, prot: cint, flags: cint, fd: cint, offset: clong): pointer <cimport,cinclude'<sys/mman.h>'> end

@@ -47,6 +47,21 @@ function riv_context:_yield(reason: riv_control_command): void
   assert(ioctl(self.yield_fd, IOCTL_YIELD, (@usize)(&swap_yield_req)) == 0, 'yield ioctl failed')
 end
 
+function riv_context:_flush_audio_commands(): void
+  self:_yield(RIV_CONTROL_FLUSH_AUDIO)
+  self.mmio_driver.audio_command_len = 0
+  self.audiobuffer_off = 0
+end
+
+function riv_context:_sync_outcard(): void
+  self.mmio_driver.outcard_len = self.outcard_len
+  if self.verify_iocard_fd > 0 then
+    assert(lseek(self.verify_iocard_fd, 0, SEEK_SET) == 0, 'iocard lseek failed')
+    assert(write(self.verify_iocard_fd, self.inoutbuffer, self.outcard_len) == self.outcard_len, 'iocard write failed')
+    assert(ftruncate(self.verify_iocard_fd, self.outcard_len) == 0, 'iocard ftruncate failed')
+  end
+end
+
 function riv_context:_init_prng(argc: int32, argv: *[0]cstring): void
   local hash: [2]uint64 = {self.incard_len, self.incard_len}
   if self.incard_len > 0 then
@@ -106,30 +121,50 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
   memory.spanset((@span(boolean))(self.mmio_driver.tracked_keys), true)
   -- init palette
   self:_init_default_palette()
+
   -- retrieve input card from host
   self:_yield(RIV_CONTROL_OPEN)
   self.incard_len = self.mmio_device.incard_len & (RIV_MMIOSIZE_INOUTBUFFER-1)
+
+  -- retrieve input card from fd
+  local iocard_fd_str: string = getenv('RIV_IOCARD_FD')
+  if #iocard_fd_str > 0 then
+    local iocard_fd: int32 = iocard_fd_str.data[0] - '0'_b
+    local iocard_size: isize = lseek(iocard_fd, 0, SEEK_END)
+    assert(iocard_size >= 0 and iocard_size < RIV_MMIOSIZE_INOUTBUFFER, 'invalid iocard fd size')
+    if iocard_size > 0 then
+      local iocard_ptr: pointer = mmap(nilptr, iocard_size, PROT_READ, MAP_SHARED, iocard_fd, 0)
+      assert(iocard_ptr ~= MAP_FAILED, 'iocard fd mmap failed')
+      memory.copy(self.inoutbuffer, iocard_ptr, iocard_size)
+      munmap(iocard_ptr, iocard_size)
+    end
+    self.incard_len = (@uint32)(iocard_size)
+    self.verify_iocard_fd = iocard_fd
+  end
+
   -- initialize prng
   self:_init_prng(argc, argv)
-  self.valid = true
 
-  local verify_fd_str: string = getenv('RIV_VERIFY_FD')
-  if #verify_fd_str > 0 then
+  -- retrieve event log from fd
+  local eventlog_fd_str: string = getenv('RIV_EVENTLOG_FD')
+  if #eventlog_fd_str > 0 then
     self.verifying = true
-    local verify_fd: cint = (@cint)(tointeger(verify_fd_str))
-    local size: isize = lseek(verify_fd, 0, SEEK_END)
-    assert(size > #@riv_key_toggle_event, 'invalid verify fd size')
-    local verify_ptr: pointer = mmap(nilptr, size, PROT_READ, MAP_SHARED, verify_fd, 0)
-    assert(verify_ptr ~= MAP_FAILED, 'verify fd mmap failed')
-    self.verify_key_events = (@*[0]riv_key_toggle_event)(verify_ptr)
+    local eventlog_fd: int32 = eventlog_fd_str.data[0] - '0'_b
+    local eventlog_size: isize = lseek(eventlog_fd, 0, SEEK_END)
+    assert(eventlog_size > #@riv_key_toggle_event, 'invalid eventlog fd size')
+    local eventlog_ptr: pointer = mmap(nilptr, eventlog_size, PROT_READ, MAP_SHARED, eventlog_fd, 0)
+    assert(eventlog_ptr ~= MAP_FAILED, 'eventlog fd mmap failed')
+    self.verify_key_events = (@*[0]riv_key_toggle_event)(eventlog_ptr)
   end
+
+  self.valid = true
 end
 
 function riv_context:shutdown(): void <cexport'riv_shutdown'>
   -- ignore when not initialized
   if not self or not self.valid then return end
   -- copy outcard description to driver
-  self.mmio_driver.outcard_len = self.outcard_len
+  self:_sync_outcard()
   -- tell the host we finished, the host may use inoutbuffer
   self:_yield(RIV_CONTROL_CLOSE)
   -- unmap memory
@@ -181,12 +216,6 @@ function riv_context:_poll_inputs(): void
   end
 end
 
-function riv_context:_flush_audio(): void
-  self:_yield(RIV_CONTROL_FLUSH_AUDIO)
-  self.mmio_driver.audio_command_len = 0
-  self.audiobuffer_off = 0
-end
-
 function riv_context:present(): void <cexport'riv_present'>
   assert(self and self.valid, 'invalid riv context')
   -- force exit when replay ends
@@ -199,7 +228,7 @@ function riv_context:present(): void <cexport'riv_present'>
     end
   end
   -- copy outcard description to driver
-  self.mmio_driver.outcard_len = self.outcard_len
+  self:_sync_outcard()
   -- present
   self:_yield(RIV_CONTROL_PRESENT)
   -- fill with replay inputs
@@ -237,7 +266,7 @@ function riv_context:_queue_audio_command(command: riv_audio_command): void
   self.mmio_driver.audio_commands[command_idx] = command
   self.mmio_driver.audio_command_len = command_idx + 1
   if self.mmio_driver.audio_command_len >= #self.mmio_driver.audio_commands then
-    self:_flush_audio()
+    self:_flush_audio_commands()
   end
 end
 
@@ -249,7 +278,7 @@ function riv_context:make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <ce
   assert(desc.data.size <= RIV_MMIOSIZE_AUDIOBUFFER, 'sound buffer is too large')
   -- flush previous audio buffer if there is not enough space
   if self.audiobuffer_off + desc.data.size > RIV_MMIOSIZE_AUDIOBUFFER then
-    self:_flush_audio()
+    self:_flush_audio_commands()
   end
   -- copy buffer
   memory.copy(&self.audiobuffer[self.audiobuffer_off], desc.data.data, desc.data.size)

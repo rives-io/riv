@@ -335,6 +335,7 @@ global riv_context: type = @record{
   sound_buffer_gen: uint64,
   audiobuffer_off: uint32,
   yield_fd: int32,
+  verify_iocard_fd: int32,
   verify_key_event_index: uint32,
   verify_key_events: *[0]riv_key_toggle_event
 }

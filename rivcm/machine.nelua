@@ -11,12 +11,12 @@ global riv_paddr_base: type <using> = @enum(uint64) {
   RIV_PADDR_RAM        = 0x80000000,
   RIV_PADDR_ROOTFS     = 0x80000000000000,
   RIV_PADDR_CARTRIDGE  = 0x90000000000000,
-  RIV_PADDR_INPUTLOG   = 0xa0000000000000,
+  RIV_PADDR_EVENTLOG   = 0xa0000000000000,
 }
 
 global RIV_MMIOSIZE_RAM: uint64 <comptime> = 128*1024*1024
 global RIV_MMIOSIZE_CARTRIDGE: uint64< comptime> = 2*1024*1024
-global RIV_MMIOSIZE_INPUTLOG: uint64< comptime> = 2*1024*1024
+global RIV_MMIOSIZE_EVENTLOG: uint64< comptime> = 2*1024*1024
 
 --------------------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ global rivcm_machine = @record{
 }
 
 -- Creates a new machine.
-function rivcm_machine.create(entrypoint: string, cartridge_filename: string, inputlog_filename: string): rivcm_machine
+function rivcm_machine.create(entrypoint: string, cartridge_filename: string, eventlog_filename: string): rivcm_machine
   -- get default config
   local defconfig: *cm_machine_config
   cm_assert!(cm_get_default_config(&defconfig))
@@ -70,10 +70,10 @@ function rivcm_machine.create(entrypoint: string, cartridge_filename: string, in
   }
   flash_drive_count = flash_drive_count + 1
 
-  -- input log flash drive
+  -- event log flash drive
   flash_drive_entries[flash_drive_count] = {
-    start = RIV_PADDR_INPUTLOG,
-    length = RIV_MMIOSIZE_INPUTLOG,
+    start = RIV_PADDR_EVENTLOG,
+    length = RIV_MMIOSIZE_EVENTLOG,
   }
   flash_drive_count = flash_drive_count + 1
 
@@ -116,11 +116,11 @@ function rivcm_machine.create(entrypoint: string, cartridge_filename: string, in
     cm_assert!(cm_write_memory(self.machine, RIV_PADDR_CARTRIDGE, contents.data, contents.size))
   end
 
-  -- write input log
-  if #inputlog_filename > 0 then
-    local file: filestream <close> = fn_assert!(io.open(inputlog_filename, 'rb'))
+  -- write event log
+  if #eventlog_filename > 0 then
+    local file: filestream <close> = fn_assert!(io.open(eventlog_filename, 'rb'))
     local contents: string <close> = fn_assert!(file:read('a'))
-    cm_assert!(cm_write_memory(self.machine, RIV_PADDR_INPUTLOG, contents.data, contents.size))
+    cm_assert!(cm_write_memory(self.machine, RIV_PADDR_EVENTLOG, contents.data, contents.size))
   end
 
   return self
