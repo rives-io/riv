@@ -8,7 +8,6 @@ global rivcm_iocard: type = @record{}
 
 local outbuffer: [RIV_MMIOSIZE_INOUTBUFFER]byte
 local outcard_data: span(byte)
-local outcard_format: riv_card_format
 
 function rivcm_iocard.setup(): void
   outcard_data.data = &outbuffer[0]
@@ -19,7 +18,6 @@ function rivcm_iocard.shutdown(): void
 end
 
 function rivcm_iocard.update_outcard(): void
-  outcard_format = machine.mmio_driver.outcard_format
   outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_MMIOSIZE_INOUTBUFFER)
   machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, outcard_data)
 end
@@ -30,8 +28,6 @@ function rivcm_iocard.load_incard(filename: string): void
   local data: span(byte) = {data=contents.data, size=math.min(RIV_MMIOSIZE_INOUTBUFFER, contents.size)}
   machine:write_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, data)
   machine.mmio_device.incard_len = data.size
-  -- TODO: detect type from filename
-  machine.mmio_device.incard_format = RIV_CARDFORMAT_DATA
   io.printf("[RIVCM] Loaded input card '%s'\n", filename)
 end
 

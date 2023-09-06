@@ -71,9 +71,8 @@ end
 local function save_score(finished: boolean)
   local finished_str: string = finished and 'true' or 'false'
   riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MMIOSIZE_INOUTBUFFER,
-    [[{"score":%u,"apples":%u,"frames":%u,"max_score":%u,"finished":%s}]],
+    [[JSON{"score":%u,"apples":%u,"frames":%u,"max_score":%u,"finished":%s}]],
       score, apples, riv.frame, max_score, finished_str)
-  riv.outcard_format = RIV_CARDFORMAT_JSON
   riv_printf("%s\n", (@cstring)(riv.inoutbuffer))
 end
 

@@ -48,7 +48,7 @@ function riv_context:_yield(reason: riv_control_command): void
 end
 
 function riv_context:_init_prng(argc: int32, argv: *[0]cstring): void
-  local hash: [2]uint64 = {self.incard_format, self.incard_format}
+  local hash: [2]uint64 = {self.incard_len, self.incard_len}
   if self.incard_len > 0 then
     hash = murmur3_128(span_uint8{data=(self.inoutbuffer), size=self.incard_len}, hash)
   end
@@ -109,7 +109,6 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
   -- retrieve input card from host
   self:_yield(RIV_CONTROL_OPEN)
   self.incard_len = self.mmio_device.incard_len & (RIV_MMIOSIZE_INOUTBUFFER-1)
-  self.incard_format = self.mmio_device.incard_format
   -- initialize prng
   self:_init_prng(argc, argv)
   self.valid = true
@@ -130,7 +129,6 @@ function riv_context:shutdown(): void <cexport'riv_shutdown'>
   -- ignore when not initialized
   if not self or not self.valid then return end
   -- copy outcard description to driver
-  self.mmio_driver.outcard_format = self.outcard_format
   self.mmio_driver.outcard_len = self.outcard_len
   -- tell the host we finished, the host may use inoutbuffer
   self:_yield(RIV_CONTROL_CLOSE)
@@ -201,7 +199,6 @@ function riv_context:present(): void <cexport'riv_present'>
     end
   end
   -- copy outcard description to driver
-  self.mmio_driver.outcard_format = self.outcard_format
   self.mmio_driver.outcard_len = self.outcard_len
   -- present
   self:_yield(RIV_CONTROL_PRESENT)

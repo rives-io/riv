@@ -208,10 +208,9 @@ typedef enum riv_pixel_format {
 
 // Input/output card formats
 typedef enum riv_card_format {
-  RIV_CARDFORMAT_NONE = 0,
-  RIV_CARDFORMAT_DATA,
-  RIV_CARDFORMAT_TEXT,
-  RIV_CARDFORMAT_JSON,
+  RIV_CARDFORMAT_BLOB = 0x424f4c42, // "BLOB"
+  RIV_CARDFORMAT_TEXT = 0x54584554, // "TEXT"
+  RIV_CARDFORMAT_JSON = 0x4e4f534a, // "JSON"
 } riv_card_format;
 
 // Waveform types
@@ -407,7 +406,6 @@ typedef struct riv_mmio_driver {
   riv_framebuffer_desc framebuffer_desc;
   riv_audio_command audio_commands[32];
   uint32_t audio_command_len;
-  riv_card_format outcard_format;
   uint32_t outcard_len;
   bool tracked_keys[RIV_NUM_KEYCODE];
   uint32_t palette[256];
@@ -417,7 +415,6 @@ typedef struct riv_mmio_driver {
 typedef struct riv_mmio_device {
   riv_mmio_header header;
   uint32_t incard_len;
-  riv_card_format incard_format;
   uint32_t key_toggle_count;
   uint8_t key_toggles[RIV_NUM_KEYCODE];
 } riv_mmio_device;
@@ -459,7 +456,6 @@ typedef struct riv_context {
   // Public read/write fields (can be written at any moment)
   riv_prng prng;                          // Internal PRNG state
   uint32_t outcard_len;                   // Output card length
-  riv_card_format outcard_format;         // Output card format
   bool quit;                              // When set true, RIV loop will stop
   riv_framebuffer_desc* framebuffer_desc; // Screen frame buffer description
   riv_unbounded_uint8 inoutbuffer;        // Input/output card buffer
