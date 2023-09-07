@@ -48,8 +48,7 @@ exec bwrapbox \
   --unshare-uts \
   --unshare-user \
   --clearenv \
-  --setenv TERM "$TERM" \
-  --setenv SHELL "$BWRAPBOX_SHELL" \
+  --setenv TERM "$BWRAPBOX_TERM" \
   --setenv PATH "$BWRAPBOX_PATH" \
   --setenv HOME "$BWRAPBOX_HOME" \
   --setenv USER "$BWRAPBOX_USER" \

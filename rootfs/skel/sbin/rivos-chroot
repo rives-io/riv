@@ -1,0 +1,17 @@
+#!/bin/sh
+ROOT=$1
+shift
+exec bwrap \
+    --bind $ROOT / \
+    --dev-bind /dev /dev \
+    --bind /proc /proc \
+    --bind /sys /sys \
+    --tmpfs /tmp \
+    --tmpfs /run \
+    --clearenv \
+    --setenv TERM "linux" \
+    --setenv PATH "/usr/sbin:/usr/bin:/sbin:/bin" \
+    --setenv HOME "/root" \
+    --setenv USER "root" \
+    --setenv LOGNAME "root" \
+    "$@"

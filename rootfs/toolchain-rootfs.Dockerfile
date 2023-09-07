@@ -84,12 +84,11 @@ RUN make -C tools install PREFIX=/usr
 
 # Create Linux filesystem hierarchy
 WORKDIR /rootfs
-RUN mkdir -p usr/bin usr/sbin usr/lib var/tmp proc sys dev root cartridge tmp run etc && \
+RUN mkdir -p sbin usr/bin usr/sbin usr/lib var/tmp proc sys dev root cartridge tmp run etc && \
     chmod 555 proc sys && \
     chown 500:500 cartridge && \
     chmod 1777 tmp var/tmp && \
     ln -s usr/bin bin && \
-    ln -s usr/sbin sbin && \
     ln -s usr/lib lib && \
     ln -s /run var/run
 
@@ -115,7 +114,6 @@ RUN make -C /root/tools install PREFIX=/usr DESTDIR=/rootfs
 
 # Install system configs
 COPY rootfs/skel/etc etc
-COPY rootfs/skel/usr usr
 RUN ln -s ../proc/mounts etc/mtab && \
     chmod 600 etc/shadow && \
     sed -i '/^ *# /d' etc/sysctl.conf

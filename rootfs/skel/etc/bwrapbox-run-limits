@@ -1,11 +1,11 @@
 #!/bin/sh
 
 # user and shell
+BWRAPBOX_TERM=linux
 BWRAPBOX_USER=cartridge
 BWRAPBOX_HOME=/cartridge
 BWRAPBOX_WORKDIR=/cartridge
 BWRAPBOX_PATH=/bin:/usr/bin
-BWRAPBOX_SHELL=/bin/sh
 
 # seccomp
 BWRAPBOX_SECCOMP_FILTER=/usr/lib/bwrapbox/seccomp-filter.bpf
