@@ -16,7 +16,7 @@ rootfs: rootfs.ext2 rootfs.hash.txt
 rootfs.ext2: toolchain-rootfs.Dockerfile $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
 	$(MAKE) toolchain
 	docker create --platform=linux/riscv64 --name riv-copy-rootfs riv/toolchain:devel
-	docker cp riv-copy-rootfs:/$@ .
+	docker cp riv-copy-rootfs:/root/$@ .
 	docker rm riv-copy-rootfs
 	touch $@
 

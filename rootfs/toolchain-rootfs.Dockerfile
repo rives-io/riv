@@ -23,11 +23,12 @@ RUN apk add libarchive-dev libseccomp-dev
 # Musl link aliases
 RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so
 
+# Download apks to be installed in rootfs
+WORKDIR /root/apks
+RUN apk fetch musl bubblewrap libcap2
+
 # Build other packages inside /root
 WORKDIR /root
-
-# Download apks to be installed in rootfs
-RUN apk fetch musl bubblewrap libcap2
 
 # Install elfkickers
 RUN wget -O BR903-ELFkickers.tar.gz https://github.com/BR903/ELFkickers/tarball/master && \
@@ -58,7 +59,8 @@ RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarba
     cd .. && \
     rm -rf nelua-lang-latest.tar.gz edubart-nelua-lang-*
 
-# Install linux-headers
+# Install linux and linux-headers
+COPY kernel/linux.bin linux.bin
 COPY kernel/linux-headers.tar.xz linux-headers.tar.xz
 RUN apk add linux-headers && \
     cd / && rm `apk info -L linux-headers | grep -F ".h"`
@@ -98,7 +100,7 @@ RUN for i in $(bin/busybox --list-long | grep -v sbin/init | grep -v linuxrc); d
 # Install apks
 RUN cp -a /etc/apk etc/apk && \
     rm etc/apk/world && \
-    apk add --no-network --root /rootfs --initdb /root/*.apk && \
+    apk add --no-network --root /rootfs --initdb /root/apks/*.apk && \
     rm -rf etc/apk lib/apk var/cache dev/*
 
 # Install musl utilities
@@ -129,7 +131,7 @@ RUN genext2fs \
     --faketime \
     --block-size 4096 \
     --readjustment +0 \
-    --root /rootfs /rootfs.ext2
+    --root /rootfs /root/rootfs.ext2
 
 # Install workaround to run env as current user
 RUN adduser -D -u 500 cartridge cartridge
