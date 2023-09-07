@@ -32,7 +32,6 @@ exec bwrapbox \
   --size $BWRAPBOX_ROOT_SIZE --tmpfs / \
   --dev /dev \
   --proc /proc \
-  --dev-bind /dev/yield /dev/yield \
   --ro-bind /usr /usr \
   --ro-bind /etc /etc \
   --ro-bind /sys /sys \

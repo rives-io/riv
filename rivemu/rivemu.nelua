@@ -71,6 +71,7 @@ local rivemu_options: type = @record{
   print_hash: boolean,
   no_audio: boolean,
   no_video: boolean,
+  no_yield: boolean,
   no_quit: boolean,
   wait_halt: boolean,
   print_final_hash: boolean,
@@ -116,6 +117,10 @@ local function parse_options(): rivemu_options
       opts.no_audio = true
     elseif a == '-no-video' then
       opts.no_video = true
+    elseif a == '-no-yield' then
+      opts.no_yield = true
+      opts.no_video = true
+      opts.no_audio = true
     elseif a == '-no-quit' then
       opts.no_quit = true
     elseif a == '-wait-halt' then
@@ -162,6 +167,9 @@ local function parse_options(): rivemu_options
 -no-video
   Disable video.
 
+-no-yield
+  Disable yield device when verifying (also disable audio and video).
+
 -no-quit
   Don't quit when cartridge finishes.
 
@@ -179,6 +187,9 @@ local function parse_options(): rivemu_options
       entrypoint_sb:write('RUN_CARTRIDGE=/dev/mtdblock1 RUN_RIVLOG=/dev/mtdblock2 RUN_IOCARD=/run/iocard ')
     else
       entrypoint_sb:write('RUN_CARTRIDGE=/dev/mtdblock1 ')
+    end
+    if opts.no_yield then
+      entrypoint_sb:write('RUN_NO_YIELD=y ')
     end
     entrypoint_sb:write('exec cartridge-run')
   end

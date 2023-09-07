@@ -5,13 +5,13 @@ export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 # mount
 busybox mkdir -p /proc /sys /dev/pts /dev/shm /run /cartridge
-busybox mountpoint -q /proc    || busybox mount -o nosuid,nodev,noexec -t proc proc /proc
-busybox mountpoint -q /sys     || busybox mount -o nosuid,nodev,noexec -t sysfs sys /sys
-busybox mountpoint -q /dev/pts || busybox mount -o nosuid,noexec,mode=620,gid=5 -t devpts devpts /dev/pts
-busybox mountpoint -q /dev/shm || busybox mount -o nosuid,nodev,mode=1777,inode64 -t tmpfs tmpfs /dev/shm
-busybox mountpoint -q /tmp     || busybox mount -o nosuid,nodev,mode=1777,inode64 -t tmpfs tmpfs /tmp
-busybox mountpoint -q /run     || busybox mount -o nosuid,nodev,mode=0755,inode64 -t tmpfs tmpfs /run
-busybox grep -Fq cgroup2 /proc/filesystems && busybox mountpoint -q /sys/fs/cgroup || busybox mount -o nosuid,nodev,noexec -t cgroup2 cgroup2 /sys/fs/cgroup
+busybox grep -Fq "/proc " /proc/mounts    || busybox mount -o nosuid,nodev,noexec -t proc proc /proc
+busybox grep -Fq "/sys " /proc/mounts     || busybox mount -o nosuid,nodev,noexec -t sysfs sys /sys
+busybox grep -Fq "/dev/pts " /proc/mounts || busybox mount -o nosuid,noexec,mode=620,gid=5 -t devpts devpts /dev/pts
+busybox grep -Fq "/dev/shm " /proc/mounts || busybox mount -o nosuid,nodev,mode=1777,inode64 -t tmpfs tmpfs /dev/shm
+busybox grep -Fq "/tmp " /proc/mounts     || busybox mount -o nosuid,nodev,mode=1777,inode64 -t tmpfs tmpfs /tmp
+busybox grep -Fq "/run " /proc/mounts     || busybox mount -o nosuid,nodev,mode=0755,inode64 -t tmpfs tmpfs /run
+busybox grep -Fq cgroup2 /proc/filesystems && busybox grep -Fq "/sys/fs/cgroup " /proc/mounts || busybox mount -o nosuid,nodev,noexec -t cgroup2 cgroup2 /sys/fs/cgroup
 busybox mount -o noatime,nosuid,remount /
 busybox mount -o nosuid,remount /dev
 busybox mount -o ro,remount /
@@ -22,9 +22,11 @@ busybox grep -Fq hugetlbfs /proc/filesystems && echo 1 > /proc/sys/vm/nr_hugepag
 # initialize
 [ -d /sys/fs/cgroup ] && echo "+cpu +pids +memory" > /sys/fs/cgroup/cgroup.subtree_control
 [ -f /etc/sysctl.conf ] && busybox sysctl -pq
-[ -c /dev/yield       ] && busybox chmod 660 /dev/yield && busybox chown root:cartridge /dev/yield
-[ -c /dev/rollup      ] && busybox chmod 660 /dev/rollup && busybox chown root:cartridge /dev/rollup
 [ -f /etc/hostname    ] && busybox hostname -F /etc/hostname
+if busybox id dapp &> /dev/null; then
+  [ -c /dev/yield       ] && busybox chmod 660 /dev/yield && busybox chown root:dapp /dev/yield
+  [ -c /dev/rollup      ] && busybox chmod 660 /dev/rollup && busybox chown root:dapp /dev/rollup
+fi
 [ ! -z "$LINES" ] && [ ! -z "$COLUMNS" ] && busybox stty rows $LINES cols $COLUMNS
 
 echo '
