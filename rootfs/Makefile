@@ -9,15 +9,20 @@ DOCKER_USER_RUN_FLAGS=\
 	-e USER=$$(id -u -n) -e GROUP=$$(id -g -n) \
 	-e UID=$$(id -u) -e GID=$$(id -g) \
 
-rootfs: rootfs.ext2
+all: rootfs
 
-rootfs.ext2: rootfs.Dockerfile toolchain-rootfs.Dockerfile $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
+rootfs: rootfs.ext2 rootfs.hash.txt
+
+rootfs.ext2: toolchain-rootfs.Dockerfile $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
 	$(MAKE) toolchain
-	docker build --target rootfs-stage -f $< --progress plain --output . ..
+	docker create --platform=linux/riscv64 --name riv-copy-rootfs riv/toolchain:devel
+	docker cp riv-copy-rootfs:/$@ .
+	docker rm riv-copy-rootfs
 	touch $@
-	stat -c "%s %n" $@ > rootfs.hash.txt
-	sha1sum $@ >> rootfs.hash.txt
-	cat rootfs.hash.txt
+
+rootfs.hash.txt: rootfs.ext2
+	stat -c "%s %n" $< > $@
+	sha1sum $< >> $@
 
 shell: rootfs.ext2
 	cartesi-machine \
@@ -29,7 +34,7 @@ shell: rootfs.ext2
 		-i exec /bin/ash
 
 toolchain:
-	docker build --target toolchain-rootfs-stage -t riv/toolchain:devel -f toolchain-rootfs.Dockerfile --progress plain ..
+	docker build --target toolchain-rootfs-stage --tag riv/toolchain:devel --file toolchain-rootfs.Dockerfile --progress plain ..
 
 toolchain-exec:
 	docker run $(DOCKER_USER_RUN_FLAGS) $(DOCKER_RUN_FLAGS) /bin/bash -c "$(COMMAND)"
