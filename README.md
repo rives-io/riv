@@ -14,6 +14,8 @@ directly in a Web Browser, or in a native Linux or Windows emulator application.
 RIV uses the official Cartesi Machine for emulation, and Cartesi Rollups for verifying
 recorded game replays on-chain.
 
+**NOTE:** This is under development, things may change a lot.
+
 ## Quick Examples
 
 The following games were ported to RIV, and you can play them in your browser:

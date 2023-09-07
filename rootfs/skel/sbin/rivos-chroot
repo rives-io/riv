@@ -6,8 +6,8 @@ exec bwrap \
     --dev-bind /dev /dev \
     --bind /proc /proc \
     --bind /sys /sys \
+    --bind /run /run \
     --tmpfs /tmp \
-    --tmpfs /run \
     --clearenv \
     --setenv TERM "linux" \
     --setenv PATH "/usr/sbin:/usr/bin:/sbin:/bin" \
