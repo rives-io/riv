@@ -180,7 +180,7 @@ local function parse_options(): rivcm_options
     else
       entrypoint_sb:write('RUN_CARTRIDGE=/dev/mtdblock1 ')
     end
-    entrypoint_sb:write('cartridge-run')
+    entrypoint_sb:write('exec cartridge-run')
   end
   if #entrypoint_args > 0 then
     if #entrypoint_sb > 0 then

@@ -24,7 +24,7 @@ shell: rootfs.ext2
 		--flash-drive=label:root,filename:$< \
 		--ram-image=../kernel/linux.bin \
 		--rom-image=../kernel/rom.bin \
-		--append-rom-bootargs="ro hugepagesz=2M hugepages=1 init=/sbin/init TERM=$(TERM) LINES=$(shell tput lines) COLUMNS=$(shell tput cols)" \
+		--append-rom-bootargs="TERM=$(TERM) LINES=$(shell tput lines) COLUMNS=$(shell tput cols)" \
 		--htif-yield-automatic \
 		-i exec /bin/ash
 

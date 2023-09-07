@@ -14,6 +14,10 @@ busybox mountpoint -q /run     || busybox mount -o nosuid,nodev,mode=0755,inode6
 busybox grep -Fq cgroup2 /proc/filesystems && busybox mountpoint -q /sys/fs/cgroup || busybox mount -o nosuid,nodev,noexec -t cgroup2 cgroup2 /sys/fs/cgroup
 busybox mount -o noatime,nosuid,remount /
 busybox mount -o nosuid,remount /dev
+busybox mount -o ro,remount /
+
+# allocate a 2MB hugepage for memory mapped devices
+busybox grep -Fq hugetlbfs /proc/filesystems && echo 1 > /proc/sys/vm/nr_hugepages
 
 # initialize
 [ -d /sys/fs/cgroup ] && echo "+cpu +pids +memory" > /sys/fs/cgroup/cgroup.subtree_control
@@ -43,6 +47,5 @@ else
 fi
 
 # shutdown
-busybox mount -o ro,remount /
 busybox umount -af
 busybox poweroff -f

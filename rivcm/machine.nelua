@@ -79,13 +79,11 @@ function rivcm_machine.create(entrypoint: string, cartridge_filename: string, ev
 
   -- bootargs
   local bootargs: string <close> = "console=hvc0 \z
-    rootfstype=ext2 \z
-    root=/dev/mtdblock0 \z
-    ro quiet \z
+    rootfstype=ext2 root=/dev/mtdblock0 \z
+    rw quiet \z
     swiotlb=noforce \z
-    mtdparts=flash.0:-(root) \z
-    hugepagesz=2M hugepages=1 \z
-    init=/sbin/init -- " .. entrypoint
+    init=/opt/cartesi/bin/init \z
+    mtdparts=flash.0:-(root) -- " .. entrypoint
 
   -- set config
   local config: cm_machine_config = $defconfig

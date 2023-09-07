@@ -121,6 +121,8 @@ RUN ln -s ../proc/mounts etc/mtab && \
 # Install init
 COPY rootfs/skel/sbin sbin
 RUN sed -i '/^ *# /d;/^$/d' sbin/init
+RUN mkdir -p opt/cartesi/bin && \
+    ln -s ../../../sbin/init opt/cartesi/bin/init
 
 # Generate rootfs
 RUN genext2fs \
