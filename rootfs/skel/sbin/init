@@ -1,34 +1,41 @@
 #!/bin/busybox sh
 
 # path
-export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH=/opt/cartesi/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # mount
 busybox mkdir -p /proc /sys /dev/pts /dev/shm /run /cartridge
-busybox grep -Fq "/proc " /proc/mounts    || busybox mount -o nosuid,nodev,noexec -t proc proc /proc
-busybox grep -Fq "/sys " /proc/mounts     || busybox mount -o nosuid,nodev,noexec -t sysfs sys /sys
-busybox grep -Fq "/dev/pts " /proc/mounts || busybox mount -o nosuid,noexec,mode=620,gid=5 -t devpts devpts /dev/pts
+[ -f /proc/mounts ]                       || busybox mount -o nosuid,nodev,noexec -t proc proc /proc
+[ -d /sys/class ]                         || busybox mount -o nosuid,nodev,noexec -t sysfs sys /sys
+[ -c /dev/pts/ptmx ]                      || busybox mount -o nosuid,noexec,mode=620,gid=5 -t devpts devpts /dev/pts
 busybox grep -Fq "/dev/shm " /proc/mounts || busybox mount -o nosuid,nodev,mode=1777,inode64 -t tmpfs tmpfs /dev/shm
 busybox grep -Fq "/tmp " /proc/mounts     || busybox mount -o nosuid,nodev,mode=1777,inode64 -t tmpfs tmpfs /tmp
 busybox grep -Fq "/run " /proc/mounts     || busybox mount -o nosuid,nodev,mode=0755,inode64 -t tmpfs tmpfs /run
-busybox grep -Fq cgroup2 /proc/filesystems && busybox grep -Fq "/sys/fs/cgroup " /proc/mounts || busybox mount -o nosuid,nodev,noexec -t cgroup2 cgroup2 /sys/fs/cgroup
+busybox grep -Fq cgroup2 /proc/filesystems &&  [ -f /sys/fs/cgroup/cgroup.subtree_control ] || busybox mount -o nosuid,nodev,noexec -t cgroup2 cgroup2 /sys/fs/cgroup
 busybox mount -o noatime,nosuid,remount /
 busybox mount -o nosuid,remount /dev
-busybox mount -o ro,remount /
+# busybox mount -o ro,remount /
 
 # allocate a 2MB hugepage for memory mapped devices
 busybox grep -Fq hugetlbfs /proc/filesystems && echo 1 > /proc/sys/vm/nr_hugepages
 
-# initialize
-[ -d /sys/fs/cgroup ] && echo "+cpu +pids +memory" > /sys/fs/cgroup/cgroup.subtree_control
+# initialize system configs
 [ -f /etc/sysctl.conf ] && busybox sysctl -pq
-[ -f /etc/hostname    ] && busybox hostname -F /etc/hostname
-if busybox id dapp &> /dev/null; then
-  [ -c /dev/yield       ] && busybox chmod 660 /dev/yield && busybox chown root:dapp /dev/yield
-  [ -c /dev/rollup      ] && busybox chmod 660 /dev/rollup && busybox chown root:dapp /dev/rollup
-fi
+
+# initialize network
+[ -f /etc/hostname ] && busybox hostname -F /etc/hostname
+busybox ifconfig lo up
+
+# initialize cgroups
+[ -d /sys/fs/cgroup ] && echo "+cpu +pids +memory" > /sys/fs/cgroup/cgroup.subtree_control
+
+# initialize kernel entropy
+command -v rndaddentropy > /dev/null && busybox head -c 4096 /dev/urandom | rndaddentropy
+
+# make terminal bigger in interactive mode
 [ ! -z "$LINES" ] && [ ! -z "$COLUMNS" ] && busybox stty rows $LINES cols $COLUMNS
 
+# show splash
 echo '
          .
         / \
@@ -43,11 +50,17 @@ echo '
 
 # run
 if [ -n "$*" ]; then
-  busybox setsid busybox cttyhack su -c "$*"
+  cd ~root &&
+    HOME=~root USER=root LOGNAME=root \
+    busybox setsid \
+    busybox cttyhack \
+    busybox su -p $USER -c "$*"
+  cd /
 else
-  echo "[RIVOS] Nothing to do."
+  echo "Nothing to do."
 fi
 
 # shutdown
+busybox mount -o ro,remount /
 busybox umount -af
 busybox poweroff -f

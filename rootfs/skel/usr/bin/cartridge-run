@@ -8,46 +8,45 @@ run() {
   local EXE=$(busybox find /cartridge -maxdepth 1 -type f -executable -print -quit)
   if ! [[ $EXE =~ ^[-_./a-zA-Z0-9]+$ ]]; then
     >&2 echo "[RIVOS] Invalid executable filename \"$EXE\"."
+    busybox umount /cartridge
     return 1
   fi
-  if [[ -x "$EXE" ]]; then
-    if [ -n "$RUN_NO_YIELD" ]; then # disable yield device
-      BWRAPBOX_FLAGS="--setenv RIV_NO_YIELD y"
-    else
-      BWRAPBOX_FLAGS="--dev-bind /dev/yield /dev/yield"
-      if ! chmod 660 /dev/yield && chown root:cartridge /dev/yield; then
-        >&2 echo "[RIVOS] Unable to give cartridge access to yield device."
-        return 1
-      fi
-    fi
-    if [ -n "$RUN_RIVLOG" ]; then # verify
-      echo "[RIVOS] Unpacking rivlog..."
-      local RUN_EVENTLOG=$(mktemp --tmpdir=/run eventlog.XXXXXXXXXXX)
-      if ! unpack-rivlog <"$RUN_RIVLOG" >"$RUN_EVENTLOG"; then
-        >&2 echo "[RIVOS] Unable to unpack rivlog."
-        return 1
-      fi
-      echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
-      BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_EVENTLOG_FD 3 --setenv RIV_IOCARD_FD 4"
-      BWRAPBOX_VERIFY_LIMITS=y BWRAPBOX_FLAGS=$BWRAPBOX_FLAGS \
-        bwrapbox-run "$EXE" "$@" \
-          3<"$RUN_EVENTLOG" \
-          4<>"$RUN_IOCARD"
-      STATUS=$?
-      cat "$RUN_IOCARD"
-      echo "[RIVOS] Cartridge finished with status $STATUS"
-      rm -f "$RUN_EVENTLOG"
-    else # play
-      echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
-      BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS" \
-        bwrapbox-run "$EXE" "$@"
-      STATUS=$?
-      echo "[RIVOS] Cartridge finished with status $STATUS"
-    fi
-  else
+  if ! [[ -x "$EXE" ]]; then
     >&2 echo "[RIVOS] No executable file found in cartridge."
-    STATUS=1
+    busybox umount /cartridge
+    return 1
   fi
+  if [ -n "$RUN_NO_YIELD" ]; then # disable yield device
+    BWRAPBOX_FLAGS="--setenv RIV_NO_YIELD y"
+  else
+    BWRAPBOX_FLAGS="--dev-bind /dev/yield /dev/yield"
+    if ! chmod 660 /dev/yield && chown root:cartridge /dev/yield; then
+      >&2 echo "[RIVOS] Unable to give cartridge access to yield device."
+      busybox umount /cartridge
+      return 1
+    fi
+  fi
+  echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
+  if [ ! -n "$RUN_RIVLOG" ]; then  # play
+    BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS" \
+      bwrapbox-run "$EXE" "$@"
+    STATUS=$?
+  else # verify replay
+    local RUN_EVENTLOG=$(mktemp --tmpdir=/run eventlog.XXXXXXXXXXX)
+    if ! unpack-rivlog <"$RUN_RIVLOG" >"$RUN_EVENTLOG"; then
+      >&2 echo "[RIVOS] Unable to unpack rivlog."
+      busybox umount /cartridge
+      return 1
+    fi
+    BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_EVENTLOG_FD 3 --setenv RIV_IOCARD_FD 4"
+    BWRAPBOX_VERIFY_LIMITS=y BWRAPBOX_FLAGS=$BWRAPBOX_FLAGS \
+      bwrapbox-run "$EXE" "$@" \
+        3<"$RUN_EVENTLOG" \
+        4<>"$RUN_IOCARD"
+    STATUS=$?
+    rm -f "$RUN_EVENTLOG"
+  fi
+  echo "[RIVOS] Cartridge finished with status $STATUS"
   busybox umount /cartridge
   return $STATUS
 }
