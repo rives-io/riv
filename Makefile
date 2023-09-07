@@ -1,11 +1,11 @@
 all:
 	$(MAKE) kernel
 	$(MAKE) rootfs
-	$(MAKE) rivcm
+	$(MAKE) rivemu
 	$(MAKE) demos
 
 # Targets that uses the host toolchain
-libs kernel rootfs rivcm:
+libs kernel rootfs rivemu:
 	$(MAKE) -C $@
 
 # Targets that uses RISC-V toolchain
@@ -25,7 +25,7 @@ update-bindings:
 clean:
 	$(MAKE) -C rootfs clean
 	$(MAKE) -C libriv clean
-	$(MAKE) -C rivcm clean
+	$(MAKE) -C rivemu clean
 	$(MAKE) -C demos clean
 	$(MAKE) -C tools clean
 	$(MAKE) -C libs clean
@@ -33,7 +33,7 @@ clean:
 distclean: clean
 	$(MAKE) -C kernel distclean
 
-.PHONY: kernel rootfs demos rivcm libs libriv tools
+.PHONY: kernel rootfs demos rivemu libs libriv tools
 
 ##################
 # Demo testing

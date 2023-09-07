@@ -6,7 +6,7 @@ require 'sokol'
 require '.machine'
 
 -- Video subsystem.
-global rivcm_video = @record{}
+global rivemu_video = @record{}
 
 -- Video subsystem state.
 local fb_desc: riv_framebuffer_desc
@@ -24,7 +24,7 @@ local function destroy_framebuffer_image(): void
 end
 
 -- Initialize video subsystem.
-function rivcm_video.setup(): void
+function rivemu_video.setup(): void
   sg_setup(sg_desc{context = sapp_sgcontext()})
   assert(sg_isvalid(), 'failed to initialize Sokol GFX')
   sgp_setup(sgp_desc{})
@@ -32,7 +32,7 @@ function rivcm_video.setup(): void
 end
 
 -- Terminate video subsystem.
-function rivcm_video.shutdown(): void
+function rivemu_video.shutdown(): void
   destroy_framebuffer_image()
   fb_desc = {}
   fb_pixel_count = 0
@@ -112,13 +112,13 @@ local function draw_framebuffer(screen_width: int64, screen_height: int64): void
   sgp_reset_image(0)
 end
 
-function rivcm_video.update_framebuffer()
+function rivemu_video.update_framebuffer()
   if not machine:is_mmio_ready() then return end
   update_framebuffer_desc()
   update_framebuffer_mem()
 end
 
-function rivcm_video.present(): void
+function rivemu_video.present(): void
   update_framebuffer_video_mem()
 
   -- prepare for drawing

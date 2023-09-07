@@ -125,7 +125,7 @@ end
 --------------------------------------------------------------------------------
 
 -- Input subsystem.
-global rivcm_input = @record{}
+global rivemu_input = @record{}
 
 -- Input subsystem state.
 local poll_events: vector(sapp_event)
@@ -137,16 +137,16 @@ local replaying: boolean
 local key_pressed_state: [RIV_NUM_KEYCODE]boolean
 
 -- Initialize input subsystem.
-function rivcm_input.setup(): void
+function rivemu_input.setup(): void
 end
 
 -- Terminate input subsystem.
-function rivcm_input.shutdown(): void
+function rivemu_input.shutdown(): void
   poll_events:destroy()
   log_key_events:destroy()
 end
 
-function rivcm_input.reset_state()
+function rivemu_input.reset_state()
   key_pressed_state = {}
 end
 
@@ -228,12 +228,12 @@ local function poll_record_events(): void
 end
 
 -- Returns true if replaying and the replay is in the last frame or above last frame.
-function rivcm_input.is_replay_at_end(): boolean
+function rivemu_input.is_replay_at_end(): boolean
   return replaying and machine.mmio_driver.frame >= log_last_frame
 end
 
 -- Poll for keyboard/mouse input events.
-function rivcm_input.poll(): void
+function rivemu_input.poll(): void
   -- poll always destroy events in queue
   defer poll_events:clear() end
 
@@ -251,28 +251,28 @@ function rivcm_input.poll(): void
 end
 
 -- Poll keyboard/mouse input events.
-function rivcm_input.append_event(event: *sapp_event): void
+function rivemu_input.append_event(event: *sapp_event): void
   -- ignore input events when replaying
   if replaying then return end
   poll_events:push($event)
 end
 
 -- Start recording.
-function rivcm_input.start_recording()
+function rivemu_input.start_recording()
   recording = true
-  io.printf("[RIVCM] Recording\n")
+  io.printf("[RIVEMU] Recording\n")
 end
 
 -- Save replay log to a file.
-function rivcm_input.save_replay(filename: string): void
+function rivemu_input.save_replay(filename: string): void
   riv_log.save(filename, log_key_events, log_last_frame)
-  io.printf("[RIVCM] Saved replay '%s'\n", filename)
+  io.printf("[RIVEMU] Saved replay '%s'\n", filename)
 end
 
 -- Load replay log from a file.
-function rivcm_input.load_replay_from_file(filename: string): void
+function rivemu_input.load_replay_from_file(filename: string): void
   log_key_events:destroy()
   log_key_events, log_last_frame = riv_log.load_from_file(filename)
   replaying = true
-  io.printf("[RIVCM] Loaded replay '%s'\n", filename)
+  io.printf("[RIVEMU] Loaded replay '%s'\n", filename)
 end

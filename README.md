@@ -248,13 +248,13 @@ a game library and a sandboxing utility. Here is a list of each folder component
 
 - `kernel` - RIV Linux custom kernel, it has features enabled for sandboxing games.
 - `rootfs` - RIV minimal operating system based on Alpine Linux where games are run, it also builds a RISC-V toolchain compiling games for it.
-- `rivcm` - RIV Cartesi Machine, this is the emulator players use to play the games locally with graphics and audio.
+- `rivemu` - RIV Emulator, this is the emulator players use to play the games locally with graphics and audio.
 - `libriv` - RIV library used as middle-layers, that every game must use for graphics, audio, inputs, time and random.
 - `demos` - Simple games made with RIV that are provable on-chain to showcase it.
-- `docs` - RIV documentation.
 - `tools` - RIV Linux utilities, such as `bwrapbox`, a sandboxing on top of [bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) for running games with additions for limiting CPU usage and memory usage.
-
-Check README of each directory for more details on them.
+- `libs` - Libraries providing functionality to the host machine or guest machine, such as
+[Sokol](https://github.com/floooh/sokol) for graphics, [miniaudio](https://miniaud.io/) for audio,
+[miniz](https://github.com/richgel999/miniz) for log compression, hash utilities..
 
 ## Authors
 

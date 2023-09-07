@@ -20,15 +20,15 @@
 *.hash
 
 # ignore generated binaries
-/rivcm/rivcm
-/rivcm/web
+/rivemu/rivemu
+/rivemu/web
 /tools/bwrapbox/bwrapbox
 /tools/unpack-rivlog/unpack-rivlog
 /tools/bwrapbox/seccomp-filter
 /tools/bwrapbox/seccomp-filter.bpf
 
 # ignore generated C sources
-/rivcm/rivcm.c
+/rivemu/rivemu.c
 /libriv/libriv.c
 /tools/bwrapbox/bwrapbox.c
 /tools/unpack-rivlog/unpack-rivlog.c

@@ -91,7 +91,7 @@ $(NAME).sqfs: $(NAME).fs
 # 		--squash-uids 0
 
 run: $(NAME).sqfs
-	cd ../.. && ./rivcm/rivcm -cartridge=demos/$(NAME)/$(NAME).sqfs $(ARGS)
+	cd ../.. && ./rivemu/rivemu -cartridge=demos/$(NAME)/$(NAME).sqfs $(ARGS)
 
 clean::
 	rm -f *.o *.txt *.elf *.sqfs *.elftoc.c

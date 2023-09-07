@@ -39,7 +39,7 @@ if ccinfo.is_emscripten then
   cflags('--embed-file '..projdir..'/antcopter.rivlog@antcopter.rivlog')
   cflags('--embed-file '..projdir..'/doom.rivlog@doom.rivlog')
   cflags('--embed-file '..projdir..'/snake.rivlog@snake.rivlog')
-  cflags('--shell-file '..projdir..'/rivcm/shell_minimal.html')
+  cflags('--shell-file '..projdir..'/rivemu/shell_minimal.html')
 end
 ]]
 
@@ -55,7 +55,7 @@ require '.input'
 require '.framelimiter'
 require '.iocard'
 
-local rivcm_options: type = @record{
+local rivemu_options: type = @record{
   entrypoint: string,
   cartridge_filename: string,
   replay_filename: string,
@@ -77,8 +77,8 @@ local rivcm_options: type = @record{
   speed: float64,
 }
 
-local function parse_options(): rivcm_options
-  local opts: rivcm_options = {
+local function parse_options(): rivemu_options
+  local opts: rivemu_options = {
     speed = 1.0
   }
   local entrypoint_args: string
@@ -127,7 +127,7 @@ local function parse_options(): rivcm_options
     elseif a == '-args' then
       entrypoint_args = sargs_value_at(i)
     elseif a == '-help' or a == '--help' or a == '-h' then
-      io.printf("Usage: rivcm [options]\n")
+      io.printf("Usage: rivemu [options]\n")
       io.write[[
 -print-fps
   Print frame rate statistics every second.
@@ -192,31 +192,31 @@ local function parse_options(): rivcm_options
   return opts
 end
 
-local options: rivcm_options
-local framelimiter: rivcm_framelimiter
+local options: rivemu_options
+local framelimiter: rivemu_framelimiter
 local finished: boolean
 
 -- Initialize application.
 local function startup(): void
-  io.printf('[RIVCM] Startup\n')
+  io.printf('[RIVEMU] Startup\n')
 
   -- initialize the machine
-  machine = rivcm_machine.create(options.entrypoint, options.cartridge_filename, options.verify_filename)
+  machine = rivemu_machine.create(options.entrypoint, options.cartridge_filename, options.verify_filename)
 
   -- init subsystems
-  rivcm_iocard.setup()
+  rivemu_iocard.setup()
   if not options.no_video then
-    rivcm_video.setup()
+    rivemu_video.setup()
   end
   if not options.no_audio then
-    rivcm_audio.setup(options.speed)
+    rivemu_audio.setup(options.speed)
   end
-  rivcm_input.setup()
+  rivemu_input.setup()
 
   if options.recording then -- start recording
-    rivcm_input.start_recording()
+    rivemu_input.start_recording()
   elseif options.replaying then -- start replaying
-    rivcm_input.load_replay_from_file(options.replay_filename)
+    rivemu_input.load_replay_from_file(options.replay_filename)
   end
 end
 
@@ -224,27 +224,27 @@ local function finish(): void
   finished = true
 
   if options.recording then
-    rivcm_input.save_replay(options.record_filename)
+    rivemu_input.save_replay(options.record_filename)
   end
 
   if #options.outhash_filename > 0 then
-    rivcm_iocard.save_outhash(options.outhash_filename)
+    rivemu_iocard.save_outhash(options.outhash_filename)
   end
   if #options.outcard_filename > 0 then
-    rivcm_iocard.save_outcard(options.outcard_filename)
+    rivemu_iocard.save_outcard(options.outcard_filename)
   end
-  rivcm_iocard.print_outcard()
+  rivemu_iocard.print_outcard()
 
   if options.wait_halt then
-    io.printf('[RIVCM] Waiting halt...\n')
+    io.printf('[RIVEMU] Waiting halt...\n')
     repeat until machine:run() == CM_BREAK_REASON_HALTED
   end
 
   if options.print_final_hash then
     local root_hash: string <close> = hexhash(machine:get_root_hash())
-    io.printf('[RIVCM] Cycles %d: %s\n', machine:read_mcycle(), root_hash)
+    io.printf('[RIVEMU] Cycles %d: %s\n', machine:read_mcycle(), root_hash)
   else
-    io.printf('[RIVCM] Cycles %d\n', machine:read_mcycle())
+    io.printf('[RIVEMU] Cycles %d\n', machine:read_mcycle())
   end
 
   if not options.no_quit then
@@ -258,15 +258,15 @@ local function shutdown(): void
     finish()
   end
 
-  io.printf('[RIVCM] Shutdown\n')
+  io.printf('[RIVEMU] Shutdown\n')
 
-  rivcm_iocard.shutdown()
-  rivcm_input.shutdown()
+  rivemu_iocard.shutdown()
+  rivemu_input.shutdown()
   if not options.no_video then
-    rivcm_video.shutdown()
+    rivemu_video.shutdown()
   end
   if not options.no_audio then
-    rivcm_audio.shutdown()
+    rivemu_audio.shutdown()
   end
 
   machine:destroy()
@@ -280,19 +280,19 @@ local function machine_frame(): void
       -- execute control event from the yield
       switch machine:read_yield_data() do
       case RIV_CONTROL_OPEN then
-        io.printf('[RIVCM] Open RIV device\n')
+        io.printf('[RIVEMU] Open RIV device\n')
         if #options.incard_filename > 0 then
-          rivcm_iocard.load_incard(options.incard_filename)
+          rivemu_iocard.load_incard(options.incard_filename)
         end
         -- reset input state
-        rivcm_input.reset_state()
+        rivemu_input.reset_state()
       case RIV_CONTROL_CLOSE then
-        io.printf('[RIVCM] Close RIV device\n')
+        io.printf('[RIVEMU] Close RIV device\n')
         -- copy output card from guest memory into host memory
-        rivcm_iocard.update_outcard()
+        rivemu_iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
         if not options.no_video then
-          rivcm_video.update_framebuffer()
+          rivemu_video.update_framebuffer()
         end
         -- finish
         finish()
@@ -300,26 +300,26 @@ local function machine_frame(): void
       case RIV_CONTROL_PRESENT then
         -- poll audio
         if not options.no_audio then
-          rivcm_audio.poll_commands()
+          rivemu_audio.poll_commands()
         end
         -- copy output card from guest memory into host memory
-        rivcm_iocard.update_outcard()
+        rivemu_iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
         if not options.no_video then
-          rivcm_video.update_framebuffer()
+          rivemu_video.update_framebuffer()
         end
         -- must break the loop so we can present the video
         return
       case RIV_CONTROL_FLUSH_AUDIO then
         -- poll audio
         if not options.no_audio then
-          rivcm_audio.poll_commands()
+          rivemu_audio.poll_commands()
         end
       else
         error 'unknown yield reason'
       end
     case CM_BREAK_REASON_HALTED then
-      io.printf('[RIVCM] Halted\n')
+      io.printf('[RIVEMU] Halted\n')
       finish()
       return
     else
@@ -335,10 +335,10 @@ local function advance_frame(): void
   if finished or machine:is_halted() then return end
 
   -- check if is the last replay frame
-  local replay_finished: boolean = rivcm_input.is_replay_at_end()
+  local replay_finished: boolean = rivemu_input.is_replay_at_end()
 
   -- poll input events into machine device memory
-  rivcm_input.poll()
+  rivemu_input.poll()
 
   -- poll next frame from machine driver memory
   local mcycle_start: uint64 = machine:read_mcycle()
@@ -349,12 +349,12 @@ local function advance_frame(): void
   local mcycle_elapsed: uint64 = machine:read_mcycle() - mcycle_start
 
   if time_elapsed > 1.0/24.0 then
-    io.stderr:printf('[RIVCM] slow frame: %.2f ms, %.2f MHz\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
+    io.stderr:printf('[RIVEMU] slow frame: %.2f ms, %.2f MHz\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
   end
 
   -- force finish when replay ends
   if not finished and replay_finished then
-    io.printf('[RIVCM] Finish replay\n')
+    io.printf('[RIVEMU] Finish replay\n')
     finish()
   end
 
@@ -390,11 +390,11 @@ local function frame(): void
   end
   -- poll audio
   if not options.no_audio then
-    rivcm_audio.poll()
+    rivemu_audio.poll()
   end
   -- display the frame
   if not options.no_video then
-    rivcm_video.present()
+    rivemu_video.present()
   end
 end
 
@@ -413,10 +413,10 @@ sapp_run(sapp_desc{
   init_cb = startup,
   frame_cb = frame,
   cleanup_cb = shutdown,
-  event_cb = rivcm_input.append_event,
+  event_cb = rivemu_input.append_event,
   width = 768,
   height = 768,
-  window_title = "RIVCM",
+  window_title = "RIVEMU",
 
   html5_canvas_name = "canvas",
   -- html5_canvas_resize = true,

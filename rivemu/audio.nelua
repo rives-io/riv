@@ -214,7 +214,7 @@ local DEFAULT_PERIOD_SIZE <comptime> = DEFAULT_SAMPLE_RATE // 30
 local DEFAULT_VOLUME <comptime> = 0.8
 
 -- Audio subsystem.
-global rivcm_audio: type = @record{}
+global rivemu_audio: type = @record{}
 
 -- Audio subsystem state.
 local engine: ma_engine
@@ -225,7 +225,7 @@ local global_pcm_frame: uint64
 local global_sample_rate: uint64
 
 -- Initialize audio subsystem.
-function rivcm_audio.setup(pitch: float64): void
+function rivemu_audio.setup(pitch: float64): void
   -- initialize miniaudio
   local config: ma_engine_config = ma_engine_config_init()
   config.sampleRate = DEFAULT_SAMPLE_RATE
@@ -239,7 +239,7 @@ function rivcm_audio.setup(pitch: float64): void
 end
 
 -- Terminate audio subsystem.
-function rivcm_audio.shutdown(): void
+function rivemu_audio.shutdown(): void
   -- destroy sounds
   for id: uint64, sound: *Sound in mpairs(sounds) do
     sound:destroy()
@@ -255,7 +255,7 @@ function rivcm_audio.shutdown(): void
 end
 
 -- Poll audio subsystem.
-function rivcm_audio.poll(): void
+function rivemu_audio.poll(): void
   -- remove sounds that ended
   local now: float64 = os.now()
   for id: uint64, sound: *Sound in mpairs(sounds) do
@@ -389,7 +389,7 @@ local function handle_waveform(desc: riv_waveform_desc): void
 end
 
 -- Control audio subsystem.
-function rivcm_audio.poll_commands(): void
+function rivemu_audio.poll_commands(): void
   global_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine)
   for i: usize=0,<machine.mmio_driver.audio_command_len do
     local command: riv_audio_command = machine.mmio_driver.audio_commands[i]

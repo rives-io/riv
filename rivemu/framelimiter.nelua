@@ -4,7 +4,7 @@ require 'io'
 require 'math'
 
 -- Frame limiter.
-global rivcm_framelimiter: type = @record{
+global rivemu_framelimiter: type = @record{
   target_fps: float64,
   last_frame_time: float64,
 
@@ -16,7 +16,7 @@ global rivcm_framelimiter: type = @record{
 }
 
 -- Return true when we should process the next frame.
-function rivcm_framelimiter:should_process_next_frame(now: float64): boolean
+function rivemu_framelimiter:should_process_next_frame(now: float64): boolean
   if self.target_fps == 0 then
     self.last_frame_time = now
     return true
@@ -33,7 +33,7 @@ function rivcm_framelimiter:should_process_next_frame(now: float64): boolean
 end
 
 -- Print the frame rate statistics to stderr every second.
-function rivcm_framelimiter:print_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64): void
+function rivemu_framelimiter:print_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64): void
   self.frame_counter = self.frame_counter + 1
   self.time_elapsed_sum = self.time_elapsed_sum + time_elapsed
   self.mcycle_elapsed_sum = self.mcycle_elapsed_sum + mcycle_elapsed
@@ -43,7 +43,7 @@ function rivcm_framelimiter:print_stats(now: float64, time_elapsed: float64, mcy
       local fps: float64 = self.frame_counter / last_time_elapsed
       local mips: float64 = self.mcycle_elapsed_sum / (self.time_elapsed_sum * 1000000.0)
       local cpu_usage: float64 = (self.time_elapsed_sum * 100.0) / last_time_elapsed
-      io.printf('[RIVCM] frame=%d fps=%.2f guest_cpu_clock=%.2fMHz host_cpu_usage=%.2f%%\n',
+      io.printf('[RIVEMU] frame=%d fps=%.2f guest_cpu_clock=%.2fMHz host_cpu_usage=%.2f%%\n',
         machine.mmio_driver.frame, fps / last_time_elapsed, mips, cpu_usage)
     end
     self.frame_counter = 0
