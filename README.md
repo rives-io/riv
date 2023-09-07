@@ -14,6 +14,19 @@ directly in a Web Browser, or in a native Linux or Windows emulator application.
 RIV uses the official Cartesi Machine for emulation, and Cartesi Rollups for verifying
 recorded game replays on-chain.
 
+## Quick Examples
+
+The following games were ported to RIV, and you can play them in your browser:
+
+- [Classic DOOM](https://rivcm.surge.sh/?-cartridge=demos/doom/doom.sqfs).
+- [Antcopter](https://rivcm.surge.sh/?-cartridge=demos/antcopter/antcopter.sqfs).
+- [A snake clone](https://rivcm.surge.sh/?-cartridge=demos/snake/snake.sqfs).
+
+Also watch game replays of the same games in the following URLs, to visualize what's being verified on-chain:
+- [A replay of DOOM](https://rivcm.surge.sh/?-cartridge=demos/doom/doom.sqfs&-replay=doom.rivlog)
+- [A replay of Antcopter](https://rivcm.surge.sh/?-cartridge=demos/antcopter/antcopter.sqfs&-replay=antcopter.rivlog)
+- [A replay of Snake](https://rivcm.surge.sh/?-cartridge=demos/snake/snake.sqfs&-replay=snake.rivlog)
+
 ## Advantages
 
 ### Implement a game only once
@@ -219,11 +232,11 @@ This protects the RIV machine against malicious player inputs or malfunctioning 
 
 ### Can I use RIV inside another application using Cartesi?
 
-With the Hypervisor extension being worked on for the Cartesi Machine,
-it will be possible in the future to just grab the RIV kernel, rootfs, game cartridges and
-run inside another descentralized application. The application will still have to use the original RIV emulator
+Yes, you just need to copy RIV rootfs inside your application rootfs, and run the game
+verification process inside a chroot jail to the RIV files.
+The application frontend will still need to use the original RIV emulator
 to produce the game replays locally, also notice that the RIV emulator can work
-in the Web Browser with WebAssembly, so you can bundle it in your frontend.
+in the web browser with WebAssembly, so you can bundle it in your web frontend.
 
 ### How RIV can run on the web browser? Is the Cartesi Machine running on the browser?
 
