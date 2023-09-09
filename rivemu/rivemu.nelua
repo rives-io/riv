@@ -184,14 +184,19 @@ local function parse_options(): rivemu_options
   local entrypoint_sb: stringbuilder <close>
   if #opts.cartridge_filename > 0 then
     if opts.verifying then
-      entrypoint_sb:write('RUN_CARTRIDGE=/dev/mtdblock1 RUN_RIVLOG=/dev/mtdblock2 RUN_IOCARD=/run/iocard ')
+      entrypoint_sb:write('RIV_CARTRIDGE=/dev/mtdblock1 RIV_REPLAYLOG=/dev/mtdblock2 RIV_OUTCARD=/run/outcard ')
     else
-      entrypoint_sb:write('RUN_CARTRIDGE=/dev/mtdblock1 ')
+      entrypoint_sb:write('RIV_CARTRIDGE=/dev/mtdblock1 ')
     end
     if opts.no_yield then
-      entrypoint_sb:write('RUN_NO_YIELD=y ')
+      entrypoint_sb:write('RIV_NO_YIELD=y \z
+        riv-run;\z
+        echo ==== BEGIN OUTCARD ====;\z
+        cat /run/outcard;echo;\z
+        echo ==== END OUTCARD ====')
+    else
+      entrypoint_sb:write('riv-run')
     end
-    entrypoint_sb:write('exec cartridge-run')
   end
   if #entrypoint_args > 0 then
     if #entrypoint_sb > 0 then
@@ -238,13 +243,15 @@ local function finish(): void
     rivemu_input.save_replay(options.record_filename)
   end
 
-  if #options.outhash_filename > 0 then
-    rivemu_iocard.save_outhash(options.outhash_filename)
+  if not options.no_yield then
+    if #options.outhash_filename > 0 then
+      rivemu_iocard.save_outhash(options.outhash_filename)
+    end
+    if #options.outcard_filename > 0 then
+      rivemu_iocard.save_outcard(options.outcard_filename)
+    end
+    rivemu_iocard.print_outcard()
   end
-  if #options.outcard_filename > 0 then
-    rivemu_iocard.save_outcard(options.outcard_filename)
-  end
-  rivemu_iocard.print_outcard()
 
   if options.wait_halt then
     io.printf('[RIVEMU] Waiting halt...\n')

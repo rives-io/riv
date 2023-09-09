@@ -23,7 +23,7 @@
 /rivemu/rivemu
 /rivemu/web
 /tools/bwrapbox/bwrapbox
-/tools/unpack-rivlog/unpack-rivlog
+/tools/riv-unpacklog/riv-unpacklog
 /tools/bwrapbox/seccomp-filter
 /tools/bwrapbox/seccomp-filter.bpf
 
@@ -31,7 +31,7 @@
 /rivemu/rivemu.c
 /libriv/libriv.c
 /tools/bwrapbox/bwrapbox.c
-/tools/unpack-rivlog/unpack-rivlog.c
+/tools/riv-unpacklog/riv-unpacklog.c
 /demos/*/*.c
 
 # ignore kernel stuff

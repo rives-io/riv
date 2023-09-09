@@ -11,12 +11,12 @@ global riv_paddr_base: type <using> = @enum(uint64) {
   RIV_PADDR_RAM        = 0x80000000,
   RIV_PADDR_ROOTFS     = 0x80000000000000,
   RIV_PADDR_CARTRIDGE  = 0x90000000000000,
-  RIV_PADDR_EVENTLOG   = 0xa0000000000000,
+  RIV_PADDR_REPLAYLOG   = 0xa0000000000000,
 }
 
 global RIV_MMIOSIZE_RAM: uint64 <comptime> = 128*1024*1024
 global RIV_MMIOSIZE_CARTRIDGE: uint64< comptime> = 2*1024*1024
-global RIV_MMIOSIZE_EVENTLOG: uint64< comptime> = 2*1024*1024
+global RIV_MMIOSIZE_REPLAYLOG: uint64< comptime> = 2*1024*1024
 
 --------------------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ global rivemu_machine = @record{
 }
 
 -- Creates a new machine.
-function rivemu_machine.create(entrypoint: string, cartridge_filename: string, eventlog_filename: string): rivemu_machine
+function rivemu_machine.create(entrypoint: string, cartridge_filename: string, replaylog_filename: string): rivemu_machine
   -- get default config
   local defconfig: *cm_machine_config
   cm_assert!(cm_get_default_config(&defconfig))
@@ -72,8 +72,8 @@ function rivemu_machine.create(entrypoint: string, cartridge_filename: string, e
 
   -- event log flash drive
   flash_drive_entries[flash_drive_count] = {
-    start = RIV_PADDR_EVENTLOG,
-    length = RIV_MMIOSIZE_EVENTLOG,
+    start = RIV_PADDR_REPLAYLOG,
+    length = RIV_MMIOSIZE_REPLAYLOG,
   }
   flash_drive_count = flash_drive_count + 1
 
@@ -115,10 +115,10 @@ function rivemu_machine.create(entrypoint: string, cartridge_filename: string, e
   end
 
   -- write event log
-  if #eventlog_filename > 0 then
-    local file: filestream <close> = fn_assert!(io.open(eventlog_filename, 'rb'))
+  if #replaylog_filename > 0 then
+    local file: filestream <close> = fn_assert!(io.open(replaylog_filename, 'rb'))
     local contents: string <close> = fn_assert!(file:read('a'))
-    cm_assert!(cm_write_memory(self.machine, RIV_PADDR_EVENTLOG, contents.data, contents.size))
+    cm_assert!(cm_write_memory(self.machine, RIV_PADDR_REPLAYLOG, contents.data, contents.size))
   end
 
   return self

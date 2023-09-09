@@ -385,9 +385,9 @@ if cgroup_enabled then
   local status: cint, reason: string = wait_child_pid(bwrap_pid)
   local cputime_usec: integer = cgroup_cputime_usecs(cgroup_path)
   if reason == 'killed' and status == SIGXCPU then
-    io.stderr:printf("application CPU time exceeded (%d usecs)\n", cputime_usec)
+    io.stderr:printf("[bwrapbox] application CPU time exceeded after %d usecs\n", cputime_usec)
   else
-    io.stderr:printf("application %s with status %d after %d usecs\n", reason, status, cputime_usec)
+    io.stderr:printf("[bwrapbox] application %s with status %d after %d usecs\n", reason, status, cputime_usec)
   end
   exit(status)
 else

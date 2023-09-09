@@ -1,5 +1,5 @@
 #!/bin/sh
-source /etc/bwrapbox-run-limits
+source /etc/riv-bwrapbox-limits
 exec bwrapbox \
   --cgroup $BWRAPBOX_USER.bwrapbox \
   --cgroup-overwrite \

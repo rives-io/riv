@@ -147,15 +147,15 @@ function riv_context:setup(argc: int32, argv: *[0]cstring): void <cexport'riv_se
   self:_init_prng(argc, argv)
 
   -- retrieve event log from fd
-  local eventlog_fd_str: string = getenv('RIV_EVENTLOG_FD')
-  if #eventlog_fd_str > 0 then
+  local replaylog_fd_str: string = getenv('RIV_REPLAYLOG_FD')
+  if #replaylog_fd_str > 0 then
     self.verifying = true
-    local eventlog_fd: int32 = eventlog_fd_str.data[0] - '0'_b
-    local eventlog_size: isize = lseek(eventlog_fd, 0, SEEK_END)
-    assert(eventlog_size > #@riv_key_toggle_event, 'invalid eventlog fd size')
-    local eventlog_ptr: pointer = mmap(nilptr, eventlog_size, PROT_READ, MAP_SHARED, eventlog_fd, 0)
-    assert(eventlog_ptr ~= MAP_FAILED, 'eventlog fd mmap failed')
-    self.verify_key_events = (@*[0]riv_key_toggle_event)(eventlog_ptr)
+    local replaylog_fd: int32 = replaylog_fd_str.data[0] - '0'_b
+    local replaylog_size: isize = lseek(replaylog_fd, 0, SEEK_END)
+    assert(replaylog_size > #@riv_key_toggle_event, 'invalid replay log fd size')
+    local replaylog_ptr: pointer = mmap(nilptr, replaylog_size, PROT_READ, MAP_SHARED, replaylog_fd, 0)
+    assert(replaylog_ptr ~= MAP_FAILED, 'replay log fd mmap failed')
+    self.verify_key_events = (@*[0]riv_key_toggle_event)(replaylog_ptr)
   end
 
   self.valid = true
