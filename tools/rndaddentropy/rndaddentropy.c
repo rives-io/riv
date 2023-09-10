@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/random.h>
 

@@ -26,11 +26,16 @@ run() {
       return 1
     fi
   fi
+  if [ -n "$RIV_STOP_FRAME" ]; then
+    BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_STOP_FRAME $RIV_STOP_FRAME"
+  fi
+  local RIV_SCREENSHOT=$(busybox mktemp --tmpdir=/run screenshot.XXXXXXXXXXX)
+  BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_SCREENSHOT_FD 5"
   echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
   if [ ! -n "$RIV_REPLAYLOG" ]; then  # play
     # run
-    BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS" \
-      riv-bwrapbox "$EXE" "$@"
+    riv-bwrapbox $BWRAPBOX_FLAGS -- "$EXE" "$@" \
+        5<>"$RIV_SCREENSHOT"
     STATUS=$?
   else # verify replay
     local RIV_UNPACKED_REPLAYLOG=$(busybox mktemp --tmpdir=/run replaylog.XXXXXXXXXXX)
@@ -39,14 +44,14 @@ run() {
     if [ -n "$RIV_INCARD" ]; then
       if ! busybox cp "$RIV_INCARD" "$RIV_IOCARD"; then
         >&2 echo "[RIVOS] Unable to copy incard to iocard."
-        busybox rm -f "$RIV_UNPACKED_REPLAYLOG" -f "$RIV_IOCARD"
+        busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD" "$RIV_SCREENSHOT"
         busybox umount /cartridge
         return 1
       fi
     else
       if ! busybox truncate -s 0 "$RIV_IOCARD"; then
         >&2 echo "[RIVOS] Unable to create empty iocard."
-        busybox rm -f "$RIV_UNPACKED_REPLAYLOG" -f "$RIV_IOCARD"
+        busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD" "$RIV_SCREENSHOT"
         busybox umount /cartridge
         return 1
       fi
@@ -54,28 +59,35 @@ run() {
     # prepare event log
     if ! riv-unpacklog <"$RIV_REPLAYLOG" >"$RIV_UNPACKED_REPLAYLOG"; then
       >&2 echo "[RIVOS] Unable to unpack rivlog."
-      busybox rm -f "$RIV_UNPACKED_REPLAYLOG" -f "$RIV_IOCARD"
+      busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD" "$RIV_SCREENSHOT"
       busybox umount /cartridge
       return 1
     fi
     # run
     BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_REPLAYLOG_FD 3 --setenv RIV_IOCARD_FD 4"
-    BWRAPBOX_VERIFY_LIMITS=y BWRAPBOX_FLAGS=$BWRAPBOX_FLAGS \
-      riv-bwrapbox "$EXE" "$@" \
+    BWRAPBOX_VERIFY_LIMITS=y \
+      riv-bwrapbox $BWRAPBOX_FLAGS -- "$EXE" "$@" \
         3<"$RIV_UNPACKED_REPLAYLOG" \
-        4<>"$RIV_IOCARD"
+        4<>"$RIV_IOCARD" \
+        5<>"$RIV_SCREENSHOT"
     STATUS=$?
     # copy iocard to outcard
     if [ -n "$RIV_OUTCARD" ]; then
       if ! busybox cp "$RIV_IOCARD" "$RIV_OUTCARD"; then
         >&2 echo "[RIVOS] Unable to copy iocard to outcard."
-        busybox rm -f "$RIV_UNPACKED_REPLAYLOG" -f "$RIV_IOCARD"
+        busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD" "$RIV_SCREENSHOT"
         busybox umount /cartridge
         return 1
       fi
     fi
-    busybox rm -f "$RIV_UNPACKED_REPLAYLOG" -f "$RIV_IOCARD"
+    busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD"
   fi
+  # copy screenshot
+  if [ -n "$RIV_SAVE_SCREENSHOT" ]; then
+    busybox cp "$RIV_SCREENSHOT" "$RIV_SAVE_SCREENSHOT"
+  fi
+  busybox rm -f "$RIV_SCREENSHOT"
+  # finished
   echo "[RIVOS] Cartridge finished with status $STATUS"
   busybox umount /cartridge
   return $STATUS

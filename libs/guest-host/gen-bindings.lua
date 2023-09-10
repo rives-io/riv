@@ -19,8 +19,6 @@ nldecl.generate_bindings_file{
   output_file = 'miniz.nelua',
   defines = {
     'MINIZ_NO_ARCHIVE_APIS',
-    'MINIZ_NO_ZLIB_APIS',
-    'MINIZ_NO_ZLIB_COMPATIBLE_NAME',
     'MINIZ_NO_STDIO',
     'MINIZ_NO_TIME',
   },
@@ -35,12 +33,26 @@ nldecl.generate_bindings_file{
   output_head = [==[
 ##[[
 cdefine 'MINIZ_NO_ARCHIVE_APIS'
-cdefine 'MINIZ_NO_ZLIB_APIS'
-cdefine 'MINIZ_NO_ZLIB_COMPATIBLE_NAME'
 cdefine 'MINIZ_NO_STDIO'
 cdefine 'MINIZ_NO_TIME'
 cinclude 'miniz.h'
 cinclude 'miniz.c'
+]]
+]==]
+}
+
+-- spng
+nldecl.generate_bindings_file{
+  output_file = 'spng.nelua',
+  includes = {'spng.h'},
+  include_dirs = {'.'},
+  include_names = {'^spng_', '^SPNG_'},
+  output_head = [==[
+##[[
+cdefine 'SPNG_USE_MINIZ'
+cdefine 'SPNG_DISABLE_OPT'
+cinclude 'spng.h'
+cinclude 'spng.c'
 ]]
 ]==]
 }

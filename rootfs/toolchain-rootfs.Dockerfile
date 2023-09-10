@@ -26,6 +26,7 @@ RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so
 # Download apks to be installed in rootfs
 WORKDIR /root/apks
 RUN apk fetch musl bubblewrap libcap2
+RUN apk fetch zlib lz4-libs xz-libs lzo zstd-libs squashfs-tools
 
 # Build other packages inside /root
 WORKDIR /root

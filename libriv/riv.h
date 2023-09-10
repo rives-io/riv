@@ -476,6 +476,7 @@ typedef struct riv_context {
   int32_t verify_iocard_fd;
   uint32_t verify_key_event_index;
   riv_key_toggle_event *verify_key_events;
+  uint64_t stop_frame;
 } riv_context;
 
 // RIV context callback

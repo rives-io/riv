@@ -1,0 +1,385 @@
+##[[
+cdefine 'SPNG_USE_MINIZ'
+cdefine 'SPNG_DISABLE_OPT'
+cinclude 'spng.h'
+cinclude 'spng.c'
+]]
+global FILE: type <cimport,nodecl,cincomplete> = @record{}
+global spng_errno: type <cimport,nodecl,using,ctypedef'spng_errno'> = @enum(cint){
+  SPNG_IO_ERROR = -2,
+  SPNG_IO_EOF = -1,
+  SPNG_OK = 0,
+  SPNG_EINVAL = 1,
+  SPNG_EMEM = 2,
+  SPNG_EOVERFLOW = 3,
+  SPNG_ESIGNATURE = 4,
+  SPNG_EWIDTH = 5,
+  SPNG_EHEIGHT = 6,
+  SPNG_EUSER_WIDTH = 7,
+  SPNG_EUSER_HEIGHT = 8,
+  SPNG_EBIT_DEPTH = 9,
+  SPNG_ECOLOR_TYPE = 10,
+  SPNG_ECOMPRESSION_METHOD = 11,
+  SPNG_EFILTER_METHOD = 12,
+  SPNG_EINTERLACE_METHOD = 13,
+  SPNG_EIHDR_SIZE = 14,
+  SPNG_ENOIHDR = 15,
+  SPNG_ECHUNK_POS = 16,
+  SPNG_ECHUNK_SIZE = 17,
+  SPNG_ECHUNK_CRC = 18,
+  SPNG_ECHUNK_TYPE = 19,
+  SPNG_ECHUNK_UNKNOWN_CRITICAL = 20,
+  SPNG_EDUP_PLTE = 21,
+  SPNG_EDUP_CHRM = 22,
+  SPNG_EDUP_GAMA = 23,
+  SPNG_EDUP_ICCP = 24,
+  SPNG_EDUP_SBIT = 25,
+  SPNG_EDUP_SRGB = 26,
+  SPNG_EDUP_BKGD = 27,
+  SPNG_EDUP_HIST = 28,
+  SPNG_EDUP_TRNS = 29,
+  SPNG_EDUP_PHYS = 30,
+  SPNG_EDUP_TIME = 31,
+  SPNG_EDUP_OFFS = 32,
+  SPNG_EDUP_EXIF = 33,
+  SPNG_ECHRM = 34,
+  SPNG_EPLTE_IDX = 35,
+  SPNG_ETRNS_COLOR_TYPE = 36,
+  SPNG_ETRNS_NO_PLTE = 37,
+  SPNG_EGAMA = 38,
+  SPNG_EICCP_NAME = 39,
+  SPNG_EICCP_COMPRESSION_METHOD = 40,
+  SPNG_ESBIT = 41,
+  SPNG_ESRGB = 42,
+  SPNG_ETEXT = 43,
+  SPNG_ETEXT_KEYWORD = 44,
+  SPNG_EZTXT = 45,
+  SPNG_EZTXT_COMPRESSION_METHOD = 46,
+  SPNG_EITXT = 47,
+  SPNG_EITXT_COMPRESSION_FLAG = 48,
+  SPNG_EITXT_COMPRESSION_METHOD = 49,
+  SPNG_EITXT_LANG_TAG = 50,
+  SPNG_EITXT_TRANSLATED_KEY = 51,
+  SPNG_EBKGD_NO_PLTE = 52,
+  SPNG_EBKGD_PLTE_IDX = 53,
+  SPNG_EHIST_NO_PLTE = 54,
+  SPNG_EPHYS = 55,
+  SPNG_ESPLT_NAME = 56,
+  SPNG_ESPLT_DUP_NAME = 57,
+  SPNG_ESPLT_DEPTH = 58,
+  SPNG_ETIME = 59,
+  SPNG_EOFFS = 60,
+  SPNG_EEXIF = 61,
+  SPNG_EIDAT_TOO_SHORT = 62,
+  SPNG_EIDAT_STREAM = 63,
+  SPNG_EZLIB = 64,
+  SPNG_EFILTER = 65,
+  SPNG_EBUFSIZ = 66,
+  SPNG_EIO = 67,
+  SPNG_EOF = 68,
+  SPNG_EBUF_SET = 69,
+  SPNG_EBADSTATE = 70,
+  SPNG_EFMT = 71,
+  SPNG_EFLAGS = 72,
+  SPNG_ECHUNKAVAIL = 73,
+  SPNG_ENCODE_ONLY = 74,
+  SPNG_EOI = 75,
+  SPNG_ENOPLTE = 76,
+  SPNG_ECHUNK_LIMITS = 77,
+  SPNG_EZLIB_INIT = 78,
+  SPNG_ECHUNK_STDLEN = 79,
+  SPNG_EINTERNAL = 80,
+  SPNG_ECTXTYPE = 81,
+  SPNG_ENOSRC = 82,
+  SPNG_ENODST = 83,
+  SPNG_EOPSTATE = 84,
+  SPNG_ENOTFINAL = 85
+}
+global spng_text_type: type <cimport,nodecl,using,ctypedef'spng_text_type'> = @enum(cint){
+  SPNG_TEXT = 1,
+  SPNG_ZTXT = 2,
+  SPNG_ITXT = 3
+}
+global spng_color_type: type <cimport,nodecl,using,ctypedef'spng_color_type'> = @enum(cint){
+  SPNG_COLOR_TYPE_GRAYSCALE = 0,
+  SPNG_COLOR_TYPE_TRUECOLOR = 2,
+  SPNG_COLOR_TYPE_INDEXED = 3,
+  SPNG_COLOR_TYPE_GRAYSCALE_ALPHA = 4,
+  SPNG_COLOR_TYPE_TRUECOLOR_ALPHA = 6
+}
+global spng_filter: type <cimport,nodecl,using,ctypedef'spng_filter'> = @enum(cint){
+  SPNG_FILTER_NONE = 0,
+  SPNG_FILTER_SUB = 1,
+  SPNG_FILTER_UP = 2,
+  SPNG_FILTER_AVERAGE = 3,
+  SPNG_FILTER_PAETH = 4
+}
+global spng_filter_choice: type <cimport,nodecl,using,ctypedef'spng_filter_choice'> = @enum(cint){
+  SPNG_DISABLE_FILTERING = 0,
+  SPNG_FILTER_CHOICE_NONE = 8,
+  SPNG_FILTER_CHOICE_SUB = 16,
+  SPNG_FILTER_CHOICE_UP = 32,
+  SPNG_FILTER_CHOICE_AVG = 64,
+  SPNG_FILTER_CHOICE_PAETH = 128,
+  SPNG_FILTER_CHOICE_ALL = 248
+}
+global spng_interlace_method: type <cimport,nodecl,using,ctypedef'spng_interlace_method'> = @enum(cint){
+  SPNG_INTERLACE_NONE = 0,
+  SPNG_INTERLACE_ADAM7 = 1
+}
+global spng_format: type <cimport,nodecl,using,ctypedef'spng_format'> = @enum(cint){
+  SPNG_FMT_RGBA8 = 1,
+  SPNG_FMT_RGBA16 = 2,
+  SPNG_FMT_RGB8 = 4,
+  SPNG_FMT_GA8 = 16,
+  SPNG_FMT_GA16 = 32,
+  SPNG_FMT_G8 = 64,
+  SPNG_FMT_PNG = 256,
+  SPNG_FMT_RAW = 512
+}
+global spng_ctx_flags: type <cimport,nodecl,using,ctypedef'spng_ctx_flags'> = @enum(cint){
+  SPNG_CTX_IGNORE_ADLER32 = 1,
+  SPNG_CTX_ENCODER = 2
+}
+global spng_decode_flags: type <cimport,nodecl,using,ctypedef'spng_decode_flags'> = @enum(cint){
+  SPNG_DECODE_USE_TRNS = 1,
+  SPNG_DECODE_USE_GAMA = 2,
+  SPNG_DECODE_USE_SBIT = 8,
+  SPNG_DECODE_TRNS = 1,
+  SPNG_DECODE_GAMMA = 2,
+  SPNG_DECODE_PROGRESSIVE = 256
+}
+global spng_crc_action: type <cimport,nodecl,using,ctypedef'spng_crc_action'> = @enum(cint){
+  SPNG_CRC_ERROR = 0,
+  SPNG_CRC_DISCARD = 1,
+  SPNG_CRC_USE = 2
+}
+global spng_encode_flags: type <cimport,nodecl,using,ctypedef'spng_encode_flags'> = @enum(cint){
+  SPNG_ENCODE_PROGRESSIVE = 1,
+  SPNG_ENCODE_FINALIZE = 2
+}
+global spng_ihdr: type <cimport,nodecl,ctypedef'spng_ihdr'> = @record{
+  width: uint32,
+  height: uint32,
+  bit_depth: uint8,
+  color_type: uint8,
+  compression_method: uint8,
+  filter_method: uint8,
+  interlace_method: uint8
+}
+global spng_plte_entry: type <cimport,nodecl,ctypedef'spng_plte_entry'> = @record{
+  red: uint8,
+  green: uint8,
+  blue: uint8,
+  alpha: uint8
+}
+global spng_plte: type <cimport,nodecl,ctypedef'spng_plte'> = @record{
+  n_entries: uint32,
+  entries: [256]spng_plte_entry
+}
+global spng_trns: type <cimport,nodecl,ctypedef'spng_trns'> = @record{
+  gray: uint16,
+  red: uint16,
+  green: uint16,
+  blue: uint16,
+  n_type3_entries: uint32,
+  type3_alpha: [256]uint8
+}
+global spng_chrm_int: type <cimport,nodecl,ctypedef'spng_chrm_int'> = @record{
+  white_point_x: uint32,
+  white_point_y: uint32,
+  red_x: uint32,
+  red_y: uint32,
+  green_x: uint32,
+  green_y: uint32,
+  blue_x: uint32,
+  blue_y: uint32
+}
+global spng_chrm: type <cimport,nodecl,ctypedef'spng_chrm'> = @record{
+  white_point_x: float64,
+  white_point_y: float64,
+  red_x: float64,
+  red_y: float64,
+  green_x: float64,
+  green_y: float64,
+  blue_x: float64,
+  blue_y: float64
+}
+global spng_iccp: type <cimport,nodecl,ctypedef'spng_iccp'> = @record{
+  profile_name: [80]cchar,
+  profile_len: csize,
+  profile: cstring
+}
+global spng_sbit: type <cimport,nodecl,ctypedef'spng_sbit'> = @record{
+  grayscale_bits: uint8,
+  red_bits: uint8,
+  green_bits: uint8,
+  blue_bits: uint8,
+  alpha_bits: uint8
+}
+global spng_text: type <cimport,nodecl,ctypedef'spng_text'> = @record{
+  keyword: [80]cchar,
+  type: cint,
+  length: csize,
+  text: cstring,
+  compression_flag: uint8,
+  compression_method: uint8,
+  language_tag: cstring,
+  translated_keyword: cstring
+}
+global spng_bkgd: type <cimport,nodecl,ctypedef'spng_bkgd'> = @record{
+  gray: uint16,
+  red: uint16,
+  green: uint16,
+  blue: uint16,
+  plte_index: uint16
+}
+global spng_hist: type <cimport,nodecl,ctypedef'spng_hist'> = @record{
+  frequency: [256]uint16
+}
+global spng_phys: type <cimport,nodecl,ctypedef'spng_phys'> = @record{
+  ppu_x: uint32,
+  ppu_y: uint32,
+  unit_specifier: uint8
+}
+global spng_splt_entry: type <cimport,nodecl,ctypedef'spng_splt_entry'> = @record{
+  red: uint16,
+  green: uint16,
+  blue: uint16,
+  alpha: uint16,
+  frequency: uint16
+}
+global spng_splt: type <cimport,nodecl,ctypedef'spng_splt'> = @record{
+  name: [80]cchar,
+  sample_depth: uint8,
+  n_entries: uint32,
+  entries: *spng_splt_entry
+}
+global spng_time: type <cimport,nodecl,ctypedef'spng_time'> = @record{
+  year: uint16,
+  month: uint8,
+  day: uint8,
+  hour: uint8,
+  minute: uint8,
+  second: uint8
+}
+global spng_offs: type <cimport,nodecl,ctypedef'spng_offs'> = @record{
+  x: int32,
+  y: int32,
+  unit_specifier: uint8
+}
+global spng_exif: type <cimport,nodecl,ctypedef'spng_exif'> = @record{
+  length: csize,
+  data: cstring
+}
+global spng_chunk: type <cimport,nodecl,ctypedef'spng_chunk'> = @record{
+  offset: csize,
+  length: uint32,
+  type: [4]uint8,
+  crc: uint32
+}
+global spng_location: type <cimport,nodecl,using,ctypedef'spng_location'> = @enum(cint){
+  SPNG_AFTER_IHDR = 1,
+  SPNG_AFTER_PLTE = 2,
+  SPNG_AFTER_IDAT = 8
+}
+global spng_unknown_chunk: type <cimport,nodecl,ctypedef'spng_unknown_chunk'> = @record{
+  type: [4]uint8,
+  length: csize,
+  data: pointer,
+  location: spng_location
+}
+global spng_option: type <cimport,nodecl,using,ctypedef'spng_option'> = @enum(cint){
+  SPNG_KEEP_UNKNOWN_CHUNKS = 1,
+  SPNG_IMG_COMPRESSION_LEVEL = 2,
+  SPNG_IMG_WINDOW_BITS = 3,
+  SPNG_IMG_MEM_LEVEL = 4,
+  SPNG_IMG_COMPRESSION_STRATEGY = 5,
+  SPNG_TEXT_COMPRESSION_LEVEL = 6,
+  SPNG_TEXT_WINDOW_BITS = 7,
+  SPNG_TEXT_MEM_LEVEL = 8,
+  SPNG_TEXT_COMPRESSION_STRATEGY = 9,
+  SPNG_FILTER_CHOICE = 10,
+  SPNG_CHUNK_COUNT_LIMIT = 11,
+  SPNG_ENCODE_TO_BUFFER = 12
+}
+global spng_alloc: type <cimport,nodecl,ctypedef'spng_alloc'> = @record{
+  malloc_fn: *function(size: csize): pointer,
+  realloc_fn: *function(ptr: pointer, size: csize): pointer,
+  calloc_fn: *function(count: csize, size: csize): pointer,
+  free_fn: *function(ptr: pointer): void
+}
+global spng_row_info: type <cimport,nodecl,ctypedef'spng_row_info'> = @record{
+  scanline_idx: uint32,
+  row_num: uint32,
+  pass: cint,
+  filter: uint8
+}
+global spng_ctx: type <cimport,nodecl,forwarddecl> = @record{}
+global function spng_ctx_new(flags: cint): *spng_ctx <cimport,nodecl> end
+global function spng_ctx_new2(alloc: *spng_alloc, flags: cint): *spng_ctx <cimport,nodecl> end
+global function spng_ctx_free(ctx: *spng_ctx): void <cimport,nodecl> end
+global function spng_set_png_buffer(ctx: *spng_ctx, buf: pointer, size: csize): cint <cimport,nodecl> end
+global function spng_set_png_stream(ctx: *spng_ctx, rw_func: *function(ctx: *spng_ctx, user: pointer, dst_src: pointer, length: csize): cint, user: pointer): cint <cimport,nodecl> end
+global function spng_set_png_file(ctx: *spng_ctx, file: *FILE): cint <cimport,nodecl> end
+global function spng_get_png_buffer(ctx: *spng_ctx, len: *csize, error: *cint): pointer <cimport,nodecl> end
+global function spng_set_image_limits(ctx: *spng_ctx, width: uint32, height: uint32): cint <cimport,nodecl> end
+global function spng_get_image_limits(ctx: *spng_ctx, width: *uint32, height: *uint32): cint <cimport,nodecl> end
+global function spng_set_chunk_limits(ctx: *spng_ctx, chunk_size: csize, cache_size: csize): cint <cimport,nodecl> end
+global function spng_get_chunk_limits(ctx: *spng_ctx, chunk_size: *csize, cache_size: *csize): cint <cimport,nodecl> end
+global function spng_set_crc_action(ctx: *spng_ctx, critical: cint, ancillary: cint): cint <cimport,nodecl> end
+global function spng_set_option(ctx: *spng_ctx, option: spng_option, value: cint): cint <cimport,nodecl> end
+global function spng_get_option(ctx: *spng_ctx, option: spng_option, value: *cint): cint <cimport,nodecl> end
+global function spng_decoded_image_size(ctx: *spng_ctx, fmt: cint, len: *csize): cint <cimport,nodecl> end
+global function spng_decode_image(ctx: *spng_ctx, out: pointer, len: csize, fmt: cint, flags: cint): cint <cimport,nodecl> end
+global function spng_decode_scanline(ctx: *spng_ctx, out: pointer, len: csize): cint <cimport,nodecl> end
+global function spng_decode_row(ctx: *spng_ctx, out: pointer, len: csize): cint <cimport,nodecl> end
+global function spng_decode_chunks(ctx: *spng_ctx): cint <cimport,nodecl> end
+global function spng_get_row_info(ctx: *spng_ctx, row_info: *spng_row_info): cint <cimport,nodecl> end
+global function spng_encode_image(ctx: *spng_ctx, img: pointer, len: csize, fmt: cint, flags: cint): cint <cimport,nodecl> end
+global function spng_encode_scanline(ctx: *spng_ctx, scanline: pointer, len: csize): cint <cimport,nodecl> end
+global function spng_encode_row(ctx: *spng_ctx, row: pointer, len: csize): cint <cimport,nodecl> end
+global function spng_encode_chunks(ctx: *spng_ctx): cint <cimport,nodecl> end
+global function spng_get_ihdr(ctx: *spng_ctx, ihdr: *spng_ihdr): cint <cimport,nodecl> end
+global function spng_get_plte(ctx: *spng_ctx, plte: *spng_plte): cint <cimport,nodecl> end
+global function spng_get_trns(ctx: *spng_ctx, trns: *spng_trns): cint <cimport,nodecl> end
+global function spng_get_chrm(ctx: *spng_ctx, chrm: *spng_chrm): cint <cimport,nodecl> end
+global function spng_get_chrm_int(ctx: *spng_ctx, chrm_int: *spng_chrm_int): cint <cimport,nodecl> end
+global function spng_get_gama(ctx: *spng_ctx, gamma: *float64): cint <cimport,nodecl> end
+global function spng_get_gama_int(ctx: *spng_ctx, gama_int: *uint32): cint <cimport,nodecl> end
+global function spng_get_iccp(ctx: *spng_ctx, iccp: *spng_iccp): cint <cimport,nodecl> end
+global function spng_get_sbit(ctx: *spng_ctx, sbit: *spng_sbit): cint <cimport,nodecl> end
+global function spng_get_srgb(ctx: *spng_ctx, rendering_intent: *uint8): cint <cimport,nodecl> end
+global function spng_get_text(ctx: *spng_ctx, text: *spng_text, n_text: *uint32): cint <cimport,nodecl> end
+global function spng_get_bkgd(ctx: *spng_ctx, bkgd: *spng_bkgd): cint <cimport,nodecl> end
+global function spng_get_hist(ctx: *spng_ctx, hist: *spng_hist): cint <cimport,nodecl> end
+global function spng_get_phys(ctx: *spng_ctx, phys: *spng_phys): cint <cimport,nodecl> end
+global function spng_get_splt(ctx: *spng_ctx, splt: *spng_splt, n_splt: *uint32): cint <cimport,nodecl> end
+global function spng_get_time(ctx: *spng_ctx, time: *spng_time): cint <cimport,nodecl> end
+global function spng_get_unknown_chunks(ctx: *spng_ctx, chunks: *spng_unknown_chunk, n_chunks: *uint32): cint <cimport,nodecl> end
+global function spng_get_offs(ctx: *spng_ctx, offs: *spng_offs): cint <cimport,nodecl> end
+global function spng_get_exif(ctx: *spng_ctx, exif: *spng_exif): cint <cimport,nodecl> end
+global function spng_set_ihdr(ctx: *spng_ctx, ihdr: *spng_ihdr): cint <cimport,nodecl> end
+global function spng_set_plte(ctx: *spng_ctx, plte: *spng_plte): cint <cimport,nodecl> end
+global function spng_set_trns(ctx: *spng_ctx, trns: *spng_trns): cint <cimport,nodecl> end
+global function spng_set_chrm(ctx: *spng_ctx, chrm: *spng_chrm): cint <cimport,nodecl> end
+global function spng_set_chrm_int(ctx: *spng_ctx, chrm_int: *spng_chrm_int): cint <cimport,nodecl> end
+global function spng_set_gama(ctx: *spng_ctx, gamma: float64): cint <cimport,nodecl> end
+global function spng_set_gama_int(ctx: *spng_ctx, gamma: uint32): cint <cimport,nodecl> end
+global function spng_set_iccp(ctx: *spng_ctx, iccp: *spng_iccp): cint <cimport,nodecl> end
+global function spng_set_sbit(ctx: *spng_ctx, sbit: *spng_sbit): cint <cimport,nodecl> end
+global function spng_set_srgb(ctx: *spng_ctx, rendering_intent: uint8): cint <cimport,nodecl> end
+global function spng_set_text(ctx: *spng_ctx, text: *spng_text, n_text: uint32): cint <cimport,nodecl> end
+global function spng_set_bkgd(ctx: *spng_ctx, bkgd: *spng_bkgd): cint <cimport,nodecl> end
+global function spng_set_hist(ctx: *spng_ctx, hist: *spng_hist): cint <cimport,nodecl> end
+global function spng_set_phys(ctx: *spng_ctx, phys: *spng_phys): cint <cimport,nodecl> end
+global function spng_set_splt(ctx: *spng_ctx, splt: *spng_splt, n_splt: uint32): cint <cimport,nodecl> end
+global function spng_set_time(ctx: *spng_ctx, time: *spng_time): cint <cimport,nodecl> end
+global function spng_set_unknown_chunks(ctx: *spng_ctx, chunks: *spng_unknown_chunk, n_chunks: uint32): cint <cimport,nodecl> end
+global function spng_set_offs(ctx: *spng_ctx, offs: *spng_offs): cint <cimport,nodecl> end
+global function spng_set_exif(ctx: *spng_ctx, exif: *spng_exif): cint <cimport,nodecl> end
+global function spng_strerror(err: cint): cstring <cimport,nodecl> end
+global function spng_version_string(): cstring <cimport,nodecl> end
+global SPNG_VERSION_MAJOR: cint <comptime> = 0
+global SPNG_VERSION_MINOR: cint <comptime> = 7
+global SPNG_VERSION_PATCH: cint <comptime> = 4

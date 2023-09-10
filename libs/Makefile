@@ -2,10 +2,11 @@ MINIZ_VERSION=3.0.2
 CARTESI_VERSION=0.15.2
 SOKOL_TAG=pre-separate-samplers
 MINIAUDIO_BRANCH=master
+SPNG_BRANCH=master
 
 all: | update-libs update-bindings
 
-update-libs: update-miniz update-sha3 update-sokol update-miniaudio update-cartesi
+update-libs: update-miniz update-sha3 update-sokol update-spng update-miniaudio update-cartesi
 
 update-bindings:
 	cd guest-host && nelua-lua gen-bindings.lua
@@ -22,6 +23,10 @@ update-sokol:
 	wget -O host/sokol_gfx.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_gfx.h
 	wget -O host/sokol_app.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_app.h
 	wget -O host/sokol_args.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_args.h
+
+update-spng:
+	wget -O guest-host/spng.h https://raw.githubusercontent.com/randy408/libspng/master/spng/spng.h
+	wget -O guest-host/spng.c https://raw.githubusercontent.com/randy408/libspng/master/spng/spng.c
 
 update-miniaudio:
 	wget -O host/miniaudio.h https://raw.githubusercontent.com/mackron/miniaudio/$(MINIAUDIO_BRANCH)/miniaudio.h

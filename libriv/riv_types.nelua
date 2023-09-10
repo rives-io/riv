@@ -337,7 +337,8 @@ global riv_context: type = @record{
   yield_fd: int32,
   verify_iocard_fd: int32,
   verify_key_event_index: uint32,
-  verify_key_events: *[0]riv_key_toggle_event
+  verify_key_events: *[0]riv_key_toggle_event,
+  stop_frame: uint64
 }
 global riv_context_callback: type = @function(a1: *riv_context): void
 global riv_run_desc: type = @record{

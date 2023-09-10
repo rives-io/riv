@@ -1,7 +1,5 @@
 ##[[
 cdefine 'MINIZ_NO_ARCHIVE_APIS'
-cdefine 'MINIZ_NO_ZLIB_APIS'
-cdefine 'MINIZ_NO_ZLIB_COMPATIBLE_NAME'
 cdefine 'MINIZ_NO_STDIO'
 cdefine 'MINIZ_NO_TIME'
 cinclude 'miniz.h'

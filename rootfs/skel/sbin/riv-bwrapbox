@@ -58,5 +58,4 @@ exec bwrapbox \
   --as-pid-1 \
   --new-session \
   --seccomp 10 10<"$BWRAPBOX_SECCOMP_FILTER" \
-  $BWRAPBOX_FLAGS \
-  -- "$@"
+  "$@"
