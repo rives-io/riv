@@ -15,7 +15,6 @@
 *.fs
 *.elftoc.c
 *.rivlog
-*.json
 *.txt
 *.hash
 *.outcard
