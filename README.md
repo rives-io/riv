@@ -271,6 +271,130 @@ a game library and a sandboxing utility. Here is a list of each folder component
 [Sokol](https://github.com/floooh/sokol) for graphics, [miniaudio](https://miniaud.io/) for audio,
 [miniz](https://github.com/richgel999/miniz) for log compression, hash utilities..
 
+## Compiling RIV emulator
+
+Note that at this moment RIV emulator can only be compiled on Linux,
+below I will provide instructions to compile on Ubuntu distribution.
+
+First install Cartesi Machine with the following commands:
+
+```
+apt-get install -y build-essential git pkg-config lua5.4 liblua5.4-dev wget libboost-dev libboost-context-dev libboost-coroutine-dev libboost-filesystem-dev libcrypto++-dev libb64-dev nlohmann-json3-dev libprotobuf-dev protobuf-compiler-grpc libgrpc++-dev libb64-dev libabsl-dev patchelf
+git clone --recursive --branch v0.15.2 https://github.com/cartesi/machine-emulator.git
+cd machine-emulator
+make dep
+make
+sudo make install PREFIX=/usr/local
+```
+
+Next install Nelua programming language, because RIV emulator is made with it:
+
+```
+git clone https://github.com/edubart/nelua-lang.git
+cd nelua-lang
+make
+sudo make install PREFIX=/usr/local
+```
+
+Then compile `rivemu` emulator:
+
+```
+apt-get install -y libgl-dev libx11-dev xorg-dev
+git clone https://github.com/edubart/riv.git
+make rivemu
+```
+
+The emulator should be available in `./rivemu/rivemu`, this is the executable you use to play games
+and record replays.
+
+The emulator will require kernel and rootfs images to run,
+although you could build them from scratch,
+it's way easier and fast to download prebuilt images with:
+```
+make download-images
+```
+
+Now proceed to the next section to try out a game.
+
+## Playing, recording replays and replaying a Cartridge
+
+Lets download the prebuilt Snake game:
+
+```
+wget -O snake.sqfs https://github.com/edubart/riv/releases/download/downloads/snake.sqfs
+```
+
+Now you can play it with:
+```
+./rivemu/rivemu -cartridge=snake.sqfs
+```
+
+You can record a replay of your play to the file `snake.rivlog` and its final output card to `snake.outcard` with:
+```
+./rivemu/rivemu -cartridge=snake.sqfs -record=snake.rivlog -save-outcard=snake.outcard
+```
+You don't need to finish a game session, you could quit at any moment,
+the score will reflect what you have played so far.
+
+You can inspect the cartridge output card:
+```
+cat snake.outcard
+```
+Notice that the output is a JSON of the game scores prefixed with `JSON` string.
+
+Then you can watch your replay play with:
+```
+./rivemu/rivemu -cartridge=snake.sqfs -replay=snake.rivlog
+```
+It should produce the same output card with the same game scores.
+These two output files are the ones that you must submit on-chain
+to verify the game output scores.
+
+More interestingly you can also view replay at greater speed:
+```
+./rivemu/rivemu -cartridge=snake.sqfs -replay=snake.rivlog -speed=2
+```
+
+## Compiling images
+
+If you have Docker, you can also compile the kernel and rootfs images with the following command:
+```
+make kernel rootfs
+```
+
+## Compiling demos
+
+First you need to compile the rootfs image, because it also provides a toolchain compiler
+for RISC-V and RIV operating system as a Docker image:
+
+```
+make rootfs
+```
+
+You can compile the Snake demo with:
+```
+make demo DEMO=snake
+```
+
+It should produce its cartridge at `demos/snake/snake.sqfs`.
+Currently this is the only demo in this repository,
+it made using Nelua programming language,
+I will provide games made in C/C++ and other languages in the future.
+
+You can also compile the Antcopter/DOOM demos with:
+
+```
+# Antcopter
+git clone --branch riv git@github.com:edubart/antcopter.git demos/antcopter
+make demo DEMO=antcopter
+./rivemu/rivemu -cartridge=demos/antcopter/antcopter.sqfs
+
+# DOOM
+git clone --branch riv git@github.com:edubart/cartesi-doom-example.git demos/doom
+make demo DEMO=doom
+./rivemu/rivemu -cartridge=demos/doom/doom.sqfs
+```
+
 ## Authors
 
 Eduardo Bart

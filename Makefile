@@ -33,7 +33,12 @@ clean:
 distclean: clean
 	$(MAKE) -C kernel distclean
 
-.PHONY: kernel rootfs demos rivemu libs libriv tools
+download-images:
+	wget -O kernel/linux.bin https://github.com/edubart/riv/releases/download/downloads/linux.bin
+	wget -O kernel/rom.bin https://github.com/edubart/riv/releases/download/downloads/rom.bin
+	wget -O rootfs/rootfs.ext2 https://github.com/edubart/riv/releases/download/downloads/rootfs.ext2
+
+.PHONY: kernel rootfs demos rivemu libs libriv tools download-images
 
 ##################
 # Demo testing
