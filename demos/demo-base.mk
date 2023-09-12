@@ -17,6 +17,7 @@ SSTRIP=sstrip
 ELFTOC=elftoc
 OBJDUMP_FLAGS+=--all-headers --disassemble --disassemble-zeroes
 COMP?=xz
+ASSETS_DIR?=assets
 
 # All of the following flags are known to help generating the small RISC-V ELF binaries
 CFLAGS+=-Os -ffast-math -DNDEBUG -flto=auto
@@ -49,7 +50,7 @@ all: \
 $(NAME).fs: $(NAME).min.elf
 	rm -rf $@
 	mkdir -p $@
-	if [ -d assets ]; then cp -r assets/* $@/; fi
+	if [ -d $(ASSETS_DIR) ]; then cp -r $(ASSETS_DIR)/* $@/; fi
 	cp $< $@/$(NAME)
 
 $(NAME).min.elf: $(NAME).elf
