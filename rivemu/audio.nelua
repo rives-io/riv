@@ -231,6 +231,7 @@ function rivemu_audio.setup(pitch: float64): void
   config.sampleRate = DEFAULT_SAMPLE_RATE
   config.channels = DEFAULT_CHANNELS
   config.periodSizeInFrames = DEFAULT_PERIOD_SIZE
+  config.noAutoStart = MA_TRUE
   global_pitch = pitch
   ma_assert!(ma_engine_init(&config, &engine))
   ma_engine_set_volume(&engine, DEFAULT_VOLUME)
@@ -238,8 +239,9 @@ function rivemu_audio.setup(pitch: float64): void
   global_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine)
 end
 
--- Terminate audio subsystem.
-function rivemu_audio.shutdown(): void
+-- Reset audio subsystem.
+function rivemu_audio.reset(): void
+  ma_engine_stop(&engine)
   -- destroy sounds
   for id: uint64, sound: *Sound in mpairs(sounds) do
     sound:destroy()
@@ -250,6 +252,21 @@ function rivemu_audio.shutdown(): void
     delete((@span(byte)){data=buffer.data.data, size=buffer.data.size})
   end
   buffers:destroy()
+end
+
+-- Start audio thread.
+function rivemu_audio.start(): void
+  ma_assert!(ma_engine_start(&engine))
+end
+
+-- Stop audio thread.
+function rivemu_audio.stop(): void
+  ma_assert!(ma_engine_stop(&engine))
+end
+
+-- Terminate audio subsystem.
+function rivemu_audio.shutdown(): void
+  rivemu_audio.reset()
   -- destroy miniaudio
   ma_engine_uninit(&engine)
 end

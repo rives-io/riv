@@ -23,6 +23,15 @@ local function destroy_framebuffer_image(): void
   end
 end
 
+-- Reset video subsystem.
+function rivemu_video.reset(): void
+  destroy_framebuffer_image()
+  fb_desc = {}
+  fb_pixel_count = 0
+  memory.zero(&framebuffer[0], RIV_MMIOSIZE_FRAMEBUFFER)
+  memory.zero(&framebuffer_rgba[0], RIV_MMIOSIZE_FRAMEBUFFER * 4)
+end
+
 -- Initialize video subsystem.
 function rivemu_video.setup(): void
   sg_setup(sg_desc{context = sapp_sgcontext()})
@@ -33,10 +42,7 @@ end
 
 -- Terminate video subsystem.
 function rivemu_video.shutdown(): void
-  destroy_framebuffer_image()
-  fb_desc = {}
-  fb_pixel_count = 0
-
+  rivemu_video.reset()
   sgp_shutdown()
   sg_shutdown()
 end

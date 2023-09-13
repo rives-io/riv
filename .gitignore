@@ -18,6 +18,8 @@
 *.txt
 *.hash
 *.outcard
+*.js
+*.wasm
 
 # ignore generated binaries
 /rivemu/rivemu

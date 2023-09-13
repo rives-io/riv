@@ -15,8 +15,7 @@ rivemu: rivemu.nelua *.nelua
 		--cache-dir . \
 		--output $@ $<
 
-web/index.html: rivemu.nelua *.nelua
-	mkdir -p web
+rivemu.js: rivemu.nelua *.nelua
 	nelua $(NELUA_FLAGS) \
 		--cc=$(WASM_CC) \
 		--cflags="$(CFLAGS) $(INCS)" \

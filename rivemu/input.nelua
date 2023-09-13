@@ -140,13 +140,24 @@ local key_pressed_state: [RIV_NUM_KEYCODE]boolean
 function rivemu_input.setup(): void
 end
 
--- Terminate input subsystem.
-function rivemu_input.shutdown(): void
+-- Reset input subsystem.
+function rivemu_input.reset(): void
   poll_events:destroy()
   log_key_events:destroy()
+  log_last_frame = 0
+  replay_log_index = 0
+  recording = false
+  replaying = false
+  key_pressed_state = {}
 end
 
-function rivemu_input.reset_state()
+-- Terminate input subsystem.
+function rivemu_input.shutdown(): void
+  rivemu_input.reset()
+end
+
+-- Reset keyboard state.
+function rivemu_input.reset_keys_state()
   key_pressed_state = {}
 end
 
@@ -259,6 +270,7 @@ end
 
 -- Start recording.
 function rivemu_input.start_recording()
+  rivemu_input.reset()
   recording = true
   io.printf("[RIVEMU] Recording\n")
 end
@@ -271,7 +283,7 @@ end
 
 -- Load replay log from a file.
 function rivemu_input.load_replay_from_file(filename: string): void
-  log_key_events:destroy()
+  rivemu_input.reset()
   log_key_events, log_last_frame = riv_log.load_from_file(filename)
   replaying = true
   io.printf("[RIVEMU] Loaded replay '%s'\n", filename)
