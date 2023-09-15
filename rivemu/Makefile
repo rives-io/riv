@@ -23,7 +23,7 @@ rivemu.js: rivemu.nelua *.nelua
 
 clean:
 	rm -rf web
-	rm -f rivemu rivemu.c
+	rm -f rivemu rivemu.c rivemu.js rivemu.wasm
 
 install: rivemu
 	mkdir -p $(DESTDIR)$(PREFIX)/rivemu
