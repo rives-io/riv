@@ -37,6 +37,7 @@ if ccinfo.is_emscripten then
   -- export functions
   local export_functions = {
     '_main',
+    '_quit',
     '_rivemu_start',
     '_rivemu_stop',
     '_malloc',
@@ -547,6 +548,10 @@ end
 local function rivemu_stop(url: cstring): void <cexport'rivemu_stop'>
   io.printf('[RIVEMU] Stopping cartridge...\n')
   finish()
+end
+
+local function quit(): void <cexport'quit'>
+  sapp_quit()
 end
 
 ## end
