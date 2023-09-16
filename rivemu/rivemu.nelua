@@ -279,7 +279,7 @@ local function startup(): void
   io.printf('[RIVEMU] Startup\n')
   setup()
 ## if not ccinfo.is_emscripten then
-  start()
+  begin()
 ## end
 end
 
