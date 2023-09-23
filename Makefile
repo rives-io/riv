@@ -37,6 +37,7 @@ download-images:
 	wget -O kernel/linux.bin https://github.com/edubart/riv/releases/download/downloads/linux.bin
 	wget -O kernel/rom.bin https://github.com/edubart/riv/releases/download/downloads/rom.bin
 	wget -O rootfs/rootfs.ext2 https://github.com/edubart/riv/releases/download/downloads/rootfs.ext2
+	wget -O kernel/linux-headers.tar.xz https://github.com/edubart/riv/releases/download/downloads/linux-headers.tar.xz
 
 .PHONY: kernel rootfs demos rivemu libs libriv tools download-images
 
