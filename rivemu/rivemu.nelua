@@ -39,6 +39,7 @@ if ccinfo.is_emscripten then
     '_main',
     '_quit',
     '_rivemu_start',
+    '_rivemu_start_ex',
     '_rivemu_stop',
     '_malloc',
     '_free',
@@ -541,6 +542,22 @@ local function rivemu_start(ptr: *uint8, len: int32): void <cexport'rivemu_start
   options.cartridge_filename = '/cartridge.sqfs'
   options.record_filename = '/replay.rivlog'
   options.outcard_filename = '/replay.outcard'
+  options.recording = true
+  begin()
+end
+
+local function rivemu_start_ex(ptr: *uint8, len: int32, args: cstring): void <cexport'rivemu_start_ex'>
+  reset()
+  io.printf('[RIVEMU] Starting cartridge...\n')
+  local contents: string = {data=(@*[0]byte)(ptr), size=len}
+  do
+    local cartridge_file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
+    fn_assert!(cartridge_file:write(contents))
+  end
+  options.cartridge_filename = '/cartridge.sqfs'
+  options.record_filename = '/replay.rivlog'
+  options.outcard_filename = '/replay.outcard'
+  options.entrypoint_args = args
   options.recording = true
   begin()
 end
