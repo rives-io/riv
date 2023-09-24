@@ -133,6 +133,9 @@ RUN genext2fs \
     --readjustment +0 \
     --root /rootfs /root/rootfs.ext2
 
+# Generate rootfs.tar
+RUN tar -cf /root/rootfs.tar /rootfs
+
 # Install workaround to run env as current user
 RUN adduser -D -u 500 cartridge cartridge
 COPY --chmod=755 rootfs/toolchain-entrypoint.sh /usr/local/bin/toolchain-entrypoint.sh

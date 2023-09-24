@@ -11,13 +11,17 @@ DOCKER_USER_RUN_FLAGS=\
 
 all: rootfs
 
-rootfs: rootfs.ext2 rootfs.hash.txt
+rootfs: rootfs.ext2 rootfs.tar rootfs.hash.txt
 
 rootfs.ext2: toolchain-rootfs.Dockerfile $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
 	$(MAKE) toolchain
 	docker create --platform=linux/riscv64 --name riv-copy-rootfs riv/toolchain:devel
 	docker cp riv-copy-rootfs:/root/$@ .
+	docker cp riv-copy-rootfs:/root/rootfs.tar .
 	docker rm riv-copy-rootfs
+	touch $@
+
+rootfs.tar: rootfs.ext2
 	touch $@
 
 rootfs.hash.txt: rootfs.ext2
