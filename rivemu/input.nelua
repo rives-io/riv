@@ -243,6 +243,10 @@ function rivemu_input.is_replay_at_end(): boolean
   return replaying and machine.mmio_driver.frame >= log_last_frame
 end
 
+function rivemu_input.get_replay_frames(): uint64
+  return log_last_frame
+end
+
 -- Poll for keyboard/mouse input events.
 function rivemu_input.poll(): void
   -- poll always destroy events in queue

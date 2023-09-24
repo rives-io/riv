@@ -40,6 +40,7 @@ if ccinfo.is_emscripten then
     '_quit',
     '_rivemu_start',
     '_rivemu_start_ex',
+    '_rivemu_start_replay_ex',
     '_rivemu_stop',
     '_malloc',
     '_free',
@@ -309,7 +310,8 @@ local function finish(): void
 
   ## if ccinfo.is_emscripten then
     do
-      local rivlog_file: filestream <close> = fn_assert!(io.open(options.record_filename, 'rb'))
+      local rivlog_filename: string = options.replaying and options.replay_filename or options.record_filename
+      local rivlog_file: filestream <close> = fn_assert!(io.open(rivlog_filename, 'rb'))
       local rivlog_data: string <close> = fn_assert!(rivlog_file:read('a'))
       local rivlog_ptr: *uint8 <nodce> = (@*uint8)(rivlog_data.data)
       local rivlog_len: int32 <nodce> = (@int32)(rivlog_data.size)
@@ -474,10 +476,11 @@ local function frame(): void
       do
         local width: int32 <nodce> = machine.mmio_driver.framebuffer_desc.width
         local height: int32 <nodce> = machine.mmio_driver.framebuffer_desc.height
+        local num_frames: int32 <nodce> = rivemu_input.get_replay_frames()
           cemit![[
         EM_ASM({
-          rivemu_on_begin($0, $1);
-        }, width, height);
+          rivemu_on_begin($0, $1, $2);
+        }, width, height, num_frames);
         ]]
       end
       ## end
@@ -559,6 +562,27 @@ local function rivemu_start_ex(ptr: *uint8, len: int32, args: cstring): void <ce
   options.outcard_filename = '/replay.outcard'
   options.entrypoint_args = args
   options.recording = true
+  begin()
+end
+
+local function rivemu_start_replay_ex(cartridge_ptr: *uint8, cartridge_len: int32, rivlog_ptr: *uint8, rivlog_len: int32, args: cstring): void <cexport'rivemu_start_replay_ex'>
+  reset()
+  io.printf('[RIVEMU] Starting cartridge...\n')
+  do
+    local contents: string = {data=(@*[0]byte)(cartridge_ptr), size=cartridge_len}
+    local file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
+    fn_assert!(file:write(contents))
+  end
+  do
+    local contents: string = {data=(@*[0]byte)(rivlog_ptr), size=rivlog_len}
+    local file: filestream <close> = fn_assert!(io.open('/replay.rivlog', 'wb'))
+    fn_assert!(file:write(contents))
+  end
+  options.cartridge_filename = '/cartridge.sqfs'
+  options.replay_filename = '/replay.rivlog'
+  options.outcard_filename = '/replay.outcard'
+  options.entrypoint_args = args
+  options.replaying = true
   begin()
 end
 
