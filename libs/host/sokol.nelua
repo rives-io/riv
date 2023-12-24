@@ -48,6 +48,9 @@ global sg_buffer: type <cimport,nodecl> = @record{
 global sg_image: type <cimport,nodecl> = @record{
   id: uint32
 }
+global sg_sampler: type <cimport,nodecl> = @record{
+  id: uint32
+}
 global sg_shader: type <cimport,nodecl> = @record{
   id: uint32
 }
@@ -68,8 +71,10 @@ global SG_INVALID_ID: cint <comptime> = 0
 global SG_NUM_SHADER_STAGES: cint <comptime> = 2
 global SG_NUM_INFLIGHT_FRAMES: cint <comptime> = 2
 global SG_MAX_COLOR_ATTACHMENTS: cint <comptime> = 4
-global SG_MAX_SHADERSTAGE_BUFFERS: cint <comptime> = 8
+global SG_MAX_VERTEX_BUFFERS: cint <comptime> = 8
 global SG_MAX_SHADERSTAGE_IMAGES: cint <comptime> = 12
+global SG_MAX_SHADERSTAGE_SAMPLERS: cint <comptime> = 8
+global SG_MAX_SHADERSTAGE_IMAGESAMPLERPAIRS: cint <comptime> = 12
 global SG_MAX_SHADERSTAGE_UBS: cint <comptime> = 4
 global SG_MAX_UB_MEMBERS: cint <comptime> = 16
 global SG_MAX_VERTEX_ATTRIBUTES: cint <comptime> = 16
@@ -223,11 +228,23 @@ global sg_image_type: type <cimport,nodecl,using> = @enum(cint){
   _SG_IMAGETYPE_NUM = 5,
   _SG_IMAGETYPE_FORCE_U32 = 2147483647
 }
+global sg_image_sample_type: type <cimport,nodecl,using> = @enum(cint){
+  _SG_IMAGESAMPLETYPE_DEFAULT = 0,
+  SG_IMAGESAMPLETYPE_FLOAT = 1,
+  SG_IMAGESAMPLETYPE_DEPTH = 2,
+  SG_IMAGESAMPLETYPE_SINT = 3,
+  SG_IMAGESAMPLETYPE_UINT = 4,
+  SG_IMAGESAMPLETYPE_UNFILTERABLE_FLOAT = 5,
+  _SG_IMAGESAMPLETYPE_NUM = 6,
+  _SG_IMAGESAMPLETYPE_FORCE_U32 = 2147483647
+}
 global sg_sampler_type: type <cimport,nodecl,using> = @enum(cint){
   _SG_SAMPLERTYPE_DEFAULT = 0,
-  SG_SAMPLERTYPE_FLOAT = 1,
-  SG_SAMPLERTYPE_SINT = 2,
-  SG_SAMPLERTYPE_UINT = 3
+  SG_SAMPLERTYPE_FILTERING = 1,
+  SG_SAMPLERTYPE_NONFILTERING = 2,
+  SG_SAMPLERTYPE_COMPARISON = 3,
+  _SG_SAMPLERTYPE_NUM = 4,
+  _SG_SAMPLERTYPE_FORCE_U32 = 5
 }
 global sg_cube_face: type <cimport,nodecl,using> = @enum(cint){
   SG_CUBEFACE_POS_X = 0,
@@ -256,13 +273,10 @@ global sg_primitive_type: type <cimport,nodecl,using> = @enum(cint){
 }
 global sg_filter: type <cimport,nodecl,using> = @enum(cint){
   _SG_FILTER_DEFAULT = 0,
-  SG_FILTER_NEAREST = 1,
-  SG_FILTER_LINEAR = 2,
-  SG_FILTER_NEAREST_MIPMAP_NEAREST = 3,
-  SG_FILTER_NEAREST_MIPMAP_LINEAR = 4,
-  SG_FILTER_LINEAR_MIPMAP_NEAREST = 5,
-  SG_FILTER_LINEAR_MIPMAP_LINEAR = 6,
-  _SG_FILTER_NUM = 7,
+  SG_FILTER_NONE = 1,
+  SG_FILTER_NEAREST = 2,
+  SG_FILTER_LINEAR = 3,
+  _SG_FILTER_NUM = 4,
   _SG_FILTER_FORCE_U32 = 2147483647
 }
 global sg_wrap: type <cimport,nodecl,using> = @enum(cint){
@@ -456,14 +470,18 @@ global sg_pass_action: type <cimport,nodecl> = @record{
   stencil: sg_stencil_attachment_action,
   _end_canary: uint32
 }
+global sg_stage_bindings: type <cimport,nodecl> = @record{
+  images: [12]sg_image,
+  samplers: [8]sg_sampler
+}
 global sg_bindings: type <cimport,nodecl> = @record{
   _start_canary: uint32,
   vertex_buffers: [8]sg_buffer,
   vertex_buffer_offsets: [8]cint,
   index_buffer: sg_buffer,
   index_buffer_offset: cint,
-  vs_images: [12]sg_image,
-  fs_images: [12]sg_image,
+  vs: sg_stage_bindings,
+  fs: sg_stage_bindings,
   _end_canary: uint32
 }
 global sg_buffer_desc: type <cimport,nodecl> = @record{
@@ -493,15 +511,6 @@ global sg_image_desc: type <cimport,nodecl> = @record{
   usage: sg_usage,
   pixel_format: sg_pixel_format,
   sample_count: cint,
-  min_filter: sg_filter,
-  mag_filter: sg_filter,
-  wrap_u: sg_wrap,
-  wrap_v: sg_wrap,
-  wrap_w: sg_wrap,
-  border_color: sg_border_color,
-  max_anisotropy: uint32,
-  min_lod: float32,
-  max_lod: float32,
   data: sg_image_data,
   label: cstring,
   gl_textures: [2]uint32,
@@ -510,6 +519,27 @@ global sg_image_desc: type <cimport,nodecl> = @record{
   d3d11_texture: pointer,
   d3d11_shader_resource_view: pointer,
   wgpu_texture: pointer,
+  wgpu_texture_view: pointer,
+  _end_canary: uint32
+}
+global sg_sampler_desc: type <cimport,nodecl> = @record{
+  _start_canary: uint32,
+  min_filter: sg_filter,
+  mag_filter: sg_filter,
+  mipmap_filter: sg_filter,
+  wrap_u: sg_wrap,
+  wrap_v: sg_wrap,
+  wrap_w: sg_wrap,
+  min_lod: float32,
+  max_lod: float32,
+  border_color: sg_border_color,
+  compare: sg_compare_func,
+  max_anisotropy: uint32,
+  label: cstring,
+  gl_sampler: uint32,
+  mtl_sampler: pointer,
+  d3d11_sampler: pointer,
+  wgpu_sampler: pointer,
   _end_canary: uint32
 }
 global sg_shader_attr_desc: type <cimport,nodecl> = @record{
@@ -528,9 +558,20 @@ global sg_shader_uniform_block_desc: type <cimport,nodecl> = @record{
   uniforms: [16]sg_shader_uniform_desc
 }
 global sg_shader_image_desc: type <cimport,nodecl> = @record{
-  name: cstring,
+  used: boolean,
+  multisampled: boolean,
   image_type: sg_image_type,
+  sample_type: sg_image_sample_type
+}
+global sg_shader_sampler_desc: type <cimport,nodecl> = @record{
+  used: boolean,
   sampler_type: sg_sampler_type
+}
+global sg_shader_image_sampler_pair_desc: type <cimport,nodecl> = @record{
+  used: boolean,
+  image_slot: cint,
+  sampler_slot: cint,
+  glsl_name: cstring
 }
 global sg_shader_stage_desc: type <cimport,nodecl> = @record{
   source: cstring,
@@ -538,7 +579,9 @@ global sg_shader_stage_desc: type <cimport,nodecl> = @record{
   entry: cstring,
   d3d11_target: cstring,
   uniform_blocks: [4]sg_shader_uniform_block_desc,
-  images: [12]sg_shader_image_desc
+  images: [12]sg_shader_image_desc,
+  samplers: [8]sg_shader_sampler_desc,
+  image_sampler_pairs: [12]sg_shader_image_sampler_pair_desc
 }
 global sg_shader_desc: type <cimport,nodecl> = @record{
   _start_canary: uint32,
@@ -548,19 +591,19 @@ global sg_shader_desc: type <cimport,nodecl> = @record{
   label: cstring,
   _end_canary: uint32
 }
-global sg_buffer_layout_desc: type <cimport,nodecl> = @record{
+global sg_vertex_buffer_layout_state: type <cimport,nodecl> = @record{
   stride: cint,
   step_func: sg_vertex_step,
   step_rate: cint
 }
-global sg_vertex_attr_desc: type <cimport,nodecl> = @record{
+global sg_vertex_attr_state: type <cimport,nodecl> = @record{
   buffer_index: cint,
   offset: cint,
   format: sg_vertex_format
 }
-global sg_layout_desc: type <cimport,nodecl> = @record{
-  buffers: [8]sg_buffer_layout_desc,
-  attrs: [16]sg_vertex_attr_desc
+global sg_vertex_layout_state: type <cimport,nodecl> = @record{
+  buffers: [8]sg_vertex_buffer_layout_state,
+  attrs: [16]sg_vertex_attr_state
 }
 global sg_stencil_face_state: type <cimport,nodecl> = @record{
   compare: sg_compare_func,
@@ -593,7 +636,7 @@ global sg_blend_state: type <cimport,nodecl> = @record{
   dst_factor_alpha: sg_blend_factor,
   op_alpha: sg_blend_op
 }
-global sg_color_state: type <cimport,nodecl> = @record{
+global sg_color_target_state: type <cimport,nodecl> = @record{
   pixel_format: sg_pixel_format,
   write_mask: sg_color_mask,
   blend: sg_blend_state
@@ -601,11 +644,11 @@ global sg_color_state: type <cimport,nodecl> = @record{
 global sg_pipeline_desc: type <cimport,nodecl> = @record{
   _start_canary: uint32,
   shader: sg_shader,
-  layout: sg_layout_desc,
+  layout: sg_vertex_layout_state,
   depth: sg_depth_state,
   stencil: sg_stencil_state,
   color_count: cint,
-  colors: [4]sg_color_state,
+  colors: [4]sg_color_target_state,
   primitive_type: sg_primitive_type,
   index_type: sg_index_type,
   cull_mode: sg_cull_mode,
@@ -634,11 +677,13 @@ global sg_trace_hooks: type <cimport,nodecl> = @record{
   reset_state_cache: function(user_data: pointer): void,
   make_buffer: function(desc: *sg_buffer_desc, result: sg_buffer, user_data: pointer): void,
   make_image: function(desc: *sg_image_desc, result: sg_image, user_data: pointer): void,
+  make_sampler: function(desc: *sg_sampler_desc, result: sg_sampler, user_data: pointer): void,
   make_shader: function(desc: *sg_shader_desc, result: sg_shader, user_data: pointer): void,
   make_pipeline: function(desc: *sg_pipeline_desc, result: sg_pipeline, user_data: pointer): void,
   make_pass: function(desc: *sg_pass_desc, result: sg_pass, user_data: pointer): void,
   destroy_buffer: function(buf: sg_buffer, user_data: pointer): void,
   destroy_image: function(img: sg_image, user_data: pointer): void,
+  destroy_sampler: function(smp: sg_sampler, user_data: pointer): void,
   destroy_shader: function(shd: sg_shader, user_data: pointer): void,
   destroy_pipeline: function(pip: sg_pipeline, user_data: pointer): void,
   destroy_pass: function(pass: sg_pass, user_data: pointer): void,
@@ -657,40 +702,36 @@ global sg_trace_hooks: type <cimport,nodecl> = @record{
   commit: function(user_data: pointer): void,
   alloc_buffer: function(result: sg_buffer, user_data: pointer): void,
   alloc_image: function(result: sg_image, user_data: pointer): void,
+  alloc_sampler: function(result: sg_sampler, user_data: pointer): void,
   alloc_shader: function(result: sg_shader, user_data: pointer): void,
   alloc_pipeline: function(result: sg_pipeline, user_data: pointer): void,
   alloc_pass: function(result: sg_pass, user_data: pointer): void,
   dealloc_buffer: function(buf_id: sg_buffer, user_data: pointer): void,
   dealloc_image: function(img_id: sg_image, user_data: pointer): void,
+  dealloc_sampler: function(smp_id: sg_sampler, user_data: pointer): void,
   dealloc_shader: function(shd_id: sg_shader, user_data: pointer): void,
   dealloc_pipeline: function(pip_id: sg_pipeline, user_data: pointer): void,
   dealloc_pass: function(pass_id: sg_pass, user_data: pointer): void,
   init_buffer: function(buf_id: sg_buffer, desc: *sg_buffer_desc, user_data: pointer): void,
   init_image: function(img_id: sg_image, desc: *sg_image_desc, user_data: pointer): void,
+  init_sampler: function(smp_id: sg_sampler, desc: *sg_sampler_desc, user_data: pointer): void,
   init_shader: function(shd_id: sg_shader, desc: *sg_shader_desc, user_data: pointer): void,
   init_pipeline: function(pip_id: sg_pipeline, desc: *sg_pipeline_desc, user_data: pointer): void,
   init_pass: function(pass_id: sg_pass, desc: *sg_pass_desc, user_data: pointer): void,
   uninit_buffer: function(buf_id: sg_buffer, user_data: pointer): void,
   uninit_image: function(img_id: sg_image, user_data: pointer): void,
+  uninit_sampler: function(smp_id: sg_sampler, user_data: pointer): void,
   uninit_shader: function(shd_id: sg_shader, user_data: pointer): void,
   uninit_pipeline: function(pip_id: sg_pipeline, user_data: pointer): void,
   uninit_pass: function(pass_id: sg_pass, user_data: pointer): void,
   fail_buffer: function(buf_id: sg_buffer, user_data: pointer): void,
   fail_image: function(img_id: sg_image, user_data: pointer): void,
+  fail_sampler: function(smp_id: sg_sampler, user_data: pointer): void,
   fail_shader: function(shd_id: sg_shader, user_data: pointer): void,
   fail_pipeline: function(pip_id: sg_pipeline, user_data: pointer): void,
   fail_pass: function(pass_id: sg_pass, user_data: pointer): void,
   push_debug_group: function(name: cstring, user_data: pointer): void,
-  pop_debug_group: function(user_data: pointer): void,
-  err_buffer_pool_exhausted: function(user_data: pointer): void,
-  err_image_pool_exhausted: function(user_data: pointer): void,
-  err_shader_pool_exhausted: function(user_data: pointer): void,
-  err_pipeline_pool_exhausted: function(user_data: pointer): void,
-  err_pass_pool_exhausted: function(user_data: pointer): void,
-  err_context_mismatch: function(user_data: pointer): void,
-  err_pass_invalid: function(user_data: pointer): void,
-  err_draw_invalid: function(user_data: pointer): void,
-  err_bindings_invalid: function(user_data: pointer): void
+  pop_debug_group: function(user_data: pointer): void
 }
 global sg_slot_info: type <cimport,nodecl> = @record{
   state: sg_resource_state,
@@ -712,6 +753,9 @@ global sg_image_info: type <cimport,nodecl> = @record{
   num_slots: cint,
   active_slot: cint
 }
+global sg_sampler_info: type <cimport,nodecl> = @record{
+  slot: sg_slot_info
+}
 global sg_shader_info: type <cimport,nodecl> = @record{
   slot: sg_slot_info
 }
@@ -720,6 +764,136 @@ global sg_pipeline_info: type <cimport,nodecl> = @record{
 }
 global sg_pass_info: type <cimport,nodecl> = @record{
   slot: sg_slot_info
+}
+global sg_frame_stats_gl: type <cimport,nodecl> = @record{
+  num_bind_buffer: uint32,
+  num_active_texture: uint32,
+  num_bind_texture: uint32,
+  num_bind_sampler: uint32,
+  num_use_program: uint32,
+  num_render_state: uint32,
+  num_vertex_attrib_pointer: uint32,
+  num_vertex_attrib_divisor: uint32,
+  num_enable_vertex_attrib_array: uint32,
+  num_disable_vertex_attrib_array: uint32,
+  num_uniform: uint32
+}
+global sg_frame_stats_d3d11_pass: type <cimport,nodecl> = @record{
+  num_om_set_render_targets: uint32,
+  num_clear_render_target_view: uint32,
+  num_clear_depth_stencil_view: uint32,
+  num_resolve_subresource: uint32
+}
+global sg_frame_stats_d3d11_pipeline: type <cimport,nodecl> = @record{
+  num_rs_set_state: uint32,
+  num_om_set_depth_stencil_state: uint32,
+  num_om_set_blend_state: uint32,
+  num_ia_set_primitive_topology: uint32,
+  num_ia_set_input_layout: uint32,
+  num_vs_set_shader: uint32,
+  num_vs_set_constant_buffers: uint32,
+  num_ps_set_shader: uint32,
+  num_ps_set_constant_buffers: uint32
+}
+global sg_frame_stats_d3d11_bindings: type <cimport,nodecl> = @record{
+  num_ia_set_vertex_buffers: uint32,
+  num_ia_set_index_buffer: uint32,
+  num_vs_set_shader_resources: uint32,
+  num_ps_set_shader_resources: uint32,
+  num_vs_set_samplers: uint32,
+  num_ps_set_samplers: uint32
+}
+global sg_frame_stats_d3d11_uniforms: type <cimport,nodecl> = @record{
+  num_update_subresource: uint32
+}
+global sg_frame_stats_d3d11_draw: type <cimport,nodecl> = @record{
+  num_draw_indexed_instanced: uint32,
+  num_draw_indexed: uint32,
+  num_draw_instanced: uint32,
+  num_draw: uint32
+}
+global sg_frame_stats_d3d11: type <cimport,nodecl> = @record{
+  pass: sg_frame_stats_d3d11_pass,
+  pipeline: sg_frame_stats_d3d11_pipeline,
+  bindings: sg_frame_stats_d3d11_bindings,
+  uniforms: sg_frame_stats_d3d11_uniforms,
+  draw: sg_frame_stats_d3d11_draw,
+  num_map: uint32,
+  num_unmap: uint32
+}
+global sg_frame_stats_metal_idpool: type <cimport,nodecl> = @record{
+  num_added: uint32,
+  num_released: uint32,
+  num_garbage_collected: uint32
+}
+global sg_frame_stats_metal_pipeline: type <cimport,nodecl> = @record{
+  num_set_blend_color: uint32,
+  num_set_cull_mode: uint32,
+  num_set_front_facing_winding: uint32,
+  num_set_stencil_reference_value: uint32,
+  num_set_depth_bias: uint32,
+  num_set_render_pipeline_state: uint32,
+  num_set_depth_stencil_state: uint32
+}
+global sg_frame_stats_metal_bindings: type <cimport,nodecl> = @record{
+  num_set_vertex_buffer: uint32,
+  num_set_vertex_texture: uint32,
+  num_set_vertex_sampler_state: uint32,
+  num_set_fragment_texture: uint32,
+  num_set_fragment_sampler_state: uint32
+}
+global sg_frame_stats_metal_uniforms: type <cimport,nodecl> = @record{
+  num_set_vertex_buffer_offset: uint32,
+  num_set_fragment_buffer_offset: uint32
+}
+global sg_frame_stats_metal: type <cimport,nodecl> = @record{
+  idpool: sg_frame_stats_metal_idpool,
+  pipeline: sg_frame_stats_metal_pipeline,
+  bindings: sg_frame_stats_metal_bindings,
+  uniforms: sg_frame_stats_metal_uniforms
+}
+global sg_frame_stats_wgpu_uniforms: type <cimport,nodecl> = @record{
+  num_set_bindgroup: uint32,
+  size_write_buffer: uint32
+}
+global sg_frame_stats_wgpu_bindings: type <cimport,nodecl> = @record{
+  num_set_vertex_buffer: uint32,
+  num_skip_redundant_vertex_buffer: uint32,
+  num_set_index_buffer: uint32,
+  num_skip_redundant_index_buffer: uint32,
+  num_create_bindgroup: uint32,
+  num_discard_bindgroup: uint32,
+  num_set_bindgroup: uint32,
+  num_skip_redundant_bindgroup: uint32,
+  num_bindgroup_cache_hits: uint32,
+  num_bindgroup_cache_misses: uint32,
+  num_bindgroup_cache_collisions: uint32,
+  num_bindgroup_cache_hash_vs_key_mismatch: uint32
+}
+global sg_frame_stats_wgpu: type <cimport,nodecl> = @record{
+  uniforms: sg_frame_stats_wgpu_uniforms,
+  bindings: sg_frame_stats_wgpu_bindings
+}
+global sg_frame_stats: type <cimport,nodecl> = @record{
+  frame_index: uint32,
+  num_passes: uint32,
+  num_apply_viewport: uint32,
+  num_apply_scissor_rect: uint32,
+  num_apply_pipeline: uint32,
+  num_apply_bindings: uint32,
+  num_apply_uniforms: uint32,
+  num_draw: uint32,
+  num_update_buffer: uint32,
+  num_append_buffer: uint32,
+  num_update_image: uint32,
+  size_apply_uniforms: uint32,
+  size_update_buffer: uint32,
+  size_append_buffer: uint32,
+  size_update_image: uint32,
+  gl: sg_frame_stats_gl,
+  d3d11: sg_frame_stats_d3d11,
+  metal: sg_frame_stats_metal,
+  wgpu: sg_frame_stats_wgpu
 }
 global sg_log_item: type <cimport,nodecl,using> = @enum(cint){
   SG_LOGITEM_OK = 0,
@@ -731,201 +905,256 @@ global sg_log_item: type <cimport,nodecl,using> = @enum(cint){
   SG_LOGITEM_GL_SHADER_LINKING_FAILED = 6,
   SG_LOGITEM_GL_VERTEX_ATTRIBUTE_NOT_FOUND_IN_SHADER = 7,
   SG_LOGITEM_GL_TEXTURE_NAME_NOT_FOUND_IN_SHADER = 8,
-  SG_LOGITEM_GL_FRAMEBUFFER_INCOMPLETE = 9,
-  SG_LOGITEM_GL_MSAA_FRAMEBUFFER_INCOMPLETE = 10,
-  SG_LOGITEM_D3D11_CREATE_BUFFER_FAILED = 11,
-  SG_LOGITEM_D3D11_CREATE_DEPTH_TEXTURE_UNSUPPORTED_PIXEL_FORMAT = 12,
-  SG_LOGITEM_D3D11_CREATE_DEPTH_TEXTURE_FAILED = 13,
-  SG_LOGITEM_D3D11_CREATE_2D_TEXTURE_UNSUPPORTED_PIXEL_FORMAT = 14,
-  SG_LOGITEM_D3D11_CREATE_2D_TEXTURE_FAILED = 15,
-  SG_LOGITEM_D3D11_CREATE_2D_SRV_FAILED = 16,
-  SG_LOGITEM_D3D11_CREATE_3D_TEXTURE_UNSUPPORTED_PIXEL_FORMAT = 17,
-  SG_LOGITEM_D3D11_CREATE_3D_TEXTURE_FAILED = 18,
-  SG_LOGITEM_D3D11_CREATE_3D_SRV_FAILED = 19,
-  SG_LOGITEM_D3D11_CREATE_MSAA_TEXTURE_FAILED = 20,
-  SG_LOGITEM_D3D11_CREATE_SAMPLER_STATE_FAILED = 21,
-  SG_LOGITEM_D3D11_LOAD_D3DCOMPILER_47_DLL_FAILED = 22,
-  SG_LOGITEM_D3D11_SHADER_COMPILATION_FAILED = 23,
-  SG_LOGITEM_D3D11_SHADER_COMPILATION_OUTPUT = 24,
-  SG_LOGITEM_D3D11_CREATE_CONSTANT_BUFFER_FAILED = 25,
-  SG_LOGITEM_D3D11_CREATE_INPUT_LAYOUT_FAILED = 26,
-  SG_LOGITEM_D3D11_CREATE_RASTERIZER_STATE_FAILED = 27,
-  SG_LOGITEM_D3D11_CREATE_DEPTH_STENCIL_STATE_FAILED = 28,
-  SG_LOGITEM_D3D11_CREATE_BLEND_STATE_FAILED = 29,
-  SG_LOGITEM_D3D11_CREATE_RTV_FAILED = 30,
-  SG_LOGITEM_D3D11_CREATE_DSV_FAILED = 31,
-  SG_LOGITEM_D3D11_MAP_FOR_UPDATE_BUFFER_FAILED = 32,
-  SG_LOGITEM_D3D11_MAP_FOR_APPEND_BUFFER_FAILED = 33,
-  SG_LOGITEM_D3D11_MAP_FOR_UPDATE_IMAGE_FAILED = 34,
-  SG_LOGITEM_METAL_TEXTURE_FORMAT_NOT_SUPPORTED = 35,
-  SG_LOGITEM_METAL_SHADER_COMPILATION_FAILED = 36,
-  SG_LOGITEM_METAL_SHADER_CREATION_FAILED = 37,
-  SG_LOGITEM_METAL_SHADER_COMPILATION_OUTPUT = 38,
-  SG_LOGITEM_METAL_VERTEX_SHADER_ENTRY_NOT_FOUND = 39,
-  SG_LOGITEM_METAL_FRAGMENT_SHADER_ENTRY_NOT_FOUND = 40,
-  SG_LOGITEM_METAL_CREATE_RPS_FAILED = 41,
-  SG_LOGITEM_METAL_CREATE_RPS_OUTPUT = 42,
-  SG_LOGITEM_WGPU_MAP_UNIFORM_BUFFER_FAILED = 43,
-  SG_LOGITEM_WGPU_STAGING_BUFFER_FULL_COPY_TO_BUFFER = 44,
-  SG_LOGITEM_WGPU_STAGING_BUFFER_FULL_COPY_TO_TEXTURE = 45,
-  SG_LOGITEM_WGPU_RESET_STATE_CACHE_FIXME = 46,
-  SG_LOGITEM_WGPU_ACTIVATE_CONTEXT_FIXME = 47,
-  SG_LOGITEM_UNINIT_BUFFER_ACTIVE_CONTEXT_MISMATCH = 48,
-  SG_LOGITEM_UNINIT_IMAGE_ACTIVE_CONTEXT_MISMATCH = 49,
-  SG_LOGITEM_UNINIT_SHADER_ACTIVE_CONTEXT_MISMATCH = 50,
-  SG_LOGITEM_UNINIT_PIPELINE_ACTIVE_CONTEXT_MISMATCH = 51,
-  SG_LOGITEM_UNINIT_PASS_ACTIVE_CONTEXT_MISMATCH = 52,
-  SG_LOGITEM_IDENTICAL_COMMIT_LISTENER = 53,
-  SG_LOGITEM_COMMIT_LISTENER_ARRAY_FULL = 54,
-  SG_LOGITEM_TRACE_HOOKS_NOT_ENABLED = 55,
-  SG_LOGITEM_DEALLOC_BUFFER_INVALID_STATE = 56,
-  SG_LOGITEM_DEALLOC_IMAGE_INVALID_STATE = 57,
-  SG_LOGITEM_DEALLOC_SHADER_INVALID_STATE = 58,
-  SG_LOGITEM_DEALLOC_PIPELINE_INVALID_STATE = 59,
-  SG_LOGITEM_DEALLOC_PASS_INVALID_STATE = 60,
-  SG_LOGITEM_INIT_BUFFER_INVALID_STATE = 61,
-  SG_LOGITEM_INIT_IMAGE_INVALID_STATE = 62,
-  SG_LOGITEM_INIT_SHADER_INVALID_STATE = 63,
-  SG_LOGITEM_INIT_PIPELINE_INVALID_STATE = 64,
-  SG_LOGITEM_INIT_PASS_INVALID_STATE = 65,
-  SG_LOGITEM_UNINIT_BUFFER_INVALID_STATE = 66,
-  SG_LOGITEM_UNINIT_IMAGE_INVALID_STATE = 67,
-  SG_LOGITEM_UNINIT_SHADER_INVALID_STATE = 68,
-  SG_LOGITEM_UNINIT_PIPELINE_INVALID_STATE = 69,
-  SG_LOGITEM_UNINIT_PASS_INVALID_STATE = 70,
-  SG_LOGITEM_FAIL_BUFFER_INVALID_STATE = 71,
-  SG_LOGITEM_FAIL_IMAGE_INVALID_STATE = 72,
-  SG_LOGITEM_FAIL_SHADER_INVALID_STATE = 73,
-  SG_LOGITEM_FAIL_PIPELINE_INVALID_STATE = 74,
-  SG_LOGITEM_FAIL_PASS_INVALID_STATE = 75,
-  SG_LOGITEM_BUFFER_POOL_EXHAUSTED = 76,
-  SG_LOGITEM_IMAGE_POOL_EXHAUSTED = 77,
-  SG_LOGITEM_SHADER_POOL_EXHAUSTED = 78,
-  SG_LOGITEM_PIPELINE_POOL_EXHAUSTED = 79,
-  SG_LOGITEM_PASS_POOL_EXHAUSTED = 80,
-  SG_LOGITEM_DRAW_WITHOUT_BINDINGS = 81,
-  SG_LOGITEM_VALIDATE_BUFFERDESC_CANARY = 82,
-  SG_LOGITEM_VALIDATE_BUFFERDESC_SIZE = 83,
-  SG_LOGITEM_VALIDATE_BUFFERDESC_DATA = 84,
-  SG_LOGITEM_VALIDATE_BUFFERDESC_DATA_SIZE = 85,
-  SG_LOGITEM_VALIDATE_BUFFERDESC_NO_DATA = 86,
-  SG_LOGITEM_VALIDATE_IMAGEDATA_NODATA = 87,
-  SG_LOGITEM_VALIDATE_IMAGEDATA_DATA_SIZE = 88,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_CANARY = 89,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_WIDTH = 90,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_HEIGHT = 91,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_RT_PIXELFORMAT = 92,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_NONRT_PIXELFORMAT = 93,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_MSAA_BUT_NO_RT = 94,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_NO_MSAA_RT_SUPPORT = 95,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_MSAA_NUM_MIPMAPS = 96,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_MSAA_3D_IMAGE = 97,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_DEPTH_3D_IMAGE = 98,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_RT_IMMUTABLE = 99,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_RT_NO_DATA = 100,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_INJECTED_NO_DATA = 101,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_DYNAMIC_NO_DATA = 102,
-  SG_LOGITEM_VALIDATE_IMAGEDESC_COMPRESSED_IMMUTABLE = 103,
-  SG_LOGITEM_VALIDATE_SHADERDESC_CANARY = 104,
-  SG_LOGITEM_VALIDATE_SHADERDESC_SOURCE = 105,
-  SG_LOGITEM_VALIDATE_SHADERDESC_BYTECODE = 106,
-  SG_LOGITEM_VALIDATE_SHADERDESC_SOURCE_OR_BYTECODE = 107,
-  SG_LOGITEM_VALIDATE_SHADERDESC_NO_BYTECODE_SIZE = 108,
-  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_UBS = 109,
-  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_UB_MEMBERS = 110,
-  SG_LOGITEM_VALIDATE_SHADERDESC_NO_UB_MEMBERS = 111,
-  SG_LOGITEM_VALIDATE_SHADERDESC_UB_MEMBER_NAME = 112,
-  SG_LOGITEM_VALIDATE_SHADERDESC_UB_SIZE_MISMATCH = 113,
-  SG_LOGITEM_VALIDATE_SHADERDESC_UB_ARRAY_COUNT = 114,
-  SG_LOGITEM_VALIDATE_SHADERDESC_UB_STD140_ARRAY_TYPE = 115,
-  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_IMGS = 116,
-  SG_LOGITEM_VALIDATE_SHADERDESC_IMG_NAME = 117,
-  SG_LOGITEM_VALIDATE_SHADERDESC_ATTR_SEMANTICS = 118,
-  SG_LOGITEM_VALIDATE_SHADERDESC_ATTR_STRING_TOO_LONG = 119,
-  SG_LOGITEM_VALIDATE_PIPELINEDESC_CANARY = 120,
-  SG_LOGITEM_VALIDATE_PIPELINEDESC_SHADER = 121,
-  SG_LOGITEM_VALIDATE_PIPELINEDESC_NO_ATTRS = 122,
-  SG_LOGITEM_VALIDATE_PIPELINEDESC_LAYOUT_STRIDE4 = 123,
-  SG_LOGITEM_VALIDATE_PIPELINEDESC_ATTR_SEMANTICS = 124,
-  SG_LOGITEM_VALIDATE_PASSDESC_CANARY = 125,
-  SG_LOGITEM_VALIDATE_PASSDESC_NO_COLOR_ATTS = 126,
-  SG_LOGITEM_VALIDATE_PASSDESC_NO_CONT_COLOR_ATTS = 127,
-  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE = 128,
-  SG_LOGITEM_VALIDATE_PASSDESC_MIPLEVEL = 129,
-  SG_LOGITEM_VALIDATE_PASSDESC_FACE = 130,
-  SG_LOGITEM_VALIDATE_PASSDESC_LAYER = 131,
-  SG_LOGITEM_VALIDATE_PASSDESC_SLICE = 132,
-  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE_NO_RT = 133,
-  SG_LOGITEM_VALIDATE_PASSDESC_COLOR_INV_PIXELFORMAT = 134,
-  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_INV_PIXELFORMAT = 135,
-  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE_SIZES = 136,
-  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE_SAMPLE_COUNTS = 137,
-  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_COLOR_IMAGE_MSAA = 138,
-  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_IMAGE = 139,
-  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_SAMPLE_COUNT = 140,
-  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_MIPLEVEL = 141,
-  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_FACE = 142,
-  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_LAYER = 143,
-  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_SLICE = 144,
-  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_IMAGE_NO_RT = 145,
-  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_IMAGE_SIZES = 146,
-  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_IMAGE_FORMAT = 147,
-  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_IMAGE = 148,
-  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_MIPLEVEL = 149,
-  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_FACE = 150,
-  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_LAYER = 151,
-  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_SLICE = 152,
-  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_IMAGE_NO_RT = 153,
-  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_IMAGE_SIZES = 154,
-  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_IMAGE_SAMPLE_COUNT = 155,
-  SG_LOGITEM_VALIDATE_BEGINPASS_PASS = 156,
-  SG_LOGITEM_VALIDATE_BEGINPASS_COLOR_ATTACHMENT_IMAGE = 157,
-  SG_LOGITEM_VALIDATE_BEGINPASS_RESOLVE_ATTACHMENT_IMAGE = 158,
-  SG_LOGITEM_VALIDATE_BEGINPASS_DEPTHSTENCIL_ATTACHMENT_IMAGE = 159,
-  SG_LOGITEM_VALIDATE_APIP_PIPELINE_VALID_ID = 160,
-  SG_LOGITEM_VALIDATE_APIP_PIPELINE_EXISTS = 161,
-  SG_LOGITEM_VALIDATE_APIP_PIPELINE_VALID = 162,
-  SG_LOGITEM_VALIDATE_APIP_SHADER_EXISTS = 163,
-  SG_LOGITEM_VALIDATE_APIP_SHADER_VALID = 164,
-  SG_LOGITEM_VALIDATE_APIP_ATT_COUNT = 165,
-  SG_LOGITEM_VALIDATE_APIP_COLOR_FORMAT = 166,
-  SG_LOGITEM_VALIDATE_APIP_DEPTH_FORMAT = 167,
-  SG_LOGITEM_VALIDATE_APIP_SAMPLE_COUNT = 168,
-  SG_LOGITEM_VALIDATE_ABND_PIPELINE = 169,
-  SG_LOGITEM_VALIDATE_ABND_PIPELINE_EXISTS = 170,
-  SG_LOGITEM_VALIDATE_ABND_PIPELINE_VALID = 171,
-  SG_LOGITEM_VALIDATE_ABND_VBS = 172,
-  SG_LOGITEM_VALIDATE_ABND_VB_EXISTS = 173,
-  SG_LOGITEM_VALIDATE_ABND_VB_TYPE = 174,
-  SG_LOGITEM_VALIDATE_ABND_VB_OVERFLOW = 175,
-  SG_LOGITEM_VALIDATE_ABND_NO_IB = 176,
-  SG_LOGITEM_VALIDATE_ABND_IB = 177,
-  SG_LOGITEM_VALIDATE_ABND_IB_EXISTS = 178,
-  SG_LOGITEM_VALIDATE_ABND_IB_TYPE = 179,
-  SG_LOGITEM_VALIDATE_ABND_IB_OVERFLOW = 180,
-  SG_LOGITEM_VALIDATE_ABND_VS_IMGS = 181,
-  SG_LOGITEM_VALIDATE_ABND_VS_IMG_EXISTS = 182,
-  SG_LOGITEM_VALIDATE_ABND_VS_IMG_TYPES = 183,
-  SG_LOGITEM_VALIDATE_ABND_VS_IMG_MSAA = 184,
-  SG_LOGITEM_VALIDATE_ABND_VS_IMG_DEPTH = 185,
-  SG_LOGITEM_VALIDATE_ABND_FS_IMGS = 186,
-  SG_LOGITEM_VALIDATE_ABND_FS_IMG_EXISTS = 187,
-  SG_LOGITEM_VALIDATE_ABND_FS_IMG_TYPES = 188,
-  SG_LOGITEM_VALIDATE_ABND_FS_IMG_MSAA = 189,
-  SG_LOGITEM_VALIDATE_ABND_FS_IMG_DEPTH = 190,
-  SG_LOGITEM_VALIDATE_AUB_NO_PIPELINE = 191,
-  SG_LOGITEM_VALIDATE_AUB_NO_UB_AT_SLOT = 192,
-  SG_LOGITEM_VALIDATE_AUB_SIZE = 193,
-  SG_LOGITEM_VALIDATE_UPDATEBUF_USAGE = 194,
-  SG_LOGITEM_VALIDATE_UPDATEBUF_SIZE = 195,
-  SG_LOGITEM_VALIDATE_UPDATEBUF_ONCE = 196,
-  SG_LOGITEM_VALIDATE_UPDATEBUF_APPEND = 197,
-  SG_LOGITEM_VALIDATE_APPENDBUF_USAGE = 198,
-  SG_LOGITEM_VALIDATE_APPENDBUF_SIZE = 199,
-  SG_LOGITEM_VALIDATE_APPENDBUF_UPDATE = 200,
-  SG_LOGITEM_VALIDATE_UPDIMG_USAGE = 201,
-  SG_LOGITEM_VALIDATE_UPDIMG_ONCE = 202,
-  SG_LOGITEM_VALIDATION_FAILED = 203
+  SG_LOGITEM_GL_FRAMEBUFFER_STATUS_UNDEFINED = 9,
+  SG_LOGITEM_GL_FRAMEBUFFER_STATUS_INCOMPLETE_ATTACHMENT = 10,
+  SG_LOGITEM_GL_FRAMEBUFFER_STATUS_INCOMPLETE_MISSING_ATTACHMENT = 11,
+  SG_LOGITEM_GL_FRAMEBUFFER_STATUS_UNSUPPORTED = 12,
+  SG_LOGITEM_GL_FRAMEBUFFER_STATUS_INCOMPLETE_MULTISAMPLE = 13,
+  SG_LOGITEM_GL_FRAMEBUFFER_STATUS_UNKNOWN = 14,
+  SG_LOGITEM_D3D11_CREATE_BUFFER_FAILED = 15,
+  SG_LOGITEM_D3D11_CREATE_DEPTH_TEXTURE_UNSUPPORTED_PIXEL_FORMAT = 16,
+  SG_LOGITEM_D3D11_CREATE_DEPTH_TEXTURE_FAILED = 17,
+  SG_LOGITEM_D3D11_CREATE_2D_TEXTURE_UNSUPPORTED_PIXEL_FORMAT = 18,
+  SG_LOGITEM_D3D11_CREATE_2D_TEXTURE_FAILED = 19,
+  SG_LOGITEM_D3D11_CREATE_2D_SRV_FAILED = 20,
+  SG_LOGITEM_D3D11_CREATE_3D_TEXTURE_UNSUPPORTED_PIXEL_FORMAT = 21,
+  SG_LOGITEM_D3D11_CREATE_3D_TEXTURE_FAILED = 22,
+  SG_LOGITEM_D3D11_CREATE_3D_SRV_FAILED = 23,
+  SG_LOGITEM_D3D11_CREATE_MSAA_TEXTURE_FAILED = 24,
+  SG_LOGITEM_D3D11_CREATE_SAMPLER_STATE_FAILED = 25,
+  SG_LOGITEM_D3D11_LOAD_D3DCOMPILER_47_DLL_FAILED = 26,
+  SG_LOGITEM_D3D11_SHADER_COMPILATION_FAILED = 27,
+  SG_LOGITEM_D3D11_SHADER_COMPILATION_OUTPUT = 28,
+  SG_LOGITEM_D3D11_CREATE_CONSTANT_BUFFER_FAILED = 29,
+  SG_LOGITEM_D3D11_CREATE_INPUT_LAYOUT_FAILED = 30,
+  SG_LOGITEM_D3D11_CREATE_RASTERIZER_STATE_FAILED = 31,
+  SG_LOGITEM_D3D11_CREATE_DEPTH_STENCIL_STATE_FAILED = 32,
+  SG_LOGITEM_D3D11_CREATE_BLEND_STATE_FAILED = 33,
+  SG_LOGITEM_D3D11_CREATE_RTV_FAILED = 34,
+  SG_LOGITEM_D3D11_CREATE_DSV_FAILED = 35,
+  SG_LOGITEM_D3D11_MAP_FOR_UPDATE_BUFFER_FAILED = 36,
+  SG_LOGITEM_D3D11_MAP_FOR_APPEND_BUFFER_FAILED = 37,
+  SG_LOGITEM_D3D11_MAP_FOR_UPDATE_IMAGE_FAILED = 38,
+  SG_LOGITEM_METAL_CREATE_BUFFER_FAILED = 39,
+  SG_LOGITEM_METAL_TEXTURE_FORMAT_NOT_SUPPORTED = 40,
+  SG_LOGITEM_METAL_CREATE_TEXTURE_FAILED = 41,
+  SG_LOGITEM_METAL_CREATE_SAMPLER_FAILED = 42,
+  SG_LOGITEM_METAL_SHADER_COMPILATION_FAILED = 43,
+  SG_LOGITEM_METAL_SHADER_CREATION_FAILED = 44,
+  SG_LOGITEM_METAL_SHADER_COMPILATION_OUTPUT = 45,
+  SG_LOGITEM_METAL_VERTEX_SHADER_ENTRY_NOT_FOUND = 46,
+  SG_LOGITEM_METAL_FRAGMENT_SHADER_ENTRY_NOT_FOUND = 47,
+  SG_LOGITEM_METAL_CREATE_RPS_FAILED = 48,
+  SG_LOGITEM_METAL_CREATE_RPS_OUTPUT = 49,
+  SG_LOGITEM_METAL_CREATE_DSS_FAILED = 50,
+  SG_LOGITEM_WGPU_BINDGROUPS_POOL_EXHAUSTED = 51,
+  SG_LOGITEM_WGPU_BINDGROUPSCACHE_SIZE_GREATER_ONE = 52,
+  SG_LOGITEM_WGPU_BINDGROUPSCACHE_SIZE_POW2 = 53,
+  SG_LOGITEM_WGPU_CREATEBINDGROUP_FAILED = 54,
+  SG_LOGITEM_WGPU_CREATE_BUFFER_FAILED = 55,
+  SG_LOGITEM_WGPU_CREATE_TEXTURE_FAILED = 56,
+  SG_LOGITEM_WGPU_CREATE_TEXTURE_VIEW_FAILED = 57,
+  SG_LOGITEM_WGPU_CREATE_SAMPLER_FAILED = 58,
+  SG_LOGITEM_WGPU_CREATE_SHADER_MODULE_FAILED = 59,
+  SG_LOGITEM_WGPU_SHADER_TOO_MANY_IMAGES = 60,
+  SG_LOGITEM_WGPU_SHADER_TOO_MANY_SAMPLERS = 61,
+  SG_LOGITEM_WGPU_SHADER_CREATE_BINDGROUP_LAYOUT_FAILED = 62,
+  SG_LOGITEM_WGPU_CREATE_PIPELINE_LAYOUT_FAILED = 63,
+  SG_LOGITEM_WGPU_CREATE_RENDER_PIPELINE_FAILED = 64,
+  SG_LOGITEM_WGPU_PASS_CREATE_TEXTURE_VIEW_FAILED = 65,
+  SG_LOGITEM_UNINIT_BUFFER_ACTIVE_CONTEXT_MISMATCH = 66,
+  SG_LOGITEM_UNINIT_IMAGE_ACTIVE_CONTEXT_MISMATCH = 67,
+  SG_LOGITEM_UNINIT_SAMPLER_ACTIVE_CONTEXT_MISMATCH = 68,
+  SG_LOGITEM_UNINIT_SHADER_ACTIVE_CONTEXT_MISMATCH = 69,
+  SG_LOGITEM_UNINIT_PIPELINE_ACTIVE_CONTEXT_MISMATCH = 70,
+  SG_LOGITEM_UNINIT_PASS_ACTIVE_CONTEXT_MISMATCH = 71,
+  SG_LOGITEM_IDENTICAL_COMMIT_LISTENER = 72,
+  SG_LOGITEM_COMMIT_LISTENER_ARRAY_FULL = 73,
+  SG_LOGITEM_TRACE_HOOKS_NOT_ENABLED = 74,
+  SG_LOGITEM_DEALLOC_BUFFER_INVALID_STATE = 75,
+  SG_LOGITEM_DEALLOC_IMAGE_INVALID_STATE = 76,
+  SG_LOGITEM_DEALLOC_SAMPLER_INVALID_STATE = 77,
+  SG_LOGITEM_DEALLOC_SHADER_INVALID_STATE = 78,
+  SG_LOGITEM_DEALLOC_PIPELINE_INVALID_STATE = 79,
+  SG_LOGITEM_DEALLOC_PASS_INVALID_STATE = 80,
+  SG_LOGITEM_INIT_BUFFER_INVALID_STATE = 81,
+  SG_LOGITEM_INIT_IMAGE_INVALID_STATE = 82,
+  SG_LOGITEM_INIT_SAMPLER_INVALID_STATE = 83,
+  SG_LOGITEM_INIT_SHADER_INVALID_STATE = 84,
+  SG_LOGITEM_INIT_PIPELINE_INVALID_STATE = 85,
+  SG_LOGITEM_INIT_PASS_INVALID_STATE = 86,
+  SG_LOGITEM_UNINIT_BUFFER_INVALID_STATE = 87,
+  SG_LOGITEM_UNINIT_IMAGE_INVALID_STATE = 88,
+  SG_LOGITEM_UNINIT_SAMPLER_INVALID_STATE = 89,
+  SG_LOGITEM_UNINIT_SHADER_INVALID_STATE = 90,
+  SG_LOGITEM_UNINIT_PIPELINE_INVALID_STATE = 91,
+  SG_LOGITEM_UNINIT_PASS_INVALID_STATE = 92,
+  SG_LOGITEM_FAIL_BUFFER_INVALID_STATE = 93,
+  SG_LOGITEM_FAIL_IMAGE_INVALID_STATE = 94,
+  SG_LOGITEM_FAIL_SAMPLER_INVALID_STATE = 95,
+  SG_LOGITEM_FAIL_SHADER_INVALID_STATE = 96,
+  SG_LOGITEM_FAIL_PIPELINE_INVALID_STATE = 97,
+  SG_LOGITEM_FAIL_PASS_INVALID_STATE = 98,
+  SG_LOGITEM_BUFFER_POOL_EXHAUSTED = 99,
+  SG_LOGITEM_IMAGE_POOL_EXHAUSTED = 100,
+  SG_LOGITEM_SAMPLER_POOL_EXHAUSTED = 101,
+  SG_LOGITEM_SHADER_POOL_EXHAUSTED = 102,
+  SG_LOGITEM_PIPELINE_POOL_EXHAUSTED = 103,
+  SG_LOGITEM_PASS_POOL_EXHAUSTED = 104,
+  SG_LOGITEM_DRAW_WITHOUT_BINDINGS = 105,
+  SG_LOGITEM_VALIDATE_BUFFERDESC_CANARY = 106,
+  SG_LOGITEM_VALIDATE_BUFFERDESC_SIZE = 107,
+  SG_LOGITEM_VALIDATE_BUFFERDESC_DATA = 108,
+  SG_LOGITEM_VALIDATE_BUFFERDESC_DATA_SIZE = 109,
+  SG_LOGITEM_VALIDATE_BUFFERDESC_NO_DATA = 110,
+  SG_LOGITEM_VALIDATE_IMAGEDATA_NODATA = 111,
+  SG_LOGITEM_VALIDATE_IMAGEDATA_DATA_SIZE = 112,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_CANARY = 113,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_WIDTH = 114,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_HEIGHT = 115,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_RT_PIXELFORMAT = 116,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_NONRT_PIXELFORMAT = 117,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_MSAA_BUT_NO_RT = 118,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_NO_MSAA_RT_SUPPORT = 119,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_MSAA_NUM_MIPMAPS = 120,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_MSAA_3D_IMAGE = 121,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_DEPTH_3D_IMAGE = 122,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_RT_IMMUTABLE = 123,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_RT_NO_DATA = 124,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_INJECTED_NO_DATA = 125,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_DYNAMIC_NO_DATA = 126,
+  SG_LOGITEM_VALIDATE_IMAGEDESC_COMPRESSED_IMMUTABLE = 127,
+  SG_LOGITEM_VALIDATE_SAMPLERDESC_CANARY = 128,
+  SG_LOGITEM_VALIDATE_SAMPLERDESC_MINFILTER_NONE = 129,
+  SG_LOGITEM_VALIDATE_SAMPLERDESC_MAGFILTER_NONE = 130,
+  SG_LOGITEM_VALIDATE_SAMPLERDESC_ANISTROPIC_REQUIRES_LINEAR_FILTERING = 131,
+  SG_LOGITEM_VALIDATE_SHADERDESC_CANARY = 132,
+  SG_LOGITEM_VALIDATE_SHADERDESC_SOURCE = 133,
+  SG_LOGITEM_VALIDATE_SHADERDESC_BYTECODE = 134,
+  SG_LOGITEM_VALIDATE_SHADERDESC_SOURCE_OR_BYTECODE = 135,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_BYTECODE_SIZE = 136,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_UBS = 137,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_UB_MEMBERS = 138,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_UB_MEMBERS = 139,
+  SG_LOGITEM_VALIDATE_SHADERDESC_UB_MEMBER_NAME = 140,
+  SG_LOGITEM_VALIDATE_SHADERDESC_UB_SIZE_MISMATCH = 141,
+  SG_LOGITEM_VALIDATE_SHADERDESC_UB_ARRAY_COUNT = 142,
+  SG_LOGITEM_VALIDATE_SHADERDESC_UB_STD140_ARRAY_TYPE = 143,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_IMAGES = 144,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_SAMPLERS = 145,
+  SG_LOGITEM_VALIDATE_SHADERDESC_IMAGE_SAMPLER_PAIR_IMAGE_SLOT_OUT_OF_RANGE = 146,
+  SG_LOGITEM_VALIDATE_SHADERDESC_IMAGE_SAMPLER_PAIR_SAMPLER_SLOT_OUT_OF_RANGE = 147,
+  SG_LOGITEM_VALIDATE_SHADERDESC_IMAGE_SAMPLER_PAIR_NAME_REQUIRED_FOR_GL = 148,
+  SG_LOGITEM_VALIDATE_SHADERDESC_IMAGE_SAMPLER_PAIR_HAS_NAME_BUT_NOT_USED = 149,
+  SG_LOGITEM_VALIDATE_SHADERDESC_IMAGE_SAMPLER_PAIR_HAS_IMAGE_BUT_NOT_USED = 150,
+  SG_LOGITEM_VALIDATE_SHADERDESC_IMAGE_SAMPLER_PAIR_HAS_SAMPLER_BUT_NOT_USED = 151,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NONFILTERING_SAMPLER_REQUIRED = 152,
+  SG_LOGITEM_VALIDATE_SHADERDESC_COMPARISON_SAMPLER_REQUIRED = 153,
+  SG_LOGITEM_VALIDATE_SHADERDESC_IMAGE_NOT_REFERENCED_BY_IMAGE_SAMPLER_PAIRS = 154,
+  SG_LOGITEM_VALIDATE_SHADERDESC_SAMPLER_NOT_REFERENCED_BY_IMAGE_SAMPLER_PAIRS = 155,
+  SG_LOGITEM_VALIDATE_SHADERDESC_NO_CONT_IMAGE_SAMPLER_PAIRS = 156,
+  SG_LOGITEM_VALIDATE_SHADERDESC_ATTR_SEMANTICS = 157,
+  SG_LOGITEM_VALIDATE_SHADERDESC_ATTR_STRING_TOO_LONG = 158,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_CANARY = 159,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_SHADER = 160,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_NO_ATTRS = 161,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_LAYOUT_STRIDE4 = 162,
+  SG_LOGITEM_VALIDATE_PIPELINEDESC_ATTR_SEMANTICS = 163,
+  SG_LOGITEM_VALIDATE_PASSDESC_CANARY = 164,
+  SG_LOGITEM_VALIDATE_PASSDESC_NO_ATTACHMENTS = 165,
+  SG_LOGITEM_VALIDATE_PASSDESC_NO_CONT_COLOR_ATTS = 166,
+  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE = 167,
+  SG_LOGITEM_VALIDATE_PASSDESC_MIPLEVEL = 168,
+  SG_LOGITEM_VALIDATE_PASSDESC_FACE = 169,
+  SG_LOGITEM_VALIDATE_PASSDESC_LAYER = 170,
+  SG_LOGITEM_VALIDATE_PASSDESC_SLICE = 171,
+  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE_NO_RT = 172,
+  SG_LOGITEM_VALIDATE_PASSDESC_COLOR_INV_PIXELFORMAT = 173,
+  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_INV_PIXELFORMAT = 174,
+  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE_SIZES = 175,
+  SG_LOGITEM_VALIDATE_PASSDESC_IMAGE_SAMPLE_COUNTS = 176,
+  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_COLOR_IMAGE_MSAA = 177,
+  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_IMAGE = 178,
+  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_SAMPLE_COUNT = 179,
+  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_MIPLEVEL = 180,
+  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_FACE = 181,
+  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_LAYER = 182,
+  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_SLICE = 183,
+  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_IMAGE_NO_RT = 184,
+  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_IMAGE_SIZES = 185,
+  SG_LOGITEM_VALIDATE_PASSDESC_RESOLVE_IMAGE_FORMAT = 186,
+  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_IMAGE = 187,
+  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_MIPLEVEL = 188,
+  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_FACE = 189,
+  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_LAYER = 190,
+  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_SLICE = 191,
+  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_IMAGE_NO_RT = 192,
+  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_IMAGE_SIZES = 193,
+  SG_LOGITEM_VALIDATE_PASSDESC_DEPTH_IMAGE_SAMPLE_COUNT = 194,
+  SG_LOGITEM_VALIDATE_BEGINPASS_PASS = 195,
+  SG_LOGITEM_VALIDATE_BEGINPASS_COLOR_ATTACHMENT_IMAGE = 196,
+  SG_LOGITEM_VALIDATE_BEGINPASS_RESOLVE_ATTACHMENT_IMAGE = 197,
+  SG_LOGITEM_VALIDATE_BEGINPASS_DEPTHSTENCIL_ATTACHMENT_IMAGE = 198,
+  SG_LOGITEM_VALIDATE_APIP_PIPELINE_VALID_ID = 199,
+  SG_LOGITEM_VALIDATE_APIP_PIPELINE_EXISTS = 200,
+  SG_LOGITEM_VALIDATE_APIP_PIPELINE_VALID = 201,
+  SG_LOGITEM_VALIDATE_APIP_SHADER_EXISTS = 202,
+  SG_LOGITEM_VALIDATE_APIP_SHADER_VALID = 203,
+  SG_LOGITEM_VALIDATE_APIP_ATT_COUNT = 204,
+  SG_LOGITEM_VALIDATE_APIP_COLOR_FORMAT = 205,
+  SG_LOGITEM_VALIDATE_APIP_DEPTH_FORMAT = 206,
+  SG_LOGITEM_VALIDATE_APIP_SAMPLE_COUNT = 207,
+  SG_LOGITEM_VALIDATE_ABND_PIPELINE = 208,
+  SG_LOGITEM_VALIDATE_ABND_PIPELINE_EXISTS = 209,
+  SG_LOGITEM_VALIDATE_ABND_PIPELINE_VALID = 210,
+  SG_LOGITEM_VALIDATE_ABND_VBS = 211,
+  SG_LOGITEM_VALIDATE_ABND_VB_EXISTS = 212,
+  SG_LOGITEM_VALIDATE_ABND_VB_TYPE = 213,
+  SG_LOGITEM_VALIDATE_ABND_VB_OVERFLOW = 214,
+  SG_LOGITEM_VALIDATE_ABND_NO_IB = 215,
+  SG_LOGITEM_VALIDATE_ABND_IB = 216,
+  SG_LOGITEM_VALIDATE_ABND_IB_EXISTS = 217,
+  SG_LOGITEM_VALIDATE_ABND_IB_TYPE = 218,
+  SG_LOGITEM_VALIDATE_ABND_IB_OVERFLOW = 219,
+  SG_LOGITEM_VALIDATE_ABND_VS_EXPECTED_IMAGE_BINDING = 220,
+  SG_LOGITEM_VALIDATE_ABND_VS_IMG_EXISTS = 221,
+  SG_LOGITEM_VALIDATE_ABND_VS_IMAGE_TYPE_MISMATCH = 222,
+  SG_LOGITEM_VALIDATE_ABND_VS_IMAGE_MSAA = 223,
+  SG_LOGITEM_VALIDATE_ABND_VS_EXPECTED_FILTERABLE_IMAGE = 224,
+  SG_LOGITEM_VALIDATE_ABND_VS_EXPECTED_DEPTH_IMAGE = 225,
+  SG_LOGITEM_VALIDATE_ABND_VS_UNEXPECTED_IMAGE_BINDING = 226,
+  SG_LOGITEM_VALIDATE_ABND_VS_EXPECTED_SAMPLER_BINDING = 227,
+  SG_LOGITEM_VALIDATE_ABND_VS_UNEXPECTED_SAMPLER_COMPARE_NEVER = 228,
+  SG_LOGITEM_VALIDATE_ABND_VS_EXPECTED_SAMPLER_COMPARE_NEVER = 229,
+  SG_LOGITEM_VALIDATE_ABND_VS_EXPECTED_NONFILTERING_SAMPLER = 230,
+  SG_LOGITEM_VALIDATE_ABND_VS_UNEXPECTED_SAMPLER_BINDING = 231,
+  SG_LOGITEM_VALIDATE_ABND_VS_SMP_EXISTS = 232,
+  SG_LOGITEM_VALIDATE_ABND_FS_EXPECTED_IMAGE_BINDING = 233,
+  SG_LOGITEM_VALIDATE_ABND_FS_IMG_EXISTS = 234,
+  SG_LOGITEM_VALIDATE_ABND_FS_IMAGE_TYPE_MISMATCH = 235,
+  SG_LOGITEM_VALIDATE_ABND_FS_IMAGE_MSAA = 236,
+  SG_LOGITEM_VALIDATE_ABND_FS_EXPECTED_FILTERABLE_IMAGE = 237,
+  SG_LOGITEM_VALIDATE_ABND_FS_EXPECTED_DEPTH_IMAGE = 238,
+  SG_LOGITEM_VALIDATE_ABND_FS_UNEXPECTED_IMAGE_BINDING = 239,
+  SG_LOGITEM_VALIDATE_ABND_FS_EXPECTED_SAMPLER_BINDING = 240,
+  SG_LOGITEM_VALIDATE_ABND_FS_UNEXPECTED_SAMPLER_COMPARE_NEVER = 241,
+  SG_LOGITEM_VALIDATE_ABND_FS_EXPECTED_SAMPLER_COMPARE_NEVER = 242,
+  SG_LOGITEM_VALIDATE_ABND_FS_EXPECTED_NONFILTERING_SAMPLER = 243,
+  SG_LOGITEM_VALIDATE_ABND_FS_UNEXPECTED_SAMPLER_BINDING = 244,
+  SG_LOGITEM_VALIDATE_ABND_FS_SMP_EXISTS = 245,
+  SG_LOGITEM_VALIDATE_AUB_NO_PIPELINE = 246,
+  SG_LOGITEM_VALIDATE_AUB_NO_UB_AT_SLOT = 247,
+  SG_LOGITEM_VALIDATE_AUB_SIZE = 248,
+  SG_LOGITEM_VALIDATE_UPDATEBUF_USAGE = 249,
+  SG_LOGITEM_VALIDATE_UPDATEBUF_SIZE = 250,
+  SG_LOGITEM_VALIDATE_UPDATEBUF_ONCE = 251,
+  SG_LOGITEM_VALIDATE_UPDATEBUF_APPEND = 252,
+  SG_LOGITEM_VALIDATE_APPENDBUF_USAGE = 253,
+  SG_LOGITEM_VALIDATE_APPENDBUF_SIZE = 254,
+  SG_LOGITEM_VALIDATE_APPENDBUF_UPDATE = 255,
+  SG_LOGITEM_VALIDATE_UPDIMG_USAGE = 256,
+  SG_LOGITEM_VALIDATE_UPDIMG_ONCE = 257,
+  SG_LOGITEM_VALIDATION_FAILED = 258
 }
 global sg_metal_context_desc: type <cimport,nodecl> = @record{
   device: pointer,
@@ -954,21 +1183,27 @@ global sg_wgpu_context_desc: type <cimport,nodecl> = @record{
   depth_stencil_view_userdata_cb: function(a1: pointer): pointer,
   user_data: pointer
 }
+global sg_gl_context_desc: type <cimport,nodecl> = @record{
+  default_framebuffer_cb: function(): uint32,
+  default_framebuffer_userdata_cb: function(a1: pointer): uint32,
+  user_data: pointer
+}
 global sg_context_desc: type <cimport,nodecl> = @record{
   color_format: sg_pixel_format,
   depth_format: sg_pixel_format,
   sample_count: cint,
   metal: sg_metal_context_desc,
   d3d11: sg_d3d11_context_desc,
-  wgpu: sg_wgpu_context_desc
+  wgpu: sg_wgpu_context_desc,
+  gl: sg_gl_context_desc
 }
 global sg_commit_listener: type <cimport,nodecl> = @record{
   func: function(user_data: pointer): void,
   user_data: pointer
 }
 global sg_allocator: type <cimport,nodecl> = @record{
-  alloc: function(size: csize, user_data: pointer): pointer,
-  free: function(ptr: pointer, user_data: pointer): void,
+  alloc_fn: function(size: csize, user_data: pointer): pointer,
+  free_fn: function(ptr: pointer, user_data: pointer): void,
   user_data: pointer
 }
 global sg_logger: type <cimport,nodecl> = @record{
@@ -979,19 +1214,114 @@ global sg_desc: type <cimport,nodecl> = @record{
   _start_canary: uint32,
   buffer_pool_size: cint,
   image_pool_size: cint,
+  sampler_pool_size: cint,
   shader_pool_size: cint,
   pipeline_pool_size: cint,
   pass_pool_size: cint,
   context_pool_size: cint,
   uniform_buffer_size: cint,
-  staging_buffer_size: cint,
-  sampler_cache_size: cint,
   max_commit_listeners: cint,
   disable_validation: boolean,
+  mtl_force_managed_storage_mode: boolean,
+  wgpu_disable_bindgroups_cache: boolean,
+  wgpu_bindgroups_cache_size: cint,
   allocator: sg_allocator,
   logger: sg_logger,
   context: sg_context_desc,
   _end_canary: uint32
+}
+global sg_d3d11_buffer_info: type <cimport,nodecl> = @record{
+  buf: pointer
+}
+global sg_d3d11_image_info: type <cimport,nodecl> = @record{
+  tex2d: pointer,
+  tex3d: pointer,
+  res: pointer,
+  srv: pointer
+}
+global sg_d3d11_sampler_info: type <cimport,nodecl> = @record{
+  smp: pointer
+}
+global sg_d3d11_shader_info: type <cimport,nodecl> = @record{
+  vs_cbufs: [4]pointer,
+  fs_cbufs: [4]pointer,
+  vs: pointer,
+  fs: pointer
+}
+global sg_d3d11_pipeline_info: type <cimport,nodecl> = @record{
+  il: pointer,
+  rs: pointer,
+  dss: pointer,
+  bs: pointer
+}
+global sg_d3d11_pass_info: type <cimport,nodecl> = @record{
+  color_rtv: [4]pointer,
+  resolve_rtv: [4]pointer,
+  dsv: pointer
+}
+global sg_mtl_buffer_info: type <cimport,nodecl> = @record{
+  buf: [2]pointer,
+  active_slot: cint
+}
+global sg_mtl_image_info: type <cimport,nodecl> = @record{
+  tex: [2]pointer,
+  active_slot: cint
+}
+global sg_mtl_sampler_info: type <cimport,nodecl> = @record{
+  smp: pointer
+}
+global sg_mtl_shader_info: type <cimport,nodecl> = @record{
+  vs_lib: pointer,
+  fs_lib: pointer,
+  vs_func: pointer,
+  fs_func: pointer
+}
+global sg_mtl_pipeline_info: type <cimport,nodecl> = @record{
+  rps: pointer,
+  dss: pointer
+}
+global sg_wgpu_buffer_info: type <cimport,nodecl> = @record{
+  buf: pointer
+}
+global sg_wgpu_image_info: type <cimport,nodecl> = @record{
+  tex: pointer,
+  view: pointer
+}
+global sg_wgpu_sampler_info: type <cimport,nodecl> = @record{
+  smp: pointer
+}
+global sg_wgpu_shader_info: type <cimport,nodecl> = @record{
+  vs_mod: pointer,
+  fs_mod: pointer,
+  bgl: pointer
+}
+global sg_wgpu_pipeline_info: type <cimport,nodecl> = @record{
+  pip: pointer
+}
+global sg_wgpu_pass_info: type <cimport,nodecl> = @record{
+  color_view: [4]pointer,
+  resolve_view: [4]pointer,
+  ds_view: pointer
+}
+global sg_gl_buffer_info: type <cimport,nodecl> = @record{
+  buf: [2]uint32,
+  active_slot: cint
+}
+global sg_gl_image_info: type <cimport,nodecl> = @record{
+  tex: [2]uint32,
+  tex_target: uint32,
+  msaa_render_buffer: uint32,
+  active_slot: cint
+}
+global sg_gl_sampler_info: type <cimport,nodecl> = @record{
+  smp: uint32
+}
+global sg_gl_shader_info: type <cimport,nodecl> = @record{
+  prog: uint32
+}
+global sg_gl_pass_info: type <cimport,nodecl> = @record{
+  frame_buffer: uint32,
+  msaa_resolve_framebuffer: [4]uint32
 }
 global sgp_error: type <cimport,nodecl,using> = @enum(cint){
   SGP_NO_ERROR = 0,
@@ -1007,8 +1337,9 @@ global sgp_error: type <cimport,nodecl,using> = @enum(cint){
   SGP_ERROR_ALLOC_FAILED = 10,
   SGP_ERROR_MAKE_VERTEX_BUFFER_FAILED = 11,
   SGP_ERROR_MAKE_WHITE_IMAGE_FAILED = 12,
-  SGP_ERROR_MAKE_COMMON_SHADER_FAILED = 13,
-  SGP_ERROR_MAKE_COMMON_PIPELINE_FAILED = 14
+  SGP_ERROR_MAKE_NEAREST_SAMPLER_FAILED = 13,
+  SGP_ERROR_MAKE_COMMON_SHADER_FAILED = 14,
+  SGP_ERROR_MAKE_COMMON_PIPELINE_FAILED = 15
 }
 global sgp_blend_mode: type <cimport,nodecl,using> = @enum(cint){
   SGP_BLENDMODE_NONE = 0,
@@ -1065,9 +1396,10 @@ global sgp_uniform: type <cimport,nodecl> = @record{
   size: uint32,
   content: [4]float32
 }
-global sgp_images_uniform: type <cimport,nodecl> = @record{
+global sgp_textures_uniform: type <cimport,nodecl> = @record{
   count: uint32,
-  images: [4]sg_image
+  images: [4]sg_image,
+  samplers: [4]sg_sampler
 }
 global sgp_state: type <cimport,nodecl> = @record{
   frame_size: sgp_isize,
@@ -1078,7 +1410,7 @@ global sgp_state: type <cimport,nodecl> = @record{
   mvp: sgp_mat2x3,
   thickness: float32,
   color: sgp_color,
-  images: sgp_images_uniform,
+  textures: sgp_textures_uniform,
   uniform: sgp_uniform,
   blend_mode: sgp_blend_mode,
   pipeline: sg_pipeline,
@@ -1088,12 +1420,14 @@ global sgp_state: type <cimport,nodecl> = @record{
 }
 global sgp_desc: type <cimport,nodecl> = @record{
   max_vertices: uint32,
-  max_commands: uint32
+  max_commands: uint32,
+  pixel_format: sg_pixel_format
 }
 global sgp_pipeline_desc: type <cimport,nodecl> = @record{
   shader: sg_shader_desc,
   primitive_type: sg_primitive_type,
-  blend_mode: sgp_blend_mode
+  blend_mode: sgp_blend_mode,
+  pixel_format: sg_pixel_format
 }
 global SAPP_MAX_TOUCHPOINTS: cint <comptime> = 8
 global SAPP_MAX_MOUSEBUTTONS: cint <comptime> = 3
@@ -1311,8 +1645,8 @@ global sapp_icon_desc: type <cimport,nodecl> = @record{
   images: [8]sapp_image_desc
 }
 global sapp_allocator: type <cimport,nodecl> = @record{
-  alloc: function(size: csize, user_data: pointer): pointer,
-  free: function(ptr: pointer, user_data: pointer): void,
+  alloc_fn: function(size: csize, user_data: pointer): pointer,
+  free_fn: function(ptr: pointer, user_data: pointer): void,
   user_data: pointer
 }
 global sapp_log_item: type <cimport,nodecl,using> = @enum(cint){
@@ -1399,9 +1733,21 @@ global sapp_log_item: type <cimport,nodecl,using> = @enum(cint){
   SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_ONCREATE = 80,
   SAPP_LOGITEM_ANDROID_CREATE_THREAD_PIPE_FAILED = 81,
   SAPP_LOGITEM_ANDROID_NATIVE_ACTIVITY_CREATE_SUCCESS = 82,
-  SAPP_LOGITEM_IMAGE_DATA_SIZE_MISMATCH = 83,
-  SAPP_LOGITEM_DROPPED_FILE_PATH_TOO_LONG = 84,
-  SAPP_LOGITEM_CLIPBOARD_STRING_TOO_BIG = 85
+  SAPP_LOGITEM_WGPU_SWAPCHAIN_CREATE_SURFACE_FAILED = 83,
+  SAPP_LOGITEM_WGPU_SWAPCHAIN_CREATE_SWAPCHAIN_FAILED = 84,
+  SAPP_LOGITEM_WGPU_SWAPCHAIN_CREATE_DEPTH_STENCIL_TEXTURE_FAILED = 85,
+  SAPP_LOGITEM_WGPU_SWAPCHAIN_CREATE_DEPTH_STENCIL_VIEW_FAILED = 86,
+  SAPP_LOGITEM_WGPU_SWAPCHAIN_CREATE_MSAA_TEXTURE_FAILED = 87,
+  SAPP_LOGITEM_WGPU_SWAPCHAIN_CREATE_MSAA_VIEW_FAILED = 88,
+  SAPP_LOGITEM_WGPU_REQUEST_DEVICE_STATUS_ERROR = 89,
+  SAPP_LOGITEM_WGPU_REQUEST_DEVICE_STATUS_UNKNOWN = 90,
+  SAPP_LOGITEM_WGPU_REQUEST_ADAPTER_STATUS_UNAVAILABLE = 91,
+  SAPP_LOGITEM_WGPU_REQUEST_ADAPTER_STATUS_ERROR = 92,
+  SAPP_LOGITEM_WGPU_REQUEST_ADAPTER_STATUS_UNKNOWN = 93,
+  SAPP_LOGITEM_WGPU_CREATE_INSTANCE_FAILED = 94,
+  SAPP_LOGITEM_IMAGE_DATA_SIZE_MISMATCH = 95,
+  SAPP_LOGITEM_DROPPED_FILE_PATH_TOO_LONG = 96,
+  SAPP_LOGITEM_CLIPBOARD_STRING_TOO_BIG = 97
 }
 global sapp_logger: type <cimport,nodecl> = @record{
   func: function(tag: cstring, log_level: uint32, log_item_id: uint32, message_or_null: cstring, line_nr: uint32, filename_or_null: cstring, user_data: pointer): void,
@@ -1479,8 +1825,8 @@ global sapp_mouse_cursor: type <cimport,nodecl,using> = @enum(cint){
   _SAPP_MOUSECURSOR_NUM = 11
 }
 global sargs_allocator: type <cimport,nodecl> = @record{
-  alloc: function(size: csize, user_data: pointer): pointer,
-  free: function(ptr: pointer, user_data: pointer): void,
+  alloc_fn: function(size: csize, user_data: pointer): pointer,
+  free_fn: function(ptr: pointer, user_data: pointer): void,
   user_data: pointer
 }
 global sargs_desc: type <cimport,nodecl> = @record{
@@ -1501,11 +1847,13 @@ global function sg_add_commit_listener(listener: sg_commit_listener): boolean <c
 global function sg_remove_commit_listener(listener: sg_commit_listener): boolean <cimport,nodecl> end
 global function sg_make_buffer(desc: *sg_buffer_desc): sg_buffer <cimport,nodecl> end
 global function sg_make_image(desc: *sg_image_desc): sg_image <cimport,nodecl> end
+global function sg_make_sampler(desc: *sg_sampler_desc): sg_sampler <cimport,nodecl> end
 global function sg_make_shader(desc: *sg_shader_desc): sg_shader <cimport,nodecl> end
 global function sg_make_pipeline(desc: *sg_pipeline_desc): sg_pipeline <cimport,nodecl> end
 global function sg_make_pass(desc: *sg_pass_desc): sg_pass <cimport,nodecl> end
 global function sg_destroy_buffer(buf: sg_buffer): void <cimport,nodecl> end
 global function sg_destroy_image(img: sg_image): void <cimport,nodecl> end
+global function sg_destroy_sampler(smp: sg_sampler): void <cimport,nodecl> end
 global function sg_destroy_shader(shd: sg_shader): void <cimport,nodecl> end
 global function sg_destroy_pipeline(pip: sg_pipeline): void <cimport,nodecl> end
 global function sg_destroy_pass(pass: sg_pass): void <cimport,nodecl> end
@@ -1534,55 +1882,95 @@ global function sg_query_limits(): sg_limits <cimport,nodecl> end
 global function sg_query_pixelformat(fmt: sg_pixel_format): sg_pixelformat_info <cimport,nodecl> end
 global function sg_query_buffer_state(buf: sg_buffer): sg_resource_state <cimport,nodecl> end
 global function sg_query_image_state(img: sg_image): sg_resource_state <cimport,nodecl> end
+global function sg_query_sampler_state(smp: sg_sampler): sg_resource_state <cimport,nodecl> end
 global function sg_query_shader_state(shd: sg_shader): sg_resource_state <cimport,nodecl> end
 global function sg_query_pipeline_state(pip: sg_pipeline): sg_resource_state <cimport,nodecl> end
 global function sg_query_pass_state(pass: sg_pass): sg_resource_state <cimport,nodecl> end
 global function sg_query_buffer_info(buf: sg_buffer): sg_buffer_info <cimport,nodecl> end
 global function sg_query_image_info(img: sg_image): sg_image_info <cimport,nodecl> end
+global function sg_query_sampler_info(smp: sg_sampler): sg_sampler_info <cimport,nodecl> end
 global function sg_query_shader_info(shd: sg_shader): sg_shader_info <cimport,nodecl> end
 global function sg_query_pipeline_info(pip: sg_pipeline): sg_pipeline_info <cimport,nodecl> end
 global function sg_query_pass_info(pass: sg_pass): sg_pass_info <cimport,nodecl> end
 global function sg_query_buffer_desc(buf: sg_buffer): sg_buffer_desc <cimport,nodecl> end
 global function sg_query_image_desc(img: sg_image): sg_image_desc <cimport,nodecl> end
+global function sg_query_sampler_desc(smp: sg_sampler): sg_sampler_desc <cimport,nodecl> end
 global function sg_query_shader_desc(shd: sg_shader): sg_shader_desc <cimport,nodecl> end
 global function sg_query_pipeline_desc(pip: sg_pipeline): sg_pipeline_desc <cimport,nodecl> end
 global function sg_query_pass_desc(pass: sg_pass): sg_pass_desc <cimport,nodecl> end
 global function sg_query_buffer_defaults(desc: *sg_buffer_desc): sg_buffer_desc <cimport,nodecl> end
 global function sg_query_image_defaults(desc: *sg_image_desc): sg_image_desc <cimport,nodecl> end
+global function sg_query_sampler_defaults(desc: *sg_sampler_desc): sg_sampler_desc <cimport,nodecl> end
 global function sg_query_shader_defaults(desc: *sg_shader_desc): sg_shader_desc <cimport,nodecl> end
 global function sg_query_pipeline_defaults(desc: *sg_pipeline_desc): sg_pipeline_desc <cimport,nodecl> end
 global function sg_query_pass_defaults(desc: *sg_pass_desc): sg_pass_desc <cimport,nodecl> end
 global function sg_alloc_buffer(): sg_buffer <cimport,nodecl> end
 global function sg_alloc_image(): sg_image <cimport,nodecl> end
+global function sg_alloc_sampler(): sg_sampler <cimport,nodecl> end
 global function sg_alloc_shader(): sg_shader <cimport,nodecl> end
 global function sg_alloc_pipeline(): sg_pipeline <cimport,nodecl> end
 global function sg_alloc_pass(): sg_pass <cimport,nodecl> end
 global function sg_dealloc_buffer(buf: sg_buffer): void <cimport,nodecl> end
 global function sg_dealloc_image(img: sg_image): void <cimport,nodecl> end
+global function sg_dealloc_sampler(smp: sg_sampler): void <cimport,nodecl> end
 global function sg_dealloc_shader(shd: sg_shader): void <cimport,nodecl> end
 global function sg_dealloc_pipeline(pip: sg_pipeline): void <cimport,nodecl> end
 global function sg_dealloc_pass(pass: sg_pass): void <cimport,nodecl> end
 global function sg_init_buffer(buf: sg_buffer, desc: *sg_buffer_desc): void <cimport,nodecl> end
 global function sg_init_image(img: sg_image, desc: *sg_image_desc): void <cimport,nodecl> end
+global function sg_init_sampler(smg: sg_sampler, desc: *sg_sampler_desc): void <cimport,nodecl> end
 global function sg_init_shader(shd: sg_shader, desc: *sg_shader_desc): void <cimport,nodecl> end
 global function sg_init_pipeline(pip: sg_pipeline, desc: *sg_pipeline_desc): void <cimport,nodecl> end
 global function sg_init_pass(pass: sg_pass, desc: *sg_pass_desc): void <cimport,nodecl> end
 global function sg_uninit_buffer(buf: sg_buffer): void <cimport,nodecl> end
 global function sg_uninit_image(img: sg_image): void <cimport,nodecl> end
+global function sg_uninit_sampler(smp: sg_sampler): void <cimport,nodecl> end
 global function sg_uninit_shader(shd: sg_shader): void <cimport,nodecl> end
 global function sg_uninit_pipeline(pip: sg_pipeline): void <cimport,nodecl> end
 global function sg_uninit_pass(pass: sg_pass): void <cimport,nodecl> end
 global function sg_fail_buffer(buf: sg_buffer): void <cimport,nodecl> end
 global function sg_fail_image(img: sg_image): void <cimport,nodecl> end
+global function sg_fail_sampler(smp: sg_sampler): void <cimport,nodecl> end
 global function sg_fail_shader(shd: sg_shader): void <cimport,nodecl> end
 global function sg_fail_pipeline(pip: sg_pipeline): void <cimport,nodecl> end
 global function sg_fail_pass(pass: sg_pass): void <cimport,nodecl> end
+global function sg_enable_frame_stats(): void <cimport,nodecl> end
+global function sg_disable_frame_stats(): void <cimport,nodecl> end
+global function sg_frame_stats_enabled(): boolean <cimport,nodecl> end
+global function sg_query_frame_stats(): sg_frame_stats <cimport,nodecl> end
 global function sg_setup_context(): sg_context <cimport,nodecl> end
 global function sg_activate_context(ctx_id: sg_context): void <cimport,nodecl> end
 global function sg_discard_context(ctx_id: sg_context): void <cimport,nodecl> end
 global function sg_d3d11_device(): pointer <cimport,nodecl> end
+global function sg_d3d11_device_context(): pointer <cimport,nodecl> end
+global function sg_d3d11_query_buffer_info(buf: sg_buffer): sg_d3d11_buffer_info <cimport,nodecl> end
+global function sg_d3d11_query_image_info(img: sg_image): sg_d3d11_image_info <cimport,nodecl> end
+global function sg_d3d11_query_sampler_info(smp: sg_sampler): sg_d3d11_sampler_info <cimport,nodecl> end
+global function sg_d3d11_query_shader_info(shd: sg_shader): sg_d3d11_shader_info <cimport,nodecl> end
+global function sg_d3d11_query_pipeline_info(pip: sg_pipeline): sg_d3d11_pipeline_info <cimport,nodecl> end
+global function sg_d3d11_query_pass_info(pass: sg_pass): sg_d3d11_pass_info <cimport,nodecl> end
 global function sg_mtl_device(): pointer <cimport,nodecl> end
 global function sg_mtl_render_command_encoder(): pointer <cimport,nodecl> end
+global function sg_mtl_query_buffer_info(buf: sg_buffer): sg_mtl_buffer_info <cimport,nodecl> end
+global function sg_mtl_query_image_info(img: sg_image): sg_mtl_image_info <cimport,nodecl> end
+global function sg_mtl_query_sampler_info(smp: sg_sampler): sg_mtl_sampler_info <cimport,nodecl> end
+global function sg_mtl_query_shader_info(shd: sg_shader): sg_mtl_shader_info <cimport,nodecl> end
+global function sg_mtl_query_pipeline_info(pip: sg_pipeline): sg_mtl_pipeline_info <cimport,nodecl> end
+global function sg_wgpu_device(): pointer <cimport,nodecl> end
+global function sg_wgpu_queue(): pointer <cimport,nodecl> end
+global function sg_wgpu_command_encoder(): pointer <cimport,nodecl> end
+global function sg_wgpu_render_pass_encoder(): pointer <cimport,nodecl> end
+global function sg_wgpu_query_buffer_info(buf: sg_buffer): sg_wgpu_buffer_info <cimport,nodecl> end
+global function sg_wgpu_query_image_info(img: sg_image): sg_wgpu_image_info <cimport,nodecl> end
+global function sg_wgpu_query_sampler_info(smp: sg_sampler): sg_wgpu_sampler_info <cimport,nodecl> end
+global function sg_wgpu_query_shader_info(shd: sg_shader): sg_wgpu_shader_info <cimport,nodecl> end
+global function sg_wgpu_query_pipeline_info(pip: sg_pipeline): sg_wgpu_pipeline_info <cimport,nodecl> end
+global function sg_wgpu_query_pass_info(pass: sg_pass): sg_wgpu_pass_info <cimport,nodecl> end
+global function sg_gl_query_buffer_info(buf: sg_buffer): sg_gl_buffer_info <cimport,nodecl> end
+global function sg_gl_query_image_info(img: sg_image): sg_gl_image_info <cimport,nodecl> end
+global function sg_gl_query_sampler_info(smp: sg_sampler): sg_gl_sampler_info <cimport,nodecl> end
+global function sg_gl_query_shader_info(shd: sg_shader): sg_gl_shader_info <cimport,nodecl> end
+global function sg_gl_query_pass_info(pass: sg_pass): sg_gl_pass_info <cimport,nodecl> end
 global function sgp_setup(desc: *sgp_desc): void <cimport,nodecl> end
 global function sgp_shutdown(): void <cimport,nodecl> end
 global function sgp_is_valid(): boolean <cimport,nodecl> end
@@ -1613,6 +2001,8 @@ global function sgp_reset_color(): void <cimport,nodecl> end
 global function sgp_set_image(channel: cint, image: sg_image): void <cimport,nodecl> end
 global function sgp_unset_image(channel: cint): void <cimport,nodecl> end
 global function sgp_reset_image(channel: cint): void <cimport,nodecl> end
+global function sgp_set_sampler(channel: cint, sampler: sg_sampler): void <cimport,nodecl> end
+global function sgp_reset_sampler(channel: cint): void <cimport,nodecl> end
 global function sgp_viewport(x: cint, y: cint, w: cint, h: cint): void <cimport,nodecl> end
 global function sgp_reset_viewport(): void <cimport,nodecl> end
 global function sgp_scissor(x: cint, y: cint, w: cint, h: cint): void <cimport,nodecl> end
@@ -1629,10 +2019,8 @@ global function sgp_draw_filled_triangle(ax: float32, ay: float32, bx: float32, 
 global function sgp_draw_filled_triangles_strip(points: *sgp_point, count: uint32): void <cimport,nodecl> end
 global function sgp_draw_filled_rects(rects: *sgp_rect, count: uint32): void <cimport,nodecl> end
 global function sgp_draw_filled_rect(x: float32, y: float32, w: float32, h: float32): void <cimport,nodecl> end
-global function sgp_draw_textured_rects(rects: *sgp_rect, count: uint32): void <cimport,nodecl> end
-global function sgp_draw_textured_rect(x: float32, y: float32, w: float32, h: float32): void <cimport,nodecl> end
-global function sgp_draw_textured_rects_ex(channel: cint, rects: *sgp_textured_rect, count: uint32): void <cimport,nodecl> end
-global function sgp_draw_textured_rect_ex(channel: cint, dest_rect: sgp_rect, src_rect: sgp_rect): void <cimport,nodecl> end
+global function sgp_draw_textured_rects(channel: cint, rects: *sgp_textured_rect, count: uint32): void <cimport,nodecl> end
+global function sgp_draw_textured_rect(channel: cint, dest_rect: sgp_rect, src_rect: sgp_rect): void <cimport,nodecl> end
 global function sgp_query_state(): *sgp_state <cimport,nodecl> end
 global function sgp_query_desc(): sgp_desc <cimport,nodecl> end
 global function sapp_isvalid(): boolean <cimport,nodecl> end

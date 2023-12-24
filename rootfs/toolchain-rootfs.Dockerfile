@@ -27,6 +27,7 @@ RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so
 WORKDIR /root/apks
 RUN apk fetch musl bubblewrap libcap2
 RUN apk fetch zlib lz4-libs xz-libs lzo zstd-libs squashfs-tools
+RUN apk fetch libstdc++ libgcc
 
 # Build other packages inside /root
 WORKDIR /root
@@ -52,7 +53,7 @@ RUN wget -O genext2fs-1.5.2.tar.gz https://github.com/cartesi/genext2fs/archive/
     rm -rf genext2fs-*
 
 # Install nelua
-RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarball/master && \
+RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarball/e82695abf0a68a30a593cefb0bf1143cf9e14b6b && \
     tar -xzf nelua-lang-latest.tar.gz && \
     cd edubart-nelua-lang-* && \
     make && \

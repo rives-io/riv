@@ -199,8 +199,8 @@ local function draw_apple()
 end
 
 local function draw_snake()
-  for x=0,GRID_SIZE-1 do
-    for y=0,GRID_SIZE-1 do
+  for x=0,<GRID_SIZE do
+    for y=0,<GRID_SIZE do
       local pos = Point2D{x=x,y=y}
       if has_tile(pos) then -- snake is present at this tile
         draw_tile(pos, RIV_PAL16_GREEN)
@@ -221,9 +221,7 @@ local function frame(ctx: *riv_context)
   draw()
 end
 
-local function init(ctx: *riv_context)
-  riv = ctx
-  init_game()
+local function init_tracked_keys()
   for i=0,<RIV_NUM_KEYCODE do
     riv.tracked_keys[i] = false
   end
@@ -231,6 +229,12 @@ local function init(ctx: *riv_context)
   riv.tracked_keys[RIV_KEYCODE_DOWN] = true
   riv.tracked_keys[RIV_KEYCODE_LEFT] = true
   riv.tracked_keys[RIV_KEYCODE_RIGHT] = true
+end
+
+local function init(ctx: *riv_context)
+  riv = ctx
+  init_game()
+  init_tracked_keys()
 end
 
 riv_run(&(@riv_run_desc){

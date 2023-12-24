@@ -212,7 +212,7 @@ global ma_standard_sample_rate: type <cimport,nodecl,using> = @enum(cint){
   ma_standard_sample_rate_176400 = 176400,
   ma_standard_sample_rate_192000 = 192000,
   ma_standard_sample_rate_16000 = 16000,
-  ma_standard_sample_rate_11025 = 11250,
+  ma_standard_sample_rate_11025 = 11025,
   ma_standard_sample_rate_8000 = 8000,
   ma_standard_sample_rate_352800 = 352800,
   ma_standard_sample_rate_384000 = 384000,
@@ -1061,7 +1061,8 @@ global ma_device_notification_type: type <cimport,nodecl,using> = @enum(cint){
   ma_device_notification_type_stopped = 1,
   ma_device_notification_type_rerouted = 2,
   ma_device_notification_type_interruption_began = 3,
-  ma_device_notification_type_interruption_ended = 4
+  ma_device_notification_type_interruption_ended = 4,
+  ma_device_notification_type_unlocked = 5
 }
 global ma_device_notification: type <cimport,nodecl> = @record{
   pDevice: *ma_device,
@@ -2926,7 +2927,7 @@ global function ma_sound_group_is_playing(pGroup: *ma_sound_group): ma_bool32 <c
 global function ma_sound_group_get_time_in_pcm_frames(pGroup: *ma_sound_group): ma_uint64 <cimport,nodecl> end
 global MA_VERSION_MAJOR: cint <comptime> = 0
 global MA_VERSION_MINOR: cint <comptime> = 11
-global MA_VERSION_REVISION: cint <comptime> = 18
+global MA_VERSION_REVISION: cint <comptime> = 21
 global MA_SIZEOF_PTR: cint <comptime> = 8
 global MA_TRUE: cint <comptime> = 1
 global MA_FALSE: cint <comptime> = 0

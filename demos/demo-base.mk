@@ -3,8 +3,10 @@ HOST_ARCH=$(shell uname -m)
 ifeq ($(HOST_ARCH),riscv64)
 	TOOLCHAIN_PREFIX?=
 	CC=$(TOOLCHAIN_PREFIX)gcc
+	CXX=$(TOOLCHAIN_PREFIX)g++
 else
 	CC=riscv64-linux-musl-gcc
+	CXX=riscv64-linux-musl-g++
 	TOOLCHAIN_PREFIX=$(shell $(CC) -dumpmachine)-
 endif
 

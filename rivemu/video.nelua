@@ -70,10 +70,6 @@ local function update_framebuffer_desc(): void
     usage = SG_USAGE_STREAM,
     width = fb_desc.width,
     height = fb_desc.height,
-    min_filter = SG_FILTER_NEAREST,
-    mag_filter = SG_FILTER_NEAREST,
-    wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-    wrap_v = SG_WRAP_CLAMP_TO_EDGE,
   })
   assert(sg_query_image_state(fb_image) == SG_RESOURCESTATE_VALID, "failed to create frame buffer image")
 end
@@ -114,7 +110,7 @@ end
 local function draw_framebuffer(screen_width: int64, screen_height: int64): void
   if fb_pixel_count == 0 then return end
   sgp_set_image(0, fb_image)
-  sgp_draw_textured_rect(fit_box(fb_desc.width, fb_desc.height, screen_width, screen_height))
+  sgp_draw_filled_rect(fit_box(fb_desc.width, fb_desc.height, screen_width, screen_height))
   sgp_reset_image(0)
 end
 
