@@ -206,13 +206,6 @@ typedef enum riv_pixel_format {
   RIV_NUM_PIXELFORMAT,
 } riv_pixel_format;
 
-// Input/output card formats
-typedef enum riv_card_format {
-  RIV_CARDFORMAT_BLOB = 0x424f4c42, // "BLOB"
-  RIV_CARDFORMAT_TEXT = 0x54584554, // "TEXT"
-  RIV_CARDFORMAT_JSON = 0x4e4f534a, // "JSON"
-} riv_card_format;
-
 // Waveform types
 typedef enum riv_waveform_type {
   RIV_WAVEFORM_NONE = 0,
@@ -431,7 +424,8 @@ typedef struct riv_prng {
 typedef struct riv_key_state {
   uint64_t down_frame;  // Last frame the key was pressed
   uint64_t up_frame;    // Last frame the key was released
-  bool press;           // Becomes trues when the key is pressed, becomes false only when it is released
+  bool pressed;         // Becomes trues when the key is pressed, becomes false only when it is released
+  bool released;        // Becomes trues when the key is released, becomes false only when it is pressed
   bool down;            // True only in the frame the key is pressed
   bool up;              // True only in the frame the key is released
 } riv_key_state;
@@ -446,10 +440,11 @@ typedef struct riv_key_toggle_event {
 typedef struct riv_context {
   // Public read-only fields (can be read at any moment)
   uint64_t frame;                         // Current frame number
+  uint32_t key_toggle_count;              // Number of toggled keys in this frame
+  uint8_t key_toggles[RIV_NUM_KEYCODE];   // Toggled key in this frame (in order)
   riv_key_state keys[RIV_NUM_KEYCODE];    // Current keyboard state
   uint32_t key_modifiers;                 // NIY
   uint32_t incard_len;                    // Input card length
-  riv_card_format incard_format;          // Input card format
   bool valid;                             // Whether riv is initialized
   bool verifying;                         // Whether we are verifying
   bool yielding;                          // Whether an audio/video/input devices are connected and yielding

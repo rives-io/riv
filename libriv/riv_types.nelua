@@ -150,11 +150,6 @@ global riv_pixel_format: type <using> = @enum(uint32){
   RIV_PIXELFORMAT_PAL256 = 1,
   RIV_NUM_PIXELFORMAT = 2
 }
-global riv_card_format: type <using> = @enum(uint32){
-  RIV_CARDFORMAT_BLOB = 1112493122,
-  RIV_CARDFORMAT_TEXT = 1415071060,
-  RIV_CARDFORMAT_JSON = 1313821514
-}
 global riv_waveform_type: type <using> = @enum(uint32){
   RIV_WAVEFORM_NONE = 0,
   RIV_WAVEFORM_SINE = 1,
@@ -300,7 +295,8 @@ global riv_prng: type = @record{
 global riv_key_state: type = @record{
   down_frame: uint64,
   up_frame: uint64,
-  press: boolean,
+  pressed: boolean,
+  released: boolean,
   down: boolean,
   up: boolean
 }
@@ -310,10 +306,11 @@ global riv_key_toggle_event: type = @record{
 }
 global riv_context: type = @record{
   frame: uint64,
+  key_toggle_count: uint32,
+  key_toggles: [128]uint8,
   keys: [128]riv_key_state,
   key_modifiers: uint32,
   incard_len: uint32,
-  incard_format: riv_card_format,
   valid: boolean,
   verifying: boolean,
   yielding: boolean,

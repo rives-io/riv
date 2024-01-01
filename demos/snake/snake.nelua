@@ -98,14 +98,14 @@ local function game_over()
 end
 
 local function check_turn(keycode: uint8, dir: Direction, turned: boolean)
-  if riv.keys[keycode].down or (not turned and riv.keys[keycode].press) then
+  if riv.keys[keycode].down or (not turned and riv.keys[keycode].pressed) then
     local headdir = get_tile(headpos)
     switch dir do
-    case Direction.UP then if headdir == Direction.DOWN then return end
-    case Direction.DOWN then if headdir == Direction.UP then return end
-    case Direction.LEFT then if headdir == Direction.RIGHT then return end
-    case Direction.RIGHT then if headdir == Direction.LEFT then return end
-    else return end
+    case Direction.UP then if headdir == Direction.DOWN then return false end
+    case Direction.DOWN then if headdir == Direction.UP then return false end
+    case Direction.LEFT then if headdir == Direction.RIGHT then return false end
+    case Direction.RIGHT then if headdir == Direction.LEFT then return false end
+    else return false end
     movedir = dir
     return true
   end
