@@ -1,0 +1,97 @@
+## pragmas.unitname = ''
+
+require 'miniz'
+require 'spng'
+require '.riv_impl_types'
+
+local function riv_init_default_palette(): void
+  for i: uint32=0,<256 do
+    riv.palette_map[i] = (@uint8)(i)
+  end
+  riv.mmio_driver.palette[RIV_PAL16_BLACK] = RIV_RGB_PAL16_BLACK
+  riv.mmio_driver.palette[RIV_PAL16_DARKBLUE] = RIV_RGB_PAL16_DARKBLUE
+  riv.mmio_driver.palette[RIV_PAL16_DARKPURPLE] = RIV_RGB_PAL16_DARKPURPLE
+  riv.mmio_driver.palette[RIV_PAL16_DARKGREEN] = RIV_RGB_PAL16_DARKGREEN
+  riv.mmio_driver.palette[RIV_PAL16_BROWN] = RIV_RGB_PAL16_BROWN
+  riv.mmio_driver.palette[RIV_PAL16_DARKGREY] = RIV_RGB_PAL16_DARKGREY
+  riv.mmio_driver.palette[RIV_PAL16_LIGHTGREY] = RIV_RGB_PAL16_LIGHTGREY
+  riv.mmio_driver.palette[RIV_PAL16_WHITE] = RIV_RGB_PAL16_WHITE
+  riv.mmio_driver.palette[RIV_PAL16_RED] = RIV_RGB_PAL16_RED
+  riv.mmio_driver.palette[RIV_PAL16_ORANGE] = RIV_RGB_PAL16_ORANGE
+  riv.mmio_driver.palette[RIV_PAL16_YELLOW] = RIV_RGB_PAL16_YELLOW
+  riv.mmio_driver.palette[RIV_PAL16_GREEN] = RIV_RGB_PAL16_GREEN
+  riv.mmio_driver.palette[RIV_PAL16_BLUE] = RIV_RGB_PAL16_BLUE
+  riv.mmio_driver.palette[RIV_PAL16_LAVENDER] = RIV_RGB_PAL16_LAVENDER
+  riv.mmio_driver.palette[RIV_PAL16_PINK] = RIV_RGB_PAL16_PINK
+  riv.mmio_driver.palette[RIV_PAL16_LIGHTPEACH] = RIV_RGB_PAL16_LIGHTPEACH
+end
+
+global function riv_init_video(): void
+  riv_init_default_palette()
+end
+
+-- Encodes a screenshot from the current framebuffer to a PNG binary string.
+local function riv_encode_png_screenshot(): string
+  local ret: cint
+  -- Creating an encoder context requires a flag
+  local enc: *spng_ctx = spng_ctx_new(SPNG_CTX_ENCODER)
+  assert(enc ~= nilptr, 'spng_ctx_new failed')
+  defer spng_ctx_free(enc) end
+
+  -- Encode to internal buffer managed by the library
+  ret = spng_set_option(enc, SPNG_ENCODE_TO_BUFFER, 1)
+  if ret ~= 0 then error('spng_set_option failed: '..spng_strerror(ret)) end
+
+  -- Specify image dimensions, PNG format
+  local ihdr: spng_ihdr = {
+    width = riv.framebuffer_desc.width,
+    height = riv.framebuffer_desc.height,
+    bit_depth = 8,
+    color_type = SPNG_COLOR_TYPE_INDEXED
+  }
+
+  -- Image will be encoded according to ihdr.color_type, .bit_depth
+  ret = spng_set_ihdr(enc, &ihdr)
+  if ret ~= 0 then error('spng_set_option failed: '..spng_strerror(ret)) end
+
+  -- Detect palette size
+  local num_pixels: usize = riv.framebuffer_desc.width * riv.framebuffer_desc.height
+  local num_colors: usize = 0
+  for i=0,<num_pixels do
+    if riv.framebuffer[i] > num_colors then num_colors = riv.framebuffer[i] end
+  end
+  num_colors = num_colors + 1
+
+  -- Set palette colors
+  local plte: spng_plte = {n_entries = num_colors}
+  for i: usize=0,<256 do
+    plte.entries[i].red = (@uint8)((riv.palette[i] >> 0) & 0xff)
+    plte.entries[i].green = (@uint8)((riv.palette[i] >> 8) & 0xff)
+    plte.entries[i].blue = (@uint8)((riv.palette[i] >> 16) & 0xff)
+  end
+  ret = spng_set_plte(enc, &plte)
+  if ret ~= 0 then error('spng_set_plte failed: '..spng_strerror(ret)) end
+
+  -- SPNG_FMT_PNG is a special value that matches the format in ihdr,
+  -- SPNG_ENCODE_FINALIZE will finalize the PNG with the end-of-file marker
+  ret = spng_encode_image(enc, riv.framebuffer, num_pixels, SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE)
+  if ret ~= 0 then error('spng_encode_image failed: '..spng_strerror(ret)) end
+
+  -- PNG is written to an internal buffer by default
+  ret = 0
+  local png_size: usize
+  local png: pointer = spng_get_png_buffer(enc, &png_size, &ret)
+  if ret ~= 0 or png == nilptr then error('spng_get_png_buffer failed: '..spng_strerror(ret)) end
+
+  return string{data=(@*[0]uint8)(png), size=png_size}
+end
+
+-- Save screenshot
+global function riv_save_screenshot_fd()
+  local screenshot_fd_str: string = getenv('RIV_SCREENSHOT_FD')
+  if #screenshot_fd_str > 0 then
+    local screenshot_fd: int32 = screenshot_fd_str.data[0] - '0'_b
+    local screenshot_png: string <close> = riv_encode_png_screenshot()
+    assert(write(screenshot_fd, screenshot_png.data, screenshot_png.size) == screenshot_png.size, 'screenshot fd write failed')
+  end
+end

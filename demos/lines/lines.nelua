@@ -1,22 +1,27 @@
 require 'riv'
 
-local function frame(riv: *riv_context)
-  local framebuffer: auto, frame: usize = riv.framebuffer, riv.frame
-  local width: usize, height: usize = riv.framebuffer_desc.width, riv.framebuffer_desc.height
-  for y: usize=0,<height do
-    for x: usize=0,<width do
-      framebuffer[y*width+x] = ((frame + x + y) // 8) % 16
+local SCREEN_SIZE: usize <comptime> = 256
+
+local function frame()
+  local framebuffer: *[0]uint8 = riv_get_framebuffer()
+  local frame: usize = riv_get_frame()
+  for y: usize=0,<SCREEN_SIZE do
+    ## cemit '#pragma GCC unroll 4'
+    for x: usize=0,<SCREEN_SIZE do
+      framebuffer[y*SCREEN_SIZE+x] = ((frame + x + y) // 8) % 16
     end
   end
 end
 
 riv_run(&riv_run_desc{
+  argc = argc,
+  argv = argv,
   frame_cb = frame,
   framebuffer_desc = {
-    width = 256,
-    height = 256,
+    width = SCREEN_SIZE,
+    height = SCREEN_SIZE,
     target_fps = 60,
-  }
+  },
 })
 
 ## nostartfiles()

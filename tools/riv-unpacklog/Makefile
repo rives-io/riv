@@ -16,7 +16,7 @@ LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
 LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
 LDFLAGS+=-Wl,--dynamic-linker=/lib/ld-musl.so
 LDFLAGS+=-z relro -z now -s
-NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
+NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --release --verbose
 
 riv-unpacklog: riv-unpacklog.nelua ../../libs/guest-host/* ../../libriv/*
 	nelua $(NELUA_FLAGS) \

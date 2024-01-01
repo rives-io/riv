@@ -1,0 +1,79 @@
+## pragmas.unitname = ''
+
+require 'memory'
+require '.riv_impl_types'
+require '.riv_yield'
+
+local function riv_flush_audio_commands(): void
+  riv_yield(RIV_CONTROL_FLUSH_AUDIO)
+  riv.mmio_driver.audio_command_len = 0
+  riv.audiobuffer_off = 0
+end
+
+local function riv_queue_audio_command(command: riv_audio_command): void
+  local command_idx: uint32 = riv.mmio_driver.audio_command_len
+  riv.mmio_driver.audio_commands[command_idx] = command
+  riv.mmio_driver.audio_command_len = command_idx + 1
+  if riv.mmio_driver.audio_command_len >= #riv.mmio_driver.audio_commands then
+    riv_flush_audio_commands()
+  end
+end
+
+global function riv_make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <cexport>
+  -- silently ignore invalid id field
+  if desc.id ~= 0 then return 0 end
+  -- TODO: we could send in multiple chunks
+  assert(desc.data.size <= RIV_MMIOSIZE_AUDIOBUFFER, 'sound buffer is too large')
+  -- flush previous audio buffer if there is not enough space
+  if riv.audiobuffer_off + desc.data.size > RIV_MMIOSIZE_AUDIOBUFFER then
+    riv_flush_audio_commands()
+  end
+  -- copy buffer
+  memory.copy(&riv.audiobuffer[riv.audiobuffer_off], desc.data.data, desc.data.size)
+  desc.data.data = (@*uint8)((@usize)(riv.audiobuffer_off))
+  riv.audiobuffer_off = riv.audiobuffer_off + desc.data.size
+  -- choose sound buffer id
+  desc.id = riv.sound_buffer_gen + 1
+  riv.sound_buffer_gen = desc.id
+  -- queue command
+  riv_queue_audio_command{
+    type = RIV_AUDIOCOMMAND_MAKE_SOUND_BUFFER,
+    desc = {sound_buffer = $desc},
+  }
+  return desc.id
+end
+
+global function riv_destroy_sound_buffer(id: uint64): void <cexport>
+  -- queue command
+  riv_queue_audio_command{
+    type = RIV_AUDIOCOMMAND_DESTROY_SOUND_BUFFER,
+    desc = {sound_buffer = {id = id}},
+  }
+end
+
+global function riv_sound(desc: *riv_sound_desc): uint64 <cexport>
+  -- choose sound id
+  if desc.id == 0 then
+    if desc.buffer_id == 0 then return 0 end -- nothing to play
+    desc.id = riv.sound_gen + 1
+    riv.sound_gen = desc.id
+  end
+  -- queue command
+  riv_queue_audio_command{
+    type = RIV_AUDIOCOMMAND_SOUND,
+    desc = {sound = $desc}
+  }
+  return desc.id
+end
+
+global function riv_waveform(desc: *riv_waveform_desc): uint64 <cexport>
+  -- choose sound id
+  desc.id = riv.sound_gen + 1
+  riv.sound_gen = desc.id
+  -- queue command
+  riv_queue_audio_command{
+    type = RIV_AUDIOCOMMAND_WAVEFORM,
+    desc = {waveform = $desc}
+  }
+  return desc.id
+end

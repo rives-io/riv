@@ -16,7 +16,7 @@ LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
 LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
 LDFLAGS+=-z relro -z now -rdynamic
 STRIPFLAGS+=--strip-unneeded --remove-section=.comment
-NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
+NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --release --verbose
 
 all: libriv.so
 
@@ -39,9 +39,8 @@ clean:
 
 install: libriv.so
 	mkdir -p $(DESTDIR)$(PREFIX)/lib
-	install -m755 libriv.so $(DESTDIR)$(PREFIX)/lib/libriv.so.0.1.0
-	ln -sf libriv.so.0.1.0 $(DESTDIR)$(PREFIX)/lib/libriv.so.0.1
-	ln -sf libriv.so.0.1 $(DESTDIR)$(PREFIX)/lib/libriv.so.0
+	install -m755 libriv.so $(DESTDIR)$(PREFIX)/lib/libriv.so.0.2
+	ln -sf libriv.so.0.2 $(DESTDIR)$(PREFIX)/lib/libriv.so.0
 	ln -sf libriv.so.0 $(DESTDIR)$(PREFIX)/lib/libriv.so
 
 install-dev:

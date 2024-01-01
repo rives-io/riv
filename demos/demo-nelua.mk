@@ -1,6 +1,7 @@
 include ../demo-base.mk
 
-NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
+NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --release --verbose
+# NELUA_FLAGS+=-Pnocfeaturessetup -Pnocwarnpragmas
 NELUA_FLAGS+=-L../../libriv/?.nelua
 
 $(NAME).elf: $(NAME).nelua *.nelua ../../libriv/*.nelua ../../libriv/*.h

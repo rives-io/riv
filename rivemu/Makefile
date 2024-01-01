@@ -5,7 +5,7 @@ WASM_CC=emcc
 CC=gcc
 CFLAGS+=-Wall
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none -z relro -z now
-NELUA_FLAGS+=-Pnochecks -Pnoassertloc -Pnocstaticassert --release --verbose
+NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --release --verbose
 
 rivemu: rivemu.nelua *.nelua
 	nelua $(NELUA_FLAGS) \

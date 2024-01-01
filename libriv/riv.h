@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #define RIV_VERSION_MAJOR 0
-#define RIV_VERSION_MINOR 1
+#define RIV_VERSION_MINOR 2
 #define RIV_VERSION_PATCH 0
 #define RIV_VERSION (RIV_VERSION_MAJOR*1000000 + RIV_VERSION_MINOR*1000 + RIV_VERSION_PATCH)
 
@@ -290,20 +290,20 @@ typedef enum riv_vaddr_base {
 } riv_vaddr_base;
 
 // RIV driver magic when initializing
-#define RIV_DRIVER_MAGIC { \
+#define RIV_DRIVER_MAGIC (riv_magic_buffer){{ \
   0x3f, 0xdf, 0x37, 0x1e, 0xc0, 0xfc, 0xd1, 0xba, \
   0xec, 0xe9, 0x72, 0xa1, 0xf5, 0x89, 0x87, 0xc5, \
   0x70, 0xfd, 0xbe, 0xc0, 0xce, 0xcc, 0x2d, 0x74, \
   0x8d, 0x45, 0x39, 0x62, 0x49, 0xb8, 0x15, 0x26, \
-}
+}}
 
 // RIV device magic when initializing
-#define RIV_DEVICE_MAGIC { \
+#define RIV_DEVICE_MAGIC (riv_magic_buffer){{ \
   0x83, 0x0b, 0x3a, 0xd1, 0xcc, 0x8b, 0xc2, 0xe5, \
   0x70, 0x5c, 0x83, 0x98, 0x6c, 0xe4, 0x67, 0xc9, \
   0xc1, 0xc6, 0x0b, 0xc6, 0xb9, 0x80, 0xa4, 0x1c, \
   0x34, 0x12, 0x8c, 0x2e, 0x05, 0xd8, 0x2c, 0x4e, \
-}
+}}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Primitive types
@@ -384,9 +384,14 @@ typedef struct riv_audio_command {
   riv_audio_command_desc desc;
 } riv_audio_command;
 
+// Magic buffer
+typedef struct riv_magic_buffer {
+  uint8_t data[32];
+} riv_magic_buffer;
+
 // Memory mapped header
 typedef struct riv_mmio_header {
-  uint8_t magic[32];
+  riv_magic_buffer magic;
   uint32_t version;
   uint32_t features;
   uint64_t uuid;
@@ -415,10 +420,10 @@ typedef struct riv_mmio_device {
 ////////////////////////////////////////////////////////////////////////////////
 // Structures used only in the driver
 
-// Pseudo random number generator
-typedef struct riv_prng {
+// Pseudo random number generator based on xoshiro256
+typedef struct riv_xoshiro256 {
   uint64_t state[4];
-} riv_prng;
+} riv_xoshiro256;
 
 // Key state
 typedef struct riv_key_state {
@@ -449,14 +454,15 @@ typedef struct riv_context {
   bool verifying;                         // Whether we are verifying
   bool yielding;                          // Whether an audio/video/input devices are connected and yielding
   // Public read/write fields (can be written at any moment)
-  riv_prng prng;                          // Internal PRNG state
+  riv_xoshiro256 prng;                    // Internal PRNG state
   uint32_t outcard_len;                   // Output card length
   bool quit;                              // When set true, RIV loop will stop
+  riv_unbounded_bool tracked_keys;        // Key codes being tracked
   riv_framebuffer_desc* framebuffer_desc; // Screen frame buffer description
   riv_unbounded_uint8 inoutbuffer;        // Input/output card buffer
   riv_unbounded_uint8 framebuffer;        // Screen frame buffer
   riv_unbounded_uint32 palette;           // Color palette
-  riv_unbounded_bool tracked_keys;        // Key codes being tracked
+  uint8_t palette_map[256];               // Color palette map (only for drawing functions)
   // Private fields
   riv_unbounded_uint8 audiobuffer;        // Audio buffer used by audio commands
   riv_mmio_driver* mmio_driver;
@@ -475,20 +481,21 @@ typedef struct riv_context {
 } riv_context;
 
 // RIV context callback
-typedef void (*riv_context_callback)(riv_context*);
+typedef void (*riv_simple_callback)();
 
 // RIV run description
 typedef struct riv_run_desc {
-  riv_context_callback init_cb;          // Callback called when initializing the app
-  riv_context_callback cleanup_cb;       // Callback called before exiting the app
-  riv_context_callback frame_cb;         // Callback called every app frame
-  riv_framebuffer_desc framebuffer_desc; // Screen frame buffer description
   int32_t argc;                          // Pass argc from main to seed PRNG
   char** argv;                           // Pass argv from main to seed PRNG
+  riv_simple_callback init_cb;           // Callback called when initializing the app
+  riv_simple_callback cleanup_cb;        // Callback called before exiting the app
+  riv_simple_callback frame_cb;          // Callback called every app frame
+  riv_framebuffer_desc framebuffer_desc; // Screen frame buffer description
+  uint8_t tracked_keys[RIV_NUM_KEYCODE]; // Keyboard keys to be tracked
 } riv_run_desc;
 
 ////////////////////////////////////////////////////////////////////////////////
-// RIV driver API
+// RIV High Level API
 
 // Utilities
 
@@ -499,25 +506,45 @@ RIV_API uint64_t riv_snprintf(char* s, uint64_t maxlen, const char* format, ...)
 
 // Basic
 
-RIV_API void riv_setup(riv_context* self, int32_t argc, char** argv);    // Initialize RIV driver
-RIV_API void riv_shutdown(riv_context* self);                            // Terminate RIV driver
-RIV_API void riv_present(riv_context* self);                             // Present current frame buffer and audio commands
-RIV_API void riv_loop(riv_context* self, riv_context_callback frame_cb); // Loop presenting every frame until quitting
-RIV_API void riv_run(riv_run_desc* desc);                                // Call setup/loop/run in one go
+RIV_API riv_context* riv_get_context();               // Get RIV driver context
+RIV_API void riv_setup(int32_t argc, char** argv);    // Initialize RIV driver
+RIV_API void riv_shutdown();                          // Terminate RIV driver
+RIV_API void riv_present();                           // Present current frame buffer and audio commands
+RIV_API void riv_run(riv_run_desc* desc);             // Call setup/present loop/shutdown in one go
+RIV_API void riv_quit();                              // Request quit, breaking run loop in next frame
+
+RIV_API uint64_t riv_get_frame();
+RIV_API int64_t riv_get_millis();
+RIV_API double riv_get_seconds();
+RIV_API uint32_t riv_get_width();
+RIV_API uint32_t riv_get_height();
+RIV_API uint32_t riv_get_target_fps();
+RIV_API riv_unbounded_uint8 riv_get_framebuffer();
+
+// IO Card
+
+RIV_API riv_span_uint8 riv_get_incard();
+RIV_API void riv_set_outcard(riv_span_uint8 data);
+RIV_API riv_unbounded_uint8 riv_get_inoutbuffer();
+
+// Keyboard
+
+RIV_API void riv_set_tracked_keys(riv_span_uint8 tracked_keys);
+RIV_API riv_key_state riv_get_key_state(uint8_t keycode);
 
 // Sound system
 
-RIV_API uint64_t riv_make_sound_buffer(riv_context* self, riv_sound_buffer_desc* desc); // Create a new sound buffer
-RIV_API void riv_destroy_sound_buffer(riv_context* self, uint64_t id);                  // Destroy a sound buffer
-RIV_API uint64_t riv_sound(riv_context* self, riv_sound_desc* desc);                    // Play a sound buffer or update a sound
-RIV_API uint64_t riv_waveform(riv_context* self, riv_waveform_desc* desc);              // Play a waveform sound
+RIV_API uint64_t riv_make_sound_buffer(riv_sound_buffer_desc* desc); // Create a new sound buffer
+RIV_API void riv_destroy_sound_buffer(uint64_t id);                  // Destroy a sound buffer
+RIV_API uint64_t riv_sound(riv_sound_desc* desc);                    // Play a sound buffer or update a sound
+RIV_API uint64_t riv_waveform(riv_waveform_desc* desc);              // Play a waveform sound
 
 // Pseudo random number generator (PRNG)
 
-RIV_API void riv_srand(riv_prng* self, uint64_t a, uint64_t b);          // Seed PRNG
-RIV_API uint64_t riv_rand(riv_prng* self);                               // Returns a random uint64 in range [0, MAX_UINT64]
-RIV_API uint64_t riv_rand_uint(riv_prng* self, uint64_t high);           // Returns a random uint64 in range [0, high]
-RIV_API int64_t riv_rand_int(riv_prng* self, int64_t low, int64_t high); // Returns a random  int64 in range [low, high]
-RIV_API double riv_rand_float(riv_prng* self);                           // Returns a random float64 in range [0.0, 1.0)
+RIV_API void riv_srand(uint64_t a, uint64_t b);          // Seed PRNG
+RIV_API uint64_t riv_rand();                             // Returns a random uint64 in range [0, MAX_UINT64]
+RIV_API uint64_t riv_rand_uint(uint64_t high);           // Returns a random uint64 in range [0, high]
+RIV_API int64_t riv_rand_int(int64_t low, int64_t high); // Returns a random  int64 in range [low, high]
+RIV_API double riv_rand_float();                         // Returns a random float64 in range [0.0, 1.0)
 
 #endif

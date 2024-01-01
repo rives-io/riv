@@ -1,0 +1,207 @@
+## pragmas.unitname = ''
+
+require 'memory'
+require 'string'
+require 'linux'
+
+require '.riv_types'
+require '.riv_impl_types'
+require '.riv_yield'
+require '.riv_iocard'
+require '.riv_prng'
+require '.riv_util'
+require '.riv_input'
+require '.riv_audio'
+require '.riv_video'
+
+global function riv_get_context(): *riv_context <cexport>
+  return &riv
+end
+
+global function riv_setup(argc: int32, argv: *[0]cstring): void <cexport>
+  memory.zero(&riv, #@riv_context)
+  -- open yield device
+  riv_yield_open()
+  -- map memory
+  assert(get_free_hugepages() == 1, 'no free hugepage')
+  local prot: cint = PROT_READ | PROT_WRITE
+  local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE | MAP_HUGETLB
+  local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
+  assert(mmap(mmio, RIV_MMIOSIZE_HUGEPAGE, prot, flags, -1, 0) == mmio, 'mmap failed')
+  assert(get_free_hugepages() == 0, 'no used hugepage')
+  -- initialize device
+  memory.zero(mmio, RIV_MMIOSIZE_HUGEPAGE)
+  riv.stop_frame = (@uint64)(-1)
+  riv.mmio_driver = (@*riv_mmio_driver)(RIV_VADDR_MMIO_DRIVER)
+  riv.mmio_device = (@*riv_mmio_device)(RIV_VADDR_MMIO_DEVICE)
+  riv.mmio_driver.header = {
+    magic = RIV_DRIVER_MAGIC,
+    version = RIV_VERSION,
+    features = 0,
+    uuid = 0
+  }
+  riv.mmio_driver.framebuffer_desc = {
+    width = RIV_DEFAULT_WIDTH,
+    height = RIV_DEFAULT_HEIGHT,
+    target_fps = RIV_DEFAULT_TARGET_FPS,
+    pixel_format = RIV_DEFAULT_PIXELFORMAT,
+  }
+  riv.inoutbuffer = (@*[RIV_MMIOSIZE_INOUTBUFFER]uint8)(RIV_VADDR_INOUTBUFFER)
+  riv.framebuffer = (@*[RIV_MMIOSIZE_FRAMEBUFFER]uint8)(RIV_VADDR_FRAMEBUFFER)
+  riv.audiobuffer = (@*[RIV_MMIOSIZE_AUDIOBUFFER]uint8)(RIV_VADDR_AUDIOBUFFER)
+  -- aliases
+  riv.framebuffer_desc = &riv.mmio_driver.framebuffer_desc
+  riv.tracked_keys = &riv.mmio_driver.tracked_keys
+  riv.palette = &riv.mmio_driver.palette
+  -- init input
+  riv_init_input()
+  -- init video
+  riv_init_video()
+  -- signal the we are about to start, the host may fill input card
+  riv_yield(RIV_CONTROL_OPEN)
+  -- retrieve input card from host
+  riv_sync_incard()
+  -- initialize prng
+  riv_init_prng(argc, argv)
+  -- retrieve event log from fd
+  local replaylog_fd_str: string = getenv('RIV_REPLAYLOG_FD')
+  if #replaylog_fd_str > 0 then
+    riv.verifying = true
+    local replaylog_fd: int32 = replaylog_fd_str.data[0] - '0'_b
+    local replaylog_size: isize = lseek(replaylog_fd, 0, SEEK_END)
+    assert(replaylog_size > #@riv_key_toggle_event, 'invalid replay log fd size')
+    local replaylog_ptr: pointer = mmap(nilptr, replaylog_size, PROT_READ, MAP_SHARED, replaylog_fd, 0)
+    assert(replaylog_ptr ~= MAP_FAILED, 'replay log fd mmap failed')
+    riv.verify_key_events = (@*[0]riv_key_toggle_event)(replaylog_ptr)
+  end
+  -- retrieve stop frame
+  local stop_frame_str: string = getenv('RIV_STOP_FRAME')
+  if #stop_frame_str > 0 then
+    riv.stop_frame = (@uint64)(tointeger(stop_frame_str))
+  end
+  -- finished successfully
+  riv.valid = true
+end
+
+global function riv_shutdown(): void <cexport>
+  -- ignore when not initialized
+  if not riv.valid then return end
+  -- save screenshot if needed
+  riv_save_screenshot_fd()
+  -- copy outcard description to driver
+  riv_sync_outcard()
+  -- tell the host we finished, the host may use inoutbuffer
+  riv_yield(RIV_CONTROL_CLOSE)
+  -- unmap memory
+  local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
+  memory.zero(mmio, RIV_MMIOSIZE_HUGEPAGE)
+  assert(munmap(mmio, RIV_MMIOSIZE_HUGEPAGE) == 0, 'munmap failed')
+  assert(get_free_hugepages() == 1, 'no freed hugepage')
+  -- close yield device
+  riv_yield_close()
+  -- zero riv context memory
+  memory.zero(&riv, #@riv_context)
+end
+
+global function riv_present(): void <cexport>
+  -- force exit when replay ends
+  if riv.verifying then
+    local event: riv_key_toggle_event = riv.verify_key_events[riv.verify_key_event_index]
+    if event.key_code == 0xff and riv.frame >= event.frame + 1 then
+      riv_shutdown()
+      exit(0)
+      return
+    end
+  end
+  -- copy outcard description to driver
+  riv_sync_outcard()
+  -- present
+  riv_yield(RIV_CONTROL_PRESENT)
+  -- should we stop?
+  if riv.frame >= riv.stop_frame then
+    riv_shutdown()
+    exit(0)
+    return
+  end
+  -- fill with replay inputs
+  if riv.verifying then
+    local key_index: uint32 = 0
+    while riv.verify_key_event_index ~= 0xffffffff do
+      local event: riv_key_toggle_event = riv.verify_key_events[riv.verify_key_event_index]
+      if event.frame ~= riv.frame or event.key_code == 0xff then break end
+      riv.verify_key_event_index = riv.verify_key_event_index + 1
+      riv.mmio_device.key_toggles[key_index] = event.key_code
+      key_index = key_index + 1
+    end
+    riv.mmio_device.key_toggle_count = key_index
+  end
+  -- advance frame
+  riv.frame = riv.frame + 1
+  riv.mmio_driver.frame = riv.frame
+  -- audio commands was flushed
+  riv.mmio_driver.audio_command_len = 0
+  riv.audiobuffer_off = 0
+  -- poll keyboard inputs
+  riv_poll_inputs()
+end
+
+global function riv_run(desc: *riv_run_desc): void <cexport>
+  if desc.framebuffer_desc.width == 0 then desc.framebuffer_desc.width = RIV_DEFAULT_WIDTH end
+  if desc.framebuffer_desc.height == 0 then desc.framebuffer_desc.height = RIV_DEFAULT_HEIGHT end
+  if desc.framebuffer_desc.target_fps == 0 then desc.framebuffer_desc.target_fps = RIV_DEFAULT_TARGET_FPS end
+  if desc.framebuffer_desc.pixel_format == 0 then desc.framebuffer_desc.pixel_format = RIV_DEFAULT_PIXELFORMAT end
+  if not riv.mmio_driver then
+    riv_setup(desc.argc, desc.argv)
+  end
+  if desc.tracked_keys[0] ~= 0 then
+    riv_set_tracked_keys({data=&desc.tracked_keys, size=RIV_NUM_KEYCODE})
+  end
+  if desc.init_cb then
+    desc.init_cb()
+  end
+  riv.mmio_driver.framebuffer_desc = desc.framebuffer_desc
+  if desc.frame_cb then
+    -- process frames until quitting
+    while not riv.quit do
+      desc.frame_cb()
+      riv_present()
+    end
+  end
+  if desc.cleanup_cb then
+    desc.cleanup_cb()
+  end
+  riv_shutdown()
+  exit(0)
+end
+
+global function riv_quit(): void <cexport>
+  riv.quit = true
+end
+
+global function riv_get_frame(): uint64 <cexport>
+  return riv.frame
+end
+
+global function riv_get_millis(): int64 <cexport>
+  return (@int64)(riv.frame // 1000)
+end
+
+global function riv_get_seconds(): float64 <cexport>
+  return riv.frame / 1000.0
+end
+
+global function riv_get_width(): uint32 <cexport>
+  return riv.framebuffer_desc.width
+end
+
+global function riv_get_height(): uint32 <cexport>
+  return riv.framebuffer_desc.height
+end
+
+global function riv_get_target_fps(): uint32 <cexport>
+  return riv.framebuffer_desc.target_fps
+end
+
+global function riv_get_framebuffer(): *[0]uint8 <cexport>
+  return riv.framebuffer
+end

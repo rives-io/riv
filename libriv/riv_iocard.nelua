@@ -1,0 +1,51 @@
+## pragmas.unitname = ''
+
+require 'linux'
+require 'memory'
+require '.riv_impl_types'
+
+global function riv_sync_incard(): void
+  riv.incard_len = riv.mmio_device.incard_len & (RIV_MMIOSIZE_INOUTBUFFER-1)
+
+  -- retrieve input card from fd
+  local iocard_fd_str: string = getenv('RIV_IOCARD_FD')
+  if #iocard_fd_str > 0 then
+    local iocard_fd: int32 = iocard_fd_str.data[0] - '0'_b
+    local iocard_size: isize = lseek(iocard_fd, 0, SEEK_END)
+    assert(iocard_size >= 0 and iocard_size < RIV_MMIOSIZE_INOUTBUFFER, 'invalid iocard fd size')
+    if iocard_size > 0 then
+      local iocard_ptr: pointer = mmap(nilptr, iocard_size, PROT_READ, MAP_SHARED, iocard_fd, 0)
+      assert(iocard_ptr ~= MAP_FAILED, 'iocard fd mmap failed')
+      memory.copy(riv.inoutbuffer, iocard_ptr, iocard_size)
+      munmap(iocard_ptr, iocard_size)
+    end
+    riv.incard_len = (@uint32)(iocard_size)
+    riv.verify_iocard_fd = iocard_fd
+  end
+end
+
+global function riv_sync_outcard(): void
+  riv.mmio_driver.outcard_len = riv.outcard_len
+  if riv.verify_iocard_fd > 0 then
+    assert(lseek(riv.verify_iocard_fd, 0, SEEK_SET) == 0, 'iocard lseek failed')
+    assert(write(riv.verify_iocard_fd, riv.inoutbuffer, riv.outcard_len) == riv.outcard_len, 'iocard write failed')
+    assert(ftruncate(riv.verify_iocard_fd, riv.outcard_len) == 0, 'iocard ftruncate failed')
+  end
+end
+
+global function riv_get_incard(): riv_span_uint8 <cexport>
+  assert(riv.frame == 0, 'incard should only be read in frame 0')
+  return {data=riv.inoutbuffer, size=riv.incard_len}
+end
+
+global function riv_set_outcard(card: riv_span_uint8): void <cexport>
+  assert(card.size <= RIV_MMIOSIZE_INOUTBUFFER, 'outcard length is too large')
+  if riv.inoutbuffer ~= card.data then
+    memory.copy(riv.inoutbuffer, card.data, card.size)
+  end
+  riv.outcard_len = card.size
+end
+
+global function riv_get_inoutbuffer(): *[0]uint8 <cexport>
+  return riv.inoutbuffer
+end

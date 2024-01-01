@@ -16,7 +16,6 @@ local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
 local MOVE_DELAY <comptime> = 1
 
 -- Game state variables
-local riv: *riv_context
 local nextmove: uint64
 local headpos: Point2D, tailpos: Point2D, applepos: Point2D
 local score: uint64
@@ -25,6 +24,7 @@ local apples: uint64
 local movedir: Direction
 local tiles: [GRID_SIZE][GRID_SIZE]Direction
 local last_turn_frame: uint64
+local finished: boolean
 
 local function move_point(pos: Point2D, dir: Direction)
   switch dir
@@ -62,18 +62,20 @@ local function respawn_apple()
   -- respawn until there is no collision with its body
   repeat
     applepos = Point2D{
-      x = riv.prng:rand_uint(GRID_SIZE-1),
-      y = riv.prng:rand_uint(GRID_SIZE-1)
+      x = riv_rand_uint(GRID_SIZE-1),
+      y = riv_rand_uint(GRID_SIZE-1)
     }
   until not has_tile(applepos)
 end
 
-local function save_score(finished: boolean)
+local function save_score()
   local finished_str: string = finished and 'true' or 'false'
-  riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MMIOSIZE_INOUTBUFFER,
+  local buf_ptr: *[0]byte = riv_get_inoutbuffer()
+  local buf_len: uint64 = riv_snprintf(buf_ptr, RIV_MMIOSIZE_INOUTBUFFER,
     [[JSON{"score":%u,"apples":%u,"frames":%u,"max_score":%u,"finished":%s}]],
-      score, apples, riv.frame, max_score, finished_str)
-  riv_printf("%s\n", (@cstring)(riv.inoutbuffer))
+      score, apples, riv_get_frame(), max_score, finished_str)
+  riv_set_outcard({data=buf_ptr, size=buf_len})
+  riv_printf("%s\n", (@cstring)(buf_ptr))
 end
 
 local function init_game()
@@ -83,7 +85,8 @@ local function init_game()
   movedir = Direction.UP
   nextmove = 0
   score = 0
-  save_score(false)
+  finished = false
+  save_score()
   set_tile(headpos, Direction.UP)
   set_tile(tailpos, Direction.UP)
   respawn_apple()
@@ -91,14 +94,15 @@ local function init_game()
 end
 
 local function game_over()
-  save_score(true)
+  finished = true
   riv_printf('[SNAKE] GAME OVER\n')
-  riv.quit = true
+  riv_quit()
   -- init_game()
 end
 
 local function check_turn(keycode: uint8, dir: Direction, turned: boolean)
-  if riv.keys[keycode].down or (not turned and riv.keys[keycode].pressed) then
+  local keystate: riv_key_state = riv_get_key_state(keycode)
+  if keystate.down or (not turned and keystate.pressed) then
     local headdir = get_tile(headpos)
     switch dir do
     case Direction.UP then if headdir == Direction.DOWN then return false end
@@ -121,7 +125,7 @@ local function poll_events()
 end
 
 local function poll_game()
-  local now = riv.frame
+  local now = riv_get_frame()
   if now < nextmove then return end
   nextmove = now + MOVE_DELAY
 
@@ -152,9 +156,9 @@ local function poll_game()
     if score > max_score then
       max_score = score
     end
-    save_score(false)
+    save_score()
     respawn_apple()
-    riv:waveform(riv_waveform_desc{
+    riv_waveform(riv_waveform_desc{
       type = RIV_WAVEFORM_SINE,
       attack = 0.01,
       decay = 0.01,
@@ -169,6 +173,7 @@ local function poll_game()
     -- decrease score
     if score > TILE_SCORE_PENALITY then
       score = score - TILE_SCORE_PENALITY
+      save_score()
     end
     -- eat tail
     local taildir = get_tile(tailpos)
@@ -178,14 +183,14 @@ local function poll_game()
 end
 
 local function draw_background(color: Color)
-  local framebuffer = riv.framebuffer
+  local framebuffer = riv_get_framebuffer()
   for i=0,<SCREEN_SIZE*SCREEN_SIZE do
     framebuffer[i] = color
   end
 end
 
 local function draw_tile(pos: Point2D, color: Color)
-  local framebuffer = riv.framebuffer
+  local framebuffer = riv_get_framebuffer()
   local xoff, yoff = pos.x*TILE_SIZE, pos.y*TILE_SIZE
   for y=yoff,<yoff+TILE_SIZE do
     for x=xoff,<xoff+TILE_SIZE do
@@ -215,29 +220,19 @@ local function draw()
   draw_snake()
 end
 
-local function frame(ctx: *riv_context)
+local function frame()
   poll_events()
   poll_game()
   draw()
 end
 
-local function init_tracked_keys()
-  for i=0,<RIV_NUM_KEYCODE do
-    riv.tracked_keys[i] = false
-  end
-  riv.tracked_keys[RIV_KEYCODE_UP] = true
-  riv.tracked_keys[RIV_KEYCODE_DOWN] = true
-  riv.tracked_keys[RIV_KEYCODE_LEFT] = true
-  riv.tracked_keys[RIV_KEYCODE_RIGHT] = true
-end
-
-local function init(ctx: *riv_context)
-  riv = ctx
+local function init()
   init_game()
-  init_tracked_keys()
 end
 
 riv_run(&(@riv_run_desc){
+  argc = argc,
+  argv = argv,
   init_cb = init,
   frame_cb = frame,
   framebuffer_desc = {
@@ -246,8 +241,12 @@ riv_run(&(@riv_run_desc){
     target_fps = 8,
     pixel_format = RIV_PIXELFORMAT_PAL256,
   },
-  argc = argc,
-  argv = argv,
+  tracked_keys = {
+    RIV_KEYCODE_UP,
+    RIV_KEYCODE_DOWN,
+    RIV_KEYCODE_LEFT,
+    RIV_KEYCODE_RIGHT,
+  },
 })
 
 ## nostartfiles()

@@ -1,0 +1,71 @@
+## pragmas.unitname = ''
+
+require 'memory'
+require '.riv_impl_types'
+require '.riv_xoshiro256'
+
+global function riv_init_input(): void
+  -- track all keys by default
+  memory.spanset((@span(boolean))(riv.mmio_driver.tracked_keys), true)
+end
+
+local function riv_append_keystroke_entropy(key_code: uint8, down: boolean, frame: uint64): void
+  local h: uint64 = 0
+  h = h | key_code
+  h = h | (down and (1_u64 << 8) or 0_u64)
+  h = h | (frame << 9)
+  riv.entropy[riv.entropy_index] = h
+  riv.entropy_index = (riv.entropy_index + 1) & (#riv.entropy - 1)
+  if riv.entropy_size < #riv.entropy then
+    riv.entropy_size = riv.entropy_size + 1
+  end
+end
+
+global function riv_poll_inputs(): void
+  for i: uint32=0,<#riv.keys do
+    riv.keys[i].down = false
+    riv.keys[i].up = false
+  end
+  local key_toggle_count: uint32 = riv.mmio_device.key_toggle_count
+  if key_toggle_count > 0 then
+    for i: uint32=0,<key_toggle_count do
+      local key_code: uint8 = riv.mmio_device.key_toggles[i]
+      local pressed: boolean = not riv.keys[key_code].pressed
+      local frame: uint64 = riv.frame
+      riv.key_toggles[i] = key_code
+      riv.keys[key_code].pressed = pressed
+      riv.keys[key_code].released = not pressed
+      if pressed then
+        riv.keys[key_code].down = true
+        riv.keys[key_code].down_frame = frame
+      else
+        riv.keys[key_code].up = true
+        riv.keys[key_code].up_frame = frame
+      end
+      riv_append_keystroke_entropy(key_code, pressed, frame)
+    end
+    local entropy: span(uint8) = {data=(@*[0]uint8)(&riv.entropy),size=riv.entropy_size * #@uint64}
+    riv.prng:srand_entropy(entropy)
+  end
+  for i: uint32=key_toggle_count,<riv.key_toggle_count do
+    riv.key_toggles[i] = 0
+  end
+  riv.key_toggle_count = key_toggle_count
+end
+
+global function riv_set_tracked_keys(tracked_keys: riv_span_uint8): void <cexport>
+  for i: uint64=0,<RIV_NUM_KEYCODE do
+    riv.tracked_keys[i] = false
+  end
+  for i: uint64=0,<tracked_keys.size do
+    local keycode: uint8 = (@*[0]uint8)(tracked_keys.data)[i]
+    if keycode == 0 then break end
+    riv.tracked_keys[keycode] = true
+  end
+end
+
+global function riv_get_key_state(keycode: uint8): riv_key_state <cexport>
+  if keycode >= RIV_NUM_KEYCODE then return riv_key_state{} end
+  return riv.keys[keycode]
+end
+

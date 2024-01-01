@@ -3,7 +3,4 @@ pragma{nogc=true}
 libpath(fs.join(fs.scriptdir(2), 'libs', 'guest-host', '?.nelua'))
 ]]
 
-require '.riv_types'
-require '.riv_util'
-require '.riv_context'
-require '.riv_prng'
+require '.riv_basic'
