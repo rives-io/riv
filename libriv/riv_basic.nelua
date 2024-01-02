@@ -5,7 +5,6 @@ require 'string'
 require 'linux'
 
 require '.riv_types'
-require '.riv_impl_types'
 require '.riv_yield'
 require '.riv_iocard'
 require '.riv_prng'
@@ -14,10 +13,6 @@ require '.riv_input'
 require '.riv_audio'
 require '.riv_video'
 require '.riv_draw'
-
-global function riv_get_context(): *riv_context <cexport>
-  return &riv
-end
 
 global function riv_setup(argc: int32, argv: *[0]cstring): void <cexport>
   memory.zero(&riv, #@riv_context)
@@ -137,8 +132,11 @@ global function riv_present(): void <cexport>
     riv.mmio_device.key_toggle_count = key_index
   end
   -- advance frame
-  riv.frame = riv.frame + 1
-  riv.mmio_driver.frame = riv.frame
+  local frame: uint64 = riv.frame + 1
+  riv.frame = frame
+  riv.seconds = riv.seconds + (1.0 / riv.framebuffer_desc.target_fps)
+  riv.millis = (@int64)(riv.seconds * 1000.0)
+  riv.mmio_driver.frame = frame
   -- audio commands was flushed
   riv.mmio_driver.audio_command_len = 0
   riv.audiobuffer_off = 0
@@ -173,40 +171,4 @@ global function riv_run(desc: *riv_run_desc): void <cexport>
   end
   riv_shutdown()
   exit(0)
-end
-
-global function riv_quit(): void <cexport>
-  riv.quit = true
-end
-
-global function riv_get_frame(): uint64 <cexport>
-  return riv.frame
-end
-
-global function riv_get_millis(): int64 <cexport>
-  return (@int64)(riv.frame // 1000)
-end
-
-global function riv_get_seconds(): float64 <cexport>
-  return riv.frame / 1000.0
-end
-
-global function riv_get_width(): uint32 <cexport>
-  return riv.framebuffer_desc.width
-end
-
-global function riv_get_height(): uint32 <cexport>
-  return riv.framebuffer_desc.height
-end
-
-global function riv_get_target_fps(): uint32 <cexport>
-  return riv.framebuffer_desc.target_fps
-end
-
-global function riv_get_framebuffer(): *[0]uint8 <cexport>
-  return riv.framebuffer
-end
-
-global function riv_get_palette(): *[0]uint32 <cexport>
-  return riv.palette
 end

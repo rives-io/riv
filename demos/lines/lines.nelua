@@ -3,8 +3,8 @@ require 'riv'
 local SCREEN_SIZE: usize <comptime> = 256
 
 local function frame()
-  local framebuffer: *[0]uint8 = riv_get_framebuffer()
-  local frame: usize = riv_get_frame()
+  local framebuffer: *[0]uint8 = riv.framebuffer
+  local frame: usize = riv.frame
   for y: usize=0,<SCREEN_SIZE do
     ## cemit '#pragma GCC unroll 4'
     for x: usize=0,<SCREEN_SIZE do

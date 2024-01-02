@@ -445,6 +445,8 @@ typedef struct riv_key_toggle_event {
 typedef struct riv_context {
   // Public read-only fields (can be read at any moment)
   uint64_t frame;                         // Current frame number
+  int64_t millis;                         // Current time in microseconds since first frame
+  double seconds;                         // Current time in seconds since first frame
   uint32_t key_toggle_count;              // Number of toggled keys in this frame
   uint8_t key_toggles[RIV_NUM_KEYCODE];   // Toggled key in this frame (in order)
   riv_key_state keys[RIV_NUM_KEYCODE];    // Current keyboard state
@@ -494,7 +496,9 @@ typedef struct riv_run_desc {
 } riv_run_desc;
 
 ////////////////////////////////////////////////////////////////////////////////
-// RIV High Level API
+// RIV API
+
+extern riv_context riv;
 
 // Utilities
 
@@ -505,41 +509,15 @@ RIV_API uint64_t riv_snprintf(char* s, uint64_t maxlen, const char* format, ...)
 
 // Basic
 
-RIV_API riv_context* riv_get_context();               // Get RIV driver context
 RIV_API void riv_setup(int32_t argc, char** argv);    // Initialize RIV driver
 RIV_API void riv_shutdown();                          // Terminate RIV driver
 RIV_API void riv_present();                           // Present current frame buffer and audio commands
 RIV_API void riv_run(riv_run_desc* desc);             // Call setup/present loop/shutdown in one go
-RIV_API void riv_quit();                              // Request quit, breaking run loop in next frame
-
-RIV_API uint64_t riv_get_frame();
-RIV_API int64_t riv_get_millis();
-RIV_API double riv_get_seconds();
-RIV_API uint32_t riv_get_width();
-RIV_API uint32_t riv_get_height();
-RIV_API uint32_t riv_get_target_fps();
-RIV_API riv_unbounded_uint8 riv_get_framebuffer();
-RIV_API riv_unbounded_uint32 riv_get_palette();
 
 // Drawing
 
 RIV_API void riv_clear_screen(uint32_t col);
 RIV_API void riv_draw_pixel(uint32_t x, uint32_t y, uint32_t col);
-
-// IO Card
-
-RIV_API riv_span_uint8 riv_get_incard();
-RIV_API void riv_set_outcard(riv_span_uint8 data);
-RIV_API riv_unbounded_uint8 riv_get_inoutbuffer();
-
-// Keyboard
-
-RIV_API void riv_set_tracked_keys(riv_span_uint8 tracked_keys);
-RIV_API riv_key_state riv_get_key_state(uint8_t keycode);
-RIV_API bool riv_is_key_down(uint8_t keycode);
-RIV_API bool riv_is_key_up(uint8_t keycode);
-RIV_API bool riv_is_key_press(uint8_t keycode);
-RIV_API bool riv_is_key_release(uint8_t keycode);
 
 // Sound system
 

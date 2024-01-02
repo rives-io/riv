@@ -4,7 +4,7 @@ nldecl.generate_bindings_file{
   output_file = 'riv_types.nelua',
   includes = {'riv.h'},
   include_dirs = {'.'},
-  include_names = {'^riv_', '^RIV_', 'riv'},
+  include_names = {'^riv_', '^RIV_'},
   -- import_constants = true,
   force_exclude_names = {
     ['riv_unbounded_uint8'] = true,
@@ -44,5 +44,10 @@ nldecl.generate_bindings_file{
   output_foot = [[
 global RIV_DRIVER_MAGIC: riv_magic_buffer <cimport,nodecl>
 global RIV_DEVICE_MAGIC: riv_magic_buffer <cimport,nodecl>
+## if RIV_IMPL then
+global riv: riv_context <cexport>
+## else
+global riv: riv_context <cimport,nodecl>
+## end
 ]]
 }

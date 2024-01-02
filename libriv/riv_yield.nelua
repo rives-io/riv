@@ -1,7 +1,7 @@
 ## pragmas.unitname = ''
 
 require 'linux'
-require '.riv_impl_types'
+require '.riv_types'
 
 global riv_yield_request: type = @record{
   dev: uint8,

@@ -2,7 +2,7 @@
 
 require 'linux'
 require 'memory'
-require '.riv_impl_types'
+require '.riv_types'
 
 global function riv_sync_incard(): void
   riv.incard_len = riv.mmio_device.incard_len & (RIV_MMIOSIZE_INOUTBUFFER-1)
@@ -31,21 +31,4 @@ global function riv_sync_outcard(): void
     assert(write(riv.verify_iocard_fd, riv.inoutbuffer, riv.outcard_len) == riv.outcard_len, 'iocard write failed')
     assert(ftruncate(riv.verify_iocard_fd, riv.outcard_len) == 0, 'iocard ftruncate failed')
   end
-end
-
-global function riv_get_incard(): riv_span_uint8 <cexport>
-  assert(riv.frame == 0, 'incard should only be read in frame 0')
-  return {data=riv.inoutbuffer, size=riv.incard_len}
-end
-
-global function riv_set_outcard(card: riv_span_uint8): void <cexport>
-  assert(card.size <= RIV_MMIOSIZE_INOUTBUFFER, 'outcard length is too large')
-  if riv.inoutbuffer ~= card.data then
-    memory.copy(riv.inoutbuffer, card.data, card.size)
-  end
-  riv.outcard_len = card.size
-end
-
-global function riv_get_inoutbuffer(): *[0]uint8 <cexport>
-  return riv.inoutbuffer
 end

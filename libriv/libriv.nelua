@@ -1,6 +1,8 @@
 ##[[
 pragma{nogc=true}
 libpath(fs.join(fs.scriptdir(2), 'libs', 'guest-host', '?.nelua'))
+
+RIV_IMPL = true
 ]]
 
 require '.riv_basic'

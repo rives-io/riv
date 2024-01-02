@@ -2,7 +2,7 @@
 
 require 'miniz'
 require 'spng'
-require '.riv_impl_types'
+require '.riv_types'
 
 local function riv_init_default_palette(): void
   riv.mmio_driver.palette[RIV_PAL16_BLACK] = RIV_RGB_PAL16_BLACK

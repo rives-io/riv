@@ -1,3 +1,0 @@
-require '.riv_types'
-
-global riv: riv_context

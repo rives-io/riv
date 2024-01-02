@@ -310,6 +310,8 @@ global riv_key_toggle_event: type <cimport,nodecl> = @record{
 }
 global riv_context: type <cimport,nodecl> = @record{
   frame: uint64,
+  millis: int64,
+  seconds: float64,
   key_toggle_count: uint32,
   key_toggles: [128]uint8,
   keys: [128]riv_key_state,
@@ -357,3 +359,8 @@ global RIV_VERSION_PATCH: cint <comptime> = 0
 global RIV_VERSION: cint <comptime> = 2000
 global RIV_DRIVER_MAGIC: riv_magic_buffer <cimport,nodecl>
 global RIV_DEVICE_MAGIC: riv_magic_buffer <cimport,nodecl>
+## if RIV_IMPL then
+global riv: riv_context <cexport>
+## else
+global riv: riv_context <cimport,nodecl>
+## end

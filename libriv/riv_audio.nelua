@@ -1,7 +1,7 @@
 ## pragmas.unitname = ''
 
 require 'memory'
-require '.riv_impl_types'
+require '.riv_types'
 require '.riv_yield'
 
 local function riv_flush_audio_commands(): void

@@ -1,7 +1,7 @@
 ## pragmas.unitname = ''
 
 require 'memory'
-require '.riv_impl_types'
+require '.riv_types'
 require '.riv_xoshiro256'
 
 global function riv_init_input(): void
@@ -53,7 +53,7 @@ global function riv_poll_inputs(): void
   riv.key_toggle_count = key_toggle_count
 end
 
-global function riv_set_tracked_keys(tracked_keys: riv_span_uint8): void <cexport>
+global function riv_set_tracked_keys(tracked_keys: riv_span_uint8): void
   for i: uint64=0,<RIV_NUM_KEYCODE do
     riv.tracked_keys[i] = false
   end
@@ -65,29 +65,4 @@ global function riv_set_tracked_keys(tracked_keys: riv_span_uint8): void <cexpor
       riv.tracked_keys[keycode] = true
     end
   end
-end
-
-global function riv_get_key_state(keycode: uint8): riv_key_state <cexport>
-  if keycode >= RIV_NUM_KEYCODE then return riv_key_state{} end
-  return riv.keys[keycode]
-end
-
-global function riv_is_key_down(keycode: uint8): boolean <cexport>
-  if keycode >= RIV_NUM_KEYCODE then return false end
-  return riv.keys[keycode].down
-end
-
-global function riv_is_key_up(keycode: uint8): boolean <cexport>
-  if keycode >= RIV_NUM_KEYCODE then return false end
-  return riv.keys[keycode].up
-end
-
-global function riv_is_key_press(keycode: uint8): boolean <cexport>
-  if keycode >= RIV_NUM_KEYCODE then return false end
-  return riv.keys[keycode].press
-end
-
-global function riv_is_key_release(keycode: uint8): boolean <cexport>
-  if keycode >= RIV_NUM_KEYCODE then return false end
-  return riv.keys[keycode].release
 end

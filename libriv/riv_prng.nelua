@@ -1,7 +1,7 @@
 ## pragmas.unitname = ''
 
 require 'murmur3'
-require '.riv_impl_types'
+require '.riv_types'
 require '.riv_xoshiro256'
 
 local span_uint8: type = @span(uint8)
