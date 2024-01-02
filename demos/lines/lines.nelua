@@ -13,11 +13,14 @@ local function frame()
   end
 end
 
+local function init()
+  riv.framebuffer_desc.width = SCREEN_SIZE
+  riv.framebuffer_desc.height = SCREEN_SIZE
+  riv.framebuffer_desc.target_fps = 60
+  riv.framebuffer_desc.pixel_format = RIV_PIXELFORMAT_PAL256
+end
+
 riv_setup(argc, argv)
-riv.framebuffer_desc.width = SCREEN_SIZE
-riv.framebuffer_desc.height = SCREEN_SIZE
-riv.framebuffer_desc.target_fps = 60
-riv.framebuffer_desc.pixel_format = RIV_PIXELFORMAT_PAL256
 init()
 repeat frame() until riv_present()
 riv_shutdown()

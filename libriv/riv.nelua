@@ -21,7 +21,7 @@ global function riv_present(): boolean <cimport,nodecl> end
 
 -- drawing
 global function riv_clear_screen(col: uint32): void <cimport,nodecl> end
-global function riv_draw_pixel(x: uint32, y: uint32, col: uint32): void <cimport,nodecl> end
+global function riv_draw_pixel(x: int32, y: int32, col: uint32): void <cimport,nodecl> end
 
 -- sound system
 global function riv_make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <cimport,nodecl> end

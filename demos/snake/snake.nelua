@@ -207,7 +207,6 @@ local function frame()
 end
 
 local function init()
-  -- set framebuffer size
   riv.framebuffer_desc.width = SCREEN_SIZE
   riv.framebuffer_desc.height = SCREEN_SIZE
   riv.framebuffer_desc.target_fps = 8

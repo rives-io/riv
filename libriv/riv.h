@@ -502,7 +502,7 @@ RIV_API bool riv_present();                           // Present current frame, 
 // Drawing
 
 RIV_API void riv_clear_screen(uint32_t col);
-RIV_API void riv_draw_pixel(uint32_t x, uint32_t y, uint32_t col);
+RIV_API void riv_draw_pixel(int32_t x, int32_t y, uint32_t col);
 
 // Sound system
 

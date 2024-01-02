@@ -53,7 +53,7 @@ RUN wget -O genext2fs-1.5.2.tar.gz https://github.com/cartesi/genext2fs/archive/
     rm -rf genext2fs-*
 
 # Install nelua
-RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarball/e82695abf0a68a30a593cefb0bf1143cf9e14b6b && \
+RUN wget -O nelua-lang-latest.tar.gz https://github.com/edubart/nelua-lang/tarball/4d4b2b187675522a3cf4584ef734a9f8df201159 && \
     tar -xzf nelua-lang-latest.tar.gz && \
     cd edubart-nelua-lang-* && \
     make && \

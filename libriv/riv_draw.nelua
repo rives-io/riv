@@ -3,17 +3,12 @@
 require 'memory'
 require '.riv_types'
 
-local function riv_get_framebuffer_size_pixels(): usize <inline>
-  return riv.framebuffer_desc.width * riv.framebuffer_desc.height
-end
-
 global function riv_clear_screen(col: uint32): void <cexport>
-  memory.set(riv.framebuffer, (@uint8)(col), riv_get_framebuffer_size_pixels())
+  memory.set(riv.framebuffer, (@uint8)(col), riv.framebuffer_desc.width * riv.framebuffer_desc.height)
 end
 
-global function riv_draw_pixel(x: uint32, y: uint32, col: uint32): void <cexport>
-  local p: usize = y*riv.framebuffer_desc.width + x
-  if likely(p < riv_get_framebuffer_size_pixels()) then
-    riv.framebuffer[p] = (@uint8)(col)
+global function riv_draw_pixel(x: int32, y: int32, col: uint32): void <cexport>
+  if likely(x >= 0 and y >= 0 and x < riv.framebuffer_desc.width and y < riv.framebuffer_desc.height) then
+    riv.framebuffer[y*riv.framebuffer_desc.width + x] = (@uint8)(col)
   end
 end

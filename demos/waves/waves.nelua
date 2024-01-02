@@ -1,0 +1,30 @@
+## primtypes.number = primtypes.float32
+## primtypes.integer = primtypes.int32
+
+require 'riv'
+require 'math'
+
+local function draw()
+  riv_clear_screen()
+  local time: number = riv.seconds
+  local r <comptime> = 64
+  for y=-r,r,3 do
+    for x=-r,r,2 do
+      local dist = math.sqrt(x*x+y*y)
+      local z = math.cos((dist/40-time)*math.pi*2.0)*6
+      riv_draw_pixel(r+x, r+y-math.ifloor(z), 6)
+    end
+  end
+end
+
+local function init()
+  riv.framebuffer_desc.width = 128
+  riv.framebuffer_desc.height = 128
+  riv.framebuffer_desc.target_fps = 30
+  riv.framebuffer_desc.pixel_format = RIV_PIXELFORMAT_PAL256
+end
+
+riv_setup(argc, argv)
+init()
+repeat draw() until riv_present()
+riv_shutdown()
