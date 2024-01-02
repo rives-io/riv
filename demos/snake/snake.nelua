@@ -101,8 +101,7 @@ local function game_over()
 end
 
 local function check_turn(keycode: uint8, dir: Direction, turned: boolean)
-  local keystate: riv_key_state = riv_get_key_state(keycode)
-  if keystate.down or (not turned and keystate.pressed) then
+  if riv_is_key_press(keycode) or (not turned and riv_is_key_down(keycode)) then
     local headdir = get_tile(headpos)
     switch dir do
     case Direction.UP then if headdir == Direction.DOWN then return false end
@@ -182,25 +181,8 @@ local function poll_game()
   end
 end
 
-local function draw_background(color: Color)
-  local framebuffer = riv_get_framebuffer()
-  for i=0,<SCREEN_SIZE*SCREEN_SIZE do
-    framebuffer[i] = color
-  end
-end
-
-local function draw_tile(pos: Point2D, color: Color)
-  local framebuffer = riv_get_framebuffer()
-  local xoff, yoff = pos.x*TILE_SIZE, pos.y*TILE_SIZE
-  for y=yoff,<yoff+TILE_SIZE do
-    for x=xoff,<xoff+TILE_SIZE do
-      framebuffer[y*SCREEN_SIZE + x] = color
-    end
-  end
-end
-
 local function draw_apple()
-  draw_tile(applepos, RIV_PAL16_RED)
+  riv_draw_pixel(applepos.x, applepos.y, RIV_PAL16_RED)
 end
 
 local function draw_snake()
@@ -208,14 +190,14 @@ local function draw_snake()
     for y=0,<GRID_SIZE do
       local pos = Point2D{x=x,y=y}
       if has_tile(pos) then -- snake is present at this tile
-        draw_tile(pos, RIV_PAL16_GREEN)
+        riv_draw_pixel(pos.x, pos.y, RIV_PAL16_GREEN)
       end
     end
   end
 end
 
 local function draw()
-  draw_background(RIV_PAL16_DARKBLUE)
+  riv_clear_screen(RIV_PAL16_DARKBLUE)
   draw_apple()
   draw_snake()
 end
@@ -230,7 +212,7 @@ local function init()
   init_game()
 end
 
-riv_run(&(@riv_run_desc){
+riv_run(&riv_run_desc{
   argc = argc,
   argv = argv,
   init_cb = init,

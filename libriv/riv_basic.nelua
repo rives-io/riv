@@ -13,6 +13,7 @@ require '.riv_util'
 require '.riv_input'
 require '.riv_audio'
 require '.riv_video'
+require '.riv_draw'
 
 global function riv_get_context(): *riv_context <cexport>
   return &riv
@@ -204,4 +205,8 @@ end
 
 global function riv_get_framebuffer(): *[0]uint8 <cexport>
   return riv.framebuffer
+end
+
+global function riv_get_palette(): *[0]uint32 <cexport>
+  return riv.palette
 end

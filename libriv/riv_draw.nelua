@@ -1,0 +1,19 @@
+## pragmas.unitname = ''
+
+require 'memory'
+require '.riv_impl_types'
+
+local function riv_get_framebuffer_size_pixels(): usize <inline>
+  return riv.framebuffer_desc.width * riv.framebuffer_desc.height
+end
+
+global function riv_clear_screen(col: uint32): void <cexport>
+  memory.set(riv.framebuffer, (@uint8)(col), riv_get_framebuffer_size_pixels())
+end
+
+global function riv_draw_pixel(x: uint32, y: uint32, col: uint32): void <cexport>
+  local p: usize = y*riv.framebuffer_desc.width + x
+  if likely(p < riv_get_framebuffer_size_pixels()) then
+    riv.framebuffer[p] = (@uint8)(col)
+  end
+end

@@ -5,9 +5,6 @@ require 'spng'
 require '.riv_impl_types'
 
 local function riv_init_default_palette(): void
-  for i: uint32=0,<256 do
-    riv.palette_map[i] = (@uint8)(i)
-  end
   riv.mmio_driver.palette[RIV_PAL16_BLACK] = RIV_RGB_PAL16_BLACK
   riv.mmio_driver.palette[RIV_PAL16_DARKBLUE] = RIV_RGB_PAL16_DARKBLUE
   riv.mmio_driver.palette[RIV_PAL16_DARKPURPLE] = RIV_RGB_PAL16_DARKPURPLE
@@ -87,7 +84,7 @@ local function riv_encode_png_screenshot(): string
 end
 
 -- Save screenshot
-global function riv_save_screenshot_fd()
+global function riv_save_screenshot_fd(): void
   local screenshot_fd_str: string = getenv('RIV_SCREENSHOT_FD')
   if #screenshot_fd_str > 0 then
     local screenshot_fd: int32 = screenshot_fd_str.data[0] - '0'_b

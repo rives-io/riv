@@ -23,26 +23,26 @@ end
 
 global function riv_poll_inputs(): void
   for i: uint32=0,<#riv.keys do
-    riv.keys[i].down = false
-    riv.keys[i].up = false
+    riv.keys[i].press = false
+    riv.keys[i].release = false
   end
   local key_toggle_count: uint32 = riv.mmio_device.key_toggle_count
   if key_toggle_count > 0 then
     for i: uint32=0,<key_toggle_count do
       local key_code: uint8 = riv.mmio_device.key_toggles[i]
-      local pressed: boolean = not riv.keys[key_code].pressed
+      local down: boolean = not riv.keys[key_code].down
       local frame: uint64 = riv.frame
       riv.key_toggles[i] = key_code
-      riv.keys[key_code].pressed = pressed
-      riv.keys[key_code].released = not pressed
-      if pressed then
-        riv.keys[key_code].down = true
+      riv.keys[key_code].down = down
+      riv.keys[key_code].up = not down
+      if down then
+        riv.keys[key_code].press = true
         riv.keys[key_code].down_frame = frame
-      else
-        riv.keys[key_code].up = true
+      else -- up
+        riv.keys[key_code].release = true
         riv.keys[key_code].up_frame = frame
       end
-      riv_append_keystroke_entropy(key_code, pressed, frame)
+      riv_append_keystroke_entropy(key_code, down, frame)
     end
     local entropy: span(uint8) = {data=(@*[0]uint8)(&riv.entropy),size=riv.entropy_size * #@uint64}
     riv.prng:srand_entropy(entropy)
@@ -59,8 +59,11 @@ global function riv_set_tracked_keys(tracked_keys: riv_span_uint8): void <cexpor
   end
   for i: uint64=0,<tracked_keys.size do
     local keycode: uint8 = (@*[0]uint8)(tracked_keys.data)[i]
-    if keycode == 0 then break end
-    riv.tracked_keys[keycode] = true
+    if keycode == 0 then
+      break
+    elseif keycode < RIV_NUM_KEYCODE then
+      riv.tracked_keys[keycode] = true
+    end
   end
 end
 
@@ -69,3 +72,22 @@ global function riv_get_key_state(keycode: uint8): riv_key_state <cexport>
   return riv.keys[keycode]
 end
 
+global function riv_is_key_down(keycode: uint8): boolean <cexport>
+  if keycode >= RIV_NUM_KEYCODE then return false end
+  return riv.keys[keycode].down
+end
+
+global function riv_is_key_up(keycode: uint8): boolean <cexport>
+  if keycode >= RIV_NUM_KEYCODE then return false end
+  return riv.keys[keycode].up
+end
+
+global function riv_is_key_press(keycode: uint8): boolean <cexport>
+  if keycode >= RIV_NUM_KEYCODE then return false end
+  return riv.keys[keycode].press
+end
+
+global function riv_is_key_release(keycode: uint8): boolean <cexport>
+  if keycode >= RIV_NUM_KEYCODE then return false end
+  return riv.keys[keycode].release
+end

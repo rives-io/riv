@@ -429,10 +429,10 @@ typedef struct riv_xoshiro256 {
 typedef struct riv_key_state {
   uint64_t down_frame;  // Last frame the key was pressed
   uint64_t up_frame;    // Last frame the key was released
-  bool pressed;         // Becomes trues when the key is pressed, becomes false only when it is released
-  bool released;        // Becomes trues when the key is released, becomes false only when it is pressed
-  bool down;            // True only in the frame the key is pressed
-  bool up;              // True only in the frame the key is released
+  bool down;            // Becomes trues when the key is pressed, becomes false only when it is released
+  bool up;              // Becomes trues when the key is released, becomes false only when it is pressed
+  bool press;           // True only in the frame the key is pressed
+  bool release;         // True only in the frame the key is released
 } riv_key_state;
 
 // Key toggle event
@@ -457,12 +457,11 @@ typedef struct riv_context {
   riv_xoshiro256 prng;                    // Internal PRNG state
   uint32_t outcard_len;                   // Output card length
   bool quit;                              // When set true, RIV loop will stop
-  riv_unbounded_bool tracked_keys;        // Key codes being tracked
   riv_framebuffer_desc* framebuffer_desc; // Screen frame buffer description
+  riv_unbounded_bool tracked_keys;        // Key codes being tracked
   riv_unbounded_uint8 inoutbuffer;        // Input/output card buffer
   riv_unbounded_uint8 framebuffer;        // Screen frame buffer
   riv_unbounded_uint32 palette;           // Color palette
-  uint8_t palette_map[256];               // Color palette map (only for drawing functions)
   // Private fields
   riv_unbounded_uint8 audiobuffer;        // Audio buffer used by audio commands
   riv_mmio_driver* mmio_driver;
@@ -520,6 +519,12 @@ RIV_API uint32_t riv_get_width();
 RIV_API uint32_t riv_get_height();
 RIV_API uint32_t riv_get_target_fps();
 RIV_API riv_unbounded_uint8 riv_get_framebuffer();
+RIV_API riv_unbounded_uint32 riv_get_palette();
+
+// Drawing
+
+RIV_API void riv_clear_screen(uint32_t col);
+RIV_API void riv_draw_pixel(uint32_t x, uint32_t y, uint32_t col);
 
 // IO Card
 
@@ -531,6 +536,10 @@ RIV_API riv_unbounded_uint8 riv_get_inoutbuffer();
 
 RIV_API void riv_set_tracked_keys(riv_span_uint8 tracked_keys);
 RIV_API riv_key_state riv_get_key_state(uint8_t keycode);
+RIV_API bool riv_is_key_down(uint8_t keycode);
+RIV_API bool riv_is_key_up(uint8_t keycode);
+RIV_API bool riv_is_key_press(uint8_t keycode);
+RIV_API bool riv_is_key_release(uint8_t keycode);
 
 // Sound system
 
