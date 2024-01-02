@@ -17,8 +17,7 @@ global function riv_snprintf(s: cstring, maxlen: usize, format: cstring <const>,
 -- basic
 global function riv_setup(argc: int32, argv: *[0]cstring): void <cimport,nodecl> end
 global function riv_shutdown(): void <cimport,nodecl> end
-global function riv_present(): void <cimport,nodecl> end
-global function riv_run(desc: *riv_run_desc): void <cimport,nodecl> end
+global function riv_present(): boolean <cimport,nodecl> end
 
 -- drawing
 global function riv_clear_screen(col: uint32): void <cimport,nodecl> end

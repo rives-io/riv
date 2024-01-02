@@ -99,14 +99,14 @@ global function riv_shutdown(): void <cexport>
   memory.zero(&riv, #@riv_context)
 end
 
-global function riv_present(): void <cexport>
+global function riv_present(): boolean <cexport>
   -- force exit when replay ends
   if riv.verifying then
     local event: riv_key_toggle_event = riv.verify_key_events[riv.verify_key_event_index]
     if event.key_code == 0xff and riv.frame >= event.frame + 1 then
       riv_shutdown()
       exit(0)
-      return
+      return true
     end
   end
   -- copy outcard description to driver
@@ -117,7 +117,7 @@ global function riv_present(): void <cexport>
   if riv.frame >= riv.stop_frame then
     riv_shutdown()
     exit(0)
-    return
+    return true
   end
   -- fill with replay inputs
   if riv.verifying then
@@ -142,33 +142,5 @@ global function riv_present(): void <cexport>
   riv.audiobuffer_off = 0
   -- poll keyboard inputs
   riv_poll_inputs()
-end
-
-global function riv_run(desc: *riv_run_desc): void <cexport>
-  if desc.framebuffer_desc.width == 0 then desc.framebuffer_desc.width = RIV_DEFAULT_WIDTH end
-  if desc.framebuffer_desc.height == 0 then desc.framebuffer_desc.height = RIV_DEFAULT_HEIGHT end
-  if desc.framebuffer_desc.target_fps == 0 then desc.framebuffer_desc.target_fps = RIV_DEFAULT_TARGET_FPS end
-  if desc.framebuffer_desc.pixel_format == 0 then desc.framebuffer_desc.pixel_format = RIV_DEFAULT_PIXELFORMAT end
-  if not riv.mmio_driver then
-    riv_setup(desc.argc, desc.argv)
-  end
-  if desc.tracked_keys[0] ~= 0 then
-    riv_set_tracked_keys({data=&desc.tracked_keys, size=RIV_NUM_KEYCODE})
-  end
-  if desc.init_cb then
-    desc.init_cb()
-  end
-  riv.mmio_driver.framebuffer_desc = desc.framebuffer_desc
-  if desc.frame_cb then
-    -- process frames until quitting
-    while not riv.quit do
-      desc.frame_cb()
-      riv_present()
-    end
-  end
-  if desc.cleanup_cb then
-    desc.cleanup_cb()
-  end
-  riv_shutdown()
-  exit(0)
+  return riv.quit
 end

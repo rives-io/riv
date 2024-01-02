@@ -207,26 +207,17 @@ local function frame()
 end
 
 local function init()
+  -- set framebuffer size
+  riv.framebuffer_desc.width = SCREEN_SIZE
+  riv.framebuffer_desc.height = SCREEN_SIZE
+  riv.framebuffer_desc.target_fps = 8
+  riv.framebuffer_desc.pixel_format = RIV_PIXELFORMAT_PAL256
   init_game()
 end
 
-riv_run(&riv_run_desc{
-  argc = argc,
-  argv = argv,
-  init_cb = init,
-  frame_cb = frame,
-  framebuffer_desc = {
-    width = SCREEN_SIZE,
-    height = SCREEN_SIZE,
-    target_fps = 8,
-    pixel_format = RIV_PIXELFORMAT_PAL256,
-  },
-  tracked_keys = {
-    RIV_KEYCODE_UP,
-    RIV_KEYCODE_DOWN,
-    RIV_KEYCODE_LEFT,
-    RIV_KEYCODE_RIGHT,
-  },
-})
+riv_setup(argc, argv)
+init()
+repeat frame() until riv_present()
+riv_shutdown()
 
 ## nostartfiles()

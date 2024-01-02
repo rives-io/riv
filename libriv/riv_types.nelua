@@ -343,16 +343,6 @@ global riv_context: type <cimport,nodecl> = @record{
   verify_key_events: *[0]riv_key_toggle_event,
   stop_frame: uint64
 }
-global riv_simple_callback: type <cimport,nodecl> = @function(): void
-global riv_run_desc: type <cimport,nodecl> = @record{
-  argc: int32,
-  argv: *cstring,
-  init_cb: riv_simple_callback,
-  cleanup_cb: riv_simple_callback,
-  frame_cb: riv_simple_callback,
-  framebuffer_desc: riv_framebuffer_desc,
-  tracked_keys: [128]uint8
-}
 global RIV_VERSION_MAJOR: cint <comptime> = 0
 global RIV_VERSION_MINOR: cint <comptime> = 2
 global RIV_VERSION_PATCH: cint <comptime> = 0

@@ -52,17 +52,3 @@ global function riv_poll_inputs(): void
   end
   riv.key_toggle_count = key_toggle_count
 end
-
-global function riv_set_tracked_keys(tracked_keys: riv_span_uint8): void
-  for i: uint64=0,<RIV_NUM_KEYCODE do
-    riv.tracked_keys[i] = false
-  end
-  for i: uint64=0,<tracked_keys.size do
-    local keycode: uint8 = (@*[0]uint8)(tracked_keys.data)[i]
-    if keycode == 0 then
-      break
-    elseif keycode < RIV_NUM_KEYCODE then
-      riv.tracked_keys[keycode] = true
-    end
-  end
-end

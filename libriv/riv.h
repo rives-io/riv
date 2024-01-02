@@ -481,20 +481,6 @@ typedef struct riv_context {
   uint64_t stop_frame;
 } riv_context;
 
-// RIV context callback
-typedef void (*riv_simple_callback)();
-
-// RIV run description
-typedef struct riv_run_desc {
-  int32_t argc;                          // Pass argc from main to seed PRNG
-  char** argv;                           // Pass argv from main to seed PRNG
-  riv_simple_callback init_cb;           // Callback called when initializing the app
-  riv_simple_callback cleanup_cb;        // Callback called before exiting the app
-  riv_simple_callback frame_cb;          // Callback called every app frame
-  riv_framebuffer_desc framebuffer_desc; // Screen frame buffer description
-  uint8_t tracked_keys[RIV_NUM_KEYCODE]; // Keyboard keys to be tracked
-} riv_run_desc;
-
 ////////////////////////////////////////////////////////////////////////////////
 // RIV API
 
@@ -511,8 +497,7 @@ RIV_API uint64_t riv_snprintf(char* s, uint64_t maxlen, const char* format, ...)
 
 RIV_API void riv_setup(int32_t argc, char** argv);    // Initialize RIV driver
 RIV_API void riv_shutdown();                          // Terminate RIV driver
-RIV_API void riv_present();                           // Present current frame buffer and audio commands
-RIV_API void riv_run(riv_run_desc* desc);             // Call setup/present loop/shutdown in one go
+RIV_API bool riv_present();                           // Present current frame, returns true when quit was requested in the frame, false otherwise.
 
 // Drawing
 
