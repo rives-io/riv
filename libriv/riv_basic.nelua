@@ -134,8 +134,11 @@ global function riv_present(): boolean <cexport>
   -- advance frame
   local frame: uint64 = riv.frame + 1
   riv.frame = frame
-  riv.seconds = riv.seconds + (1.0 / riv.framebuffer_desc.target_fps)
-  riv.millis = (@int64)(riv.seconds * 1000.0)
+  -- update time trackers
+  -- TODO: clock can skew with target_fps changes, this could be detected
+  local target_fps: uint64 = riv.framebuffer_desc.target_fps > 0 and riv.framebuffer_desc.target_fps or RIV_DEFAULT_TARGET_FPS
+  riv.seconds = frame / target_fps
+  riv.millis = (frame * 1000) // target_fps
   riv.mmio_driver.frame = frame
   -- audio commands was flushed
   riv.mmio_driver.audio_command_len = 0

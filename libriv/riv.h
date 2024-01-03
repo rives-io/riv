@@ -405,8 +405,8 @@ typedef struct riv_mmio_driver {
   riv_audio_command audio_commands[32];
   uint32_t audio_command_len;
   uint32_t outcard_len;
-  bool tracked_keys[RIV_NUM_KEYCODE];
   uint32_t palette[256];
+  bool tracked_keys[RIV_NUM_KEYCODE];
 } riv_mmio_driver;
 
 // Device memory mapped structure (device writes, driver reads)
@@ -447,14 +447,15 @@ typedef struct riv_context {
   uint64_t frame;                         // Current frame number
   int64_t millis;                         // Current time in microseconds since first frame
   double seconds;                         // Current time in seconds since first frame
-  uint32_t key_toggle_count;              // Number of toggled keys in this frame
-  uint8_t key_toggles[RIV_NUM_KEYCODE];   // Toggled key in this frame (in order)
-  riv_key_state keys[RIV_NUM_KEYCODE];    // Current keyboard state
-  uint32_t key_modifiers;                 // NIY
   uint32_t incard_len;                    // Input card length
   bool valid;                             // Whether riv is initialized
   bool verifying;                         // Whether we are verifying
   bool yielding;                          // Whether an audio/video/input devices are connected and yielding
+  uint32_t key_modifiers;                 // NIY
+  uint32_t key_toggle_count;              // Number of toggled keys in this frame
+  uint8_t key_toggles[RIV_NUM_KEYCODE];   // Toggled key in this frame (in order)
+  riv_key_state keys[RIV_NUM_KEYCODE];    // Current keyboard state
+  int8_t reserved_r[856];
   // Public read/write fields (can be written at any moment)
   riv_xoshiro256 prng;                    // Internal PRNG state
   uint32_t outcard_len;                   // Output card length
@@ -464,10 +465,11 @@ typedef struct riv_context {
   riv_unbounded_uint8 inoutbuffer;        // Input/output card buffer
   riv_unbounded_uint8 framebuffer;        // Screen frame buffer
   riv_unbounded_uint32 palette;           // Color palette
+  uint8_t reserved_rw[432];
   // Private fields
-  riv_unbounded_uint8 audiobuffer;        // Audio buffer used by audio commands
   riv_mmio_driver* mmio_driver;
   riv_mmio_device* mmio_device;
+  riv_unbounded_uint8 audiobuffer;        // Audio buffer used by audio commands
   uint64_t entropy[128];
   uint32_t entropy_index;
   uint32_t entropy_size;
