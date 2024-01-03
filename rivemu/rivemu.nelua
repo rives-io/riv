@@ -76,6 +76,7 @@ local rivemu_options: type = @record{
   incard_filename: string,
   outcard_filename: string,
   outhash_filename: string,
+  screenshot_filename: string,
   recording: boolean,
   replaying: boolean,
   verifying: boolean,
@@ -88,11 +89,13 @@ local rivemu_options: type = @record{
   wait_halt: boolean,
   print_final_hash: boolean,
   speed: float64,
+  stop_frame: int64,
 }
 
 local function parse_options(): rivemu_options
   local opts: rivemu_options = {
-    speed = 1.0
+    speed = 1.0,
+    stop_frame = -1,
   }
   ## if ccinfo.is_wasm then
   opts.no_quit = true
@@ -122,11 +125,17 @@ local function parse_options(): rivemu_options
       opts.outcard_filename = sargs_value_at(i)
     elseif a == '-save-outhash' then
       opts.outhash_filename = sargs_value_at(i)
+    elseif a == '-save-screenshot' then
+      opts.screenshot_filename = sargs_value_at(i)
     elseif a == '-speed' then
       local numstr: string = sargs_value_at(i)
       assert(numstr:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
       opts.speed = tonumber(numstr)
       assert(opts.speed > 0.0, 'speed must be positive')
+    elseif a == '-stop-frame' then
+      local numstr: string = sargs_value_at(i)
+      assert(numstr:find('^[0-9]+$') > 0, 'malformed frame number')
+      opts.stop_frame = tointeger(numstr)
     elseif a == '-no-audio' then
       opts.no_audio = true
     elseif a == '-no-video' then
@@ -148,9 +157,6 @@ local function parse_options(): rivemu_options
     elseif a == '-help' or a == '--help' or a == '-h' then
       io.printf("Usage: rivemu [options]\n")
       io.write[[
--print-fps
-  Print frame rate statistics every second.
-
 -cartridge <filename>
   Cartridge to run.
 
@@ -163,6 +169,9 @@ local function parse_options(): rivemu_options
 -save-outhash <filename>
   Save output card Keccak-256 hash to a file as a hexadecimal string.
 
+-save-screenshot <filename>
+  Save screenshot of last frame to a PNG image file.
+
 -record <filename>
   Record game to an input log.
 
@@ -174,6 +183,9 @@ local function parse_options(): rivemu_options
 
 -speed <speed>
   Set replay speed.
+
+-stop-frame <frame>
+  Set frame to stop.
 
 -no-audio
   Disable audio.
@@ -189,6 +201,15 @@ local function parse_options(): rivemu_options
 
 -wait-halt
   Don't quit when RIV device is closed, wait for the machine to halt.
+
+-print-stats
+  Print frame rate statistics every second.
+
+-print-final-hash
+  Print final machine root hash.
+
+-args <args>
+  Append arguments when running the cartridge.
 ]]
       os.exit(0)
     else
@@ -206,21 +227,25 @@ function rivemu_options:entrypoint(): string
     else
       entrypoint_sb:write('RIV_CARTRIDGE=/dev/mtdblock1 ')
     end
-    if self.no_yield then
-      entrypoint_sb:write('RIV_NO_YIELD=y \z
-        riv-run;\z
-        echo ==== BEGIN OUTCARD ====;\z
-        cat /run/outcard;echo;\z
-        echo ==== END OUTCARD ====')
-    else
-      entrypoint_sb:write('riv-run')
+    if self.stop_frame >= 0 then
+      entrypoint_sb:write('RIV_STOP_FRAME=', self.stop_frame, ' ')
     end
+    if self.no_yield then
+      entrypoint_sb:write('RIV_NO_YIELD=y ')
+    end
+    entrypoint_sb:write('riv-run')
   end
   if #self.entrypoint_args > 0 then
     if #entrypoint_sb > 0 then
       entrypoint_sb:write(' ')
     end
     entrypoint_sb:write(self.entrypoint_args)
+  end
+  if self.verifying and self.no_yield then
+    entrypoint_sb:write(';\z
+      echo ==== BEGIN OUTCARD ====;\z
+      cat /run/outcard;echo;\z
+      echo ==== END OUTCARD ====')
   end
   return entrypoint_sb:promote()
 end
@@ -359,6 +384,9 @@ local function shutdown(): void
   rivemu_iocard.shutdown()
   rivemu_input.shutdown()
   if not options.no_video then
+    if #options.screenshot_filename > 0 then
+      rivemu_video.save_screenshot(options.screenshot_filename)
+    end
     rivemu_video.shutdown()
   end
   if not options.no_audio then

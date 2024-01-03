@@ -2,6 +2,8 @@
 
 require 'math'
 require 'sokol'
+require 'miniz'
+require 'spng'
 
 require '.machine'
 
@@ -142,4 +144,67 @@ function rivemu_video.present(): void
   sgp_end()
   sg_end_pass()
   sg_commit()
+end
+
+-- Encodes a screenshot from the current framebuffer to a PNG binary string.
+local function riv_encode_png_screenshot(): string
+  local ret: cint
+  -- Creating an encoder context requires a flag
+  local enc: *spng_ctx = spng_ctx_new(SPNG_CTX_ENCODER)
+  assert(enc ~= nilptr, 'spng_ctx_new failed')
+  defer spng_ctx_free(enc) end
+
+  -- Encode to internal buffer managed by the library
+  ret = spng_set_option(enc, SPNG_ENCODE_TO_BUFFER, 1)
+  if ret ~= 0 then error('spng_set_option failed: '..spng_strerror(ret)) end
+
+  -- Specify image dimensions, PNG format
+  local ihdr: spng_ihdr = {
+    width = fb_desc.width,
+    height = fb_desc.height,
+    bit_depth = 8,
+    color_type = SPNG_COLOR_TYPE_INDEXED
+  }
+
+  -- Image will be encoded according to ihdr.color_type, .bit_depth
+  ret = spng_set_ihdr(enc, &ihdr)
+  if ret ~= 0 then error('spng_set_option failed: '..spng_strerror(ret)) end
+
+  -- Detect palette size
+  local num_pixels: usize = fb_desc.width * fb_desc.height
+  local num_colors: usize = 0
+  for i=0,<num_pixels do
+    if framebuffer[i] > num_colors then num_colors = framebuffer[i] end
+  end
+  num_colors = num_colors + 1
+
+  -- Set palette colors
+  local plte: spng_plte = {n_entries = num_colors}
+  for i: usize=0,<256 do
+    plte.entries[i].red = (@uint8)((machine.mmio_driver.palette[i] >> 0) & 0xff)
+    plte.entries[i].green = (@uint8)((machine.mmio_driver.palette[i] >> 8) & 0xff)
+    plte.entries[i].blue = (@uint8)((machine.mmio_driver.palette[i] >> 16) & 0xff)
+  end
+  ret = spng_set_plte(enc, &plte)
+  if ret ~= 0 then error('spng_set_plte failed: '..spng_strerror(ret)) end
+
+  -- SPNG_FMT_PNG is a special value that matches the format in ihdr,
+  -- SPNG_ENCODE_FINALIZE will finalize the PNG with the end-of-file marker
+  ret = spng_encode_image(enc, &framebuffer, num_pixels, SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE)
+  if ret ~= 0 then error('spng_encode_image failed: '..spng_strerror(ret)) end
+
+  -- PNG is written to an internal buffer by default
+  ret = 0
+  local png_size: usize
+  local png: pointer = spng_get_png_buffer(enc, &png_size, &ret)
+  if ret ~= 0 or png == nilptr then error('spng_get_png_buffer failed: '..spng_strerror(ret)) end
+
+  return string{data=(@*[0]uint8)(png), size=png_size}
+end
+
+function rivemu_video.save_screenshot(filename: string): void
+  local screenshot_data: string = riv_encode_png_screenshot()
+  local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
+  fn_assert!(file:write(screenshot_data))
+  io.printf("[RIVEMU] Saved last frame screenshot '%s'\n", filename)
 end
