@@ -20,6 +20,7 @@
 *.outcard
 *.js
 *.wasm
+*.png
 
 # ignore generated binaries
 /rivemu/rivemu

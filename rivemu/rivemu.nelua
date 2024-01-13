@@ -558,6 +558,7 @@ sapp_run(sapp_desc{
   width = 0,
   height = 0,
   window_title = "RIVEMU",
+  logger = {func = slog_func}
 })
 
 ## if ccinfo.is_emscripten then

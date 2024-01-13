@@ -36,7 +36,7 @@ end
 
 -- Initialize video subsystem.
 function rivemu_video.setup(): void
-  sg_setup(sg_desc{context = sapp_sgcontext()})
+  sg_setup(sg_desc{context = sapp_sgcontext(), logger = {func = slog_func}})
   assert(sg_isvalid(), 'failed to initialize Sokol GFX')
   sgp_setup(sgp_desc{})
   assert(sgp_is_valid(), 'failed to initialize SGP')

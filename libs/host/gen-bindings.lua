@@ -54,13 +54,14 @@ end
 -- sokol
 nldecl.generate_bindings_file{
   output_file = 'sokol.nelua',
-  includes = {'sokol_gfx.h', 'sokol_gp.h', 'sokol_app.h', 'sokol_args.h'},
+  includes = {'sokol_gfx.h', 'sokol_gp.h', 'sokol_app.h', 'sokol_args.h', 'sokol_log.h'},
   include_dirs = {'.'},
   include_names = {
     '^sg_', '^SG_',
     '^sapp_', '^SAPP_',
     '^sgp_', '^SGP_',
     '^sargs_', '^SARGS_',
+    '^slog_', '^SLOG_',
   },
   output_head =
 [==[
@@ -107,6 +108,10 @@ end
 cdefine 'SOKOL_ARGS_API_DECL static'
 cdefine 'SOKOL_ARGS_IMPL'
 cinclude 'sokol_args.h'
+-- sokol_log
+cdefine 'SOKOL_LOG_API_DECL static'
+cdefine 'SOKOL_LOG_IMPL'
+cinclude 'sokol_log.h'
 ]]
 ]==],
   output_foot =

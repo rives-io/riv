@@ -24,6 +24,7 @@ update-sokol:
 	wget -O host/sokol_gfx.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_gfx.h
 	wget -O host/sokol_app.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_app.h
 	wget -O host/sokol_args.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_args.h
+	wget -O host/sokol_log.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_log.h
 
 update-sokol_gp:
 	wget -O host/sokol_gp.h https://raw.githubusercontent.com/edubart/sokol_gp/$(SOKOL_TAG)/sokol_gp.h

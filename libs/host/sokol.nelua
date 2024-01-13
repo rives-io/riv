@@ -41,6 +41,10 @@ end
 cdefine 'SOKOL_ARGS_API_DECL static'
 cdefine 'SOKOL_ARGS_IMPL'
 cinclude 'sokol_args.h'
+-- sokol_log
+cdefine 'SOKOL_LOG_API_DECL static'
+cdefine 'SOKOL_LOG_IMPL'
+cinclude 'sokol_log.h'
 ]]
 global sg_buffer: type <cimport,nodecl> = @record{
   id: uint32
@@ -128,39 +132,39 @@ global sg_pixel_format: type <cimport,nodecl,using> = @enum(cint){
   SG_PIXELFORMAT_BGRA8 = 28,
   SG_PIXELFORMAT_RGB10A2 = 29,
   SG_PIXELFORMAT_RG11B10F = 30,
-  SG_PIXELFORMAT_RG32UI = 31,
-  SG_PIXELFORMAT_RG32SI = 32,
-  SG_PIXELFORMAT_RG32F = 33,
-  SG_PIXELFORMAT_RGBA16 = 34,
-  SG_PIXELFORMAT_RGBA16SN = 35,
-  SG_PIXELFORMAT_RGBA16UI = 36,
-  SG_PIXELFORMAT_RGBA16SI = 37,
-  SG_PIXELFORMAT_RGBA16F = 38,
-  SG_PIXELFORMAT_RGBA32UI = 39,
-  SG_PIXELFORMAT_RGBA32SI = 40,
-  SG_PIXELFORMAT_RGBA32F = 41,
-  SG_PIXELFORMAT_DEPTH = 42,
-  SG_PIXELFORMAT_DEPTH_STENCIL = 43,
-  SG_PIXELFORMAT_BC1_RGBA = 44,
-  SG_PIXELFORMAT_BC2_RGBA = 45,
-  SG_PIXELFORMAT_BC3_RGBA = 46,
-  SG_PIXELFORMAT_BC4_R = 47,
-  SG_PIXELFORMAT_BC4_RSN = 48,
-  SG_PIXELFORMAT_BC5_RG = 49,
-  SG_PIXELFORMAT_BC5_RGSN = 50,
-  SG_PIXELFORMAT_BC6H_RGBF = 51,
-  SG_PIXELFORMAT_BC6H_RGBUF = 52,
-  SG_PIXELFORMAT_BC7_RGBA = 53,
-  SG_PIXELFORMAT_PVRTC_RGB_2BPP = 54,
-  SG_PIXELFORMAT_PVRTC_RGB_4BPP = 55,
-  SG_PIXELFORMAT_PVRTC_RGBA_2BPP = 56,
-  SG_PIXELFORMAT_PVRTC_RGBA_4BPP = 57,
-  SG_PIXELFORMAT_ETC2_RGB8 = 58,
-  SG_PIXELFORMAT_ETC2_RGB8A1 = 59,
-  SG_PIXELFORMAT_ETC2_RGBA8 = 60,
-  SG_PIXELFORMAT_ETC2_RG11 = 61,
-  SG_PIXELFORMAT_ETC2_RG11SN = 62,
-  SG_PIXELFORMAT_RGB9E5 = 63,
+  SG_PIXELFORMAT_RGB9E5 = 31,
+  SG_PIXELFORMAT_RG32UI = 32,
+  SG_PIXELFORMAT_RG32SI = 33,
+  SG_PIXELFORMAT_RG32F = 34,
+  SG_PIXELFORMAT_RGBA16 = 35,
+  SG_PIXELFORMAT_RGBA16SN = 36,
+  SG_PIXELFORMAT_RGBA16UI = 37,
+  SG_PIXELFORMAT_RGBA16SI = 38,
+  SG_PIXELFORMAT_RGBA16F = 39,
+  SG_PIXELFORMAT_RGBA32UI = 40,
+  SG_PIXELFORMAT_RGBA32SI = 41,
+  SG_PIXELFORMAT_RGBA32F = 42,
+  SG_PIXELFORMAT_DEPTH = 43,
+  SG_PIXELFORMAT_DEPTH_STENCIL = 44,
+  SG_PIXELFORMAT_BC1_RGBA = 45,
+  SG_PIXELFORMAT_BC2_RGBA = 46,
+  SG_PIXELFORMAT_BC3_RGBA = 47,
+  SG_PIXELFORMAT_BC4_R = 48,
+  SG_PIXELFORMAT_BC4_RSN = 49,
+  SG_PIXELFORMAT_BC5_RG = 50,
+  SG_PIXELFORMAT_BC5_RGSN = 51,
+  SG_PIXELFORMAT_BC6H_RGBF = 52,
+  SG_PIXELFORMAT_BC6H_RGBUF = 53,
+  SG_PIXELFORMAT_BC7_RGBA = 54,
+  SG_PIXELFORMAT_PVRTC_RGB_2BPP = 55,
+  SG_PIXELFORMAT_PVRTC_RGB_4BPP = 56,
+  SG_PIXELFORMAT_PVRTC_RGBA_2BPP = 57,
+  SG_PIXELFORMAT_PVRTC_RGBA_4BPP = 58,
+  SG_PIXELFORMAT_ETC2_RGB8 = 59,
+  SG_PIXELFORMAT_ETC2_RGB8A1 = 60,
+  SG_PIXELFORMAT_ETC2_RGBA8 = 61,
+  SG_PIXELFORMAT_ETC2_RG11 = 62,
+  SG_PIXELFORMAT_ETC2_RG11SN = 63,
   _SG_PIXELFORMAT_NUM = 64,
   _SG_PIXELFORMAT_FORCE_U32 = 2147483647
 }
@@ -170,7 +174,9 @@ global sg_pixelformat_info: type <cimport,nodecl> = @record{
   render: boolean,
   blend: boolean,
   msaa: boolean,
-  depth: boolean
+  depth: boolean,
+  compressed: boolean,
+  bytes_per_pixel: cint
 }
 global sg_features: type <cimport,nodecl> = @record{
   origin_top_left: boolean,
@@ -1349,6 +1355,10 @@ global sgp_blend_mode: type <cimport,nodecl,using> = @enum(cint){
   SGP_BLENDMODE_MUL = 4,
   _SGP_BLENDMODE_NUM = 5
 }
+global sgp_vs_attr_location: type <cimport,nodecl,using> = @enum(cint){
+  SGP_VS_ATTR_COORD = 0,
+  SGP_VS_ATTR_COLOR = 1
+}
 global sgp_isize: type <cimport,nodecl> = @record{
   w: cint,
   h: cint
@@ -1392,6 +1402,17 @@ global sgp_color: type <cimport,nodecl> = @record{
   b: float32,
   a: float32
 }
+global sgp_color_ub4: type <cimport,nodecl> = @record{
+  r: uint8,
+  g: uint8,
+  b: uint8,
+  a: uint8
+}
+global sgp_vertex: type <cimport,nodecl> = @record{
+  position: sgp_vec2,
+  texcoord: sgp_vec2,
+  color: sgp_color_ub4
+}
 global sgp_uniform: type <cimport,nodecl> = @record{
   size: uint32,
   content: [4]float32
@@ -1409,7 +1430,7 @@ global sgp_state: type <cimport,nodecl> = @record{
   transform: sgp_mat2x3,
   mvp: sgp_mat2x3,
   thickness: float32,
-  color: sgp_color,
+  color: sgp_color_ub4,
   textures: sgp_textures_uniform,
   uniform: sgp_uniform,
   blend_mode: sgp_blend_mode,
@@ -1421,13 +1442,18 @@ global sgp_state: type <cimport,nodecl> = @record{
 global sgp_desc: type <cimport,nodecl> = @record{
   max_vertices: uint32,
   max_commands: uint32,
-  pixel_format: sg_pixel_format
+  color_format: sg_pixel_format,
+  depth_format: sg_pixel_format,
+  sample_count: cint
 }
 global sgp_pipeline_desc: type <cimport,nodecl> = @record{
   shader: sg_shader_desc,
   primitive_type: sg_primitive_type,
   blend_mode: sgp_blend_mode,
-  pixel_format: sg_pixel_format
+  color_format: sg_pixel_format,
+  depth_format: sg_pixel_format,
+  sample_count: cint,
+  has_vs_color: boolean
 }
 global SAPP_MAX_TOUCHPOINTS: cint <comptime> = 8
 global SAPP_MAX_MOUSEBUTTONS: cint <comptime> = 3
@@ -1880,6 +1906,8 @@ global function sg_query_backend(): sg_backend <cimport,nodecl> end
 global function sg_query_features(): sg_features <cimport,nodecl> end
 global function sg_query_limits(): sg_limits <cimport,nodecl> end
 global function sg_query_pixelformat(fmt: sg_pixel_format): sg_pixelformat_info <cimport,nodecl> end
+global function sg_query_row_pitch(fmt: sg_pixel_format, width: cint, row_align_bytes: cint): cint <cimport,nodecl> end
+global function sg_query_surface_pitch(fmt: sg_pixel_format, width: cint, height: cint, row_align_bytes: cint): cint <cimport,nodecl> end
 global function sg_query_buffer_state(buf: sg_buffer): sg_resource_state <cimport,nodecl> end
 global function sg_query_image_state(img: sg_image): sg_resource_state <cimport,nodecl> end
 global function sg_query_sampler_state(smp: sg_sampler): sg_resource_state <cimport,nodecl> end
@@ -2009,6 +2037,7 @@ global function sgp_scissor(x: cint, y: cint, w: cint, h: cint): void <cimport,n
 global function sgp_reset_scissor(): void <cimport,nodecl> end
 global function sgp_reset_state(): void <cimport,nodecl> end
 global function sgp_clear(): void <cimport,nodecl> end
+global function sgp_draw(primitive_type: sg_primitive_type, vertices: *sgp_vertex, count: uint32): void <cimport,nodecl> end
 global function sgp_draw_points(points: *sgp_point, count: uint32): void <cimport,nodecl> end
 global function sgp_draw_point(x: float32, y: float32): void <cimport,nodecl> end
 global function sgp_draw_lines(lines: *sgp_line, count: uint32): void <cimport,nodecl> end
@@ -2091,6 +2120,7 @@ global function sargs_find(key: cstring): cint <cimport,nodecl> end
 global function sargs_num_args(): cint <cimport,nodecl> end
 global function sargs_key_at(index: cint): cstring <cimport,nodecl> end
 global function sargs_value_at(index: cint): cstring <cimport,nodecl> end
+global function slog_func(tag: cstring, log_level: uint32, log_item: uint32, message: cstring, line_nr: uint32, filename: cstring, user_data: pointer): void <cimport,nodecl> end
 global SGP_BATCH_OPTIMIZER_DEPTH: cint <comptime> = 8
 global SGP_UNIFORM_CONTENT_SLOTS: cint <comptime> = 4
 global SGP_TEXTURE_SLOTS: cint <comptime> = 4
