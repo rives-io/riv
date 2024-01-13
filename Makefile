@@ -4,9 +4,27 @@ all:
 	$(MAKE) rivemu
 	$(MAKE) demos
 
+all-cross:
+	$(MAKE) kernel
+	$(MAKE) rootfs-cross
+	$(MAKE) rivemu
+	$(MAKE) demos-cross
+
 # Targets that uses the host toolchain
 libs kernel rootfs rivemu:
 	$(MAKE) -C $@
+
+libriv-cross:
+	$(MAKE) -C libriv
+
+tools-cross:
+	$(MAKE) -C tools
+
+rootfs-cross: libriv-cross tools-cross
+	$(MAKE) -C rootfs
+
+demos-cross:
+	$(MAKE) -C demos
 
 # Targets that uses RISC-V toolchain
 libriv tools demos:

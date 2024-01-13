@@ -266,10 +266,10 @@ a game library and a sandboxing utility. Here is a list of each folder component
 - `rivemu` - RIV Emulator, this is the emulator players use to play the games locally with graphics and audio.
 - `libriv` - RIV library used as middle-layers, that every game must use for graphics, audio, inputs, time and random.
 - `demos` - Simple games made with RIV that are provable on-chain to showcase it.
-- `tools` - RIV Linux utilities, such as `bwrapbox`, a sandboxing on top of [bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) for running games with additions for limiting CPU usage and memory usage.
+- `tools` - RIV Linux utilities
 - `libs` - Libraries providing functionality to the host machine or guest machine, such as
 [Sokol](https://github.com/floooh/sokol) for graphics, [miniaudio](https://miniaud.io/) for audio,
-[miniz](https://github.com/richgel999/miniz) for log compression, hash utilities..
+[miniz](https://github.com/richgel999/miniz) for compression, hash utilities..
 
 ## Compiling RIV emulator
 
@@ -278,7 +278,7 @@ below I will provide instructions to compile on Ubuntu distribution.
 
 First install Cartesi Machine with the following commands:
 
-```
+```sh
 apt-get install -y build-essential git pkg-config lua5.4 liblua5.4-dev wget libboost-dev libboost-context-dev libboost-coroutine-dev libboost-filesystem-dev libcrypto++-dev libb64-dev nlohmann-json3-dev libprotobuf-dev protobuf-compiler-grpc libgrpc++-dev libb64-dev libabsl-dev patchelf
 git clone --recursive --branch v0.15.2 https://github.com/cartesi/machine-emulator.git
 cd machine-emulator
@@ -289,7 +289,7 @@ sudo make install PREFIX=/usr/local
 
 Next install Nelua programming language, because RIV emulator is made with it:
 
-```
+```sh
 git clone https://github.com/edubart/nelua-lang.git
 cd nelua-lang
 make
@@ -298,7 +298,7 @@ sudo make install PREFIX=/usr/local
 
 Then compile `rivemu` emulator:
 
-```
+```sh
 apt-get install -y libgl-dev libx11-dev xorg-dev
 git clone https://github.com/edubart/riv.git
 make rivemu
@@ -310,7 +310,7 @@ and record replays.
 The emulator will require kernel and rootfs images to run,
 although you could build them from scratch,
 it's way easier and fast to download prebuilt images with:
-```
+```sh
 make download-images
 ```
 
@@ -320,30 +320,30 @@ Now proceed to the next section to try out a game.
 
 Lets download the prebuilt Snake game:
 
-```
+```sh
 wget -O snake.sqfs https://github.com/edubart/riv/releases/download/downloads/snake.sqfs
 ```
 
 Now you can play it with:
-```
+```sh
 ./rivemu/rivemu -cartridge=snake.sqfs
 ```
 
 You can record a replay of your play to the file `snake.rivlog` and its final output card to `snake.outcard` with:
-```
+```sh
 ./rivemu/rivemu -cartridge=snake.sqfs -record=snake.rivlog -save-outcard=snake.outcard
 ```
 You don't need to finish a game session, you could quit at any moment,
 the score will reflect what you have played so far.
 
 You can inspect the cartridge output card:
-```
+```sh
 cat snake.outcard
 ```
 Notice that the output is a JSON of the game scores prefixed with `JSON` string.
 
 Then you can watch your replay play with:
-```
+```sh
 ./rivemu/rivemu -cartridge=snake.sqfs -replay=snake.rivlog
 ```
 It should produce the same output card with the same game scores.
@@ -351,14 +351,14 @@ These two output files are the ones that you must submit on-chain
 to verify the game output scores.
 
 More interestingly you can also view replay at greater speed:
-```
+```sh
 ./rivemu/rivemu -cartridge=snake.sqfs -replay=snake.rivlog -speed=2
 ```
 
 ## Compiling images
 
 If you have Docker, you can also compile the kernel and rootfs images with the following command:
-```
+```sh
 make kernel rootfs
 ```
 
@@ -367,12 +367,12 @@ make kernel rootfs
 First you need to compile the rootfs image, because it also provides a toolchain compiler
 for RISC-V and RIV operating system as a Docker image:
 
-```
+```sh
 make rootfs
 ```
 
 You can compile the Snake demo with:
-```
+```sh
 make demo DEMO=snake
 ```
 
@@ -383,7 +383,7 @@ I will provide games made in C/C++ and other languages in the future.
 
 You can also compile the Antcopter/DOOM demos with:
 
-```
+```sh
 # Antcopter
 git clone --branch riv git@github.com:edubart/antcopter.git demos/antcopter
 make demo DEMO=antcopter

@@ -11,12 +11,12 @@ else
 endif
 
 # Release flags
-CFLAGS+=-O2 -fno-stack-protector -DNDEBUG -Wall
+CFLAGS+=-O2 -DNDEBUG -Wall -fno-stack-protector
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
 LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
 LDFLAGS+=-z relro -z now -rdynamic
 STRIPFLAGS+=--strip-unneeded --remove-section=.comment
-NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --release --verbose
+NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
 
 all: libriv.so
 
@@ -30,6 +30,7 @@ libriv.so: libriv.nelua *.nelua
 		--stripflags="$(STRIPFLAGS)" \
 		--cache-dir . \
 		--output $@ $<
+	touch $@
 
 update-bindings:
 	nelua-lua genbindings.lua

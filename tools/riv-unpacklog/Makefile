@@ -11,20 +11,24 @@ else
 endif
 
 # Release flags
-CFLAGS+=-O2 -DNDEBUG -Wall
+CFLAGS+=-O2 -DNDEBUG -Wall -fno-stack-protector
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
 LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
 LDFLAGS+=-Wl,--dynamic-linker=/lib/ld-musl.so
-LDFLAGS+=-z relro -z now -s
-NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --release --verbose
+LDFLAGS+=-z relro -z now
+STRIPFLAGS+=--strip-unneeded --remove-section=.comment
+NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
 
-riv-unpacklog: riv-unpacklog.nelua ../../libs/guest-host/* ../../libriv/*
+riv-unpacklog: riv-unpacklog.nelua ../../libs/guest-host/* ../../libriv/*.nelua ../../libriv/*.h
 	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
 		--ldflags="$(LDFLAGS)" \
+		--strip-bin \
+		--stripflags="$(STRIPFLAGS)" \
 		--cache-dir . \
 		--output $@ $<
+	touch $@
 
 clean:
 	rm -f riv-unpacklog riv-unpacklog.c

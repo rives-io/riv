@@ -1,4 +1,4 @@
-TOOLS=bwrapbox riv-unpacklog rndaddentropy
+TOOLS=riv-unpacklog
 MAKETARGET=
 
 all: $(TOOLS)

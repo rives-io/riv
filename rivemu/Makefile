@@ -5,7 +5,14 @@ WASM_CC=emcc
 CC=gcc
 CFLAGS+=-Wall
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none -z relro -z now
-NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --release --verbose
+NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
+
+ifeq ($(debug), yes)
+	CFLAGS+=-Og
+else
+	CFLAGS+=-O2 -DNDEBUG
+	LDFLAGS+=-s
+endif
 
 rivemu: rivemu.nelua *.nelua
 	nelua $(NELUA_FLAGS) \
@@ -14,12 +21,14 @@ rivemu: rivemu.nelua *.nelua
 		--ldflags="$(LDFLAGS) $(LIBS)" \
 		--cache-dir . \
 		--output $@ $<
+	touch $@
 
 rivemu.js: rivemu.nelua *.nelua
 	nelua $(NELUA_FLAGS) \
 		--cc=$(WASM_CC) \
 		--cflags="$(CFLAGS) $(INCS)" \
 		--output $@ $<
+	touch $@
 
 clean:
 	rm -rf web

@@ -15,7 +15,7 @@ global riv_paddr_base: type <using> = @enum(uint64) {
 }
 
 global RIV_MMIOSIZE_RAM: uint64 <comptime> = 128*1024*1024
-global RIV_MMIOSIZE_CARTRIDGE: uint64< comptime> = 2*1024*1024
+global RIV_MMIOSIZE_CARTRIDGE: uint64< comptime> = 8*1024*1024
 global RIV_MMIOSIZE_REPLAYLOG: uint64< comptime> = 2*1024*1024
 
 --------------------------------------------------------------------------------
