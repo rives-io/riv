@@ -11,21 +11,33 @@ else
 endif
 
 # Release flags
-CFLAGS+=-O2 -DNDEBUG -Wall -fno-stack-protector
+CFLAGS+=-Wall
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
 LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
 LDFLAGS+=-Wl,--dynamic-linker=/lib/ld-musl.so
 LDFLAGS+=-z relro -z now
-STRIPFLAGS+=--strip-unneeded --remove-section=.comment
 NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
 
-riv-unpacklog: riv-unpacklog.nelua ../../libs/guest-host/* ../../libriv/*.nelua ../../libriv/*.h
+ifeq ($(debug), yes)
+	CFLAGS+=-Og
+else
+	CFLAGS+=-O2 -DNDEBUG -fno-stack-protector
+	STRIPFLAGS+=--strip-unneeded --remove-section=.comment
+	NELUA_FLAGS+=--strip-bin --stripflags="$(STRIPFLAGS)"
+endif
+
+DEPS=*.nelua \
+	$(wildcard ../../libs/guest-host/*.{h,c,nelua}) \
+	$(wildcard ../../libs/host/*.{h,c,nelua}) \
+	../../libriv/riv_types.nelua \
+	../../libriv/riv_log.nelua \
+	../../libriv/riv.h
+
+riv-unpacklog: riv-unpacklog.nelua $(DEPS)
 	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
 		--ldflags="$(LDFLAGS)" \
-		--strip-bin \
-		--stripflags="$(STRIPFLAGS)" \
 		--cache-dir . \
 		--output $@ $<
 	touch $@

@@ -11,23 +11,28 @@ else
 endif
 
 # Release flags
-CFLAGS+=-O2 -DNDEBUG -Wall -fno-stack-protector
+CFLAGS+=-Wall
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
 LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
 LDFLAGS+=-z relro -z now -rdynamic
-STRIPFLAGS+=--strip-unneeded --remove-section=.comment
 NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
+
+ifeq ($(debug), yes)
+	CFLAGS+=-Og
+else
+	CFLAGS+=-O2 -DNDEBUG -fno-stack-protector
+	STRIPFLAGS+=--strip-unneeded --remove-section=.comment
+	NELUA_FLAGS+=--strip-bin --stripflags="$(STRIPFLAGS)"
+endif
 
 all: libriv.so
 
 libriv.so: libriv.nelua *.nelua
 	nelua $(NELUA_FLAGS) \
+		--shared-lib \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
-		--shared-lib \
 		--ldflags="$(LDFLAGS)" \
-		--strip-bin \
-		--stripflags="$(STRIPFLAGS)" \
 		--cache-dir . \
 		--output $@ $<
 	touch $@

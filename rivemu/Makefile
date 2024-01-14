@@ -11,10 +11,17 @@ ifeq ($(debug), yes)
 	CFLAGS+=-Og
 else
 	CFLAGS+=-O2 -DNDEBUG
-	LDFLAGS+=-s
+	NELUA_FLAGS+=--strip-bin
 endif
 
-rivemu: rivemu.nelua *.nelua
+DEPS=*.nelua \
+	$(wildcard ../libs/guest-host/*.{h,c,nelua}) \
+	$(wildcard ../libs/host/*.{h,c,nelua}) \
+	../libriv/riv_types.nelua \
+	../libriv/riv_log.nelua \
+	../libriv/riv.h
+
+rivemu: rivemu.nelua $(DEPS)
 	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS) $(INCS)" \
@@ -23,7 +30,7 @@ rivemu: rivemu.nelua *.nelua
 		--output $@ $<
 	touch $@
 
-rivemu.js: rivemu.nelua *.nelua
+rivemu.js: rivemu.nelua $(DEPS)
 	nelua $(NELUA_FLAGS) \
 		--cc=$(WASM_CC) \
 		--cflags="$(CFLAGS) $(INCS)" \
