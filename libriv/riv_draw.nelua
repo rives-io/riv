@@ -1,14 +1,424 @@
 ## pragmas.unitname = ''
 
 require 'memory'
+require 'math'
 require '.riv_types'
 
-global function riv_clear_screen(col: uint32): void <cexport>
-  memory.set(riv.framebuffer, (@uint8)(col), riv.framebuffer_desc.width * riv.framebuffer_desc.height)
+local riv_vec2f = @record{
+  x: float32,
+  y: float32
+}
+
+local riv_vec2i = @record{
+  x: int64,
+  y: int64
+}
+
+local function memset(s: pointer, c: cint, n: csize): pointer <cimport,cinclude'<string.h>'> end
+
+global function riv_init_draw(): void
+  -- set initial clip big enough for all screen sizes
+  riv.draw.clip.x1 = 16384
+  riv.draw.clip.y1 = 16384
+  for i: usize = 0,<256 do
+    riv.draw.pal[i] = i
+  end
 end
 
-global function riv_draw_pixel(x: int32, y: int32, col: uint32): void <cexport>
-  if likely(x >= 0 and y >= 0 and x < riv.framebuffer_desc.width and y < riv.framebuffer_desc.height) then
-    riv.framebuffer[y*riv.framebuffer_desc.width + x] = (@uint8)(col)
+global function riv_clear_screen(col: uint32): void <cexport>
+  memset(riv.framebuffer, (@uint8)(col), riv.framebuffer_desc.width * riv.framebuffer_desc.height)
+end
+
+local function riv_get_clip_limits(): (int64, int64, int64, int64, int64) <inline>
+  local fw: int64, fh: int64 = riv.framebuffer_desc.width, riv.framebuffer_desc.height
+  local cx0: int64, cy0: int64 = math.max(0, riv.draw.clip.x0), math.max(0, riv.draw.clip.y0)
+  local cx1: int64, cy1: int64 = math.min(fw - 1, riv.draw.clip.x1), math.min(fh - 1, riv.draw.clip.y1)
+  return cx0, cy0, cx1, cy1, fw
+end
+
+global function riv_draw_point(x: int64, y: int64, col: uint32): void <cexport>
+  x = x + riv.draw.origin.x
+  y = y + riv.draw.origin.y
+  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  if x >= cx0 and y >= cy0 and x <= cx1 and y <= cy1 then
+    riv.framebuffer[y*fw + x] = riv.draw.pal[(@uint8)(col)]
   end
+end
+
+global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: uint32): void <cexport>
+  x0 = x0 + riv.draw.origin.x x1 = x1 + riv.draw.origin.x
+  y0 = y0 + riv.draw.origin.y y1 = y1 + riv.draw.origin.y
+  local co: uint8 = riv.draw.pal[(@uint8)(col)]
+  local fb: *[0]uint8 = riv.framebuffer
+  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  if y0 == y1 then -- horizontal line
+    if y0 >= cy0 and y0 <= cy1 then
+      if x0 > x1 then x0, x1 = x1, x0 end
+      local ix0: int64, ix1: int64 = math.max(x0, cx0), math.min(x1, cx1)
+      local dx: int64 = ix1 - ix0 + 1
+      if dx > 0 then
+        memset(&fb[y0*fw + ix0], co, dx)
+      end
+    end
+  elseif x0 == x1 then -- vertical line
+    if x0 >= cx0 and x0 <= cx1 then
+      if y0 > y1 then y0, y1 = y1, y0 end
+      local iy0: int64, iy1: int64 = math.max(y0, cy0), math.min(y1, cy1)
+      local dy: int64 = iy1 - iy0 + 1
+      if dy > 0 then
+        for iy: int64=iy0,iy1 do
+          fb[iy*fw + x0] = co
+        end
+      end
+    end
+  else
+    local dx: int64, dy: int64 = x1-x0, y1-y0
+    local ix: int64, iy: int64 = 1, 1
+    if dx < 0 then ix = -1 dx = -dx end
+    if dy < 0 then iy = -1 dy = -dy end
+    if math.abs(y1 - y0) < math.abs(x1 - x0) then -- low diagonal line
+      local q: int64 = 2*dy - dx
+      local y: int64 = y0
+      for x: int64=x0,x1,ix do
+        if y >= cy0 and y <= cy1 and x >= cx0 and x <= cx1 then
+          fb[y*fw + x] = co
+        end
+        if q > 0 then
+          y = y + iy
+          q = q - 2*dx
+        end
+        q = q + 2*dy
+      end
+    else -- high diagonal line
+      local q: int64 = 2*dx - dy
+      local x: int64 = x0
+      for y: int64=y0,y1,iy do
+        if y >= cy0 and y <= cy1 and x >= cx0 and x <= cx1 then
+          fb[y*fw + x] = co
+        end
+        if q > 0 then
+          x = x + ix
+          q = q - 2*dy
+        end
+        q = q + 2*dx
+      end
+    end
+  end
+end
+
+global function riv_draw_rect_fill(x0: int64, y0: int64, w: int64, h: int64, col: uint32): void <cexport>
+  if w <= 0 or h <= 0 then return end
+  x0 = x0 + riv.draw.origin.x
+  y0 = y0 + riv.draw.origin.y
+  local co: uint8 = riv.draw.pal[(@uint8)(col)]
+  local fb: *[0]uint8 = riv.framebuffer
+  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  local ix0: int64, iy0: int64 = math.max(x0, cx0), math.max(y0, cy0)
+  local ix1: int64, iy1: int64 = math.min(x0+w, cx1+1), math.min(y0+h, cy1+1)
+  local dx: int64, dy: int64 = ix1 - ix0, iy1 - iy0
+  if dx > 0 and dy > 0 then
+    if dx ~= fw then
+      for y: int64=iy0,<iy1 do
+        memset(&fb[y*fw + ix0], co, dx)
+      end
+    else
+      memset(&fb[iy0*fw + ix0], co, (iy1-iy0)*dx)
+    end
+  end
+end
+
+global function riv_draw_rect_line(x0: int64, y0: int64, w: int64, h: int64, col: uint32): void <cexport>
+  if w <= 0 or h <= 0 then return end
+  x0 = x0 + riv.draw.origin.x
+  y0 = y0 + riv.draw.origin.y
+  local co: uint8 = riv.draw.pal[(@uint8)(col)]
+  local fb: *[0]uint8 = riv.framebuffer
+  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  local ix0: int64, iy0: int64 = math.max(x0, cx0), math.max(y0, cy0)
+  local ix1: int64, iy1: int64 = math.min(x0+w, cx1+1), math.min(y0+h, cy1+1)
+  local dx: int64, dy: int64 = ix1 - ix0, iy1 - iy0
+  if dx > 0 and dy > 0 then
+    local x1: int64 = x0 + w - 1
+    local y1: int64 = y0 + h - 1
+    if y0 >= cy0 and y0 <= cy1 then -- top
+      memset(&fb[y0*fw + ix0], co, dx)
+    end
+    if y1 >= cy0 and y1 <= cy1 then -- bottom
+      memset(&fb[y1*fw + ix0], co, dx)
+    end
+    local vy0: int64, vy1: int64 = math.max(y0+1,iy0), math.min(y1, cy1+1)
+    if x0 >= cx0 and x0 <= cx1 then -- left
+      for iy: int64=vy0,<vy1 do
+        fb[iy*fw + x0] = co
+      end
+    end
+    if x1 >= cx0 and x1 <= cx1 then -- right
+      for iy: int64=vy0,<vy1 do
+        fb[iy*fw + x1] = co
+      end
+    end
+  end
+end
+
+global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32): void <cexport>
+  if d <= 0 then return end
+  ox = ox + riv.draw.origin.x
+  oy = oy + riv.draw.origin.y
+  local co: uint8 = riv.draw.pal[(@uint8)(col)]
+  local fb: *[0]uint8 = riv.framebuffer
+  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  local r: int64 = d /// 2
+  if r > 0 and 2*r == d then -- even diameter
+    r = r + 1
+    local r2: int64 = r*r
+    for ry: int64=1,r do
+      local iy0: int64, iy1: int64 = oy - ry + 1, oy + ry
+      local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
+      local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1
+      if iy0v or iy1v then
+        local irx: int64 = math.ifloor(math.sqrt((@float32)(r2 - ry*ry)))
+        local ix0: int64 = math.max(ox - irx + 1, cx0)
+        local ix1: int64 = math.min(ox + irx, cx1)
+        local dx: int64 = ix1 - ix0 + 1
+        if dx > 0 then
+          if iy0v then memset(&fb[iy0*fw + ix0], co, dx) end
+          if iy1v then memset(&fb[iy1*fw + ix0], co, dx) end
+        end
+      end
+    end
+  else -- odd diameter
+    local r2: int64 = r*r + math.max(r-1, 0)
+    for ry: int64=0,r do
+      local iy0: int64, iy1: int64 = oy - ry, oy + ry
+      local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
+      local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1 and ry ~= 0
+      if iy0v or iy1v then
+        local irx: int64 = math.ifloor(math.sqrt((@float32)(r2 - ry*ry)))
+        local ix0: int64 = math.max(ox - irx, cx0)
+        local ix1: int64 = math.min(ox + irx, cx1)
+        local dx: int64 = ix1 - ix0 + 1
+        if dx > 0 then
+          if iy0v then memset(&fb[iy0*fw + ix0], co, dx) end
+          if iy1v then memset(&fb[iy1*fw + ix0], co, dx) end
+        end
+      end
+    end
+  end
+end
+
+global function riv_draw_circle_line(ox: int64, oy: int64, d: int64, col: uint32): void <cexport>
+  if d <= 0 then return end
+  ox = ox + riv.draw.origin.x
+  oy = oy + riv.draw.origin.y
+  local co: uint8 = riv.draw.pal[(@uint8)(col)]
+  local fb: *[0]uint8 = riv.framebuffer
+  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  local r: int64 = d /// 2
+  if r > 0 and 2*r == d then -- even diameter
+    r = r + 1
+    local r2: int64 = r*r
+    for ry: int64=1,r do
+      local iy0: int64, iy1: int64 = oy - ry + 1, oy + ry
+      local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
+      local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1
+      if iy0v or iy1v then
+        local irx: int64 = math.ifloor(math.sqrt((@float32)(r2 - ry*ry)))
+        for rx: int64=irx,1,-1 do
+          local ix0: int64, ix1: int64 = ox - rx + 1, ox + rx
+          local iry: int64 = math.ifloor(math.sqrt((@float32)(r2 - rx*rx)))
+          if not (rx >= irx or ry >= iry) then break end
+          local ix0v: boolean = ix0 >= cx0 and ix0 <= cx1
+          local ix1v: boolean = ix1 >= cx0 and ix1 <= cx1
+          if iy0v and ix0v then fb[iy0*fw + ix0] = co end
+          if iy0v and ix1v then fb[iy0*fw + ix1] = co end
+          if iy1v and ix0v then fb[iy1*fw + ix0] = co end
+          if iy1v and ix1v then fb[iy1*fw + ix1] = co end
+        end
+      end
+    end
+  else -- odd diameter
+    local r2: int64 = r*r + math.max(r-1, 0)
+    for ry: int64=0,r do
+      local iy0: int64, iy1: int64 = oy - ry, oy + ry
+      local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
+      local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1 and ry ~= 0
+      if iy0v or iy1v then
+        local irx: int64 = math.ifloor(math.sqrt((@float32)(r2 - ry*ry)))
+        for rx: int64=irx,0,-1 do
+          local ix0: int64, ix1: int64 = ox - rx, ox + rx
+          local iry: int64 = math.ifloor(math.sqrt((@float32)(r2 - rx*rx)))
+          if not (rx >= irx or ry >= iry) then break end
+          local ix0v: boolean = ix0 >= cx0 and ix0 <= cx1
+          local ix1v: boolean = ix1 >= cx0 and ix1 <= cx1 and rx ~= 0
+          if iy0v and ix0v then fb[iy0*fw + ix0] = co end
+          if iy0v and ix1v then fb[iy0*fw + ix1] = co end
+          if iy1v and ix0v then fb[iy1*fw + ix0] = co end
+          if iy1v and ix1v then fb[iy1*fw + ix1] = co end
+        end
+      end
+    end
+  end
+end
+
+global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cexport>
+  if x0 == x1 and x1 == x2 then -- vertical line
+    riv_draw_line(x0, math.min(y0,y1,y2), x0, math.max(y0,y1,y2), col)
+  elseif y0 == y1 and y1 == y2 then -- horizontal line
+    riv_draw_line(math.min(x0,x1,x2), y0, math.max(x0,x1,x2), y0, col)
+  else
+    x0 = x0 + riv.draw.origin.x  x1 = x1 + riv.draw.origin.x  x2 = x2 + riv.draw.origin.x
+    y0 = y0 + riv.draw.origin.y  y1 = y1 + riv.draw.origin.y  y2 = y2 + riv.draw.origin.y
+    local co: uint8 = riv.draw.pal[(@uint8)(col)]
+    local fb: *[0]uint8 = riv.framebuffer
+    local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+    local p0: boolean, p1: boolean, p2: boolean
+    -- top point
+    local tx: int64, ty: int64
+    if     y0 <= y1 and y0 <= y2 then tx=x0  ty=y0  p0=true
+    elseif y1 <= y0 and y1 <= y2 then tx=x1  ty=y1  p1=true
+    else                              tx=x2  ty=y2  p2=true end
+    -- bottom point
+    local bx: int64, by: int64
+    if     not p0 and y0 >= y1 and y0 >= y2 then bx=x0  by=y0  p0=true
+    elseif not p1 and y1 >= y0 and y1 >= y2 then bx=x1  by=y1  p1=true
+    else                                         bx=x2  by=y2  p2=true end
+    -- middle point
+    local mx: int64, my: int64
+    if     not p0 then mx=x0  my=y0
+    elseif not p1 then mx=x1  my=y1
+    else               mx=x2  my=y2 end
+    -- order middle to be on the left
+    if my == ty and mx > tx then -- swap middle and top
+      mx, my, tx, ty = tx, ty, mx, my
+    elseif my == by and mx > bx then -- swap middle and bottom
+      mx, my, bx, by = bx, by, mx, my
+    end
+    -- draw
+    local cotg_tb: float32 = (bx - tx) / (@float32)(by - ty)
+    local cotg_tm: float32 = my ~= ty and (mx - tx) / (@float32)(my - ty) or 0.0_f32
+    local cotg_mb: float32 = by ~= my and (bx - mx) / (@float32)(by - my) or 0.0_f32
+    for iy=math.max(ty,cy0),math.min(by,cy1) do
+      local ix0f: float32 = tx + cotg_tb * (iy - ty)
+      local ix1f: float32
+      if iy < my then
+        ix1f = tx + cotg_tm * (iy - ty)
+      elseif by ~= my then
+        ix1f = mx + cotg_mb * (iy - my)
+      else
+        ix1f = mx
+      end
+      if ix0f > ix1f then ix0f, ix1f = ix1f, ix0f end
+      local ix0: int64 = math.max(math.iceil(ix0f - 0.125_f32), cx0)
+      local ix1: int64 = math.min(math.ifloor(ix1f + 0.125_f32), cx1)
+      local dx: int64 = ix1 - ix0 + 1
+      if dx > 0 then
+        memset(&fb[iy*fw + ix0], co, dx)
+      end
+    end
+  end
+end
+
+global function riv_draw_triangle_line(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cexport>
+  riv_draw_line(x0, y0, x1, y1, col)
+  riv_draw_line(x1, y1, x2, y2, col)
+  riv_draw_line(x2, y2, x0, y0, col)
+end
+
+local function riv_rotate_box(ox: int64, oy: int64, w: int64, h: int64, rot: float32): [4]riv_vec2i <inline>
+  local hw: float32, hh: float32 = (w-1) * 0.5_f32, (h-1) * 0.5_f32
+  local pf: [4]riv_vec2f = {
+    {x=-hw, y=-hh}, -- top left
+    {x= hw, y=-hh}, -- top right
+    {x= hw, y= hh}, -- bottom right
+    {x=-hw, y= hh}, -- bottom left
+  }
+  local st: float32, ct: float32 = math.sin(rot), math.cos(rot)
+  local p: [4]riv_vec2i <noinit>
+  ## for i=0,3 do
+    p[#[i]#].x = math.ifloor(ox+ct*pf[#[i]#].x-st*pf[#[i]#].y+0.5_f32)
+    p[#[i]#].y = math.ifloor(oy+st*pf[#[i]#].x+ct*pf[#[i]#].y+0.5_f32)
+  ## end
+  return p
+end
+
+global function riv_draw_box_fill(ox: int64, oy: int64, w: int64, h: int64, rot: float32, col: uint32): void <cexport>
+  if w <= 0 or h <= 0 then return end
+  if rot == 0 then
+    riv_draw_rect_fill(ox - (w-1)///2, oy - (h-1)///2, w, h, col)
+  else
+    local p: [4]riv_vec2i = riv_rotate_box(ox, oy, w, h, rot)
+    riv_draw_triangle_fill(p[0].x, p[0].y, p[1].x, p[1].y, p[2].x, p[2].y, col) -- right
+    riv_draw_triangle_fill(p[2].x, p[2].y, p[3].x, p[3].y, p[0].x, p[0].y, col) -- left
+  end
+end
+
+global function riv_draw_box_line(ox: int64, oy: int64, w: int64, h: int64, rot: float32, col: uint32): void <cexport>
+  if w <= 0 or h <= 0 then return end
+  if rot == 0 then
+    riv_draw_rect_line(ox - (w-1)///2, oy - (h-1)///2, w, h, col)
+  else
+    local p: [4]riv_vec2i = riv_rotate_box(ox, oy, w, h, rot)
+    riv_draw_line(p[0].x, p[0].y, p[1].x, p[1].y, col) -- top
+    riv_draw_line(p[1].x, p[1].y, p[2].x, p[2].y, col) -- right
+    riv_draw_line(p[2].x, p[2].y, p[3].x, p[3].y, col) -- bottom
+    riv_draw_line(p[3].x, p[3].y, p[0].x, p[0].y, col) -- left
+  end
+end
+
+local function riv_clockwise_less(a: riv_vec2i, b: riv_vec2i, center: riv_vec2i): boolean
+  if a.x - center.x >= 0 and b.x - center.x < 0 then return true end
+  if a.x - center.x < 0 and b.x - center.x >= 0 then return false end
+  if a.x - center.x == 0 and b.x - center.x == 0 then
+    if a.y - center.y >= 0 or b.y - center.y >= 0 then return a.y > b.y end
+    return b.y > a.y
+  end
+  -- compute the cross product of vectors (center -> a) x (center -> b)
+  local det: int64 = (a.x - center.x) * (b.y - center.y) - (b.x - center.x) * (a.y - center.y)
+  if det < 0 then return true end
+  if det > 0 then return false end
+  -- points a and b are on the same line from the center
+  -- check which point is closer to the center
+  local d1: int64 = (a.x - center.x) * (a.x - center.x) + (a.y - center.y) * (a.y - center.y)
+  local d2: int64 = (b.x - center.x) * (b.x - center.x) + (b.y - center.y) * (b.y - center.y)
+  return d1 > d2
+end
+
+local function riv_sort_quad(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, x3: int64, y3: int64): [4]riv_vec2i <inline>
+  local p: [4]riv_vec2i = {
+    {x0, y0},
+    {x1, y1},
+    {x2, y2},
+    {x3, y3},
+  }
+  -- compute center
+  local center: riv_vec2i
+  for i: int64=0,<4 do
+    center.x = center.x + p[i].x
+    center.y = center.y + p[i].y
+  end
+  center.x = center.x // 4
+  center.y = center.y // 4
+  -- insertion sort
+  for i: int64=1,<4 do
+    local j: int64 = i
+    while j > 0 and riv_clockwise_less(p[j], p[j-1], center) do
+      p[j], p[j-1] = p[j-1], p[j]
+      j = j -1
+    end
+  end
+  return p
+end
+
+global function riv_draw_quad_line(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, x3: int64, y3: int64, col: uint32): void <cexport>
+  local p: [4]riv_vec2i = riv_sort_quad(x0, y0, x1, y1, x2, y2, x3, y3)
+  riv_draw_line(p[0].x, p[0].y, p[1].x, p[1].y, col) -- top
+  riv_draw_line(p[1].x, p[1].y, p[2].x, p[2].y, col) -- right
+  riv_draw_line(p[2].x, p[2].y, p[3].x, p[3].y, col) -- bottom
+  riv_draw_line(p[3].x, p[3].y, p[0].x, p[0].y, col) -- left
+end
+
+global function riv_draw_quad_fill(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, x3: int64, y3: int64, col: uint32): void <cexport>
+  local p: [4]riv_vec2i = riv_sort_quad(x0, y0, x1, y1, x2, y2, x3, y3)
+  riv_draw_triangle_fill(p[0].x, p[0].y, p[1].x, p[1].y, p[2].x, p[2].y, col) -- right
+  riv_draw_triangle_fill(p[2].x, p[2].y, p[3].x, p[3].y, p[0].x, p[0].y, col) -- left
 end

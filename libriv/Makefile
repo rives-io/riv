@@ -20,7 +20,7 @@ NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
 ifeq ($(debug), yes)
 	CFLAGS+=-Og
 else
-	CFLAGS+=-O2 -DNDEBUG -fno-stack-protector
+	CFLAGS+=-O2 -DNDEBUG -fno-stack-protector -ffast-math
 	STRIPFLAGS+=--strip-unneeded --remove-section=.comment
 	NELUA_FLAGS+=--strip-bin --stripflags="$(STRIPFLAGS)"
 endif

@@ -198,11 +198,6 @@ typedef enum riv_rgb_pal16_color {
 typedef enum riv_pixel_format {
   RIV_PIXELFORMAT_INVALID = 0,
   RIV_PIXELFORMAT_PAL256,
-  // RIV_PIXELFORMAT_RGB8,
-  // RIV_PIXELFORMAT_RGB16,
-  // RIV_PIXELFORMAT_RGB24,
-  // RIV_PIXELFORMAT_RGB32,
-  // RIV_PIXELFORMAT_RGB32F,
   RIV_NUM_PIXELFORMAT,
 } riv_pixel_format;
 
@@ -441,6 +436,27 @@ typedef struct riv_key_toggle_event {
   uint64_t frame;
 } riv_key_toggle_event;
 
+// Point
+typedef struct riv_draw_pointi {
+  int64_t x;
+  int64_t y;
+} riv_draw_pointi;
+
+// Bounding box
+typedef struct riv_draw_bboxi {
+  int64_t x0;
+  int64_t y0;
+  int64_t x1;
+  int64_t y1;
+} riv_draw_bboxi;
+
+// Draw state
+typedef struct riv_draw_state {
+  riv_draw_pointi origin; // Draw origin
+  riv_draw_bboxi clip;    // Draw clipping bounding box
+  uint8_t pal[256];       // Draw swap palette
+} riv_draw_state;
+
 // RIV context
 typedef struct riv_context {
   // Public read-only fields (can be read at any moment)
@@ -463,9 +479,10 @@ typedef struct riv_context {
   riv_framebuffer_desc* framebuffer_desc; // Screen frame buffer description
   riv_unbounded_bool tracked_keys;        // Key codes being tracked
   riv_unbounded_uint8 inoutbuffer;        // Input/output card buffer
-  riv_unbounded_uint8 framebuffer;        // Screen frame buffer
   riv_unbounded_uint32 palette;           // Color palette
-  uint8_t reserved_rw[432];
+  riv_unbounded_uint8 framebuffer;        // Screen frame buffer
+  riv_draw_state draw;                    // Draw state
+  uint8_t reserved_rw[136];
   // Private fields
   riv_mmio_driver* mmio_driver;
   riv_mmio_device* mmio_device;
@@ -504,7 +521,18 @@ RIV_API bool riv_present();                           // Present current frame, 
 // Drawing
 
 RIV_API void riv_clear_screen(uint32_t col);
-RIV_API void riv_draw_pixel(int32_t x, int32_t y, uint32_t col);
+RIV_API void riv_draw_point(int64_t x, int64_t y, uint32_t col);
+RIV_API void riv_draw_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, uint32_t col);
+RIV_API void riv_draw_rect_fill(int64_t x0, int64_t y0, int64_t w, int64_t h, uint32_t col);
+RIV_API void riv_draw_rect_line(int64_t x0, int64_t y0, int64_t w, int64_t h, uint32_t col);
+RIV_API void riv_draw_quad_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, int64_t x3, int64_t y3, uint32_t col);
+RIV_API void riv_draw_quad_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, int64_t x3, int64_t y3, uint32_t col);
+RIV_API void riv_draw_box_fill(int64_t ox, int64_t oy, int64_t w, int64_t h, float rot, uint32_t col);
+RIV_API void riv_draw_box_line(int64_t ox, int64_t oy, int64_t w, int64_t h, float rot, uint32_t col);
+RIV_API void riv_draw_circle_fill(int64_t ox, int64_t oy, int64_t d, uint32_t col);
+RIV_API void riv_draw_circle_line(int64_t ox, int64_t oy, int64_t d, uint32_t col);
+RIV_API void riv_draw_triangle_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
+RIV_API void riv_draw_triangle_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
 
 // Sound system
 

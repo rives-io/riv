@@ -308,6 +308,21 @@ global riv_key_toggle_event: type <cimport,nodecl> = @record{
   key_code: uint8,
   frame: uint64
 }
+global riv_draw_pointi: type <cimport,nodecl> = @record{
+  x: int64,
+  y: int64
+}
+global riv_draw_bboxi: type <cimport,nodecl> = @record{
+  x0: int64,
+  y0: int64,
+  x1: int64,
+  y1: int64
+}
+global riv_draw_state: type <cimport,nodecl> = @record{
+  origin: riv_draw_pointi,
+  clip: riv_draw_bboxi,
+  pal: [256]uint8
+}
 global riv_context: type <cimport,nodecl> = @record{
   frame: uint64,
   millis: int64,
@@ -327,9 +342,10 @@ global riv_context: type <cimport,nodecl> = @record{
   framebuffer_desc: *riv_framebuffer_desc,
   tracked_keys: *[0]boolean,
   inoutbuffer: *[0]uint8,
-  framebuffer: *[0]uint8,
   palette: *[0]uint32,
-  reserved_rw: [432]uint8,
+  framebuffer: *[0]uint8,
+  draw: riv_draw_state,
+  reserved_rw: [136]uint8,
   mmio_driver: *riv_mmio_driver,
   mmio_device: *riv_mmio_device,
   audiobuffer: *[0]uint8,

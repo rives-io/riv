@@ -21,7 +21,18 @@ global function riv_present(): boolean <cimport,nodecl> end
 
 -- drawing
 global function riv_clear_screen(col: uint32): void <cimport,nodecl> end
-global function riv_draw_pixel(x: int32, y: int32, col: uint32): void <cimport,nodecl> end
+global function riv_draw_point(x: int64, y: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_rect_fill(x0: int64, y0: int64, w: int64, h: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_rect_line(x0: int64, y0: int64, w: int64, h: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_quad_fill(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, x3: int64, y3: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_quad_line(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, x3: int64, y3: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_box_fill(ox: int64, oy: int64, w: int64, h: int64, rot: float32, col: uint32): void <cimport,nodecl> end
+global function riv_draw_box_line(ox: int64, oy: int64, w: int64, h: int64, rot: float32, col: uint32): void <cimport,nodecl> end
+global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_circle_line(ox: int64, oy: int64, d: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_triangle_line(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cimport,nodecl> end
 
 -- sound system
 global function riv_make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <cimport,nodecl> end

@@ -53,6 +53,8 @@ global function riv_setup(argc: int32, argv: *[0]cstring): void <cexport>
   riv_init_input()
   -- init video
   riv_init_video()
+  -- init draw
+  riv_init_draw()
   -- signal the we are about to start, the host may fill input card
   riv_yield(RIV_CONTROL_OPEN)
   -- retrieve input card from host
