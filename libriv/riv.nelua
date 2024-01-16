@@ -35,6 +35,8 @@ global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, 
 global function riv_draw_ellipse_line(ox: int64, oy: int64, w: int64, h: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_triangle_line(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_glyph(glyph: uint32, x0: int64, y0: int64, mw: int64, mh: int64, fnt: uint32, col: uint32): void <cimport,nodecl> end
+global function riv_draw_text(text: cstring <const>, x0: int64, y0: int64, mw: int64, mh: int64, sx: int64, sy: int64, fnt: uint64, col: int64): riv_vec2i <cimport,nodecl> end
 
 -- sound system
 global function riv_make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <cimport,nodecl> end

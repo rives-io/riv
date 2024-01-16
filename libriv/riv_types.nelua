@@ -308,9 +308,13 @@ global riv_key_toggle_event: type <cimport,nodecl> = @record{
   key_code: uint8,
   frame: uint64
 }
-global riv_draw_pointi: type <cimport,nodecl> = @record{
+global riv_vec2i: type <cimport,nodecl> = @record{
   x: int64,
   y: int64
+}
+global riv_vec2f: type <cimport,nodecl> = @record{
+  x: float32,
+  y: float32
 }
 global riv_draw_bboxi: type <cimport,nodecl> = @record{
   x0: int64,
@@ -318,10 +322,20 @@ global riv_draw_bboxi: type <cimport,nodecl> = @record{
   x1: int64,
   y1: int64
 }
+global riv_font: type <cimport,nodecl> = @record{
+  glyph_width: uint32,
+  glyph_height: uint32,
+  image_width: uint32,
+  image_height: uint32,
+  image_glyph_width: uint32,
+  image_glyph_height: uint32,
+  image_pixels: *uint8
+}
 global riv_draw_state: type <cimport,nodecl> = @record{
-  origin: riv_draw_pointi,
+  origin: riv_vec2i,
   clip: riv_draw_bboxi,
-  pal: [256]uint8
+  pal: [256]uint8,
+  fonts: [8]riv_font
 }
 global riv_context: type <cimport,nodecl> = @record{
   frame: uint64,

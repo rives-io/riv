@@ -4,15 +4,60 @@ require 'memory'
 require 'math'
 require '.riv_types'
 
-local riv_vec2f = @record{
-  x: float32,
-  y: float32
-}
-
-local riv_vec2i = @record{
-  x: int64,
-  y: int64
-}
+local default_font8_image: string = #[([[
+....##..##..###.#.#..##.#...###..##.........##..###.....###.###.
+.....#...#...##.###..#..###...#.###.........###.#.......##..##..
+....###..##.###...#.##..###...#.##..........###.###.....###.#...
+................................................................
+....###.###.###.###.###.###.###.###.........###.###.....###.###.
+................................................................
+###.......................#.#...###.....#.#.............#.#..#..
+###.###.###.#.#.#.#.#.#..##.##..#.....#.###.............#.#.#.#.
+###.###.#.#..#......#.#.###.###.#.....#..#...#...............#..
+###.###.###.#.#.#.#.#.#..##.##..#.....#.###.....#...##..........
+###.......................#.#.......###..#.......#..##..........
+................................................................
+.....#..#.#.#.#.###.#.#.##...#...#...#..#.#...................#.
+.....#..#.#.###.##....#.##..#...#.....#..#...#...............#..
+.....#......#.#..##..#...##.....#.....#.###.###.....###......#..
+............###.###.#...#.#.....#.....#..#...#...#...........#..
+.....#......#.#..#..#.#.###......#...#..#.#.....#........#..#...
+................................................................
+###.##..###.###.#.#.###.#...###.###.###...........#.....#...###.
+#.#..#....#...#.#.#.#...#.....#.#.#.#.#..#...#...#..###..#....#.
+#.#..#..###..##.###.###.###...#.###.###.........#.........#..##.
+#.#..#..#.....#...#...#.#.#...#.#.#...#..#...#...#..###..#......
+###.###.###.###...#.###.###...#.###...#.....#.....#.....#....#..
+................................................................
+.#..............................................................
+#.#..##.##...##.##..###.###..##.#.#.###.###.#.#.#...###.##...##.
+#.#.#.#.##..#...#.#.##..##..#...#.#..#...#..##..#...###.#.#.#.#.
+#...###.#.#.#...#.#.#...#...#.#.###..#...#..#.#.#...#.#.#.#.#.#.
+.##.#.#.###..##.##...##.#...###.#.#.###.##..#.#..##.#.#.#.#.##..
+................................................................
+............................................##..#....##..#......
+.##..#..##...##.###.#.#.#.#.#.#.#.#.#.#.###.#....#....#.#.#.....
+#.#.#.#.#.#.#....#..#.#.#.#.#.#..#..###...#.#....#....#.........
+###.##..##....#..#..#.#.###.###..#....#.#...#....#....#.........
+#....##.#.#.##...#...##..#..###.#.#.##..###.##....#..##.....###.
+................................................................
+.#..###.###..##.##..###.###..##.#.#.###.###.#.#.#...###.##...##.
+..#.#.#.#.#.#...#.#.#...#...#...#.#..#...#..#.#.#...###.#.#.#.#.
+....###.##..#...#.#.##..##..#...###..#...#..##..#...#.#.#.#.#.#.
+....#.#.#.#.#...#.#.#...#...#.#.#.#..#...#..#.#.#...#.#.#.#.#.#.
+....#.#.###..##.###.###.#...###.#.#.###.##..#.#.###.#.#.#.#.##..
+................................................................
+###..#..###..##.###.#.#.#.#.#.#.#.#.#.#.###..##..#..##..........
+#.#.#.#.#.#.#....#..#.#.#.#.#.#.#.#.#.#...#..#...#...#....#..#..
+###.#.#.##..###..#..#.#.#.#.#.#..#..###..#..##...#...##.###.#.#.
+#...##..#.#...#..#..#.#.###.###.#.#...#.#....#...#...#..#....#..
+#....##.#.#.##...#...##..#..###.#.#.###.###..##..#..##..........
+................................................................
+]])
+:gsub('%.',string.char(0))
+:gsub('#',string.char(1))
+:gsub('%s','')
+]#
 
 local function memset(s: pointer, c: cint, n: csize): pointer <cimport,cinclude'<string.h>'> end
 
@@ -20,9 +65,18 @@ global function riv_init_draw(): void
   -- set initial clip big enough for all screen sizes
   riv.draw.clip.x1 = 16384
   riv.draw.clip.y1 = 16384
+  -- set initial swap palette
   for i: usize = 0,<256 do
     riv.draw.pal[i] = i
   end
+  -- set default font
+  riv.draw.fonts[0].glyph_width = 3
+  riv.draw.fonts[0].glyph_height = 5
+  riv.draw.fonts[0].image_width = 64
+  riv.draw.fonts[0].image_height = 48
+  riv.draw.fonts[0].image_glyph_width = 4
+  riv.draw.fonts[0].image_glyph_height = 6
+  riv.draw.fonts[0].image_pixels = default_font8_image.data
 end
 
 global function riv_clear_screen(col: uint32): void <cexport>
@@ -446,4 +500,82 @@ global function riv_draw_quad_fill(x0: int64, y0: int64, x1: int64, y1: int64, x
   local p: [4]riv_vec2i = riv_sort_quad(x0, y0, x1, y1, x2, y2, x3, y3)
   riv_draw_triangle_fill(p[0].x, p[0].y, p[1].x, p[1].y, p[2].x, p[2].y, col) -- right
   riv_draw_triangle_fill(p[2].x, p[2].y, p[3].x, p[3].y, p[0].x, p[0].y, col) -- left
+end
+
+--------------------------------------------------------------------------------
+-- Text drawing
+
+global function riv_draw_glyph(glyph: uint32, x0: int64, y0: int64, mw: int64, mh: int64, fnt: uint32, col: uint32): void <cexport>
+  if unlikely(mw <= 0 or mh <= 0) then return end
+  local font: *riv_font = &riv.draw.fonts[fnt % 8]
+  if unlikely(font.image_glyph_width == 0) then return end
+  local gw: uint32, gh: uint32 = font.glyph_width, font.glyph_height
+  local gcols: uint32 = font.image_width // font.image_glyph_width
+  if unlikely(gcols == 0) then return end
+  local gx: int64 = (glyph % gcols)*font.image_glyph_width
+  local gy: int64 = (glyph // gcols)*font.image_glyph_height
+  if unlikely(gy + gh >= font.image_height or gx + gw >= font.image_width) then return end
+  x0 = x0 + riv.draw.origin.x
+  y0 = y0 + riv.draw.origin.y
+  local imgw: int64 = font.image_width
+  local imgp: *[0]uint8 = font.image_pixels
+  local fb: *[0]uint8 = riv.framebuffer
+  local co: uint8 = riv.draw.pal[(@uint8)(col)]
+  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  local bx0: int64 = math.max(x0, cx0)
+  local by0: int64 = math.max(y0, cy0)
+  local ex1: int64 = math.min(x0 + gw*mw - 1, cx1)
+  local ey1: int64 = math.min(y0 + gh*mh - 1, cy1)
+  if mw*mh == 1 then -- non scaled
+    gy = gy - y0
+    gx = gx - x0
+    for iy0: int64=by0,ey1 do
+      local igy: int64 = iy0 + gy
+      for ix0: int64=bx0,ex1 do
+        local igx: int64 = ix0 + gx
+        if imgp[igy*imgw + igx] ~= 0 then
+          fb[iy0*fw + ix0] = co
+        end
+      end
+    end
+  else -- scaled
+    for iy0: int64=by0,ey1 do
+      local iy: int64 = (iy0 - y0)///mh
+      local igy: int64 = iy + gy
+      for ix0: int64=bx0,ex1 do
+        local ix: int64 = (ix0 - x0)///mw
+        local igx: int64 = ix + gx
+        if imgp[igy*imgw + igx] ~= 0 then
+          fb[iy0*fw + ix0] = co
+        end
+      end
+    end
+  end
+end
+
+global function riv_draw_text(text: cstring <const>, x0: int64, y0: int64, mw: int64, mh: int64, sx: int64, sy: int64, fnt: uint64, col: int64): riv_vec2i <cexport>
+  local font: *riv_font = &riv.draw.fonts[fnt % 8]
+  local data: *[0]byte = text
+  local gw: int64, gh: int64 = font.glyph_width*mw, font.glyph_height*mh
+  local x: int64 = x0
+  local y: int64 = y0
+  local i: int64 = 0
+  repeat
+    local glyph: uint32 = data[i]
+    if glyph == ' '_b then -- space
+      x = x + gw + sx
+    elseif glyph == '\t'_b then -- tab
+      x = x + 4*gw + sx
+    elseif glyph == '\n'_b then -- new line
+      y = y + gh + sy
+      x = x0
+    elseif glyph > 0 and glyph ~= '\r'_b then -- visible glyph
+      if col >= 0 then
+        riv_draw_glyph(glyph, x, y, mw, mh, fnt, col)
+      end
+      x = x + gw + sx
+    end
+    i = i + 1
+  until glyph == 0
+  return riv_vec2i{x, y}
 end

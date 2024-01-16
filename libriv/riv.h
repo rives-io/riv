@@ -436,11 +436,17 @@ typedef struct riv_key_toggle_event {
   uint64_t frame;
 } riv_key_toggle_event;
 
-// Point
-typedef struct riv_draw_pointi {
+// Vector 2 of integer, can represent points or sizes
+typedef struct riv_vec2i {
   int64_t x;
   int64_t y;
-} riv_draw_pointi;
+} riv_vec2i;
+
+// Vector 2 of floats, can represent points or sizes
+typedef struct riv_vec2f {
+  float x;
+  float y;
+} riv_vec2f;
 
 // Bounding box
 typedef struct riv_draw_bboxi {
@@ -450,11 +456,23 @@ typedef struct riv_draw_bboxi {
   int64_t y1;
 } riv_draw_bboxi;
 
+// Draw font
+typedef struct riv_font {
+  uint32_t glyph_width;
+  uint32_t glyph_height;
+  uint32_t image_width;
+  uint32_t image_height;
+  uint32_t image_glyph_width;
+  uint32_t image_glyph_height;
+  riv_unbounded_uint8 image_pixels;
+} riv_font;
+
 // Draw state
 typedef struct riv_draw_state {
-  riv_draw_pointi origin; // Draw origin
-  riv_draw_bboxi clip;    // Draw clipping bounding box
-  uint8_t pal[256];       // Draw swap palette
+  riv_vec2i origin;     // Draw origin
+  riv_draw_bboxi clip;  // Draw clipping bounding box
+  uint8_t pal[256];     // Draw swap palette
+  riv_font fonts[8];    // Draw font
 } riv_draw_state;
 
 // RIV context
@@ -535,6 +553,8 @@ RIV_API void riv_draw_ellipse_fill(int64_t ox, int64_t oy, int64_t w, int64_t h,
 RIV_API void riv_draw_ellipse_line(int64_t ox, int64_t oy, int64_t w, int64_t h, uint32_t col);
 RIV_API void riv_draw_triangle_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
 RIV_API void riv_draw_triangle_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
+RIV_API void riv_draw_glyph(uint32_t glyph, int64_t x0, int64_t y0, int64_t mw, int64_t mh, uint32_t fnt, uint32_t col);
+RIV_API riv_vec2i riv_draw_text(const char* text, int64_t x0, int64_t y0, int64_t mw, int64_t mh, int64_t sx, int64_t sy, uint64_t fnt, int64_t col);
 
 // Sound system
 
