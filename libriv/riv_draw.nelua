@@ -107,7 +107,7 @@ global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: u
 end
 
 global function riv_draw_rect_fill(x0: int64, y0: int64, w: int64, h: int64, col: uint32): void <cexport>
-  if w <= 0 or h <= 0 then return end
+  if unlikely(w <= 0 or h <= 0) then return end
   x0 = x0 + riv.draw.origin.x
   y0 = y0 + riv.draw.origin.y
   local co: uint8 = riv.draw.pal[(@uint8)(col)]
@@ -128,7 +128,7 @@ global function riv_draw_rect_fill(x0: int64, y0: int64, w: int64, h: int64, col
 end
 
 global function riv_draw_rect_line(x0: int64, y0: int64, w: int64, h: int64, col: uint32): void <cexport>
-  if w <= 0 or h <= 0 then return end
+  if unlikely(w <= 0 or h <= 0) then return end
   x0 = x0 + riv.draw.origin.x
   y0 = y0 + riv.draw.origin.y
   local co: uint8 = riv.draw.pal[(@uint8)(col)]
@@ -161,7 +161,7 @@ global function riv_draw_rect_line(x0: int64, y0: int64, w: int64, h: int64, col
 end
 
 global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32): void <cexport>
-  if d <= 0 then return end
+  if unlikely(d <= 0) then return end
   ox = ox + riv.draw.origin.x
   oy = oy + riv.draw.origin.y
   local co: uint8 = riv.draw.pal[(@uint8)(col)]
@@ -188,7 +188,7 @@ global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32
 end
 
 global function riv_draw_circle_line(ox: int64, oy: int64, d: int64, col: uint32): void <cexport>
-  if d <= 0 then return end
+  if unlikely(d <= 0) then return end
   ox = ox + riv.draw.origin.x
   oy = oy + riv.draw.origin.y
   local co: uint8 = riv.draw.pal[(@uint8)(col)]
@@ -219,7 +219,7 @@ global function riv_draw_circle_line(ox: int64, oy: int64, d: int64, col: uint32
 end
 
 global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, col: uint32): void <cexport>
-  if w <= 0 or h <= 0 then return end
+  if unlikely(w <= 0 or h <= 0) then return end
   ox = ox + riv.draw.origin.x
   oy = oy + riv.draw.origin.y
   local co: uint8 = riv.draw.pal[(@uint8)(col)]
@@ -250,7 +250,7 @@ global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, 
 end
 
 global function riv_draw_ellipse_line(ox: int64, oy: int64, w: int64, h: int64, col: uint32): void <cexport>
-  if w <= 0 or h <= 0 then return end
+  if unlikely(w <= 0 or h <= 0) then return end
   ox = ox + riv.draw.origin.x
   oy = oy + riv.draw.origin.y
   local co: uint8 = riv.draw.pal[(@uint8)(col)]
@@ -367,7 +367,7 @@ local function riv_rotate_box(ox: int64, oy: int64, w: int64, h: int64, rot: flo
 end
 
 global function riv_draw_box_fill(ox: int64, oy: int64, w: int64, h: int64, rot: float32, col: uint32): void <cexport>
-  if w <= 0 or h <= 0 then return end
+  if unlikely(w <= 0 or h <= 0) then return end
   if rot == 0 then
     riv_draw_rect_fill(ox - (w-1)///2, oy - (h-1)///2, w, h, col)
   else
@@ -378,7 +378,7 @@ global function riv_draw_box_fill(ox: int64, oy: int64, w: int64, h: int64, rot:
 end
 
 global function riv_draw_box_line(ox: int64, oy: int64, w: int64, h: int64, rot: float32, col: uint32): void <cexport>
-  if w <= 0 or h <= 0 then return end
+  if unlikely(w <= 0 or h <= 0) then return end
   if rot == 0 then
     riv_draw_rect_line(ox - (w-1)///2, oy - (h-1)///2, w, h, col)
   else
