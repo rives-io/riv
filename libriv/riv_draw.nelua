@@ -66,7 +66,7 @@ global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: u
       local iy0: int64, iy1: int64 = math.max(y0, cy0), math.min(y1, cy1)
       local dy: int64 = iy1 - iy0 + 1
       if dy > 0 then
-        for iy: int64=iy0,iy1 do
+        for iy: int64=iy0,iy1,1 do
           fb[iy*fw + x0] = co
         end
       end
@@ -74,9 +74,9 @@ global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: u
   else
     local dx: int64, dy: int64 = x1-x0, y1-y0
     local ix: int64, iy: int64 = 1, 1
-    if dx < 0 then ix = -1 dx = -dx end
-    if dy < 0 then iy = -1 dy = -dy end
-    if math.abs(y1 - y0) < math.abs(x1 - x0) then -- low diagonal line
+    if dx < 0 then ix = -ix dx = -dx end
+    if dy < 0 then iy = -iy dy = -dy end
+    if dy < dx then -- low diagonal line
       local q: int64 = 2*dy - dx
       local y: int64 = y0
       for x: int64=x0,x1,ix do
@@ -167,40 +167,21 @@ global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32
   local co: uint8 = riv.draw.pal[(@uint8)(col)]
   local fb: *[0]uint8 = riv.framebuffer
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  local sr: int64 = (d + 1) %%% 2
   local r: int64 = d /// 2
-  if r > 0 and 2*r == d then -- even diameter
-    r = r + 1
-    local r2: int64 = r*r
-    for ry: int64=1,r do
-      local iy0: int64, iy1: int64 = oy - ry + 1, oy + ry
-      local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
-      local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1
-      if iy0v or iy1v then
-        local irx: int64 = math.ifloor(math.sqrt((@float32)(r2 - ry*ry)))
-        local ix0: int64 = math.max(ox - irx + 1, cx0)
-        local ix1: int64 = math.min(ox + irx, cx1)
-        local dx: int64 = ix1 - ix0 + 1
-        if dx > 0 then
-          if iy0v then memset(&fb[iy0*fw + ix0], co, dx) end
-          if iy1v then memset(&fb[iy1*fw + ix0], co, dx) end
-        end
-      end
-    end
-  else -- odd diameter
-    local r2: int64 = r*r + math.max(r-1, 0)
-    for ry: int64=0,r do
-      local iy0: int64, iy1: int64 = oy - ry, oy + ry
-      local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
-      local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1 and ry ~= 0
-      if iy0v or iy1v then
-        local irx: int64 = math.ifloor(math.sqrt((@float32)(r2 - ry*ry)))
-        local ix0: int64 = math.max(ox - irx, cx0)
-        local ix1: int64 = math.min(ox + irx, cx1)
-        local dx: int64 = ix1 - ix0 + 1
-        if dx > 0 then
-          if iy0v then memset(&fb[iy0*fw + ix0], co, dx) end
-          if iy1v then memset(&fb[iy1*fw + ix0], co, dx) end
-        end
+  local r2: int64 = r*r + math.max(r-1, 0)
+  for iry: int64=sr,r,1 do
+    local iy0: int64, iy1: int64 = oy - iry + sr, oy + iry
+    local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
+    local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1 and iy0 ~= iy1
+    if iy0v or iy1v then
+      local erx: int64 = math.ifloor(math.sqrt((@float32)(r2 - iry*iry)))
+      local ix0: int64 = math.max(ox - erx + sr, cx0)
+      local ix1: int64 = math.min(ox + erx, cx1)
+      local dx: int64 = ix1 - ix0 + 1
+      if dx > 0 then
+        if iy0v then memset(&fb[iy0*fw + ix0], co, dx) end
+        if iy1v then memset(&fb[iy1*fw + ix0], co, dx) end
       end
     end
   end
@@ -213,48 +194,92 @@ global function riv_draw_circle_line(ox: int64, oy: int64, d: int64, col: uint32
   local co: uint8 = riv.draw.pal[(@uint8)(col)]
   local fb: *[0]uint8 = riv.framebuffer
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  local sr: int64 = (d + 1) %%% 2
   local r: int64 = d /// 2
-  if r > 0 and 2*r == d then -- even diameter
-    r = r + 1
-    local r2: int64 = r*r
-    for ry: int64=1,r do
-      local iy0: int64, iy1: int64 = oy - ry + 1, oy + ry
-      local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
-      local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1
-      if iy0v or iy1v then
-        local irx: int64 = math.ifloor(math.sqrt((@float32)(r2 - ry*ry)))
-        for rx: int64=irx,1,-1 do
-          local ix0: int64, ix1: int64 = ox - rx + 1, ox + rx
-          local iry: int64 = math.ifloor(math.sqrt((@float32)(r2 - rx*rx)))
-          if not (rx >= irx or ry >= iry) then break end
-          local ix0v: boolean = ix0 >= cx0 and ix0 <= cx1
-          local ix1v: boolean = ix1 >= cx0 and ix1 <= cx1
-          if iy0v and ix0v then fb[iy0*fw + ix0] = co end
-          if iy0v and ix1v then fb[iy0*fw + ix1] = co end
-          if iy1v and ix0v then fb[iy1*fw + ix0] = co end
-          if iy1v and ix1v then fb[iy1*fw + ix1] = co end
-        end
+  local r2: int64 = r*r + math.max(r-1, 0)
+  for iry: int64=sr,r,1 do
+    local iy0: int64, iy1: int64 = oy - iry + sr, oy + iry
+    local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
+    local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1
+    if iy0v or iy1v then
+      local erx: int64 = math.ifloor(math.sqrt((@float32)(r2 - iry*iry)))
+      for irx: int64=erx,sr,-1 do
+        local ix0: int64, ix1: int64 = ox - irx + sr, ox + irx
+        local ery: int64 = math.ifloor(math.sqrt((@float32)(r2 - irx*irx)))
+        if not (irx >= erx or iry >= ery) then break end
+        local ix0v: boolean = ix0 >= cx0 and ix0 <= cx1
+        local ix1v: boolean = ix1 >= cx0 and ix1 <= cx1
+        if iy0v and ix0v then fb[iy0*fw + ix0] = co end
+        if iy0v and ix1v then fb[iy0*fw + ix1] = co end
+        if iy1v and ix0v then fb[iy1*fw + ix0] = co end
+        if iy1v and ix1v then fb[iy1*fw + ix1] = co end
       end
     end
-  else -- odd diameter
-    local r2: int64 = r*r + math.max(r-1, 0)
-    for ry: int64=0,r do
-      local iy0: int64, iy1: int64 = oy - ry, oy + ry
-      local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
-      local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1 and ry ~= 0
-      if iy0v or iy1v then
-        local irx: int64 = math.ifloor(math.sqrt((@float32)(r2 - ry*ry)))
-        for rx: int64=irx,0,-1 do
-          local ix0: int64, ix1: int64 = ox - rx, ox + rx
-          local iry: int64 = math.ifloor(math.sqrt((@float32)(r2 - rx*rx)))
-          if not (rx >= irx or ry >= iry) then break end
-          local ix0v: boolean = ix0 >= cx0 and ix0 <= cx1
-          local ix1v: boolean = ix1 >= cx0 and ix1 <= cx1 and rx ~= 0
-          if iy0v and ix0v then fb[iy0*fw + ix0] = co end
-          if iy0v and ix1v then fb[iy0*fw + ix1] = co end
-          if iy1v and ix0v then fb[iy1*fw + ix0] = co end
-          if iy1v and ix1v then fb[iy1*fw + ix1] = co end
-        end
+  end
+end
+
+global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, col: uint32): void <cexport>
+  if w <= 0 or h <= 0 then return end
+  ox = ox + riv.draw.origin.x
+  oy = oy + riv.draw.origin.y
+  local co: uint8 = riv.draw.pal[(@uint8)(col)]
+  local fb: *[0]uint8 = riv.framebuffer
+  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  local srx: int64 = (w + 1) %%% 2
+  local sry: int64 = (h + 1) %%% 2
+  local rx: int64 = w /// 2
+  local ry: int64 = h /// 2
+  local rx2: int64 = rx*rx + math.max(rx-1, 0)
+  local ry2: int64 = ry*ry + math.max(ry-1, 0)
+  local ry2inv: float32 = ry2 > 0 and 1_f32 / ry2 or 1_f32
+  for iry: int64=sry,ry,1 do
+    local iy0: int64, iy1: int64 = oy - iry + sry, oy + iry
+    local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
+    local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1 and iy0 ~= iy1
+    if iy0v or iy1v then
+      local irx: int64 = math.ifloor(math.sqrt((rx2*(ry2 - iry*iry))*ry2inv))
+      local ix0: int64 = math.max(ox - irx + srx, cx0)
+      local ix1: int64 = math.min(ox + irx, cx1)
+      local dx: int64 = ix1 - ix0 + 1
+      if dx > 0 then
+        if iy0v then memset(&fb[iy0*fw + ix0], co, dx) end
+        if iy1v then memset(&fb[iy1*fw + ix0], co, dx) end
+      end
+    end
+  end
+end
+
+global function riv_draw_ellipse_line(ox: int64, oy: int64, w: int64, h: int64, col: uint32): void <cexport>
+  if w <= 0 or h <= 0 then return end
+  ox = ox + riv.draw.origin.x
+  oy = oy + riv.draw.origin.y
+  local co: uint8 = riv.draw.pal[(@uint8)(col)]
+  local fb: *[0]uint8 = riv.framebuffer
+  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  local srx: int64 = (w + 1) %%% 2
+  local sry: int64 = (h + 1) %%% 2
+  local rx: int64 = w /// 2
+  local ry: int64 = h /// 2
+  local rx2: int64 = rx*rx + math.max(rx-1, 0)
+  local ry2: int64 = ry*ry + math.max(ry-1, 0)
+  local rx2inv: float32 = rx2 > 0 and 1_f32 / rx2 or 1_f32
+  local ry2inv: float32 = ry2 > 0 and 1_f32 / ry2 or 1_f32
+  for iry: int64=sry,ry,1 do
+    local iy0: int64, iy1: int64 = oy - iry + sry, oy + iry
+    local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
+    local iy1v: boolean = iy1 >= cy0 and iy1 <= cy1
+    if iy0v or iy1v then
+      local erx: int64 = math.ifloor(math.sqrt((rx2*(ry2 - iry*iry))*ry2inv))
+      for irx: int64=erx,srx,-1 do
+        local ix0: int64, ix1: int64 = ox - irx + srx, ox + irx
+        local ery: int64 = math.ifloor(math.sqrt((ry2*math.max(rx2 - irx*irx, 0))*rx2inv))
+        if not (irx >= erx or iry >= ery) then break end
+        local ix0v: boolean = ix0 >= cx0 and ix0 <= cx1
+        local ix1v: boolean = ix1 >= cx0 and ix1 <= cx1
+        if iy0v and ix0v then fb[iy0*fw + ix0] = co end
+        if iy0v and ix1v then fb[iy0*fw + ix1] = co end
+        if iy1v and ix0v then fb[iy1*fw + ix0] = co end
+        if iy1v and ix1v then fb[iy1*fw + ix1] = co end
       end
     end
   end
@@ -297,7 +322,7 @@ global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int6
     local cotg_tb: float32 = (bx - tx) / (@float32)(by - ty)
     local cotg_tm: float32 = my ~= ty and (mx - tx) / (@float32)(my - ty) or 0.0_f32
     local cotg_mb: float32 = by ~= my and (bx - mx) / (@float32)(by - my) or 0.0_f32
-    for iy=math.max(ty,cy0),math.min(by,cy1) do
+    for iy=math.max(ty,cy0),math.min(by,cy1),1 do
       local ix0f: float32 = tx + cotg_tb * (iy - ty)
       local ix1f: float32
       if iy < my then

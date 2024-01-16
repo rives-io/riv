@@ -31,6 +31,8 @@ global function riv_draw_box_fill(ox: int64, oy: int64, w: int64, h: int64, rot:
 global function riv_draw_box_line(ox: int64, oy: int64, w: int64, h: int64, rot: float32, col: uint32): void <cimport,nodecl> end
 global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_circle_line(ox: int64, oy: int64, d: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_ellipse_line(ox: int64, oy: int64, w: int64, h: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_triangle_line(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cimport,nodecl> end
 

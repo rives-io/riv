@@ -531,6 +531,8 @@ RIV_API void riv_draw_box_fill(int64_t ox, int64_t oy, int64_t w, int64_t h, flo
 RIV_API void riv_draw_box_line(int64_t ox, int64_t oy, int64_t w, int64_t h, float rot, uint32_t col);
 RIV_API void riv_draw_circle_fill(int64_t ox, int64_t oy, int64_t d, uint32_t col);
 RIV_API void riv_draw_circle_line(int64_t ox, int64_t oy, int64_t d, uint32_t col);
+RIV_API void riv_draw_ellipse_fill(int64_t ox, int64_t oy, int64_t w, int64_t h, uint32_t col);
+RIV_API void riv_draw_ellipse_line(int64_t ox, int64_t oy, int64_t w, int64_t h, uint32_t col);
 RIV_API void riv_draw_triangle_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
 RIV_API void riv_draw_triangle_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
 
