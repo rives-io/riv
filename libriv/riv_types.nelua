@@ -129,8 +129,8 @@ global riv_pal16_color: type <cimport,nodecl,using> = @enum(uint8){
   RIV_NUM_PAL16_COLOR = 16
 }
 global riv_font_id: type <cimport,nodecl,using> = @enum(int32){
-  RIV_FONT_ASCII_3X5 = 0,
-  RIV_FONT_ASCII_5X9 = 1,
+  RIV_FONT_ASCII_5X7 = 0,
+  RIV_FONT_ASCII_3X5 = 1,
   RIV_FONT_USER1 = 4,
   RIV_FONT_USER2 = 5,
   RIV_FONT_USER3 = 6,
@@ -335,8 +335,8 @@ global riv_font: type <cimport,nodecl> = @record{
   glyph_height: uint32,
   image_width: uint32,
   image_height: uint32,
-  image_glyph_width: uint32,
-  image_glyph_height: uint32,
+  image_grid_width: uint32,
+  image_grid_height: uint32,
   image_pixels: *uint8
 }
 global riv_draw_state: type <cimport,nodecl> = @record{
@@ -358,7 +358,6 @@ global riv_context: type <cimport,nodecl> = @record{
   key_toggles: [128]uint8,
   keys: [128]riv_key_state,
   reserved_r: [856]int8,
-  prng: riv_xoshiro256,
   outcard_len: uint32,
   quit: boolean,
   framebuffer_desc: *riv_framebuffer_desc,
@@ -367,7 +366,8 @@ global riv_context: type <cimport,nodecl> = @record{
   palette: *[0]uint32,
   framebuffer: *[0]uint8,
   draw: riv_draw_state,
-  reserved_rw: [136]uint8,
+  reserved_rw: [168]uint8,
+  prng: riv_xoshiro256,
   mmio_driver: *riv_mmio_driver,
   mmio_device: *riv_mmio_device,
   audiobuffer: *[0]uint8,

@@ -20,17 +20,17 @@ global function riv_init_draw(): void
   riv.draw.fonts[RIV_FONT_ASCII_3X5].glyph_height = #[fonts.f3x5.glyph_height]#
   riv.draw.fonts[RIV_FONT_ASCII_3X5].image_width = #[fonts.f3x5.image_width]#
   riv.draw.fonts[RIV_FONT_ASCII_3X5].image_height = #[fonts.f3x5.image_height]#
-  riv.draw.fonts[RIV_FONT_ASCII_3X5].image_glyph_width = #[fonts.f3x5.image_glyph_width]#
-  riv.draw.fonts[RIV_FONT_ASCII_3X5].image_glyph_height = #[fonts.f3x5.image_glyph_height]#
+  riv.draw.fonts[RIV_FONT_ASCII_3X5].image_grid_width = #[fonts.f3x5.image_grid_width]#
+  riv.draw.fonts[RIV_FONT_ASCII_3X5].image_grid_height = #[fonts.f3x5.image_grid_height]#
   riv.draw.fonts[RIV_FONT_ASCII_3X5].image_pixels = (@*[0]byte)(#[fonts.f3x5.pixels]#)
 
-  riv.draw.fonts[RIV_FONT_ASCII_5X9].glyph_width = #[fonts.f5x9.glyph_width]#
-  riv.draw.fonts[RIV_FONT_ASCII_5X9].glyph_height = #[fonts.f5x9.glyph_height]#
-  riv.draw.fonts[RIV_FONT_ASCII_5X9].image_width = #[fonts.f5x9.image_width]#
-  riv.draw.fonts[RIV_FONT_ASCII_5X9].image_height = #[fonts.f5x9.image_height]#
-  riv.draw.fonts[RIV_FONT_ASCII_5X9].image_glyph_width = #[fonts.f5x9.image_glyph_width]#
-  riv.draw.fonts[RIV_FONT_ASCII_5X9].image_glyph_height = #[fonts.f5x9.image_glyph_height]#
-  riv.draw.fonts[RIV_FONT_ASCII_5X9].image_pixels = (@*[0]byte)(#[fonts.f5x9.pixels]#)
+  riv.draw.fonts[RIV_FONT_ASCII_5X7].glyph_width = #[fonts.f5x7.glyph_width]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X7].glyph_height = #[fonts.f5x7.glyph_height]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X7].image_width = #[fonts.f5x7.image_width]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X7].image_height = #[fonts.f5x7.image_height]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X7].image_grid_width = #[fonts.f5x7.image_grid_width]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X7].image_grid_height = #[fonts.f5x7.image_grid_height]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X7].image_pixels = (@*[0]byte)(#[fonts.f5x7.pixels]#)
 end
 
 global function riv_clear_screen(col: uint32): void <cexport>
@@ -456,39 +456,38 @@ global function riv_draw_quad_fill(x0: int64, y0: int64, x1: int64, y1: int64, x
   riv_draw_triangle_fill(p[2].x, p[2].y, p[3].x, p[3].y, p[0].x, p[0].y, col) -- left
 end
 
---------------------------------------------------------------------------------
--- Text drawing
-
 global function riv_draw_glyph(glyph: uint32, x0: int64, y0: int64, mw: int64, mh: int64, fnt: uint32, col: uint32): void <cexport>
   if unlikely(mw <= 0 or mh <= 0) then return end
   local font: *riv_font = &riv.draw.fonts[fnt % 8]
-  if unlikely(font.image_glyph_width == 0) then return end
+  if unlikely(font.image_grid_width == 0) then return end
   local gw: uint32, gh: uint32 = font.glyph_width, font.glyph_height
-  local gcols: uint32 = font.image_width // font.image_glyph_width
+  local gcols: uint32 = font.image_width // font.image_grid_width
   if unlikely(gcols == 0) then return end
-  local gx: int64 = (glyph % gcols)*font.image_glyph_width
-  local gy: int64 = (glyph // gcols)*font.image_glyph_height
+  local gx: int64 = (glyph % gcols)*font.image_grid_width
+  local gy: int64 = (glyph // gcols)*font.image_grid_height
   if unlikely(gy + gh > font.image_height or gx + gw > font.image_width) then return end
   x0 = x0 + riv.draw.origin.x
   y0 = y0 + riv.draw.origin.y
   local imgw: int64 = font.image_width
   local imgp: *[0]uint8 = font.image_pixels
   local fb: *[0]uint8 = riv.framebuffer
-  local co: uint8 = riv.draw.pal[(@uint8)(col)]
+  local pal: *[0]uint8 = &riv.draw.pal
+  local co: uint8 = (@uint8)(col) - 1_u8
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local bx0: int64 = math.max(x0, cx0)
   local by0: int64 = math.max(y0, cy0)
   local ex1: int64 = math.min(x0 + gw*mw - 1, cx1)
   local ey1: int64 = math.min(y0 + gh*mh - 1, cy1)
-  if mw*mh == 1 then -- non scaled
+  if likely(mw == 1 and mh == 1) then -- non scaled
     gy = gy - y0
     gx = gx - x0
     for iy0: int64=by0,ey1 do
       local igy: int64 = iy0 + gy
       for ix0: int64=bx0,ex1 do
         local igx: int64 = ix0 + gx
-        if imgp[igy*imgw + igx] ~= 0 then
-          fb[iy0*fw + ix0] = co
+        local imgco: uint8 = imgp[igy*imgw + igx]
+        if imgco ~= 0 then
+          fb[iy0*fw + ix0] = pal[imgco + co]
         end
       end
     end
@@ -499,8 +498,9 @@ global function riv_draw_glyph(glyph: uint32, x0: int64, y0: int64, mw: int64, m
       for ix0: int64=bx0,ex1 do
         local ix: int64 = (ix0 - x0)///mw
         local igx: int64 = ix + gx
-        if imgp[igy*imgw + igx] ~= 0 then
-          fb[iy0*fw + ix0] = co
+        local imgco: uint8 = imgp[igy*imgw + igx]
+        if imgco ~= 0 then
+          fb[iy0*fw + ix0] = pal[imgco + co]
         end
       end
     end
@@ -512,29 +512,25 @@ global function riv_draw_text(text: cstring <const>, x0: int64, y0: int64, mw: i
   local gw: int64, gh: int64 = font.glyph_width*mw, font.glyph_height*mh
   if unlikely(gw <= 0 or gh <= 0) then return riv_vec2i{0, 0} end
   local data: *[0]byte = text
-  local x: int64 = x0
-  local y: int64 = y0
-  local xmax: int64 = x0
-  local ymax: int64 = y0
-  local i: int64 = 0
+  local x: int64, y: int64 = x0, y0
+  local xmax: int64, ymax: int64 = x0, y0
+  local i: uint64 = 0
   repeat
     local glyph: uint32 = data[i]
-    if glyph == ' '_b then -- space
-      x = x + gw
-      xmax = math.max(x, xmax)
-      x = x + sx
-    elseif glyph == '\t'_b then -- tab
-      x = x + 2*gw + sx
-      xmax = math.max(x, xmax)
-      x = x + sx
-    elseif glyph == '\n'_b then -- new line
+    if glyph == '\n'_b then -- new line
       y = y + gh
       ymax = math.max(y, ymax)
       y = y + sy
       xmax = math.max(x, xmax)
       x = x0
-    elseif glyph > 0 and glyph ~= '\r'_b then -- visible glyph
-      if col >= 0 then
+    elseif glyph == '\r'_b then
+      -- skip
+    elseif glyph > 0 then -- other glyph with width
+      if glyph == ' '_b then -- space
+        -- skip draw, but advance
+      elseif glyph == '\t'_b then -- tab
+        x = x + gw + sx
+      elseif col >= 0 then -- visible glyph
         riv_draw_glyph(glyph, x, y, mw, mh, fnt, col)
       end
       x = x + gw

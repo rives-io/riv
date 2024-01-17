@@ -176,8 +176,10 @@ typedef enum riv_pal16_color {
 
 // Default fonts ids
 typedef enum riv_font_id {
-  RIV_FONT_ASCII_3X5 = 0,
-  RIV_FONT_ASCII_5X9 = 1,
+  RIV_FONT_ASCII_5X7 = 0,
+  RIV_FONT_ASCII_3X5 = 1,
+  // 2 is reserved
+  // 3 is reserved
   RIV_FONT_USER1 = 4,
   RIV_FONT_USER2 = 5,
   RIV_FONT_USER3 = 6,
@@ -472,8 +474,8 @@ typedef struct riv_font {
   uint32_t glyph_height;
   uint32_t image_width;
   uint32_t image_height;
-  uint32_t image_glyph_width;
-  uint32_t image_glyph_height;
+  uint32_t image_grid_width;
+  uint32_t image_grid_height;
   riv_unbounded_uint8 image_pixels;
 } riv_font;
 
@@ -501,7 +503,6 @@ typedef struct riv_context {
   riv_key_state keys[RIV_NUM_KEYCODE];    // Current keyboard state
   int8_t reserved_r[856];
   // Public read/write fields (can be written at any moment)
-  riv_xoshiro256 prng;                    // Internal PRNG state
   uint32_t outcard_len;                   // Output card length
   bool quit;                              // When set true, RIV loop will stop
   riv_framebuffer_desc* framebuffer_desc; // Screen frame buffer description
@@ -510,8 +511,9 @@ typedef struct riv_context {
   riv_unbounded_uint32 palette;           // Color palette
   riv_unbounded_uint8 framebuffer;        // Screen frame buffer
   riv_draw_state draw;                    // Draw state
-  uint8_t reserved_rw[136];
+  uint8_t reserved_rw[168];
   // Private fields
+  riv_xoshiro256 prng;                    // Internal PRNG state
   riv_mmio_driver* mmio_driver;
   riv_mmio_device* mmio_device;
   riv_unbounded_uint8 audiobuffer;        // Audio buffer used by audio commands
