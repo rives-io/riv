@@ -1,63 +1,9 @@
 ## pragmas.unitname = ''
+## local fonts = require 'riv_fonts'
 
 require 'memory'
 require 'math'
 require '.riv_types'
-
-local default_font8_image: string = #[([[
-....##..##..###.#.#..##.#...###..##.........##..###.....###.###.
-.....#...#...##.###..#..###...#.###.........###.#.......##..##..
-....###..##.###...#.##..###...#.##..........###.###.....###.#...
-................................................................
-....###.###.###.###.###.###.###.###.........###.###.....###.###.
-................................................................
-###.......................#.#...###.....#.#.............#.#..#..
-###.###.###.#.#.#.#.#.#..##.##..#.....#.###.............#.#.#.#.
-###.###.#.#..#......#.#.###.###.#.....#..#...#...............#..
-###.###.###.#.#.#.#.#.#..##.##..#.....#.###.....#...##..........
-###.......................#.#.......###..#.......#..##..........
-................................................................
-.....#..#.#.#.#.###.#.#.##...#...#...#..#.#...................#.
-.....#..#.#.###.##....#.##..#...#.....#..#...#...............#..
-.....#......#.#..##..#...##.....#.....#.###.###.....###......#..
-............###.###.#...#.#.....#.....#..#...#...#...........#..
-.....#......#.#..#..#.#.###......#...#..#.#.....#........#..#...
-................................................................
-###.##..###.###.#.#.###.#...###.###.###...........#.....#...###.
-#.#..#....#...#.#.#.#...#.....#.#.#.#.#..#...#...#..###..#....#.
-#.#..#..###..##.###.###.###...#.###.###.........#.........#..##.
-#.#..#..#.....#...#...#.#.#...#.#.#...#..#...#...#..###..#......
-###.###.###.###...#.###.###...#.###...#.....#.....#.....#....#..
-................................................................
-.#..............................................................
-#.#..##.##...##.##..###.###..##.#.#.###.###.#.#.#...###.##...##.
-#.#.#.#.##..#...#.#.##..##..#...#.#..#...#..##..#...###.#.#.#.#.
-#...###.#.#.#...#.#.#...#...#.#.###..#...#..#.#.#...#.#.#.#.#.#.
-.##.#.#.###..##.##...##.#...###.#.#.###.##..#.#..##.#.#.#.#.##..
-................................................................
-............................................##..#....##..#......
-.##..#..##...##.###.#.#.#.#.#.#.#.#.#.#.###.#....#....#.#.#.....
-#.#.#.#.#.#.#....#..#.#.#.#.#.#..#..###...#.#....#....#.........
-###.##..##....#..#..#.#.###.###..#....#.#...#....#....#.........
-#....##.#.#.##...#...##..#..###.#.#.##..###.##....#..##.....###.
-................................................................
-.#..###.###..##.##..###.###..##.#.#.###.###.#.#.#...###.##...##.
-..#.#.#.#.#.#...#.#.#...#...#...#.#..#...#..#.#.#...###.#.#.#.#.
-....###.##..#...#.#.##..##..#...###..#...#..##..#...#.#.#.#.#.#.
-....#.#.#.#.#...#.#.#...#...#.#.#.#..#...#..#.#.#...#.#.#.#.#.#.
-....#.#.###..##.###.###.#...###.#.#.###.##..#.#.###.#.#.#.#.##..
-................................................................
-###..#..###..##.###.#.#.#.#.#.#.#.#.#.#.###..##..#..##..........
-#.#.#.#.#.#.#....#..#.#.#.#.#.#.#.#.#.#...#..#...#...#....#..#..
-###.#.#.##..###..#..#.#.#.#.#.#..#..###..#..##...#...##.###.#.#.
-#...##..#.#...#..#..#.#.###.###.#.#...#.#....#...#...#..#....#..
-#....##.#.#.##...#...##..#..###.#.#.###.###..##..#..##..........
-................................................................
-]])
-:gsub('%.',string.char(0))
-:gsub('#',string.char(1))
-:gsub('%s','')
-]#
 
 local function memset(s: pointer, c: cint, n: csize): pointer <cimport,cinclude'<string.h>'> end
 
@@ -69,14 +15,22 @@ global function riv_init_draw(): void
   for i: usize = 0,<256 do
     riv.draw.pal[i] = i
   end
-  -- set default font
-  riv.draw.fonts[0].glyph_width = 3
-  riv.draw.fonts[0].glyph_height = 5
-  riv.draw.fonts[0].image_width = 64
-  riv.draw.fonts[0].image_height = 48
-  riv.draw.fonts[0].image_glyph_width = 4
-  riv.draw.fonts[0].image_glyph_height = 6
-  riv.draw.fonts[0].image_pixels = default_font8_image.data
+  -- set default fonts
+  riv.draw.fonts[RIV_FONT_ASCII_3X5].glyph_width = #[fonts.f3x5.glyph_width]#
+  riv.draw.fonts[RIV_FONT_ASCII_3X5].glyph_height = #[fonts.f3x5.glyph_height]#
+  riv.draw.fonts[RIV_FONT_ASCII_3X5].image_width = #[fonts.f3x5.image_width]#
+  riv.draw.fonts[RIV_FONT_ASCII_3X5].image_height = #[fonts.f3x5.image_height]#
+  riv.draw.fonts[RIV_FONT_ASCII_3X5].image_glyph_width = #[fonts.f3x5.image_glyph_width]#
+  riv.draw.fonts[RIV_FONT_ASCII_3X5].image_glyph_height = #[fonts.f3x5.image_glyph_height]#
+  riv.draw.fonts[RIV_FONT_ASCII_3X5].image_pixels = (@*[0]byte)(#[fonts.f3x5.pixels]#)
+
+  riv.draw.fonts[RIV_FONT_ASCII_5X9].glyph_width = #[fonts.f5x9.glyph_width]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X9].glyph_height = #[fonts.f5x9.glyph_height]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X9].image_width = #[fonts.f5x9.image_width]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X9].image_height = #[fonts.f5x9.image_height]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X9].image_glyph_width = #[fonts.f5x9.image_glyph_width]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X9].image_glyph_height = #[fonts.f5x9.image_glyph_height]#
+  riv.draw.fonts[RIV_FONT_ASCII_5X9].image_pixels = (@*[0]byte)(#[fonts.f5x9.pixels]#)
 end
 
 global function riv_clear_screen(col: uint32): void <cexport>
@@ -514,7 +468,7 @@ global function riv_draw_glyph(glyph: uint32, x0: int64, y0: int64, mw: int64, m
   if unlikely(gcols == 0) then return end
   local gx: int64 = (glyph % gcols)*font.image_glyph_width
   local gy: int64 = (glyph // gcols)*font.image_glyph_height
-  if unlikely(gy + gh >= font.image_height or gx + gw >= font.image_width) then return end
+  if unlikely(gy + gh > font.image_height or gx + gw > font.image_width) then return end
   x0 = x0 + riv.draw.origin.x
   y0 = y0 + riv.draw.origin.y
   local imgw: int64 = font.image_width
@@ -555,27 +509,43 @@ end
 
 global function riv_draw_text(text: cstring <const>, x0: int64, y0: int64, mw: int64, mh: int64, sx: int64, sy: int64, fnt: uint64, col: int64): riv_vec2i <cexport>
   local font: *riv_font = &riv.draw.fonts[fnt % 8]
-  local data: *[0]byte = text
   local gw: int64, gh: int64 = font.glyph_width*mw, font.glyph_height*mh
+  if unlikely(gw <= 0 or gh <= 0) then return riv_vec2i{0, 0} end
+  local data: *[0]byte = text
   local x: int64 = x0
   local y: int64 = y0
+  local xmax: int64 = x0
+  local ymax: int64 = y0
   local i: int64 = 0
   repeat
     local glyph: uint32 = data[i]
     if glyph == ' '_b then -- space
-      x = x + gw + sx
+      x = x + gw
+      xmax = math.max(x, xmax)
+      x = x + sx
     elseif glyph == '\t'_b then -- tab
-      x = x + 4*gw + sx
+      x = x + 2*gw + sx
+      xmax = math.max(x, xmax)
+      x = x + sx
     elseif glyph == '\n'_b then -- new line
-      y = y + gh + sy
+      y = y + gh
+      ymax = math.max(y, ymax)
+      y = y + sy
+      xmax = math.max(x, xmax)
       x = x0
     elseif glyph > 0 and glyph ~= '\r'_b then -- visible glyph
       if col >= 0 then
         riv_draw_glyph(glyph, x, y, mw, mh, fnt, col)
       end
-      x = x + gw + sx
+      x = x + gw
+      xmax = math.max(x, xmax)
+      x = x + sx
     end
     i = i + 1
   until glyph == 0
-  return riv_vec2i{x, y}
+  if x ~= x0 then
+    y = y + gh
+    ymax = math.max(y, ymax)
+  end
+  return riv_vec2i{xmax - x0, ymax - y0}
 end

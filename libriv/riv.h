@@ -174,6 +174,16 @@ typedef enum riv_pal16_color {
   RIV_NUM_PAL16_COLOR  = 16,
 } riv_pal16_color;
 
+// Default fonts ids
+typedef enum riv_font_id {
+  RIV_FONT_ASCII_3X5 = 0,
+  RIV_FONT_ASCII_5X9 = 1,
+  RIV_FONT_USER1 = 4,
+  RIV_FONT_USER2 = 5,
+  RIV_FONT_USER3 = 6,
+  RIV_FONT_USER4 = 7,
+} riv_font_id;
+
 // Default palette colors
 typedef enum riv_rgb_pal16_color {
   RIV_RGB_PAL16_BLACK      = 0x000000,

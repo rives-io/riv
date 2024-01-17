@@ -128,6 +128,14 @@ global riv_pal16_color: type <cimport,nodecl,using> = @enum(uint8){
   RIV_PAL16_LIGHTPEACH = 15,
   RIV_NUM_PAL16_COLOR = 16
 }
+global riv_font_id: type <cimport,nodecl,using> = @enum(int32){
+  RIV_FONT_ASCII_3X5 = 0,
+  RIV_FONT_ASCII_5X9 = 1,
+  RIV_FONT_USER1 = 4,
+  RIV_FONT_USER2 = 5,
+  RIV_FONT_USER3 = 6,
+  RIV_FONT_USER4 = 7
+}
 global riv_rgb_pal16_color: type <cimport,nodecl,using> = @enum(uint32){
   RIV_RGB_PAL16_BLACK = 0,
   RIV_RGB_PAL16_DARKBLUE = 5450525,
