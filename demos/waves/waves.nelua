@@ -2,7 +2,7 @@ require 'riv'
 require 'math'
 
 local function draw()
-  riv_clear_screen(1)
+  riv_clear_screen(RIV_COLOR_DARKSLATE)
   local tau: float32 <comptime> = math.pi*2
   local time: float32 = riv.seconds
   local r <comptime> = 64
@@ -10,7 +10,7 @@ local function draw()
     for x=-r,r,2 do
       local dist = math.sqrt(float32(x*x+y*y))
       local z = math.cos((dist/40_f32-time)*tau)*6
-      riv_draw_point(r+x, r+y-math.ifloor(z), 6)
+      riv_draw_point(r+x, r+y-math.ifloor(z), RIV_COLOR_WHITE)
     end
   end
 end

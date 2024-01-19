@@ -154,25 +154,77 @@ typedef enum riv_key_code {
 } riv_key_code;
 
 // Default palette color indexes
-typedef enum riv_pal16_color {
-  RIV_PAL16_BLACK      = 0,
-  RIV_PAL16_DARKBLUE   = 1,
-  RIV_PAL16_DARKPURPLE = 2,
-  RIV_PAL16_DARKGREEN  = 3,
-  RIV_PAL16_BROWN      = 4,
-  RIV_PAL16_DARKGREY   = 5,
-  RIV_PAL16_LIGHTGREY  = 6,
-  RIV_PAL16_WHITE      = 7,
-  RIV_PAL16_RED        = 8,
-  RIV_PAL16_ORANGE     = 9,
-  RIV_PAL16_YELLOW     = 10,
-  RIV_PAL16_GREEN      = 11,
-  RIV_PAL16_BLUE       = 12,
-  RIV_PAL16_LAVENDER   = 13,
-  RIV_PAL16_PINK       = 14,
-  RIV_PAL16_LIGHTPEACH = 15,
-  RIV_NUM_PAL16_COLOR  = 16,
-} riv_pal16_color;
+typedef enum riv_color_id {
+  RIV_COLOR_BLACK       = 0,
+  RIV_COLOR_WHITE       = 1,
+  RIV_COLOR_LIGHTGREY   = 2,
+  RIV_COLOR_GREY        = 3,
+  RIV_COLOR_DARKSLATE   = 4,
+  RIV_COLOR_SLATE       = 5,
+  RIV_COLOR_LIGHTSLATE  = 6,
+  RIV_COLOR_LIGHTTEAL   = 7,
+  RIV_COLOR_LIGHTBLUE   = 8,
+  RIV_COLOR_BLUE        = 9,
+  RIV_COLOR_DARKERGREEN = 10,
+  RIV_COLOR_DARKGREEN   = 11,
+  RIV_COLOR_GREEN       = 12,
+  RIV_COLOR_LIGHTGREEN  = 13,
+  RIV_COLOR_LIGHTYELLOW = 14,
+  RIV_COLOR_LIGHTPEACH  = 15,
+  RIV_COLOR_PEACH       = 16,
+  RIV_COLOR_LIGHTBROWN  = 17,
+  RIV_COLOR_BROWN       = 18,
+  RIV_COLOR_DARKBROWN   = 19,
+  RIV_COLOR_DARKERBROWN = 20,
+  RIV_COLOR_DARKRED     = 21,
+  RIV_COLOR_RED         = 22,
+  RIV_COLOR_LIGHTRED    = 23,
+  RIV_COLOR_ORANGE      = 24,
+  RIV_COLOR_GOLD        = 25,
+  RIV_COLOR_YELLOW      = 26,
+  RIV_COLOR_LIGHTPINK   = 27,
+  RIV_COLOR_PINK        = 28,
+  RIV_COLOR_DARKPINK    = 29,
+  RIV_COLOR_PURPLE      = 30,
+  RIV_COLOR_DARKPURPLE  = 31,
+  RIV_NUM_COLORS        = 32,
+} riv_color_id;
+
+// Default palette colors
+typedef enum riv_color_rgb_code {
+  RIV_RGB_BLACK       = 0x000000,
+  RIV_RGB_WHITE       = 0xFFFFFF,
+  RIV_RGB_LIGHTGREY   = 0xDBCDC5,
+  RIV_RGB_GREY        = 0x726B68,
+  RIV_RGB_DARKSLATE   = 0x251418,
+  RIV_RGB_SLATE       = 0x583635,
+  RIV_RGB_LIGHTSLATE  = 0xB6978B,
+  RIV_RGB_LIGHTTEAL   = 0xE9E95E,
+  RIV_RGB_LIGHTBLUE   = 0xDC9028,
+  RIV_RGB_BLUE        = 0xA73118,
+  RIV_RGB_DARKERGREEN = 0x393205,
+  RIV_RGB_DARKGREEN   = 0x415F00,
+  RIV_RGB_GREEN       = 0x3BB208,
+  RIV_RGB_LIGHTGREEN  = 0x41F647,
+  RIV_RGB_LIGHTYELLOW = 0x75FFE8,
+  RIV_RGB_LIGHTPEACH  = 0x82BEFB,
+  RIV_RGB_PEACH       = 0x5197DE,
+  RIV_RGB_LIGHTBROWN  = 0x3168B6,
+  RIV_RGB_BROWN       = 0x26498A,
+  RIV_RGB_DARKBROWN   = 0x141C46,
+  RIV_RGB_DARKERBROWN = 0x0D091E,
+  RIV_RGB_DARKRED     = 0x0D0D72,
+  RIV_RGB_RED         = 0x2424DA,
+  RIV_RGB_LIGHTRED    = 0x4400FF,
+  RIV_RGB_ORANGE      = 0x106EEF,
+  RIV_RGB_GOLD        = 0x11ABEC,
+  RIV_RGB_YELLOW      = 0x10E9EC,
+  RIV_RGB_LIGHTPINK   = 0x8D8DF7,
+  RIV_RGB_PINK        = 0x6D4EF9,
+  RIV_RGB_DARKPINK    = 0x5824C1,
+  RIV_RGB_PURPLE      = 0x521284,
+  RIV_RGB_DARKPURPLE  = 0x3B083D,
+} riv_rgb_code;
 
 // Default fonts ids
 typedef enum riv_font_id {
@@ -185,26 +237,6 @@ typedef enum riv_font_id {
   RIV_FONT_USER3 = 6,
   RIV_FONT_USER4 = 7,
 } riv_font_id;
-
-// Default palette colors
-typedef enum riv_rgb_pal16_color {
-  RIV_RGB_PAL16_BLACK      = 0x000000,
-  RIV_RGB_PAL16_DARKBLUE   = 0x532B1D,
-  RIV_RGB_PAL16_DARKPURPLE = 0x53257E,
-  RIV_RGB_PAL16_DARKGREEN  = 0x518700,
-  RIV_RGB_PAL16_BROWN      = 0x3652AB,
-  RIV_RGB_PAL16_DARKGREY   = 0x4F575F,
-  RIV_RGB_PAL16_LIGHTGREY  = 0xC7C3C2,
-  RIV_RGB_PAL16_WHITE      = 0xE8F1FF,
-  RIV_RGB_PAL16_RED        = 0x4D00FF,
-  RIV_RGB_PAL16_ORANGE     = 0x00A3FF,
-  RIV_RGB_PAL16_YELLOW     = 0x27ECFF,
-  RIV_RGB_PAL16_GREEN      = 0x36E400,
-  RIV_RGB_PAL16_BLUE       = 0xFFAD29,
-  RIV_RGB_PAL16_LAVENDER   = 0x9C7683,
-  RIV_RGB_PAL16_PINK       = 0xA877FF,
-  RIV_RGB_PAL16_LIGHTPEACH = 0xAACCFF,
-} riv_rgb_pal16_color;
 
 // Pixel format for frame buffers
 typedef enum riv_pixel_format {

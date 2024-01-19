@@ -8,7 +8,7 @@ local function frame()
   for y: usize=0,<SCREEN_SIZE do
     ## cemit '#pragma GCC unroll 4'
     for x: usize=0,<SCREEN_SIZE do
-      framebuffer[y*SCREEN_SIZE+x] = ((frame + x + y) // 8) % 16
+      framebuffer[y*SCREEN_SIZE+x] = ((frame + x + y) // 8) % RIV_NUM_COLORS
     end
   end
 end
