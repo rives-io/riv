@@ -596,8 +596,7 @@ RIV_API bool riv_present();                           // Present current frame, 
 
 // Image loading
 
-RIV_API uint64_t riv_make_image_from_pixels(uint8_t* pixels, uint16_t width, uint16_t height, int64_t color_key, bool owned);
-RIV_API uint64_t riv_make_image_from_memory(uint8_t* data, uint64_t size, int64_t color_key);
+RIV_API uint64_t riv_make_image_from_pixels(uint8_t* pixels, uint32_t width, uint32_t height, int64_t color_key);
 RIV_API uint64_t riv_make_image_from_file(const char* filename, int64_t color_key);
 RIV_API void riv_destroy_image(riv_id img);
 

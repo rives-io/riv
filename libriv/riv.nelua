@@ -19,8 +19,7 @@ global function riv_setup(argc: int32, argv: *[0]cstring): void <cimport,nodecl>
 global function riv_shutdown(): void <cimport,nodecl> end
 global function riv_present(): boolean <cimport,nodecl> end
 
-global function riv_make_image_from_pixels(pixels: *[0]uint8, width: uint16, height: uint16, color_key: int64, owned: boolean): uint64 <cimport,nodecl> end
-global function riv_make_image_from_memory(data: *[0]uint8, size: uint64, color_key: int64): uint64 <cimport,nodecl> end
+global function riv_make_image_from_pixels(pixels: *[0]uint8, width: uint32, height: uint32, color_key: int64): uint64 <cimport,nodecl> end
 global function riv_make_image_from_file(filename: cstring <const>, color_key: int64): uint64 <cimport,nodecl> end
 global function riv_destroy_image(img_id: uint64): void <cimport,nodecl> end
 
