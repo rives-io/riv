@@ -16,21 +16,19 @@ global function riv_init_draw(): void
     riv.draw.pal[i] = i
   end
   -- set default fonts
-  riv.fonts[RIV_FONT_ASCII_3X5].glyph_width = #[fonts.f3x5.glyph_width]#
-  riv.fonts[RIV_FONT_ASCII_3X5].glyph_height = #[fonts.f3x5.glyph_height]#
-  riv.fonts[RIV_FONT_ASCII_3X5].grid_width = #[fonts.f3x5.image_grid_width]#
-  riv.fonts[RIV_FONT_ASCII_3X5].grid_height = #[fonts.f3x5.image_grid_height]#
-  riv.fonts[RIV_FONT_ASCII_3X5].image.width = #[fonts.f3x5.image_width]#
-  riv.fonts[RIV_FONT_ASCII_3X5].image.height = #[fonts.f3x5.image_height]#
-  riv.fonts[RIV_FONT_ASCII_3X5].image.pixels = (@*[0]byte)(#[fonts.f3x5.image_pixels]#)
+  riv.images[RIV_IMAGE_FONT_3X5].width = #[fonts.f3x5.cols * fonts.f3x5.grid_width]#
+  riv.images[RIV_IMAGE_FONT_3X5].height = #[fonts.f3x5.rows * fonts.f3x5.grid_height]#
+  riv.images[RIV_IMAGE_FONT_3X5].pixels = (@*[0]uint8)(#[fonts.f3x5.image_pixels]#)
+  riv.sprites[RIV_SPRITE_FONT_3X5].image_id = RIV_IMAGE_FONT_3X5
+  riv.sprites[RIV_SPRITE_FONT_3X5].grid_width = #[fonts.f3x5.grid_width]#
+  riv.sprites[RIV_SPRITE_FONT_3X5].grid_height = #[fonts.f3x5.grid_height]#
 
-  riv.fonts[RIV_FONT_ASCII_5X7].glyph_width = #[fonts.f5x7.glyph_width]#
-  riv.fonts[RIV_FONT_ASCII_5X7].glyph_height = #[fonts.f5x7.glyph_height]#
-  riv.fonts[RIV_FONT_ASCII_5X7].grid_width = #[fonts.f5x7.image_grid_width]#
-  riv.fonts[RIV_FONT_ASCII_5X7].grid_height = #[fonts.f5x7.image_grid_height]#
-  riv.fonts[RIV_FONT_ASCII_5X7].image.width = #[fonts.f5x7.image_width]#
-  riv.fonts[RIV_FONT_ASCII_5X7].image.height = #[fonts.f5x7.image_height]#
-  riv.fonts[RIV_FONT_ASCII_5X7].image.pixels = (@*[0]byte)(#[fonts.f5x7.image_pixels]#)
+  riv.images[RIV_IMAGE_FONT_5X7].width = #[fonts.f5x7.cols * fonts.f5x7.grid_width]#
+  riv.images[RIV_IMAGE_FONT_5X7].height = #[fonts.f5x7.rows * fonts.f5x7.grid_height]#
+  riv.images[RIV_IMAGE_FONT_5X7].pixels = (@*[0]uint8)(#[fonts.f5x7.image_pixels]#)
+  riv.sprites[RIV_SPRITE_FONT_5X7].image_id = RIV_IMAGE_FONT_5X7
+  riv.sprites[RIV_SPRITE_FONT_5X7].grid_width = #[fonts.f5x7.grid_width]#
+  riv.sprites[RIV_SPRITE_FONT_5X7].grid_height = #[fonts.f5x7.grid_height]#
 end
 
 global function riv_clear_screen(col: uint32): void <cexport>
@@ -457,69 +455,78 @@ global function riv_draw_quad_fill(x0: int64, y0: int64, x1: int64, y1: int64, x
 end
 
 global function riv_draw_image_rect(img_id: uint64, x0: int64, y0: int64, w: int64, h: int64, sx0: int64, sy0: int64, mw: int64, mh: int64): void <cexport>
-  if unlikely(img_id >= RIV_MAX_IMAGES or w <= 0 or h <= 0 or sx0 < 0 or sy0 < 0) then return end
+  if unlikely(img_id >= RIV_MAX_IMAGES or w <= 0 or h <= 0 or mw*mh == 0) then return end
   local img: *riv_image = &riv.images[img_id]
   local imgw: int64 = img.width
-  if unlikely(sx0 + w > imgw or sy0 + h > img.height or not img.pixels) then return end
-  x0 = x0 + riv.draw.origin.x
-  y0 = y0 + riv.draw.origin.y
+  local imgh: int64 = img.height
+  if sx0 < 0 then sx0 = imgw + sx0 end
+  if sy0 < 0 then sy0 = imgh + sy0 end
   local imgp: *[0]uint8 = img.pixels
+  if unlikely(sx0 + w > imgw or sy0 + h > imgh or not imgp) then return end
   local imgcolkey: uint64 = (@uint64)(img.color_key)
-  local fb: *[0]uint8 = riv.framebuffer
-  local pal: *[0]uint8 = &riv.draw.pal
-  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
-  local bx0: int64 = math.max(x0, cx0)
-  local by0: int64 = math.max(y0, cy0)
-  local ex1: int64 = math.min(x0 + w*math.abs(mw) - 1, cx1)
-  local ey1: int64 = math.min(y0 + h*math.abs(mh) - 1, cy1)
-  if likely(mw == 1 and mh == 1) then -- non-scaled and non-flipped
-    sy0 = sy0 - y0
-    sx0 = sx0 - x0
-    for iy0: int64=by0,ey1 do
-      local isy: int64 = iy0 + sy0
-      for ix0: int64=bx0,ex1 do
-        local isx: int64 = ix0 + sx0
-        local imgco: uint64 = imgp[isy*imgw + isx]
-        if imgco ~= imgcolkey then
-          fb[iy0*fw + ix0] = pal[imgco]
-        end
-      end
-    end
-  else -- scaled or flipped
-    if mw < 0 then sx0 = sx0 + w - 1 end
-    if mh < 0 then sy0 = sy0 + h - 1 end
-    for iy0: int64=by0,ey1 do
-      local iy: int64 = (iy0 - y0)///mh
-      local isy: int64 = iy + sy0
-      for ix0: int64=bx0,ex1 do
-        local ix: int64 = (ix0 - x0)///mw
-        local isx: int64 = ix + sx0
-        local imgco: uint64 = imgp[isy*imgw + isx]
-        if imgco ~= imgcolkey then
-          fb[iy0*fw + ix0] = pal[imgco]
-        end
-      end
-    end
-  end
-end
-
-global function riv_draw_glyph(glyph: uint32, x0: int64, y0: int64, mw: int64, mh: int64, fnt_id: uint64, col: uint32): void <cexport>
-  if unlikely(mw*mh == 0 or fnt_id >= RIV_MAX_FONTS) then return end
-  local fnt: *riv_font = &riv.fonts[fnt_id]
-  if unlikely(fnt.grid_width == 0) then return end
-  local w: uint32, h: uint32 = fnt.glyph_width, fnt.glyph_height
-  local imgw: int64 = fnt.image.width
-  local gcols: uint32 = imgw // fnt.grid_width
-  if unlikely(gcols == 0) then return end
-  local sx0: int64 = (glyph % gcols)*fnt.grid_width
-  local sy0: int64 = (glyph // gcols)*fnt.grid_height
-  if unlikely(sx0 + w > imgw or sy0 + h > fnt.image.height or not fnt.image.pixels) then return end
   x0 = x0 + riv.draw.origin.x
   y0 = y0 + riv.draw.origin.y
-  local imgp: *[0]uint8 = fnt.image.pixels
   local fb: *[0]uint8 = riv.framebuffer
   local pal: *[0]uint8 = &riv.draw.pal
-  local co: uint8 = (@uint8)(col) - 1_u8
+  local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
+  local bx0: int64 = math.max(x0, cx0)
+  local by0: int64 = math.max(y0, cy0)
+  local ex1: int64 = math.min(x0 + w*math.abs(mw) - 1, cx1)
+  local ey1: int64 = math.min(y0 + h*math.abs(mh) - 1, cy1)
+  if likely(mw == 1 and mh == 1) then -- non-scaled and non-flipped
+    sy0 = sy0 - y0
+    sx0 = sx0 - x0
+    for iy0: int64=by0,ey1 do
+      local isy: int64 = iy0 + sy0
+      for ix0: int64=bx0,ex1 do
+        local isx: int64 = ix0 + sx0
+        local imgco: uint64 = imgp[isy*imgw + isx]
+        if imgco ~= imgcolkey then
+          fb[iy0*fw + ix0] = pal[imgco]
+        end
+      end
+    end
+  else -- scaled or flipped
+    if mw < 0 then sx0 = sx0 + w - 1 end
+    if mh < 0 then sy0 = sy0 + h - 1 end
+    for iy0: int64=by0,ey1 do
+      local iy: int64 = (iy0 - y0)///mh
+      local isy: int64 = iy + sy0
+      for ix0: int64=bx0,ex1 do
+        local ix: int64 = (ix0 - x0)///mw
+        local isx: int64 = ix + sx0
+        local imgco: uint64 = imgp[isy*imgw + isx]
+        if imgco ~= imgcolkey then
+          fb[iy0*fw + ix0] = pal[imgco]
+        end
+      end
+    end
+  end
+end
+
+global function riv_draw_sprite(n: uint32, spr_id: uint64, x0: int64, y0: int64, nw: int64, nh: int64, mw: int64, mh: int64): void <cexport>
+  if unlikely(spr_id >= RIV_MAX_SPRITES or nw <= 0 or nh <= 0 or mw*mh == 0) then return end
+  local spr: *riv_sprite = &riv.sprites[spr_id]
+  local w: uint32, h: uint32 = spr.grid_width, spr.grid_height
+  if unlikely(w == 0) then return end
+  local img_id: uint64 = spr.image_id
+  if unlikely(img_id >= RIV_MAX_IMAGES) then return end
+  local img: *riv_image = &riv.images[img_id]
+  local imgw: int64 = img.width
+  local imgh: int64 = img.height
+  local imgcols: uint32 = imgw // w
+  if unlikely(imgcols == 0) then return end
+  local sx0: int64 = (n % imgcols)*w
+  local sy0: int64 = (n // imgcols)*h
+  w = w * nw
+  h = h * nh
+  local imgp: *[0]uint8 = img.pixels
+  if unlikely(sx0 + w > imgw or sy0 + h > imgh or not imgp) then return end
+  local imgcolkey: uint64 = (@uint64)(img.color_key)
+  x0 = x0 + riv.draw.origin.x
+  y0 = y0 + riv.draw.origin.y
+  local fb: *[0]uint8 = riv.framebuffer
+  local pal: *[0]uint8 = &riv.draw.pal
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local bx0: int64 = math.max(x0, cx0)
   local by0: int64 = math.max(y0, cy0)
@@ -533,8 +540,8 @@ global function riv_draw_glyph(glyph: uint32, x0: int64, y0: int64, mw: int64, m
       for ix0: int64=bx0,ex1 do
         local isx: int64 = ix0 + sx0
         local imgco: uint8 = imgp[isy*imgw + isx]
-        if imgco ~= 0 then
-          fb[iy0*fw + ix0] = pal[imgco + co]
+        if imgco ~= imgcolkey then
+          fb[iy0*fw + ix0] = pal[imgco]
         end
       end
     end
@@ -548,23 +555,28 @@ global function riv_draw_glyph(glyph: uint32, x0: int64, y0: int64, mw: int64, m
         local ix: int64 = (ix0 - x0)///mw
         local isx: int64 = ix + sx0
         local imgco: uint8 = imgp[isy*imgw + isx]
-        if imgco ~= 0 then
-          fb[iy0*fw + ix0] = pal[imgco + co]
+        if imgco ~= imgcolkey then
+          fb[iy0*fw + ix0] = pal[imgco]
         end
       end
     end
   end
 end
 
-global function riv_draw_text(text: cstring <const>, x0: int64, y0: int64, mw: int64, mh: int64, sx: int64, sy: int64, fnt_id: uint64, col: int64): riv_vec2i <cexport>
-  if unlikely(mw*mh == 0 or fnt_id >= RIV_MAX_FONTS) then return riv_vec2i{0, 0} end
-  local fnt: *riv_font = &riv.fonts[fnt_id]
-  local gw: int64, gh: int64 = fnt.glyph_width*math.abs(mw), fnt.glyph_height*math.abs(mh)
-  if unlikely(gw <= 0 or gh <= 0 or not fnt.image.pixels) then return riv_vec2i{0, 0} end
-  local data: *[0]byte = text
+global function riv_draw_text(text: cstring <const>, spr_id: uint64, x0: int64, y0: int64, col: int64, mw: int64, mh: int64, sx: int64, sy: int64): riv_vec2i <cexport>
+  if unlikely(mw*mh == 0 or spr_id >= RIV_MAX_SPRITES) then return riv_vec2i{0, 0} end
+  local spr: *riv_sprite = &riv.sprites[spr_id]
+  local gw: int64, gh: int64 = spr.grid_width*math.abs(mw), spr.grid_height*math.abs(mh)
+  if unlikely(gw <= 0 or gh <= 0) then return riv_vec2i{0, 0} end
+  local data: *[0]uint8 = text
   local x: int64, y: int64 = x0, y0
   local xmax: int64, ymax: int64 = x0, y0
   local i: uint64 = 0
+  local oldcol1: uint8 = 0
+  if col >= 0 then
+    oldcol1 = riv.draw.pal[1]
+    riv.draw.pal[1] = col
+  end
   repeat
     local glyph: uint32 = data[i]
     if glyph == '\n'_b then -- new line
@@ -581,7 +593,7 @@ global function riv_draw_text(text: cstring <const>, x0: int64, y0: int64, mw: i
       elseif glyph == '\t'_b then -- tab
         x = x + gw + sx
       elseif col >= 0 then -- visible glyph
-        riv_draw_glyph(glyph, x, y, mw, mh, fnt_id, col)
+        riv_draw_sprite(glyph, spr_id, x, y, 1, 1, mw, mh)
       end
       x = x + gw
       xmax = math.max(x, xmax)
@@ -589,6 +601,9 @@ global function riv_draw_text(text: cstring <const>, x0: int64, y0: int64, mw: i
     end
     i = i + 1
   until glyph == 0
+  if col >= 0 then
+    riv.draw.pal[1] = oldcol1
+  end
   if x ~= x0 then
     y = y + gh
     ymax = math.max(y, ymax)

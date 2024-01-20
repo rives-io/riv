@@ -67,12 +67,10 @@ local f5x7_font = {
 #....  ....#  #....  ####.  ..###  .####  ..#..  .#.#.  #...#  .###.  #####  ...#.  ..#..  .#...  .....  .....
 
 ]]):gsub('%s',''):gsub('%.',string.char(0)):gsub('#',string.char(1)),
-  glyph_width = 5,
-  glyph_height = 7,
-  image_width = 16*5,
-  image_height = 8*7,
-  image_grid_width = 5,
-  image_grid_height = 7,
+  grid_width = 5,
+  grid_height = 7,
+  cols = 16,
+  rows = 8,
 }
 
 -- Based on PICO-8 font, available under CC-0 license.
@@ -127,12 +125,10 @@ local f3x5_font = {
 #..  .##  #.#  ##.  .#.  .##  .#.  ###  #.#  ##.  ###  .##  .#.  ##.  ...  ...
 
 ]]):gsub('%s',''):gsub('%.',string.char(0)):gsub('#',string.char(1)),
-  glyph_width = 3,
-  glyph_height = 5,
-  image_width = 16*3,
-  image_height = 8*5,
-  image_grid_width = 3,
-  image_grid_height = 5,
+  grid_width = 3,
+  grid_height = 5,
+  cols = 16,
+  rows = 8,
 }
 
 return {

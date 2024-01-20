@@ -13,6 +13,7 @@ require '.riv_input'
 require '.riv_audio'
 require '.riv_video'
 require '.riv_image'
+require '.riv_sprite'
 require '.riv_draw'
 
 local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end

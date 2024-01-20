@@ -178,18 +178,9 @@ global riv_rgb_code: type <cimport,nodecl,using> = @enum(int32){
   RIV_RGB_PURPLE = 5378692,
   RIV_RGB_DARKPURPLE = 3868733
 }
-global riv_font_id: type <cimport,nodecl,using> = @enum(int32){
-  RIV_FONT_NONE = 0,
-  RIV_FONT_ASCII_5X7 = 1,
-  RIV_FONT_ASCII_3X5 = 2,
-  RIV_FONT_USER1 = 4,
-  RIV_FONT_USER2 = 5,
-  RIV_FONT_USER3 = 6,
-  RIV_FONT_USER4 = 7
-}
 global riv_pixel_format: type <cimport,nodecl,using> = @enum(uint8){
   RIV_PIXELFORMAT_INVALID = 0,
-  RIV_PIXELFORMAT_PAL256 = 1,
+  RIV_PIXELFORMAT_PLT256 = 1,
   RIV_NUM_PIXELFORMAT = 2
 }
 global riv_waveform_type: type <cimport,nodecl,using> = @enum(uint8){
@@ -220,8 +211,18 @@ global riv_constants: type <cimport,nodecl,using> = @enum(int32){
   RIV_DEFAULT_PIXELFORMAT = 1,
   RIV_MAX_COLORS = 256,
   RIV_MAX_IMAGES = 256,
-  RIV_MAX_FONTS = 8,
+  RIV_MAX_SPRITES = 256,
   RIV_INVALID_ID = 0
+}
+global riv_image_id: type <cimport,nodecl,using> = @enum(int32){
+  RIV_IMAGE_NONE = 0,
+  RIV_IMAGE_FONT_5X7 = 255,
+  RIV_IMAGE_FONT_3X5 = 254
+}
+global riv_sprite_id: type <cimport,nodecl,using> = @enum(int32){
+  RIV_SPRITE_NONE = 0,
+  RIV_SPRITE_FONT_5X7 = 255,
+  RIV_SPRITE_FONT_3X5 = 254
 }
 global riv_control_command: type <cimport,nodecl,using> = @enum(uint8){
   RIV_CONTROL_NONE = 0,
@@ -375,12 +376,10 @@ global riv_image: type <cimport,nodecl> = @record{
   color_key: int16,
   owned: boolean
 }
-global riv_font: type <cimport,nodecl> = @record{
-  glyph_width: uint32,
-  glyph_height: uint32,
+global riv_sprite: type <cimport,nodecl> = @record{
+  image_id: riv_id,
   grid_width: uint32,
-  grid_height: uint32,
-  image: riv_image
+  grid_height: uint32
 }
 global riv_draw_state: type <cimport,nodecl> = @record{
   origin: riv_vec2i,
@@ -408,8 +407,8 @@ global riv_context: type <cimport,nodecl> = @record{
   palette: *[0]uint32,
   framebuffer: *[0]uint8,
   draw: riv_draw_state,
-  fonts: [8]riv_font,
   images: [256]riv_image,
+  sprites: [256]riv_sprite,
   reserved_rw: [168]uint8,
   prng: riv_xoshiro256,
   mmio_driver: *riv_mmio_driver,
@@ -421,6 +420,7 @@ global riv_context: type <cimport,nodecl> = @record{
   sound_gen: uint64,
   sound_buffer_gen: uint64,
   image_gen: uint64,
+  sprite_gen: uint64,
   audiobuffer_off: uint32,
   yield_fd: int32,
   verify_iocard_fd: int32,

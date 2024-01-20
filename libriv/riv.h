@@ -226,22 +226,10 @@ typedef enum riv_color_rgb_code {
   RIV_RGB_DARKPURPLE  = 0x3B083D,
 } riv_rgb_code;
 
-// Default fonts ids
-typedef enum riv_font_id {
-  RIV_FONT_NONE = 0,
-  RIV_FONT_ASCII_5X7 = 1,
-  RIV_FONT_ASCII_3X5 = 2,
-  // 3 is reserved
-  RIV_FONT_USER1 = 4,
-  RIV_FONT_USER2 = 5,
-  RIV_FONT_USER3 = 6,
-  RIV_FONT_USER4 = 7,
-} riv_font_id;
-
 // Pixel format for frame buffers
 typedef enum riv_pixel_format {
   RIV_PIXELFORMAT_INVALID = 0,
-  RIV_PIXELFORMAT_PAL256,
+  RIV_PIXELFORMAT_PLT256,
   RIV_NUM_PIXELFORMAT,
 } riv_pixel_format;
 
@@ -275,12 +263,26 @@ typedef enum riv_constants {
   RIV_DEFAULT_WIDTH = 256,
   RIV_DEFAULT_HEIGHT = 256,
   RIV_DEFAULT_TARGET_FPS = 60,
-  RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PAL256,
+  RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PLT256,
   RIV_MAX_COLORS = 256,
   RIV_MAX_IMAGES = 256,
-  RIV_MAX_FONTS = 8,
+  RIV_MAX_SPRITES = 256,
   RIV_INVALID_ID = 0,
 } riv_constants;
+
+// Predefined image ids
+typedef enum riv_image_id {
+  RIV_IMAGE_NONE = 0,
+  RIV_IMAGE_FONT_5X7 = RIV_MAX_SPRITES-1,
+  RIV_IMAGE_FONT_3X5 = RIV_MAX_SPRITES-2,
+} riv_image_id;
+
+// Predefined sprite ids
+typedef enum riv_sprite_id {
+  RIV_SPRITE_NONE = 0,
+  RIV_SPRITE_FONT_5X7 = RIV_MAX_IMAGES-1,
+  RIV_SPRITE_FONT_3X5 = RIV_MAX_IMAGES-2,
+} riv_sprite_id;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Constants used to implement the driver and device communication
@@ -514,14 +516,12 @@ typedef struct riv_image {
   bool owned;
 } riv_image;
 
-// Draw font
-typedef struct riv_font {
-  uint32_t glyph_width;
-  uint32_t glyph_height;
+// Draw sprite
+typedef struct riv_sprite {
+  riv_id image_id;
   uint32_t grid_width;
   uint32_t grid_height;
-  riv_image image;
-} riv_font;
+} riv_sprite;
 
 // Draw state
 typedef struct riv_draw_state {
@@ -554,8 +554,8 @@ typedef struct riv_context {
   riv_unbounded_uint32 palette;           // Color palette
   riv_unbounded_uint8 framebuffer;        // Screen frame buffer
   riv_draw_state draw;                    // Draw state
-  riv_font fonts[RIV_MAX_FONTS];          // All loaded fonts
   riv_image images[RIV_MAX_IMAGES];       // All loaded images
+  riv_sprite sprites[RIV_MAX_SPRITES];      // All loaded sprites
   uint8_t reserved_rw[168];
   // Private fields
   riv_xoshiro256 prng;                    // Internal PRNG state
@@ -568,6 +568,7 @@ typedef struct riv_context {
   uint64_t sound_gen;                     // Counter for generating sound ids
   uint64_t sound_buffer_gen;              // Counter for generating sound buffer ids
   uint64_t image_gen;                     // Counter for generating image ids
+  uint64_t sprite_gen;                    // Counter for generating sprite ids
   uint32_t audiobuffer_off;
   int32_t yield_fd;
   int32_t verify_iocard_fd;
@@ -594,11 +595,15 @@ RIV_API void riv_setup(int32_t argc, char** argv);    // Initialize RIV driver
 RIV_API void riv_shutdown();                          // Terminate RIV driver
 RIV_API bool riv_present();                           // Present current frame, returns true when quit was requested in the frame, false otherwise.
 
-// Image loading
+// Images
 
-RIV_API uint64_t riv_make_image_from_pixels(uint8_t* pixels, uint32_t width, uint32_t height, int64_t color_key);
-RIV_API uint64_t riv_make_image_from_file(const char* filename, int64_t color_key);
+RIV_API riv_id riv_make_image(const char* filename, int64_t color_key);
 RIV_API void riv_destroy_image(riv_id img);
+
+// Sprites
+
+RIV_API riv_id riv_make_sprite(riv_id img_id, uint32_t w, uint32_t h);
+RIV_API void riv_destroy_sprite(riv_id spr_id);
 
 // Drawing
 
@@ -618,8 +623,8 @@ RIV_API void riv_draw_ellipse_line(int64_t ox, int64_t oy, int64_t w, int64_t h,
 RIV_API void riv_draw_triangle_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
 RIV_API void riv_draw_triangle_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
 RIV_API void riv_draw_image_rect(riv_id img_id, int64_t x0, int64_t y0, int64_t w, int64_t h, int64_t sx0, int64_t sy0, int64_t mw, int64_t mh);
-RIV_API void riv_draw_glyph(uint32_t glyph, int64_t x0, int64_t y0, int64_t mw, int64_t mh, riv_id fnt_id, uint32_t col);
-RIV_API riv_vec2i riv_draw_text(const char* text, int64_t x0, int64_t y0, int64_t mw, int64_t mh, int64_t sx, int64_t sy, riv_id fnt_id, int64_t col);
+RIV_API void riv_draw_sprite(uint32_t n, riv_id spr_id, int64_t x0, int64_t y0, int64_t nw, int64_t nh, int64_t mw, int64_t mh);
+RIV_API riv_vec2i riv_draw_text(const char* text, riv_id spr_id, int64_t x0, int64_t y0, int64_t col, int64_t mw, int64_t mh, int64_t sx, int64_t sy);
 
 // Sound system
 

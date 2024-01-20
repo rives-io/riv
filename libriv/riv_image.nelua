@@ -67,66 +67,42 @@ local function convert_rgba_to_plte(pixels_rgba: *[0]uint32, pixels_plte: *[0]ui
   end
 end
 
-global function riv_make_image_from_pixels(pixels: *[0]uint8, width: uint32, height: uint32, color_key: int64): uint64 <cexport>
-  local img_id: uint64 = generate_image_id()
-  if img_id == 0 then
-    io.stderr:writef('ERROR: failed to make image: reached maximum number of images\n')
-    return 0
-  end
-  if not pixels then
-    io.stderr:writef('ERROR: unable to make image: pointer is invalid\n')
-    return 0
-  end
-  if width <= 0 or height <= 0 or width > 0xffff or height > 0xffff then
-    io.stderr:writef('ERROR: unable to make image: width=%d or height=%d out of supported bounds\n', width, height)
-    return 0
-  end
-  local img: *riv_image = &riv.images[img_id]
-  img.pixels = pixels
-  img.width = (@uint16)(width)
-  img.height = (@uint16)(height)
-  img.color_key = (@int16)(color_key)
-  img.owned = false
-  riv.image_gen = img_id
-  return img_id
-end
-
-global function riv_make_image_from_file(filename: cstring <const>, color_key: int64): uint64 <cexport>
+global function riv_make_image(filename: cstring <const>, color_key: int64): uint64 <cexport>
   -- generate image id
   local img_id: uint64 = generate_image_id()
   if img_id == 0 then
-    io.stderr:writef('ERROR: unable to load image file "%s": reached maximum number of images\n', filename)
+    io.stderr:writef('ERROR: unable to make image from file "%s": reached maximum number of images\n', filename)
     return 0
   end
   -- open file
   local file: *FILE = C.fopen(filename, 'rb')
   if not file then
-    io.stderr:writef('ERROR: unable to load image file "%s": %s\n', filename, C.strerror(C.errno))
+    io.stderr:writef('ERROR: unable to make image %d from file "%s": %s\n', img_id, filename, C.strerror(C.errno))
     return 0
   end
   defer C.fclose(file) end
   -- create PNG context
   local ctx: *spng_ctx = spng_ctx_new(0)
   if not ctx then
-    io.stderr:writef('ERROR: unable to load image file "%s": failed to allocate PNG context\n', filename)
+    io.stderr:writef('ERROR: unable to make image %d from file "%s": failed to allocate PNG context\n', img_id, filename)
     return 0
   end
   defer spng_ctx_free(ctx) end
   -- set PNG file
   local spngerr: cint = spng_set_png_file(ctx, file)
   if spngerr ~= 0 then
-    io.stderr:writef('ERROR: unable to load image file "%s": %s\n', filename, spng_strerror(spngerr))
+    io.stderr:writef('ERROR: unable to make image %d from file "%s": %s\n', img_id, filename, spng_strerror(spngerr))
     return 0
   end
   -- get image width/height
   local ihdr: spng_ihdr
   spngerr = spng_get_ihdr(ctx, &ihdr)
   if spngerr ~= 0 then
-    io.stderr:writef('ERROR: unable to load image file "%s": %s\n', filename, spng_strerror(spngerr))
+    io.stderr:writef('ERROR: unable to make image %d from file "%s": %s\n', img_id, filename, spng_strerror(spngerr))
     return 0
   end
   if ihdr.width <= 0 or ihdr.height <= 0 or ihdr.width > 0xffff or ihdr.height > 0xffff then
-    io.stderr:writef('ERROR: unable to load image file "%s": width=%d or height=%d out of supported bounds\n', filename, ihdr.width, ihdr.height)
+    io.stderr:writef('ERROR: unable to make image %d from file "%s": width=%d or height=%d out of supported bounds\n', img_id, filename, ihdr.width, ihdr.height)
     return 0
   end
   -- allocate pixel buffers
@@ -134,19 +110,19 @@ global function riv_make_image_from_file(filename: cstring <const>, color_key: i
   local size_rgba: usize = num_pixels*4
   local pixels_rgba: *[0]uint32 = (@*[0]uint32)(malloc(size_rgba))
   if not pixels_rgba then
-    io.stderr:writef('ERROR: unable to load image file "%s": out of memory\n', filename)
+    io.stderr:writef('ERROR: unable to make image %d from file "%s": out of memory\n', img_id, filename)
     return 0
   end
   defer free(pixels_rgba) end
   local pixels_plte: *[0]uint8 = (@*[0]uint8)(malloc(num_pixels))
   if not pixels_plte then
-    io.stderr:writef('ERROR: unable to load image file "%s": out of memory\n', filename)
+    io.stderr:writef('ERROR: unable to make image %d from file "%s": out of memory\n', img_id, filename)
     return 0
   end
   -- decode image
   spngerr = spng_decode_image(ctx, pixels_rgba, size_rgba, SPNG_FMT_RGBA8, 0)
   if spngerr ~= 0 then
-    io.stderr:writef('ERROR: unable to decode image file "%s": %s\n', filename, spng_strerror(spngerr))
+    io.stderr:writef('ERROR: unable to make image %d from file "%s": %s\n', img_id, filename, spng_strerror(spngerr))
     free(pixels_plte)
     return 0
   end
