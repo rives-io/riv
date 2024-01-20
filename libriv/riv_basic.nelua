@@ -12,9 +12,15 @@ require '.riv_util'
 require '.riv_input'
 require '.riv_audio'
 require '.riv_video'
+require '.riv_image'
 require '.riv_draw'
 
+local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end
+
 global function riv_setup(argc: int32, argv: *[0]cstring): void <cexport>
+  -- initialize all code in top scopes
+  nelua_main(argc, argv)
+  -- zero riv
   memory.zero(&riv, #@riv_context)
   -- open yield device
   riv_yield_open()

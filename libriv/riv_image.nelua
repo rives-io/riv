@@ -1,0 +1,172 @@
+## pragmas.unitname = ''
+
+require '.riv_types'
+require 'io'
+require 'hashmap'
+require 'math'
+require 'C.stdio'
+require 'C.string'
+require 'C.errno'
+
+local function malloc(size: csize): pointer <cimport,cinclude'<stdlib.h>'> end
+local function free(ptr: pointer): void <cimport,cinclude'<stdlib.h>'> end
+
+local function generate_new_image_id(): uint64
+  local img_id: uint64 = riv.image_gen
+  for i=0,<RIV_MAX_IMAGES do
+    img_id = (img_id + 1) % RIV_MAX_IMAGES
+    if img_id == 0 then img_id = 1 end
+    if not riv.images[img_id].pixels then
+      riv.image_gen = img_id
+      return img_id
+    end
+  end
+  -- all images are in use
+  return 0
+end
+
+local function get_plte_size(): uint64
+  -- determine palette size
+  for i: int64=RIV_MAX_COLORS-1,0,-1 do
+    if riv.palette[(@uint64)(i)] ~= 0 then
+      return (@uint64)(i + 1)
+    end
+  end
+  return 1
+end
+
+local function rgb_distance2(a: uint32, b: uint32): int64 <inline>
+  local dr: int64 = (@int64)((a >> 16) & 0xff) - (@int64)((b >> 16) & 0xff)
+  local dg: int64 = (@int64)((a >>  8) & 0xff) - (@int64)((b >>  8) & 0xff)
+  local db: int64 = (@int64)((a >>  0) & 0xff) - (@int64)((b >>  0) & 0xff)
+  return dr*dr + dg*dg + db*db
+end
+
+local function convert_rgba_to_plte(pixels_rgba: *[0]uint32, pixels_plte: *[0]uint8, size: uint64, color_key: uint8): void
+  local rgba_to_plte_cache: hashmap(uint32, uint8) <close>
+  rgba_to_plte_cache:reserve(32)
+  local plte: *[0]uint32 = &riv.palette[0]
+  local plte_size: uint64 = get_plte_size()
+  for i: uint64=0,<size do
+    local rgba: uint32 = pixels_rgba[i]
+    if rgba >> 24 == 0 then -- transparent
+      pixels_plte[i] = color_key
+    else
+      local found: boolean, col: uint8 = rgba_to_plte_cache:has_and_get(rgba)
+      if not found then -- find nearest color in the palette
+        local mind: int64 = rgb_distance2(rgba, plte[0])
+        for j: uint64=1,<plte_size do
+          local d: int64 = rgb_distance2(rgba, plte[j])
+          if d < mind then
+            mind = d
+            col = j
+          end
+        end
+      end
+      pixels_plte[i] = col
+    end
+  end
+end
+
+global function riv_make_image_from_pixels(pixels: *[0]uint8, width: uint16, height: uint16, color_key: int64, owned: boolean): uint64 <cexport>
+  if not pixels then
+    io.stderr:writef('ERROR: unable to make image from pixels: pointer is invalid\n')
+    return 0
+  end
+  local img_id: uint64 = generate_new_image_id()
+  if img_id == 0 then
+    io.stderr:writef('ERROR: failed to make image from pixels: reached maximum number of images\n')
+    return 0
+  end
+  local img: *riv_image = &riv.images[img_id]
+  img.width = width
+  img.height = height
+  img.pixels = pixels
+  img.owned = owned
+  return img_id
+end
+
+global function riv_make_image_from_memory(data: *[0]uint8, size: uint64, color_key: int64): uint64 <cexport>
+  -- TODO
+  return 0
+end
+
+global function riv_make_image_from_file(filename: cstring <const>, color_key: int64): uint64 <cexport>
+  -- open file
+  local file: *FILE = C.fopen(filename, 'rb')
+  if not file then
+    io.stdout:writef('ERROR: unable to open image file "%s": %s\n', filename, C.strerror(C.errno))
+    return 0
+  end
+  defer C.fclose(file) end
+  -- create PNG context
+  local ctx: *spng_ctx = spng_ctx_new(0)
+  if not ctx then
+    io.stdout:writef('ERROR: unable to load image file "%s": failed to allocate PNG context\n', filename)
+    return 0
+  end
+  defer spng_ctx_free(ctx) end
+  -- set PNG file
+  local spngerr: cint = spng_set_png_file(ctx, file)
+  if spngerr ~= 0 then
+    io.stdout:writef('ERROR: unable to load image file "%s": %s\n', filename, spng_strerror(spngerr))
+    return 0
+  end
+  -- get image width/height
+  local ihdr: spng_ihdr
+  spngerr = spng_get_ihdr(ctx, &ihdr)
+  if spngerr ~= 0 then
+    io.stdout:writef('ERROR: unable to load image file "%s": %s\n', filename, spng_strerror(spngerr))
+    return 0
+  end
+  if ihdr.width == 0 or ihdr.height == 0 or ihdr.width > 0xffff or ihdr.height > 0xffff then
+    io.stdout:writef('ERROR: unable to load image file "%s": image width=%d or height=%d is not supported\n', filename, ihdr.width, ihdr.height)
+    return 0
+  end
+  -- allocate pixel buffers
+  local num_pixels: usize = ihdr.width*ihdr.height
+  local size_rgba: usize = num_pixels*4
+  local pixels_rgba: *[0]uint32 = (@*[0]uint32)(malloc(size_rgba))
+  if not pixels_rgba then
+    io.stdout:writef('ERROR: unable to load image file "%s": out of memory\n', filename)
+    return 0
+  end
+  defer free(pixels_rgba) end
+  local pixels_plte: *[0]uint8 = (@*[0]uint8)(malloc(num_pixels))
+  if not pixels_plte then
+    io.stdout:writef('ERROR: unable to load image file "%s": out of memory\n', filename)
+    return 0
+  end
+  -- decode image
+  spngerr = spng_decode_image(ctx, pixels_rgba, size_rgba, SPNG_FMT_RGBA8, 0)
+  if spngerr ~= 0 then
+    io.stdout:writef('ERROR: unable to decode image file "%s": %s\n', filename, spng_strerror(spngerr))
+    free(pixels_plte)
+    return 0
+  end
+  -- generate image id
+  local img_id: uint64 = generate_new_image_id()
+  if img_id == 0 then
+    io.stdout:writef('ERROR: unable to load image file "%s": reached maximum number of images\n', filename)
+    free(pixels_plte)
+    return 0
+  end
+  convert_rgba_to_plte(pixels_rgba, pixels_plte, num_pixels, (@uint8)(math.clamp(color_key, 0, RIV_MAX_COLORS-1)))
+  -- update image
+  local img: *riv_image = &riv.images[img_id]
+  img.pixels = pixels_plte
+  img.width = (@uint16)(ihdr.width)
+  img.height = (@uint16)(ihdr.height)
+  img.color_key = (@int16)(color_key)
+  img.owned = true
+  return img_id
+end
+
+global function riv_destroy_image(img_id: uint64): void <cexport>
+  if img_id <= 0 or img_id >= RIV_MAX_IMAGES then return end
+  local img: *riv_image = &riv.images[img_id]
+  if img.owned and img.pixels ~= nilptr then
+    free(img.pixels)
+  end
+  $img = {}
+end

@@ -19,6 +19,11 @@ global function riv_setup(argc: int32, argv: *[0]cstring): void <cimport,nodecl>
 global function riv_shutdown(): void <cimport,nodecl> end
 global function riv_present(): boolean <cimport,nodecl> end
 
+global function riv_make_image_from_pixels(pixels: *[0]uint8, width: uint16, height: uint16, color_key: int64, owned: boolean): uint64 <cimport,nodecl> end
+global function riv_make_image_from_memory(data: *[0]uint8, size: uint64, color_key: int64): uint64 <cimport,nodecl> end
+global function riv_make_image_from_file(filename: cstring <const>, color_key: int64): uint64 <cimport,nodecl> end
+global function riv_destroy_image(img_id: uint64): void <cimport,nodecl> end
+
 -- drawing
 global function riv_clear_screen(col: uint32): void <cimport,nodecl> end
 global function riv_draw_point(x: int64, y: int64, col: uint32): void <cimport,nodecl> end
@@ -35,12 +40,13 @@ global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, 
 global function riv_draw_ellipse_line(ox: int64, oy: int64, w: int64, h: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_triangle_line(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cimport,nodecl> end
-global function riv_draw_glyph(glyph: uint32, x0: int64, y0: int64, mw: int64, mh: int64, fnt: uint32, col: uint32): void <cimport,nodecl> end
-global function riv_draw_text(text: cstring <const>, x0: int64, y0: int64, mw: int64, mh: int64, sx: int64, sy: int64, fnt: uint64, col: int64): riv_vec2i <cimport,nodecl> end
+global function riv_draw_image_rect(img_id: uint64, x0: int64, y0: int64, w: int64, h: int64, sx0: int64, sy0: int64, mw: int64, mh: int64): void <cimport,nodecl> end
+global function riv_draw_glyph(glyph: uint32, x0: int64, y0: int64, mw: int64, mh: int64, fnt_id: uint64, col: uint32): void <cimport,nodecl> end
+global function riv_draw_text(text: cstring <const>, x0: int64, y0: int64, mw: int64, mh: int64, sx: int64, sy: int64, fnt_id: uint64, col: int64): riv_vec2i <cimport,nodecl> end
 
 -- sound system
 global function riv_make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <cimport,nodecl> end
-global function riv_destroy_sound_buffer(id: uint64): void <cimport,nodecl> end
+global function riv_destroy_sound_buffer(sndbuf_id: uint64): void <cimport,nodecl> end
 global function riv_sound(desc: *riv_sound_desc): uint64 <cimport,nodecl> end
 global function riv_waveform(desc: *riv_waveform_desc): uint64 <cimport,nodecl> end
 

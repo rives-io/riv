@@ -228,9 +228,9 @@ typedef enum riv_color_rgb_code {
 
 // Default fonts ids
 typedef enum riv_font_id {
-  RIV_FONT_ASCII_5X7 = 0,
-  RIV_FONT_ASCII_3X5 = 1,
-  // 2 is reserved
+  RIV_FONT_NONE = 0,
+  RIV_FONT_ASCII_5X7 = 1,
+  RIV_FONT_ASCII_3X5 = 2,
   // 3 is reserved
   RIV_FONT_USER1 = 4,
   RIV_FONT_USER2 = 5,
@@ -276,6 +276,10 @@ typedef enum riv_constants {
   RIV_DEFAULT_HEIGHT = 256,
   RIV_DEFAULT_TARGET_FPS = 60,
   RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PAL256,
+  RIV_MAX_COLORS = 256,
+  RIV_MAX_IMAGES = 256,
+  RIV_MAX_FONTS = 8,
+  RIV_INVALID_ID = 0,
 } riv_constants;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -350,6 +354,7 @@ typedef enum riv_vaddr_base {
 typedef uint8_t* riv_unbounded_uint8;
 typedef uint32_t* riv_unbounded_uint32;
 typedef bool* riv_unbounded_bool;
+typedef uint64_t riv_id;
 
 typedef struct riv_span_uint8 {
   riv_unbounded_uint8 data;
@@ -369,7 +374,7 @@ typedef struct riv_framebuffer_desc {
 
 // Sound buffer description
 typedef struct riv_sound_buffer_desc {
-  uint64_t id;              // Sound buffer id (filled automatically)
+  riv_id id;                // Sound buffer id (filled automatically)
   riv_sound_format format;  // Sound format
   uint32_t channels;        // Sound channels (0 = auto detect)
   uint32_t sample_rate;     // Sound sample rate (0 = auto detect)
@@ -378,8 +383,8 @@ typedef struct riv_sound_buffer_desc {
 
 // Sound description
 typedef struct riv_sound_desc {
-  uint64_t id;        // Sound id (filled automatically, or used when updating a sound)
-  uint64_t buffer_id; // Sound buffer id (must be 0 when updating a sound)
+  riv_id id;          // Sound id (filled automatically, or used when updating a sound)
+  riv_id buffer_id;   // Sound buffer id (must be 0 when updating a sound)
   float delay;        // Start delay time in seconds (0 = no delay)
   float duration;     // Duration in seconds (0 = let id end, -1 = loop)
   float fade_in;      // Fade in time in seconds (0 = no fade in)
@@ -392,7 +397,7 @@ typedef struct riv_sound_desc {
 
 // Waveform sound description
 typedef struct riv_waveform_desc {
-  uint64_t id;            // Sound id (filled automatically)
+  riv_id id;              // Sound id (filled automatically)
   riv_waveform_type type; // Waveform type
   float delay;            // Start delay in seconds
   float attack;           // Attack duration in seconds
@@ -444,7 +449,7 @@ typedef struct riv_mmio_driver {
   riv_audio_command audio_commands[32];
   uint32_t audio_command_len;
   uint32_t outcard_len;
-  uint32_t palette[256];
+  uint32_t palette[RIV_MAX_COLORS];
   bool tracked_keys[RIV_NUM_KEYCODE];
 } riv_mmio_driver;
 
@@ -493,30 +498,36 @@ typedef struct riv_vec2f {
 } riv_vec2f;
 
 // Bounding box
-typedef struct riv_draw_bboxi {
+typedef struct riv_bboxi {
   int64_t x0;
   int64_t y0;
   int64_t x1;
   int64_t y1;
-} riv_draw_bboxi;
+} riv_bboxi;
+
+// Draw image
+typedef struct riv_image {
+  riv_unbounded_uint8 pixels;
+  uint16_t width;
+  uint16_t height;
+  int16_t color_key;
+  bool owned;
+} riv_image;
 
 // Draw font
 typedef struct riv_font {
   uint32_t glyph_width;
   uint32_t glyph_height;
-  uint32_t image_width;
-  uint32_t image_height;
-  uint32_t image_grid_width;
-  uint32_t image_grid_height;
-  riv_unbounded_uint8 image_pixels;
+  uint32_t grid_width;
+  uint32_t grid_height;
+  riv_image image;
 } riv_font;
 
 // Draw state
 typedef struct riv_draw_state {
-  riv_vec2i origin;     // Draw origin
-  riv_draw_bboxi clip;  // Draw clipping bounding box
-  uint8_t pal[256];     // Draw swap palette
-  riv_font fonts[8];    // Draw font
+  riv_vec2i origin;                 // Draw origin
+  riv_bboxi clip;                   // Draw clipping bounding box
+  uint8_t pal[RIV_MAX_COLORS];      // Draw swap palette
 } riv_draw_state;
 
 // RIV context
@@ -543,6 +554,8 @@ typedef struct riv_context {
   riv_unbounded_uint32 palette;           // Color palette
   riv_unbounded_uint8 framebuffer;        // Screen frame buffer
   riv_draw_state draw;                    // Draw state
+  riv_font fonts[RIV_MAX_FONTS];          // All loaded fonts
+  riv_image images[RIV_MAX_IMAGES];       // All loaded images
   uint8_t reserved_rw[168];
   // Private fields
   riv_xoshiro256 prng;                    // Internal PRNG state
@@ -552,8 +565,9 @@ typedef struct riv_context {
   uint64_t entropy[128];
   uint32_t entropy_index;
   uint32_t entropy_size;
-  uint64_t sound_gen;
-  uint64_t sound_buffer_gen;
+  uint64_t sound_gen;                     // Counter for generating sound ids
+  uint64_t sound_buffer_gen;              // Counter for generating sound buffer ids
+  uint64_t image_gen;                     // Counter for generating image ids
   uint32_t audiobuffer_off;
   int32_t yield_fd;
   int32_t verify_iocard_fd;
@@ -580,6 +594,13 @@ RIV_API void riv_setup(int32_t argc, char** argv);    // Initialize RIV driver
 RIV_API void riv_shutdown();                          // Terminate RIV driver
 RIV_API bool riv_present();                           // Present current frame, returns true when quit was requested in the frame, false otherwise.
 
+// Image loading
+
+RIV_API uint64_t riv_make_image_from_pixels(uint8_t* pixels, uint16_t width, uint16_t height, int64_t color_key, bool owned);
+RIV_API uint64_t riv_make_image_from_memory(uint8_t* data, uint64_t size, int64_t color_key);
+RIV_API uint64_t riv_make_image_from_file(const char* filename, int64_t color_key);
+RIV_API void riv_destroy_image(riv_id img);
+
 // Drawing
 
 RIV_API void riv_clear_screen(uint32_t col);
@@ -597,13 +618,14 @@ RIV_API void riv_draw_ellipse_fill(int64_t ox, int64_t oy, int64_t w, int64_t h,
 RIV_API void riv_draw_ellipse_line(int64_t ox, int64_t oy, int64_t w, int64_t h, uint32_t col);
 RIV_API void riv_draw_triangle_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
 RIV_API void riv_draw_triangle_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
-RIV_API void riv_draw_glyph(uint32_t glyph, int64_t x0, int64_t y0, int64_t mw, int64_t mh, uint32_t fnt, uint32_t col);
-RIV_API riv_vec2i riv_draw_text(const char* text, int64_t x0, int64_t y0, int64_t mw, int64_t mh, int64_t sx, int64_t sy, uint64_t fnt, int64_t col);
+RIV_API void riv_draw_image_rect(riv_id img_id, int64_t x0, int64_t y0, int64_t w, int64_t h, int64_t sx0, int64_t sy0, int64_t mw, int64_t mh);
+RIV_API void riv_draw_glyph(uint32_t glyph, int64_t x0, int64_t y0, int64_t mw, int64_t mh, riv_id fnt_id, uint32_t col);
+RIV_API riv_vec2i riv_draw_text(const char* text, int64_t x0, int64_t y0, int64_t mw, int64_t mh, int64_t sx, int64_t sy, riv_id fnt_id, int64_t col);
 
 // Sound system
 
 RIV_API uint64_t riv_make_sound_buffer(riv_sound_buffer_desc* desc); // Create a new sound buffer
-RIV_API void riv_destroy_sound_buffer(uint64_t id);                  // Destroy a sound buffer
+RIV_API void riv_destroy_sound_buffer(riv_id sndbuf_id);             // Destroy a sound buffer
 RIV_API uint64_t riv_sound(riv_sound_desc* desc);                    // Play a sound buffer or update a sound
 RIV_API uint64_t riv_waveform(riv_waveform_desc* desc);              // Play a waveform sound
 

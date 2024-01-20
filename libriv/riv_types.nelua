@@ -179,8 +179,9 @@ global riv_rgb_code: type <cimport,nodecl,using> = @enum(int32){
   RIV_RGB_DARKPURPLE = 3868733
 }
 global riv_font_id: type <cimport,nodecl,using> = @enum(int32){
-  RIV_FONT_ASCII_5X7 = 0,
-  RIV_FONT_ASCII_3X5 = 1,
+  RIV_FONT_NONE = 0,
+  RIV_FONT_ASCII_5X7 = 1,
+  RIV_FONT_ASCII_3X5 = 2,
   RIV_FONT_USER1 = 4,
   RIV_FONT_USER2 = 5,
   RIV_FONT_USER3 = 6,
@@ -216,7 +217,11 @@ global riv_constants: type <cimport,nodecl,using> = @enum(int32){
   RIV_DEFAULT_WIDTH = 256,
   RIV_DEFAULT_HEIGHT = 256,
   RIV_DEFAULT_TARGET_FPS = 60,
-  RIV_DEFAULT_PIXELFORMAT = 1
+  RIV_DEFAULT_PIXELFORMAT = 1,
+  RIV_MAX_COLORS = 256,
+  RIV_MAX_IMAGES = 256,
+  RIV_MAX_FONTS = 8,
+  RIV_INVALID_ID = 0
 }
 global riv_control_command: type <cimport,nodecl,using> = @enum(uint8){
   RIV_CONTROL_NONE = 0,
@@ -255,6 +260,7 @@ global riv_vaddr_base: type <cimport,nodecl,using> = @enum(uint64){
   RIV_VADDR_AUDIOBUFFER = 268828672,
   RIV_VADDR_FRAMEBUFFER = 269615104
 }
+global riv_id: type <cimport,nodecl> = @uint64
 global riv_span_uint8: type <cimport,nodecl> = @record{
   data: *uint8,
   size: uint64
@@ -266,15 +272,15 @@ global riv_framebuffer_desc: type <cimport,nodecl> = @record{
   pixel_format: riv_pixel_format
 }
 global riv_sound_buffer_desc: type <cimport,nodecl> = @record{
-  id: uint64,
+  id: riv_id,
   format: riv_sound_format,
   channels: uint32,
   sample_rate: uint32,
   data: riv_span_uint8
 }
 global riv_sound_desc: type <cimport,nodecl> = @record{
-  id: uint64,
-  buffer_id: uint64,
+  id: riv_id,
+  buffer_id: riv_id,
   delay: float32,
   duration: float32,
   fade_in: float32,
@@ -285,7 +291,7 @@ global riv_sound_desc: type <cimport,nodecl> = @record{
   pitch: float32
 }
 global riv_waveform_desc: type <cimport,nodecl> = @record{
-  id: uint64,
+  id: riv_id,
   type: riv_waveform_type,
   delay: float32,
   attack: float32,
@@ -356,26 +362,30 @@ global riv_vec2f: type <cimport,nodecl> = @record{
   x: float32,
   y: float32
 }
-global riv_draw_bboxi: type <cimport,nodecl> = @record{
+global riv_bboxi: type <cimport,nodecl> = @record{
   x0: int64,
   y0: int64,
   x1: int64,
   y1: int64
 }
+global riv_image: type <cimport,nodecl> = @record{
+  pixels: *uint8,
+  width: uint16,
+  height: uint16,
+  color_key: int16,
+  owned: boolean
+}
 global riv_font: type <cimport,nodecl> = @record{
   glyph_width: uint32,
   glyph_height: uint32,
-  image_width: uint32,
-  image_height: uint32,
-  image_grid_width: uint32,
-  image_grid_height: uint32,
-  image_pixels: *uint8
+  grid_width: uint32,
+  grid_height: uint32,
+  image: riv_image
 }
 global riv_draw_state: type <cimport,nodecl> = @record{
   origin: riv_vec2i,
-  clip: riv_draw_bboxi,
-  pal: [256]uint8,
-  fonts: [8]riv_font
+  clip: riv_bboxi,
+  pal: [256]uint8
 }
 global riv_context: type <cimport,nodecl> = @record{
   frame: uint64,
@@ -398,6 +408,8 @@ global riv_context: type <cimport,nodecl> = @record{
   palette: *[0]uint32,
   framebuffer: *[0]uint8,
   draw: riv_draw_state,
+  fonts: [8]riv_font,
+  images: [256]riv_image,
   reserved_rw: [168]uint8,
   prng: riv_xoshiro256,
   mmio_driver: *riv_mmio_driver,
@@ -408,6 +420,7 @@ global riv_context: type <cimport,nodecl> = @record{
   entropy_size: uint32,
   sound_gen: uint64,
   sound_buffer_gen: uint64,
+  image_gen: uint64,
   audiobuffer_off: uint32,
   yield_fd: int32,
   verify_iocard_fd: int32,
