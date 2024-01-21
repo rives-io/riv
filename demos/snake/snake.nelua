@@ -115,10 +115,10 @@ end
 
 local function poll_events()
   local turned = false
-  turned = check_turn(RIV_KEYCODE_UP, Direction.UP, turned)
-  turned = check_turn(RIV_KEYCODE_DOWN, Direction.DOWN, turned)
-  turned = check_turn(RIV_KEYCODE_RIGHT, Direction.RIGHT, turned)
-  turned = check_turn(RIV_KEYCODE_LEFT, Direction.LEFT, turned)
+  turned = check_turn(RIV_GAMEPAD_UP, Direction.UP, turned)
+  turned = check_turn(RIV_GAMEPAD_DOWN, Direction.DOWN, turned)
+  turned = check_turn(RIV_GAMEPAD_RIGHT, Direction.RIGHT, turned)
+  turned = check_turn(RIV_GAMEPAD_LEFT, Direction.LEFT, turned)
 end
 
 local function poll_game()
@@ -210,13 +210,13 @@ local function init()
   riv.framebuffer_desc.width = SCREEN_SIZE
   riv.framebuffer_desc.height = SCREEN_SIZE
   riv.framebuffer_desc.target_fps = 8
-  riv.framebuffer_desc.pixel_format = RIV_PIXELFORMAT_PAL256
+  riv.framebuffer_desc.pixel_format = RIV_PIXELFORMAT_PLT256
   init_game()
 end
 
 riv_setup(argc, argv)
 init()
-repeat frame() until riv_present()
+repeat frame() until not riv_present()
 riv_shutdown()
 
 ## nostartfiles()

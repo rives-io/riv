@@ -220,7 +220,7 @@ global rivemu_audio: type = @record{}
 
 -- Audio subsystem state.
 local engine: ma_engine
-local buffers: hashmap(uint64, riv_sound_buffer_desc)
+local buffers: hashmap(uint64, riv_soundbuffer_desc)
 local sounds: hashmap(uint64, Sound)
 local global_pitch: float64
 local global_pcm_frame: uint64
@@ -250,7 +250,7 @@ function rivemu_audio.reset(): void
   end
   sounds:destroy()
   -- destroy sound buffers
-  for id: uint64, buffer: *riv_sound_buffer_desc in mpairs(buffers) do
+  for id: uint64, buffer: *riv_soundbuffer_desc in mpairs(buffers) do
     delete((@span(byte)){data=buffer.data.data, size=buffer.data.size})
   end
   buffers:destroy()
@@ -287,7 +287,7 @@ end
 
 --------------------------------------------------------------------------------
 
-local function handle_make_sound_buffer(desc: riv_sound_buffer_desc): void
+local function handle_make_soundbuffer(desc: riv_soundbuffer_desc): void
   assert(not buffers:has(desc.id), 'sound buffer id is already taken')
   local off: usize = (@usize)(desc.data.data)
   local data: span(byte) = new(@byte, desc.data.size)
@@ -299,7 +299,7 @@ end
 local function handle_sound(desc: riv_sound_desc): void
   if desc.buffer_id ~= 0 then -- start new sound
     if desc.seek == -1 then return end -- silently ignore sound to be stopped
-    local buffer: *riv_sound_buffer_desc = buffers:peek(desc.buffer_id)
+    local buffer: *riv_soundbuffer_desc = buffers:peek(desc.buffer_id)
     assert(buffer, 'invalid sound buffer id')
     local abuffer: *ma_audio_buffer
     local adecoder: *ma_decoder
@@ -415,10 +415,10 @@ function rivemu_audio.poll_commands(): void
   for i: usize=0,<machine.mmio_driver.audio_command_len do
     local command: riv_audio_command = machine.mmio_driver.audio_commands[i]
     switch command.type do
-    case RIV_AUDIOCOMMAND_MAKE_SOUND_BUFFER then
-      handle_make_sound_buffer(command.desc.sound_buffer)
-    case RIV_AUDIOCOMMAND_DESTROY_SOUND_BUFFER then
-      -- handle_destroy_sound_buffer(command.desc.sound_buffer.id)
+    case RIV_AUDIOCOMMAND_MAKE_SOUNDBUFFER then
+      handle_make_soundbuffer(command.desc.soundbuffer)
+    case RIV_AUDIOCOMMAND_DESTROY_SOUNDBUFFER then
+      -- handle_destroy_soundbuffer(command.desc.soundbuffer.id)
     case RIV_AUDIOCOMMAND_SOUND then
       handle_sound(command.desc.sound)
     case RIV_AUDIOCOMMAND_WAVEFORM then

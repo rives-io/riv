@@ -125,7 +125,7 @@ global riv_key_code: type <cimport,nodecl,using> = @enum(uint8){
   RIV_GAMEPAD_SELECT = 143,
   RIV_NUM_KEYCODE = 144
 }
-global riv_color_id: type <cimport,nodecl,using> = @enum(int32){
+global riv_color_id: type <cimport,nodecl,using> = @enum(uint8){
   RIV_COLOR_BLACK = 0,
   RIV_COLOR_WHITE = 1,
   RIV_COLOR_LIGHTGREY = 2,
@@ -160,7 +160,7 @@ global riv_color_id: type <cimport,nodecl,using> = @enum(int32){
   RIV_COLOR_DARKPURPLE = 31,
   RIV_NUM_COLORS = 32
 }
-global riv_rgb_code: type <cimport,nodecl,using> = @enum(int32){
+global riv_rgb_code: type <cimport,nodecl,using> = @enum(uint32){
   RIV_RGB_BLACK = 0,
   RIV_RGB_WHITE = 16777215,
   RIV_RGB_LIGHTGREY = 14405061,
@@ -226,7 +226,7 @@ global riv_constants: type <cimport,nodecl,using> = @enum(int32){
   RIV_DEFAULT_PIXELFORMAT = 0,
   RIV_MAX_COLORS = 256,
   RIV_MAX_IMAGES = 256,
-  RIV_MAX_SPRITES = 256,
+  RIV_MAX_SPRITESHEETS = 256,
   RIV_INVALID_ID = 0
 }
 global riv_image_id: type <cimport,nodecl,using> = @enum(int32){
@@ -234,10 +234,10 @@ global riv_image_id: type <cimport,nodecl,using> = @enum(int32){
   RIV_IMAGE_FONT_5X7 = 255,
   RIV_IMAGE_FONT_3X5 = 254
 }
-global riv_sprite_id: type <cimport,nodecl,using> = @enum(int32){
-  RIV_SPRITE_NONE = 0,
-  RIV_SPRITE_FONT_5X7 = 255,
-  RIV_SPRITE_FONT_3X5 = 254
+global riv_spritesheet_id: type <cimport,nodecl,using> = @enum(int32){
+  RIV_SPRITESHEET_NONE = 0,
+  RIV_SPRITESHEET_FONT_5X7 = 255,
+  RIV_SPRITESHEET_FONT_3X5 = 254
 }
 global riv_control_command: type <cimport,nodecl,using> = @enum(uint8){
   RIV_CONTROL_NONE = 0,
@@ -248,12 +248,12 @@ global riv_control_command: type <cimport,nodecl,using> = @enum(uint8){
 }
 global riv_audio_command_type: type <cimport,nodecl,using> = @enum(uint8){
   RIV_AUDIOCOMMAND_NONE = 0,
-  RIV_AUDIOCOMMAND_MAKE_SOUND_BUFFER = 1,
-  RIV_AUDIOCOMMAND_DESTROY_SOUND_BUFFER = 2,
+  RIV_AUDIOCOMMAND_MAKE_SOUNDBUFFER = 1,
+  RIV_AUDIOCOMMAND_DESTROY_SOUNDBUFFER = 2,
   RIV_AUDIOCOMMAND_SOUND = 3,
   RIV_AUDIOCOMMAND_WAVEFORM = 4
 }
-global riv_mem_size: type <cimport,nodecl,using> = @enum(uint64){
+global riv_mmio_size: type <cimport,nodecl,using> = @enum(uint64){
   RIV_MMIOSIZE_HUGEPAGE = 2097152,
   RIV_MMIOSIZE_MMIO_DRIVER = 65536,
   RIV_MMIOSIZE_MMIO_DEVICE = 65536,
@@ -261,7 +261,7 @@ global riv_mem_size: type <cimport,nodecl,using> = @enum(uint64){
   RIV_MMIOSIZE_AUDIOBUFFER = 786432,
   RIV_MMIOSIZE_FRAMEBUFFER = 1048576
 }
-global riv_mmio_offset: type <cimport,nodecl,using> = @enum(uint64){
+global riv_mmio_start: type <cimport,nodecl,using> = @enum(uint64){
   RIV_MMIOSTART_MMIO_DRIVER = 0,
   RIV_MMIOSTART_MMIO_DEVICE = 65536,
   RIV_MMIOSTART_INOUTBUFFER = 131072,
@@ -287,7 +287,7 @@ global riv_framebuffer_desc: type <cimport,nodecl> = @record{
   target_fps: uint32,
   pixel_format: riv_pixel_format
 }
-global riv_sound_buffer_desc: type <cimport,nodecl> = @record{
+global riv_soundbuffer_desc: type <cimport,nodecl> = @record{
   id: riv_id,
   format: riv_sound_format,
   channels: uint32,
@@ -322,7 +322,7 @@ global riv_waveform_desc: type <cimport,nodecl> = @record{
   pan: float32
 }
 global riv_audio_command_desc: type <cimport,nodecl> = @union{
-  sound_buffer: riv_sound_buffer_desc,
+  soundbuffer: riv_soundbuffer_desc,
   sound: riv_sound_desc,
   waveform: riv_waveform_desc
 }
@@ -391,7 +391,7 @@ global riv_image: type <cimport,nodecl> = @record{
   color_key: int16,
   owned: boolean
 }
-global riv_sprite: type <cimport,nodecl> = @record{
+global riv_spritesheet: type <cimport,nodecl> = @record{
   image_id: riv_id,
   cell_width: uint32,
   cell_height: uint32
@@ -399,6 +399,7 @@ global riv_sprite: type <cimport,nodecl> = @record{
 global riv_draw_state: type <cimport,nodecl> = @record{
   origin: riv_vec2i,
   clip: riv_recti,
+  pal_enabled: boolean,
   pal: [256]uint8
 }
 global riv_context: type <cimport,nodecl> = @record{
@@ -422,7 +423,7 @@ global riv_context: type <cimport,nodecl> = @record{
   framebuffer: *[0]uint8,
   draw: riv_draw_state,
   images: [256]riv_image,
-  sprites: [256]riv_sprite,
+  spritesheets: [256]riv_spritesheet,
   prng: riv_xoshiro256,
   mmio_driver: *riv_mmio_driver,
   mmio_device: *riv_mmio_device,
@@ -431,7 +432,7 @@ global riv_context: type <cimport,nodecl> = @record{
   entropy_index: uint32,
   entropy_size: uint32,
   sound_gen: uint64,
-  sound_buffer_gen: uint64,
+  soundbuffer_gen: uint64,
   image_gen: uint64,
   sprite_gen: uint64,
   audiobuffer_off: uint32,

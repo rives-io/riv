@@ -115,7 +115,7 @@ global function riv_present(): boolean <cexport>
     if event.key_code == 0xff and riv.frame >= event.frame + 1 then
       riv_shutdown()
       exit(0)
-      return true
+      return false
     end
   end
   -- copy outcard description to driver
@@ -126,7 +126,7 @@ global function riv_present(): boolean <cexport>
   if riv.frame >= riv.stop_frame then
     riv_shutdown()
     exit(0)
-    return true
+    return false
   end
   -- fill with replay inputs
   if riv.verifying then
@@ -154,5 +154,5 @@ global function riv_present(): boolean <cexport>
   riv.audiobuffer_off = 0
   -- poll keyboard inputs
   riv_poll_inputs()
-  return riv.quit
+  return not riv.quit
 end

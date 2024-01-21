@@ -281,23 +281,23 @@ typedef enum riv_constants {
   RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PLT256,
   RIV_MAX_COLORS = 256,
   RIV_MAX_IMAGES = 256,
-  RIV_MAX_SPRITES = 256,
+  RIV_MAX_SPRITESHEETS = 256,
   RIV_INVALID_ID = 0,
 } riv_constants;
 
 // Predefined image ids
 typedef enum riv_image_id {
   RIV_IMAGE_NONE = 0,
-  RIV_IMAGE_FONT_5X7 = RIV_MAX_SPRITES-1,
-  RIV_IMAGE_FONT_3X5 = RIV_MAX_SPRITES-2,
+  RIV_IMAGE_FONT_5X7 = RIV_MAX_IMAGES-1,
+  RIV_IMAGE_FONT_3X5 = RIV_MAX_IMAGES-2,
 } riv_image_id;
 
 // Predefined sprite ids
-typedef enum riv_sprite_id {
-  RIV_SPRITE_NONE = 0,
-  RIV_SPRITE_FONT_5X7 = RIV_MAX_IMAGES-1,
-  RIV_SPRITE_FONT_3X5 = RIV_MAX_IMAGES-2,
-} riv_sprite_id;
+typedef enum riv_spritesheet_id {
+  RIV_SPRITESHEET_NONE = 0,
+  RIV_SPRITESHEET_FONT_5X7 = RIV_MAX_SPRITESHEETS-1,
+  RIV_SPRITESHEET_FONT_3X5 = RIV_MAX_SPRITESHEETS-2,
+} riv_spritesheet_id;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Constants used to implement the driver and device communication
@@ -314,30 +314,30 @@ typedef enum riv_control_command {
 // Device audio commands
 typedef enum riv_audio_command_type {
   RIV_AUDIOCOMMAND_NONE = 0,
-  RIV_AUDIOCOMMAND_MAKE_SOUND_BUFFER,
-  RIV_AUDIOCOMMAND_DESTROY_SOUND_BUFFER,
+  RIV_AUDIOCOMMAND_MAKE_SOUNDBUFFER,
+  RIV_AUDIOCOMMAND_DESTROY_SOUNDBUFFER,
   RIV_AUDIOCOMMAND_SOUND,
   RIV_AUDIOCOMMAND_WAVEFORM,
 } riv_audio_command_type;
 
 // Memory mapped sizes
-typedef enum riv_mem_size {
+typedef enum riv_mmio_size {
   RIV_MMIOSIZE_HUGEPAGE     = 2*1024*1024, // 2 MB
   RIV_MMIOSIZE_MMIO_DRIVER  =     64*1024, // 64 KB
   RIV_MMIOSIZE_MMIO_DEVICE  =     64*1024, // 64 KB
   RIV_MMIOSIZE_INOUTBUFFER  =    256*1024, // 256 KB
   RIV_MMIOSIZE_AUDIOBUFFER  =    768*1024, // 768 KB
   RIV_MMIOSIZE_FRAMEBUFFER  =   1024*1024, // 1 MB
-} riv_mem_size;
+} riv_mmio_size;
 
 // Memory mapped offsets
-typedef enum riv_mmio_offset {
+typedef enum riv_mmio_start {
   RIV_MMIOSTART_MMIO_DRIVER  = 0,
   RIV_MMIOSTART_MMIO_DEVICE  = RIV_MMIOSTART_MMIO_DRIVER + RIV_MMIOSIZE_MMIO_DRIVER,
   RIV_MMIOSTART_INOUTBUFFER  = RIV_MMIOSTART_MMIO_DEVICE + RIV_MMIOSIZE_MMIO_DEVICE,
   RIV_MMIOSTART_AUDIOBUFFER  = RIV_MMIOSTART_INOUTBUFFER + RIV_MMIOSIZE_INOUTBUFFER,
   RIV_MMIOSTART_FRAMEBUFFER  = RIV_MMIOSTART_AUDIOBUFFER + RIV_MMIOSIZE_AUDIOBUFFER,
-} riv_mmio_offset;
+} riv_mmio_start;
 
 // Memory mapped virtual address bases
 typedef enum riv_vaddr_base {
@@ -390,13 +390,13 @@ typedef struct riv_framebuffer_desc {
 } riv_framebuffer_desc;
 
 // Sound buffer description
-typedef struct riv_sound_buffer_desc {
+typedef struct riv_soundbuffer_desc {
   riv_id id;                // Sound buffer id (filled automatically)
   riv_sound_format format;  // Sound format
   uint32_t channels;        // Sound channels (0 = auto detect)
   uint32_t sample_rate;     // Sound sample rate (0 = auto detect)
   riv_span_uint8 data;      // Sound data
-} riv_sound_buffer_desc;
+} riv_soundbuffer_desc;
 
 // Sound description
 typedef struct riv_sound_desc {
@@ -434,7 +434,7 @@ typedef struct riv_waveform_desc {
 
 // Device audio command description
 typedef union riv_audio_command_desc {
-  riv_sound_buffer_desc sound_buffer;
+  riv_soundbuffer_desc soundbuffer;
   riv_sound_desc sound;
   riv_waveform_desc waveform;
 } riv_audio_command_desc;
@@ -532,56 +532,57 @@ typedef struct riv_image {
 } riv_image;
 
 // Draw sprite
-typedef struct riv_sprite {
+typedef struct riv_spritesheet {
   riv_id image_id;
   uint32_t cell_width;
   uint32_t cell_height;
-} riv_sprite;
+} riv_spritesheet;
 
 // Draw state
 typedef struct riv_draw_state {
   riv_vec2i origin;                 // Draw origin
   riv_recti clip;                   // Draw clipping bounding box
+  bool pal_enabled;                 // Draw swap palette enabled
   uint8_t pal[RIV_MAX_COLORS];      // Draw swap palette
 } riv_draw_state;
 
 // RIV context
 typedef struct riv_context {
   // Public read-only fields
-  uint64_t frame;                         // Current frame number
-  int64_t millis;                         // Current time in microseconds since first frame
-  double seconds;                         // Current time in seconds since first frame
-  uint32_t incard_len;                    // Input card length
-  bool valid;                             // Whether riv is initialized
-  bool verifying;                         // Whether we are verifying
-  bool yielding;                          // Whether an audio/video/input devices are connected and yielding
-  uint32_t key_modifiers;                 // NIY
-  uint32_t key_toggle_count;              // Number of toggled keys in this frame
-  uint8_t key_toggles[RIV_NUM_KEYCODE];   // Toggled key in this frame (in order)
-  riv_key_state keys[RIV_NUM_KEYCODE];    // Current keyboard state
+  uint64_t frame;                                     // Current frame number
+  int64_t millis;                                     // Current time in microseconds since first frame
+  double seconds;                                     // Current time in seconds since first frame
+  uint32_t incard_len;                                // Input card length
+  bool valid;                                         // Whether riv is initialized
+  bool verifying;                                     // Whether we are verifying
+  bool yielding;                                      // Whether an audio/video/input devices are connected and yielding
+  uint32_t key_modifiers;                             // NIY
+  uint32_t key_toggle_count;                          // Number of toggled keys in this frame
+  uint8_t key_toggles[RIV_NUM_KEYCODE];               // Toggled key in this frame (in order)
+  riv_key_state keys[RIV_NUM_KEYCODE];                // Current keyboard state
   // Public read/write fields
-  uint32_t outcard_len;                   // Output card length
-  bool quit;                              // When set true, RIV loop will stop
-  riv_framebuffer_desc* framebuffer_desc; // Screen frame buffer description
-  riv_unbounded_bool tracked_keys;        // Key codes being tracked
-  riv_unbounded_uint8 inoutbuffer;        // Input/output card buffer
-  riv_unbounded_uint32 palette;           // Color palette
-  riv_unbounded_uint8 framebuffer;        // Screen frame buffer
-  riv_draw_state draw;                    // Draw state
-  riv_image images[RIV_MAX_IMAGES];       // All loaded images
-  riv_sprite sprites[RIV_MAX_SPRITES];    // All loaded sprites
+  uint32_t outcard_len;                               // Output card length
+  bool quit;                                          // When set true, RIV loop will stop
+  riv_framebuffer_desc* framebuffer_desc;             // Screen frame buffer description
+  riv_unbounded_bool tracked_keys;                    // Key codes being tracked
+  riv_unbounded_uint8 inoutbuffer;                    // Input/output card buffer
+  riv_unbounded_uint32 palette;                       // Color palette
+  riv_unbounded_uint8 framebuffer;                    // Screen frame buffer
+  riv_draw_state draw;                                // Draw state
+  riv_image images[RIV_MAX_IMAGES];                   // All loaded images
+  riv_spritesheet spritesheets[RIV_MAX_SPRITESHEETS]; // All loaded sprite sheets
   // Private fields
-  riv_xoshiro256 prng;                    // Internal PRNG state
+  riv_xoshiro256 prng;                                // Internal PRNG state
   riv_mmio_driver* mmio_driver;
   riv_mmio_device* mmio_device;
-  riv_unbounded_uint8 audiobuffer;        // Audio buffer used by audio commands
+  riv_unbounded_uint8 audiobuffer;                    // Audio buffer used by audio commands
   uint64_t entropy[128];
   uint32_t entropy_index;
   uint32_t entropy_size;
-  uint64_t sound_gen;                     // Counter for generating sound ids
-  uint64_t sound_buffer_gen;              // Counter for generating sound buffer ids
-  uint64_t image_gen;                     // Counter for generating image ids
-  uint64_t sprite_gen;                    // Counter for generating sprite ids
+  uint64_t sound_gen;                                 // Counter for generating sound ids
+  uint64_t soundbuffer_gen;                          // Counter for generating sound buffer ids
+  uint64_t image_gen;                                 // Counter for generating image ids
+  uint64_t sprite_gen;                                // Counter for generating sprite ids
   uint32_t audiobuffer_off;
   int32_t yield_fd;
   int32_t verify_iocard_fd;
@@ -606,7 +607,7 @@ RIV_API uint64_t riv_snprintf(char* s, uint64_t maxlen, const char* format, ...)
 
 RIV_API void riv_setup(int32_t argc, char** argv);    // Initialize RIV driver
 RIV_API void riv_shutdown();                          // Terminate RIV driver
-RIV_API bool riv_present();                           // Present current frame, returns true when quit was requested in the frame, false otherwise.
+RIV_API bool riv_present();                           // Present current frame, returns true until quit is requested.
 
 // Images
 
@@ -615,8 +616,8 @@ RIV_API void riv_destroy_image(riv_id img);
 
 // Sprites
 
-RIV_API riv_id riv_make_sprite(riv_id img_id, uint32_t w, uint32_t h);
-RIV_API void riv_destroy_sprite(riv_id spr_id);
+RIV_API riv_id riv_make_spritesheet(riv_id img_id, uint32_t w, uint32_t h);
+RIV_API void riv_destroy_spritesheet(riv_id sps_id);
 
 // Drawing
 
@@ -636,13 +637,13 @@ RIV_API void riv_draw_ellipse_line(int64_t ox, int64_t oy, int64_t w, int64_t h,
 RIV_API void riv_draw_triangle_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
 RIV_API void riv_draw_triangle_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
 RIV_API void riv_draw_image_rect(riv_id img_id, int64_t x0, int64_t y0, int64_t w, int64_t h, int64_t sx0, int64_t sy0, int64_t mw, int64_t mh);
-RIV_API void riv_draw_sprite(uint32_t n, riv_id spr_id, int64_t x0, int64_t y0, int64_t nw, int64_t nh, int64_t mw, int64_t mh);
-RIV_API riv_vec2i riv_draw_text(const char* text, riv_id spr_id, int64_t x0, int64_t y0, int64_t col, int64_t mw, int64_t mh, int64_t sx, int64_t sy);
+RIV_API void riv_draw_sprite(uint32_t n, riv_id sps_id, int64_t x0, int64_t y0, int64_t nw, int64_t nh, int64_t mw, int64_t mh);
+RIV_API riv_vec2i riv_draw_text(const char* text, riv_id sps_id, int64_t x0, int64_t y0, int64_t col, int64_t mw, int64_t mh, int64_t sx, int64_t sy);
 
 // Sound system
 
-RIV_API uint64_t riv_make_sound_buffer(riv_sound_buffer_desc* desc); // Create a new sound buffer
-RIV_API void riv_destroy_sound_buffer(riv_id sndbuf_id);             // Destroy a sound buffer
+RIV_API uint64_t riv_make_soundbuffer(riv_soundbuffer_desc* desc); // Create a new sound buffer
+RIV_API void riv_destroy_soundbuffer(riv_id sndbuf_id);             // Destroy a sound buffer
 RIV_API uint64_t riv_sound(riv_sound_desc* desc);                    // Play a sound buffer or update a sound
 RIV_API uint64_t riv_waveform(riv_waveform_desc* desc);              // Play a waveform sound
 

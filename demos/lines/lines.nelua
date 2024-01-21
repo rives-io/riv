@@ -1,28 +1,19 @@
 require 'riv'
 
-local SCREEN_SIZE: usize <comptime> = 256
+riv_setup(argc, argv)
 
 local function frame()
   local framebuffer: *[0]uint8 = riv.framebuffer
   local frame: usize = riv.frame
-  for y: usize=0,<SCREEN_SIZE do
+  for y: usize=0,<256 do
     ## cemit '#pragma GCC unroll 4'
-    for x: usize=0,<SCREEN_SIZE do
-      framebuffer[y*SCREEN_SIZE+x] = ((frame + x + y) // 8) % RIV_NUM_COLORS
+    for x: usize=0,<256 do
+      framebuffer[y*256+x] = ((frame + x + y) // 8) % RIV_NUM_COLORS
     end
   end
 end
 
-local function init()
-  riv.framebuffer_desc.width = SCREEN_SIZE
-  riv.framebuffer_desc.height = SCREEN_SIZE
-  riv.framebuffer_desc.target_fps = 60
-  riv.framebuffer_desc.pixel_format = RIV_PIXELFORMAT_PAL256
-end
-
-riv_setup(argc, argv)
-init()
-repeat frame() until riv_present()
+repeat frame() until not riv_present()
 riv_shutdown()
 
 ## nostartfiles()

@@ -5,35 +5,35 @@ require 'io'
 
 local function generate_sprite_id(): uint64
   local spr_id: uint64 = riv.sprite_gen
-  for i=0,<RIV_MAX_SPRITES do
-    spr_id = (spr_id + 1) % RIV_MAX_SPRITES
+  for i=0,<RIV_MAX_SPRITESHEETS do
+    spr_id = (spr_id + 1) % RIV_MAX_SPRITESHEETS
     if spr_id == 0 then spr_id = 1 end
-    if riv.sprites[spr_id].image_id == 0 then
+    if riv.spritesheets[spr_id].image_id == 0 then
       return spr_id
     end
   end
-  -- all sprites ids are in use
+  -- all spritesheets ids are in use
   return 0
 end
 
-global function riv_make_sprite(img_id: uint64, w: uint32, h: uint32): uint64 <cexport>
+global function riv_make_spritesheet(img_id: uint64, w: uint32, h: uint32): uint64 <cexport>
   -- generate sprite id
   local spr_id: uint64 = generate_sprite_id()
   if spr_id == 0 then
-    io.stderr:writef('ERROR: unable to make sprite %d: reached maximum number of sprites\n', spr_id)
+    io.stderr:writef('ERROR: unable to make sprite sheet %d: reached maximum number of sprite sheets\n', spr_id)
     return 0
   end
   -- get image
   if img_id <= 0 or img_id >= RIV_MAX_IMAGES then
-    io.stderr:writef('ERROR: unable to make sprite %d: invalid image %d\n', spr_id, img_id)
+    io.stderr:writef('ERROR: unable to make sprite sheet %d: invalid image %d\n', spr_id, img_id)
     return 0
   end
   local img: *riv_image = &riv.images[img_id]
   if w > img.width or h > img.height then
-    io.stderr:writef('ERROR: unable to make sprite %d: sprite cell size (%dx%d) is too big for its image size (%dx%d)\n', spr_id, w, h, img.width, img.height)
+    io.stderr:writef('ERROR: unable to make sprite sheet %d: cell size (%dx%d) is too big for its image size (%dx%d)\n', spr_id, w, h, img.width, img.height)
     return 0
   end
-  local spr: *riv_sprite = &riv.sprites[spr_id]
+  local spr: *riv_spritesheet = &riv.spritesheets[spr_id]
   spr.image_id = img_id
   spr.cell_width = w
   spr.cell_height = h
@@ -41,8 +41,8 @@ global function riv_make_sprite(img_id: uint64, w: uint32, h: uint32): uint64 <c
   return spr_id
 end
 
-global function riv_destroy_sprite(spr_id: uint64): void <cexport>
-  if spr_id <= 0 or spr_id >= RIV_MAX_SPRITES then return end
-  local spr: *riv_sprite = &riv.sprites[spr_id]
+global function riv_destroy_spritesheet(spr_id: uint64): void <cexport>
+  if spr_id <= 0 or spr_id >= RIV_MAX_SPRITESHEETS then return end
+  local spr: *riv_spritesheet = &riv.spritesheets[spr_id]
   $spr = {}
 end

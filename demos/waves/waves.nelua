@@ -1,10 +1,16 @@
 require 'riv'
 require 'math'
 
-local function draw()
+riv_setup(argc, argv)
+riv.framebuffer_desc.width = 128
+riv.framebuffer_desc.height = 128
+riv.framebuffer_desc.target_fps = 30
+
+repeat
   riv_clear_screen(RIV_COLOR_DARKSLATE)
   local tau: float32 <comptime> = math.pi*2
   local time: float32 = riv.seconds
+  local fb: auto = riv.framebuffer
   local r <comptime> = 64
   for y=-r,r,3 do
     for x=-r,r,2 do
@@ -13,15 +19,6 @@ local function draw()
       riv_draw_point(r+x, r+y-math.ifloor(z), RIV_COLOR_WHITE)
     end
   end
-end
+until not riv_present()
 
-local function init()
-  riv.framebuffer_desc.width = 128
-  riv.framebuffer_desc.height = 128
-  riv.framebuffer_desc.target_fps = 30
-end
-
-riv_setup(argc, argv)
-init()
-repeat draw() until riv_present()
 riv_shutdown()

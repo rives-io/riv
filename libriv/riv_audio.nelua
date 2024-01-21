@@ -19,7 +19,7 @@ local function riv_queue_audio_command(command: riv_audio_command): void
   end
 end
 
-global function riv_make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <cexport>
+global function riv_make_soundbuffer(desc: *riv_soundbuffer_desc): uint64 <cexport>
   -- silently ignore invalid id field
   if desc.id ~= 0 then return 0 end
   -- TODO: we could send in multiple chunks
@@ -33,21 +33,21 @@ global function riv_make_sound_buffer(desc: *riv_sound_buffer_desc): uint64 <cex
   desc.data.data = (@*uint8)((@usize)(riv.audiobuffer_off))
   riv.audiobuffer_off = riv.audiobuffer_off + desc.data.size
   -- choose sound buffer id
-  desc.id = riv.sound_buffer_gen + 1
-  riv.sound_buffer_gen = desc.id
+  desc.id = riv.soundbuffer_gen + 1
+  riv.soundbuffer_gen = desc.id
   -- queue command
   riv_queue_audio_command{
-    type = RIV_AUDIOCOMMAND_MAKE_SOUND_BUFFER,
-    desc = {sound_buffer = $desc},
+    type = RIV_AUDIOCOMMAND_MAKE_SOUNDBUFFER,
+    desc = {soundbuffer = $desc},
   }
   return desc.id
 end
 
-global function riv_destroy_sound_buffer(id: uint64): void <cexport>
+global function riv_destroy_soundbuffer(id: uint64): void <cexport>
   -- queue command
   riv_queue_audio_command{
-    type = RIV_AUDIOCOMMAND_DESTROY_SOUND_BUFFER,
-    desc = {sound_buffer = {id = id}},
+    type = RIV_AUDIOCOMMAND_DESTROY_SOUNDBUFFER,
+    desc = {soundbuffer = {id = id}},
   }
 end
 
