@@ -12,7 +12,7 @@ require '.machine'
 --------------------------------------------------------------------------------
 
 -- Translates a sokol_app key code to a RIV key code.
-local function translate_keycode_to_riv(keycode: sapp_keycode): riv_key_code
+local function translate_keycode(keycode: sapp_keycode): riv_key_code
   switch keycode do
   case SAPP_KEYCODE_SPACE then return RIV_KEYCODE_SPACE
   case SAPP_KEYCODE_APOSTROPHE then return RIV_KEYCODE_APOSTROPHE
@@ -122,6 +122,27 @@ local function translate_keycode_to_riv(keycode: sapp_keycode): riv_key_code
   else return RIV_KEYCODE_INVALID end
 end
 
+local function translate_keycode_to_gamepad(keycode: sapp_keycode): riv_key_code
+  switch keycode do
+  case SAPP_KEYCODE_RIGHT then return RIV_GAMEPAD_RIGHT
+  case SAPP_KEYCODE_LEFT then return RIV_GAMEPAD_LEFT
+  case SAPP_KEYCODE_DOWN then return RIV_GAMEPAD_DOWN
+  case SAPP_KEYCODE_UP then return RIV_GAMEPAD_UP
+  case SAPP_KEYCODE_Z then return RIV_GAMEPAD_A1
+  case SAPP_KEYCODE_X then return RIV_GAMEPAD_A2
+  case SAPP_KEYCODE_C then return RIV_GAMEPAD_A3
+  case SAPP_KEYCODE_S then return RIV_GAMEPAD_A4
+  case SAPP_KEYCODE_A then return RIV_GAMEPAD_L1
+  case SAPP_KEYCODE_Q then return RIV_GAMEPAD_L2
+  case SAPP_KEYCODE_1 then return RIV_GAMEPAD_L3
+  case SAPP_KEYCODE_D then return RIV_GAMEPAD_R1
+  case SAPP_KEYCODE_E then return RIV_GAMEPAD_R2
+  case SAPP_KEYCODE_3 then return RIV_GAMEPAD_R3
+  case SAPP_KEYCODE_ENTER then return RIV_GAMEPAD_START
+  case SAPP_KEYCODE_SPACE then return RIV_GAMEPAD_SELECT
+  else return RIV_KEYCODE_INVALID end
+end
+
 --------------------------------------------------------------------------------
 
 -- Input subsystem.
@@ -161,6 +182,20 @@ function rivemu_input.reset_keys_state()
   key_pressed_state = {}
 end
 
+local function track_key(key_code: riv_key_code, down: boolean, up: boolean): boolean
+  -- ignore unsupported key codes
+  if key_code == RIV_KEYCODE_INVALID then return false end
+  -- ignore keys not tracked
+  if not machine.mmio_driver.tracked_keys[key_code] then return false end
+  -- ignore key down events when the key is already pressed
+  if key_pressed_state[key_code] and down then return false end
+  -- ignore key up events when the key is not pressed
+  if not key_pressed_state[key_code] and up then return false end
+  -- append new event
+  key_pressed_state[key_code] = down
+  return true
+end
+
 -- Poll keyboards events coming from the application window.
 local function poll_keyboard_events(): void
   local index: uint8 = 0
@@ -175,22 +210,24 @@ local function poll_keyboard_events(): void
     local up: boolean = event.type == SAPP_EVENTTYPE_KEY_UP
     -- ignore non key up/down events
     if not (down or up) then continue end
-    -- translate key code
-    local key_code: riv_key_code = translate_keycode_to_riv(event.key_code)
-    -- ignore unsupported key codes
-    if key_code == RIV_KEYCODE_INVALID then continue end
-    -- ignore keys not tracked
-    if not machine.mmio_driver.tracked_keys[key_code] then continue end
-    -- ignore key down events when the key is already pressed
-    if key_pressed_state[key_code] and down then continue end
-    -- ignore key up events when the key is not pressed
-    if not key_pressed_state[key_code] and up then continue end
-    -- append new event
-    key_pressed_state[key_code] = down
-    machine.mmio_device.key_toggles[index] = key_code
-    index = index + 1
-    -- stop when event list is full, this is almost impossible, here just for sanity
-    if index >= #machine.mmio_device.key_toggles then break end
+    do -- translate key code
+      local key_code: riv_key_code = translate_keycode(event.key_code)
+      if track_key(key_code, down, up) then
+        machine.mmio_device.key_toggles[index] = key_code
+        index = index + 1
+        -- stop when event list is full, this is almost impossible, here just for sanity
+        if index >= #machine.mmio_device.key_toggles then break end
+      end
+    end
+    do -- translate gamepad code
+      local gamepad_code: riv_key_code = translate_keycode_to_gamepad(event.key_code)
+      if track_key(gamepad_code, down, up) then
+        machine.mmio_device.key_toggles[index] = gamepad_code
+        index = index + 1
+        -- stop when event list is full, this is almost impossible, here just for sanity
+        if index >= #machine.mmio_device.key_toggles then break end
+      end
+    end
   end
   machine.mmio_device.key_toggle_count = index
 

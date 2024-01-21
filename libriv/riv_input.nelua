@@ -5,8 +5,23 @@ require '.riv_types'
 require '.riv_xoshiro256'
 
 global function riv_init_input(): void
-  -- track all keys by default
-  memory.spanset((@span(boolean))(riv.mmio_driver.tracked_keys), true)
+  -- track only gamepad keys by default
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_RIGHT] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_LEFT] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_DOWN] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_UP] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_A1] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_A2] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_A3] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_A4] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_L1] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_L2] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_L3] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_R1] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_R2] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_R3] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_START] = true
+  riv.mmio_driver.tracked_keys[RIV_GAMEPAD_SELECT] = true
 end
 
 local function riv_append_keystroke_entropy(key_code: uint8, down: boolean, frame: uint64): void

@@ -9,26 +9,26 @@ local function memset(s: pointer, c: cint, n: csize): pointer <cimport,cinclude'
 
 global function riv_init_draw(): void
   -- set initial clip big enough for all screen sizes
-  riv.draw.clip.x1 = 16384
-  riv.draw.clip.y1 = 16384
+  riv.draw.clip.width = 16384
+  riv.draw.clip.height = 16384
   -- set initial swap palette
   for i: usize = 0,<256 do
     riv.draw.pal[i] = i
   end
   -- set default fonts
-  riv.images[RIV_IMAGE_FONT_3X5].width = #[fonts.f3x5.cols * fonts.f3x5.grid_width]#
-  riv.images[RIV_IMAGE_FONT_3X5].height = #[fonts.f3x5.rows * fonts.f3x5.grid_height]#
+  riv.images[RIV_IMAGE_FONT_3X5].width = #[fonts.f3x5.cols * fonts.f3x5.cell_width]#
+  riv.images[RIV_IMAGE_FONT_3X5].height = #[fonts.f3x5.rows * fonts.f3x5.cell_height]#
   riv.images[RIV_IMAGE_FONT_3X5].pixels = (@*[0]uint8)(#[fonts.f3x5.image_pixels]#)
   riv.sprites[RIV_SPRITE_FONT_3X5].image_id = RIV_IMAGE_FONT_3X5
-  riv.sprites[RIV_SPRITE_FONT_3X5].grid_width = #[fonts.f3x5.grid_width]#
-  riv.sprites[RIV_SPRITE_FONT_3X5].grid_height = #[fonts.f3x5.grid_height]#
+  riv.sprites[RIV_SPRITE_FONT_3X5].cell_width = #[fonts.f3x5.cell_width]#
+  riv.sprites[RIV_SPRITE_FONT_3X5].cell_height = #[fonts.f3x5.cell_height]#
 
-  riv.images[RIV_IMAGE_FONT_5X7].width = #[fonts.f5x7.cols * fonts.f5x7.grid_width]#
-  riv.images[RIV_IMAGE_FONT_5X7].height = #[fonts.f5x7.rows * fonts.f5x7.grid_height]#
+  riv.images[RIV_IMAGE_FONT_5X7].width = #[fonts.f5x7.cols * fonts.f5x7.cell_width]#
+  riv.images[RIV_IMAGE_FONT_5X7].height = #[fonts.f5x7.rows * fonts.f5x7.cell_height]#
   riv.images[RIV_IMAGE_FONT_5X7].pixels = (@*[0]uint8)(#[fonts.f5x7.image_pixels]#)
   riv.sprites[RIV_SPRITE_FONT_5X7].image_id = RIV_IMAGE_FONT_5X7
-  riv.sprites[RIV_SPRITE_FONT_5X7].grid_width = #[fonts.f5x7.grid_width]#
-  riv.sprites[RIV_SPRITE_FONT_5X7].grid_height = #[fonts.f5x7.grid_height]#
+  riv.sprites[RIV_SPRITE_FONT_5X7].cell_width = #[fonts.f5x7.cell_width]#
+  riv.sprites[RIV_SPRITE_FONT_5X7].cell_height = #[fonts.f5x7.cell_height]#
 end
 
 global function riv_clear_screen(col: uint32): void <cexport>
@@ -37,8 +37,8 @@ end
 
 local function riv_get_clip_limits(): (int64, int64, int64, int64, int64) <inline>
   local fw: int64, fh: int64 = riv.framebuffer_desc.width, riv.framebuffer_desc.height
-  local cx0: int64, cy0: int64 = math.max(0, riv.draw.clip.x0), math.max(0, riv.draw.clip.y0)
-  local cx1: int64, cy1: int64 = math.min(fw - 1, riv.draw.clip.x1), math.min(fh - 1, riv.draw.clip.y1)
+  local cx0: int64, cy0: int64 = math.max(0, riv.draw.clip.x), math.max(0, riv.draw.clip.y)
+  local cx1: int64, cy1: int64 = math.min(fw, riv.draw.clip.width) - 1, math.min(fh, riv.draw.clip.height) - 1
   return cx0, cy0, cx1, cy1, fw
 end
 
@@ -507,7 +507,7 @@ end
 global function riv_draw_sprite(n: uint32, spr_id: uint64, x0: int64, y0: int64, nw: int64, nh: int64, mw: int64, mh: int64): void <cexport>
   if unlikely(spr_id >= RIV_MAX_SPRITES or nw <= 0 or nh <= 0 or mw*mh == 0) then return end
   local spr: *riv_sprite = &riv.sprites[spr_id]
-  local w: uint32, h: uint32 = spr.grid_width, spr.grid_height
+  local w: uint32, h: uint32 = spr.cell_width, spr.cell_height
   if unlikely(w == 0) then return end
   local img_id: uint64 = spr.image_id
   if unlikely(img_id >= RIV_MAX_IMAGES) then return end
@@ -566,7 +566,7 @@ end
 global function riv_draw_text(text: cstring <const>, spr_id: uint64, x0: int64, y0: int64, col: int64, mw: int64, mh: int64, sx: int64, sy: int64): riv_vec2i <cexport>
   if unlikely(mw*mh == 0 or spr_id >= RIV_MAX_SPRITES) then return riv_vec2i{0, 0} end
   local spr: *riv_sprite = &riv.sprites[spr_id]
-  local gw: int64, gh: int64 = spr.grid_width*math.abs(mw), spr.grid_height*math.abs(mh)
+  local gw: int64, gh: int64 = spr.cell_width*math.abs(mw), spr.cell_height*math.abs(mh)
   if unlikely(gw <= 0 or gh <= 0) then return riv_vec2i{0, 0} end
   local data: *[0]uint8 = text
   local x: int64, y: int64 = x0, y0

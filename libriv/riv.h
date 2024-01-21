@@ -16,7 +16,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Constants
 
-// All supported RIV key codes, specially mapped to fit in 7 bits
+// All supported RIV key codes
 typedef enum riv_key_code {
   RIV_KEYCODE_INVALID             = 0,
   // F keys
@@ -124,9 +124,9 @@ typedef enum riv_key_code {
   RIV_KEYCODE_TAB                 = 99,
   RIV_KEYCODE_INSERT              = 100,
   RIV_KEYCODE_DELETE              = 101,
-  RIV_KEYCODE_RIGHT               = 102,
-  RIV_KEYCODE_LEFT                = 103,
-  RIV_KEYCODE_DOWN                = 104,
+  RIV_KEYCODE_LEFT                = 102,
+  RIV_KEYCODE_DOWN                = 103,
+  RIV_KEYCODE_RIGHT               = 104,
   RIV_KEYCODE_UP                  = 105,
   RIV_KEYCODE_PAGE_UP             = 106,
   RIV_KEYCODE_PAGE_DOWN           = 107,
@@ -150,7 +150,23 @@ typedef enum riv_key_code {
   // ASCII 125 }
   // ASCII 126 ~
   // 127 is reserved
-  RIV_NUM_KEYCODE                 = 128,
+  RIV_GAMEPAD_LEFT                = 128, // Keyboard Left
+  RIV_GAMEPAD_DOWN                = 129, // Keyboard Down
+  RIV_GAMEPAD_RIGHT               = 130, // Keyboard Right
+  RIV_GAMEPAD_UP                  = 131, // Keyboard Up
+  RIV_GAMEPAD_A1                  = 132, // Keyboard Z
+  RIV_GAMEPAD_A2                  = 133, // Keyboard X
+  RIV_GAMEPAD_A3                  = 134, // Keyboard C
+  RIV_GAMEPAD_A4                  = 135, // Keyboard S
+  RIV_GAMEPAD_L1                  = 136, // Keyboard A
+  RIV_GAMEPAD_L2                  = 137, // Keyboard Q
+  RIV_GAMEPAD_L3                  = 138, // Keyboard 1
+  RIV_GAMEPAD_R1                  = 139, // Keyboard D
+  RIV_GAMEPAD_R2                  = 140, // Keyboard E
+  RIV_GAMEPAD_R3                  = 141, // Keyboard 3
+  RIV_GAMEPAD_START               = 142, // Keyboard Enter
+  RIV_GAMEPAD_SELECT              = 143, // Keyboard Space
+  RIV_NUM_KEYCODE                 = 144,
 } riv_key_code;
 
 // Default palette color indexes
@@ -228,7 +244,6 @@ typedef enum riv_color_rgb_code {
 
 // Pixel format for frame buffers
 typedef enum riv_pixel_format {
-  RIV_PIXELFORMAT_INVALID = 0,
   RIV_PIXELFORMAT_PLT256,
   RIV_NUM_PIXELFORMAT,
 } riv_pixel_format;
@@ -487,25 +502,25 @@ typedef struct riv_key_toggle_event {
   uint64_t frame;
 } riv_key_toggle_event;
 
-// Vector 2 of integer, can represent points or sizes
+// Vector with 2 integers
 typedef struct riv_vec2i {
   int64_t x;
   int64_t y;
 } riv_vec2i;
 
-// Vector 2 of floats, can represent points or sizes
+// Vector with 2 floats
 typedef struct riv_vec2f {
   float x;
   float y;
 } riv_vec2f;
 
-// Bounding box
-typedef struct riv_bboxi {
-  int64_t x0;
-  int64_t y0;
-  int64_t x1;
-  int64_t y1;
-} riv_bboxi;
+// Rectangle
+typedef struct riv_recti {
+  int64_t x;
+  int64_t y;
+  int64_t width;
+  int64_t height;
+} riv_recti;
 
 // Draw image
 typedef struct riv_image {
@@ -519,20 +534,20 @@ typedef struct riv_image {
 // Draw sprite
 typedef struct riv_sprite {
   riv_id image_id;
-  uint32_t grid_width;
-  uint32_t grid_height;
+  uint32_t cell_width;
+  uint32_t cell_height;
 } riv_sprite;
 
 // Draw state
 typedef struct riv_draw_state {
   riv_vec2i origin;                 // Draw origin
-  riv_bboxi clip;                   // Draw clipping bounding box
+  riv_recti clip;                   // Draw clipping bounding box
   uint8_t pal[RIV_MAX_COLORS];      // Draw swap palette
 } riv_draw_state;
 
 // RIV context
 typedef struct riv_context {
-  // Public read-only fields (can be read at any moment)
+  // Public read-only fields
   uint64_t frame;                         // Current frame number
   int64_t millis;                         // Current time in microseconds since first frame
   double seconds;                         // Current time in seconds since first frame
@@ -544,8 +559,7 @@ typedef struct riv_context {
   uint32_t key_toggle_count;              // Number of toggled keys in this frame
   uint8_t key_toggles[RIV_NUM_KEYCODE];   // Toggled key in this frame (in order)
   riv_key_state keys[RIV_NUM_KEYCODE];    // Current keyboard state
-  int8_t reserved_r[856];
-  // Public read/write fields (can be written at any moment)
+  // Public read/write fields
   uint32_t outcard_len;                   // Output card length
   bool quit;                              // When set true, RIV loop will stop
   riv_framebuffer_desc* framebuffer_desc; // Screen frame buffer description
@@ -555,8 +569,7 @@ typedef struct riv_context {
   riv_unbounded_uint8 framebuffer;        // Screen frame buffer
   riv_draw_state draw;                    // Draw state
   riv_image images[RIV_MAX_IMAGES];       // All loaded images
-  riv_sprite sprites[RIV_MAX_SPRITES];      // All loaded sprites
-  uint8_t reserved_rw[168];
+  riv_sprite sprites[RIV_MAX_SPRITES];    // All loaded sprites
   // Private fields
   riv_xoshiro256 prng;                    // Internal PRNG state
   riv_mmio_driver* mmio_driver;

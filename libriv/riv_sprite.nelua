@@ -30,13 +30,13 @@ global function riv_make_sprite(img_id: uint64, w: uint32, h: uint32): uint64 <c
   end
   local img: *riv_image = &riv.images[img_id]
   if w > img.width or h > img.height then
-    io.stderr:writef('ERROR: unable to make sprite %d: sprite grid size (%dx%d) is too big for its image size (%dx%d)\n', spr_id, w, h, img.width, img.height)
+    io.stderr:writef('ERROR: unable to make sprite %d: sprite cell size (%dx%d) is too big for its image size (%dx%d)\n', spr_id, w, h, img.width, img.height)
     return 0
   end
   local spr: *riv_sprite = &riv.sprites[spr_id]
   spr.image_id = img_id
-  spr.grid_width = w
-  spr.grid_height = h
+  spr.cell_width = w
+  spr.cell_height = h
   riv.sprite_gen = spr_id
   return spr_id
 end

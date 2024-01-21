@@ -67,8 +67,8 @@ local f5x7_font = {
 #....  ....#  #....  ####.  ..###  .####  ..#..  .#.#.  #...#  .###.  #####  ...#.  ..#..  .#...  .....  .....
 
 ]]):gsub('%s',''):gsub('%.',string.char(0)):gsub('#',string.char(1)),
-  grid_width = 5,
-  grid_height = 7,
+  cell_width = 5,
+  cell_height = 7,
   cols = 16,
   rows = 8,
 }
@@ -125,8 +125,8 @@ local f3x5_font = {
 #..  .##  #.#  ##.  .#.  .##  .#.  ###  #.#  ##.  ###  .##  .#.  ##.  ...  ...
 
 ]]):gsub('%s',''):gsub('%.',string.char(0)):gsub('#',string.char(1)),
-  grid_width = 3,
-  grid_height = 5,
+  cell_width = 3,
+  cell_height = 5,
   cols = 16,
   rows = 8,
 }
