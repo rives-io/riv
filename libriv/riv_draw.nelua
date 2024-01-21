@@ -38,7 +38,7 @@ end
 local function riv_get_clip_limits(): (int64, int64, int64, int64, int64) <inline>
   local fw: int64, fh: int64 = riv.framebuffer_desc.width, riv.framebuffer_desc.height
   local cx0: int64, cy0: int64 = math.max(0, riv.draw.clip.x), math.max(0, riv.draw.clip.y)
-  local cx1: int64, cy1: int64 = math.min(fw, riv.draw.clip.width) - 1, math.min(fh, riv.draw.clip.height) - 1
+  local cx1: int64, cy1: int64 = math.min(fw, riv.draw.clip.x + riv.draw.clip.width) - 1, math.min(fh, riv.draw.clip.y + riv.draw.clip.height) - 1
   return cx0, cy0, cx1, cy1, fw
 end
 
@@ -180,7 +180,7 @@ global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local sr: int64 = (d + 1) %%% 2
   local r: int64 = d /// 2
-  local r2: int64 = r*r + math.max(r-1, 0)
+  local r2: int64 = r*r + math.max(r-1+sr, 0)
   for iry: int64=sr,r,1 do
     local iy0: int64, iy1: int64 = oy - iry + sr, oy + iry
     local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
@@ -208,7 +208,7 @@ global function riv_draw_circle_line(ox: int64, oy: int64, d: int64, col: uint32
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local sr: int64 = (d + 1) %%% 2
   local r: int64 = d /// 2
-  local r2: int64 = r*r + math.max(r-1, 0)
+  local r2: int64 = r*r + math.max(r-1+sr, 0)
   for iry: int64=sr,r,1 do
     local iy0: int64, iy1: int64 = oy - iry + sr, oy + iry
     local iy0v: boolean = iy0 >= cy0 and iy0 <= cy1
@@ -242,8 +242,8 @@ global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, 
   local sry: int64 = (h + 1) %%% 2
   local rx: int64 = w /// 2
   local ry: int64 = h /// 2
-  local rx2: int64 = rx*rx + math.max(rx-1, 0)
-  local ry2: int64 = ry*ry + math.max(ry-1, 0)
+  local rx2: int64 = rx*rx + math.max(rx-1+srx, 0)
+  local ry2: int64 = ry*ry + math.max(ry-1+sry, 0)
   local ry2inv: float32 = ry2 > 0 and 1_f32 / ry2 or 1_f32
   for iry: int64=sry,ry,1 do
     local iy0: int64, iy1: int64 = oy - iry + sry, oy + iry
@@ -274,8 +274,8 @@ global function riv_draw_ellipse_line(ox: int64, oy: int64, w: int64, h: int64, 
   local sry: int64 = (h + 1) %%% 2
   local rx: int64 = w /// 2
   local ry: int64 = h /// 2
-  local rx2: int64 = rx*rx + math.max(rx-1, 0)
-  local ry2: int64 = ry*ry + math.max(ry-1, 0)
+  local rx2: int64 = rx*rx + math.max(rx-1+srx, 0)
+  local ry2: int64 = ry*ry + math.max(ry-1+sry, 0)
   local rx2inv: float32 = rx2 > 0 and 1_f32 / rx2 or 1_f32
   local ry2inv: float32 = ry2 > 0 and 1_f32 / ry2 or 1_f32
   for iry: int64=sry,ry,1 do

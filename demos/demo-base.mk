@@ -8,6 +8,11 @@ else
 	CC=riscv64-linux-musl-gcc
 	CXX=riscv64-linux-musl-g++
 	TOOLCHAIN_PREFIX=$(shell $(CC) -dumpmachine)-
+	DEPS=../../libriv/riv.h ../../libriv/libriv.so
+	ifeq ($(DEMOLANG),nelua)
+		DEPS+=../../libriv/riv.nelua
+		NELUA_FLAGS+=-L../../libriv/?.nelua
+	endif
 endif
 
 OBJDUMP=$(TOOLCHAIN_PREFIX)objdump
@@ -38,45 +43,19 @@ LDFLAGS+=-z norelro -z noseparate-code -z lazy
 # Add RIV library (required when cross compiling)
 CFLAGS+=-I../../libriv
 LDFLAGS+=-L../../libriv -lriv
+ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-all: \
-	$(NAME).sqfs \
-	$(NAME).elf \
-	$(NAME).min.elf \
-	$(NAME).dump.txt \
-	$(NAME).readelf.txt \
-	$(NAME).strings.txt \
-	$(NAME).elftoc.c \
-	$(NAME).hash.txt
+ifneq ($(NAME),)
+all: build/$(NAME).sqfs build/$(NAME).dump.txt build/$(NAME).readelf.txt build/$(NAME).strings.txt build/$(NAME).hash.txt build/$(NAME).elftoc.c
 
-$(NAME).fs: $(NAME).min.elf
-	rm -rf $@
-	mkdir -p $@
-	if [ -d $(ASSETS_DIR) ]; then cp -r $(ASSETS_DIR)/* $@/; fi
-	cp $< $@/$(NAME)
+run: build/$(NAME).sqfs
+	cd ../.. && ./rivemu/rivemu -cartridge=$(ROOT_DIR)/build/$(NAME).sqfs $(ARGS)
+endif
 
-$(NAME).min.elf: $(NAME).elf
-	cp $< $@
-	$(STRIP) $(STRIPFLAGS) $@
-	$(SSTRIP) $@
+clean:
+	rm -rf build
 
-$(NAME).dump.txt: $(NAME).elf
-	$(OBJDUMP) $(OBJDUMP_FLAGS) $< > $@
-
-$(NAME).readelf.txt: $(NAME).elf
-	$(READELF) -a $< > $@
-
-$(NAME).strings.txt: $(NAME).min.elf
-	$(STRINGS) $< > $@
-
-$(NAME).elftoc.c: $(NAME).min.elf
-	$(ELFTOC) $< > $@
-
-$(NAME).hash.txt: $(NAME).min.elf $(NAME).sqfs
-	stat -c "%s %n" $^ > $@
-	sha1sum $^ >> $@
-
-$(NAME).sqfs: $(NAME).fs
+build/%.sqfs: build/%.fs
 	mksquashfs $< $@ \
 	    -quiet \
 	    -comp $(COMP) \
@@ -93,12 +72,55 @@ $(NAME).sqfs: $(NAME).fs
 # 		--readjustment +1 \
 # 		--squash-uids 0
 
-run: $(NAME).sqfs
-	cd ../.. && ./rivemu/rivemu -cartridge=demos/$(NAME)/$(NAME).sqfs $(ARGS)
+build:
+	mkdir -p build
 
-clean::
-	rm -f *.o *.txt *.elf *.sqfs *.elftoc.c
-	rm -rf *.fs
+build/%.fs: build/%.min.elf
+	rm -rf $@
+	mkdir -p $@
+	if [ -d $(ASSETS_DIR) ]; then cp -r $(ASSETS_DIR)/* $@/; fi
+	cp $< $@/$*
 
-.PHONY: run clean
-.PRECIOUS: %.elf $(NAME).fs
+build/%.min.elf: build/%.elf
+	cp $< $@
+	$(STRIP) $(STRIPFLAGS) $@
+	$(SSTRIP) $@
+
+ifeq ($(DEMOLANG),nelua)
+NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert -Pnogc --verbose
+#NELUA_FLAGS+=-Pnocfeaturessetup -Pnocwarnpragmas
+build/%.elf: %.nelua $(DEPS) | build
+	nelua $(NELUA_FLAGS) \
+		--cc=$(CC) \
+		--cflags="$(CFLAGS)" \
+		--ldflags="$(LDFLAGS)" \
+		--cache-dir build \
+		--binary \
+		--output $@ $<
+	touch $@
+else ifeq ($(DEMOLANG),c)
+build/%.elf: $(OBJS) | build
+	$(CC) $(LDFLAGS) $(OBJS) -o $@
+
+build/%.o: %.c | build
+	$(CC) $(CFLAGS) -c $< -o $@
+endif
+
+build/%.dump.txt: build/%.elf
+	$(OBJDUMP) $(OBJDUMP_FLAGS) $< > $@
+
+build/%.readelf.txt: build/%.elf
+	$(READELF) -a $< > $@
+
+build/%.strings.txt: build/%.min.elf
+	$(STRINGS) $< > $@
+
+build/%.elftoc.c: build/%.min.elf
+	$(ELFTOC) $< > $@
+
+build/%.hash.txt: build/%.min.elf build/%.sqfs
+	stat -c "%s %n" $^ > $@
+	sha1sum $^ >> $@
+
+.PHONY: all run clean
+.PRECIOUS: build/%.elf build/%.fs

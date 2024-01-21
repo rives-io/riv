@@ -1,0 +1,67 @@
+require 'riv'
+require 'math'
+require 'vector'
+require 'string'
+
+local Particle = @record{
+  x: float32,
+  y: float32,
+  dx: float32,
+  dy: float32,
+  dia: float32,
+  t: int64,
+  col: uint8,
+  expired: boolean,
+}
+
+local dots: vector(Particle) <close>
+dots:reserve(2048)
+
+local function spawn_particle(x: float32, y: float32)
+  dots:push{
+    x = x,
+    y = y,
+    dx = riv_rand_float() - riv_rand_float(),
+    dy = riv_rand_float() - riv_rand_float(),
+    col = riv_rand_int(1,31),
+    dia = riv_rand_float()*10,
+    t = 0,
+  }
+end
+
+local lmx, lmy = 128, 128
+local mx, my = 128, 128
+
+repeat
+  riv_clear_screen(RIV_COLOR_DARKSLATE)
+
+  if riv.keys[RIV_GAMEPAD_LEFT].down then mx = mx - 4 end
+  if riv.keys[RIV_GAMEPAD_RIGHT].down then mx = mx + 4 end
+  if riv.keys[RIV_GAMEPAD_UP].down then my = my - 4 end
+  if riv.keys[RIV_GAMEPAD_DOWN].down then my = my + 4 end
+  for i: float32=0,1,.1_f32 do
+    spawn_particle(math.ifloor(lmx*(1-i)+mx*i), math.ifloor(lmy*(1-i)+my*i))
+  end
+
+  lmx = mx
+  lmy = my
+
+  local n = 0
+  for _,a in mipairs(dots) do
+    a.t = a.t + 1
+    a.x = a.x + a.dx
+    a.y = a.y + a.dy
+    a.dia = a.dia * 0.99_f32 -- shrink
+    n = n + 1
+    local d = math.ifloor(a.dia)
+    if d > 0 then
+      riv_draw_circle_fill(math.ifloor(a.x), math.ifloor(a.y), d, a.col)
+    else
+      a.expired = true
+    end
+  end
+  dots:removeif(function(a: Particle): boolean return a.expired end)
+
+  local text <close> = string.format('PARTICLES: %d', n)
+  riv_draw_text(text, RIV_SPRITESHEET_FONT_5X7, 4, 4, RIV_COLOR_WHITE, 1, 1, 1, 1)
+until not riv_present()

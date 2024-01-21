@@ -1,0 +1,119 @@
+## primtypes.number = primtypes.number
+
+require 'riv'
+require 'math'
+require 'vector'
+require 'string'
+
+local SCREEN_SIZE <comptime> = 256
+riv.framebuffer_desc.width = SCREEN_SIZE
+riv.framebuffer_desc.height = SCREEN_SIZE
+
+local tau: number <comptime> = math.pi*2
+local mx: int64 = SCREEN_SIZE//2
+local my: int64 = SCREEN_SIZE//2
+
+local function spiral(time: number, frame: int64)
+  riv_clear_screen(RIV_COLOR_BLACK)
+  for i=1,60,2 do
+    local sx = SCREEN_SIZE//2 + math.ifloor(math.cos((-time/2+i/30)*tau)*9)
+    local sy = SCREEN_SIZE//2 + math.ifloor(-math.sin((-time/2+i/30)*tau)*9)
+    local r=2+i*3
+    riv_draw_circle_line(sx, sy, 2*r, 12)
+  end
+end
+
+local function wheel(time: number, frame: int64)
+  riv_clear_screen(RIV_COLOR_BLACK)
+  for i=31,1,-1 do
+    riv_draw_circle_fill(
+      SCREEN_SIZE//2 + math.ifloor(math.cos((time+i/5)*tau)*5),
+      SCREEN_SIZE//2 - math.ifloor(math.sin((time+i/5)*tau)*5),
+      i*6, i)
+  end
+end
+
+local function pulse(time: number, frame: int64)
+  riv_clear_screen(RIV_COLOR_BLACK)
+  riv_draw_circle_line(SCREEN_SIZE//2, SCREEN_SIZE//2, 80+2*math.ifloor(math.cos(time*tau)*10), RIV_COLOR_WHITE)
+end
+
+local function paint(time: number, frame: int64)
+  riv_draw_circle_fill(mx, my, 10, 2 + math.ifloor(time*10)%30)
+end
+
+local function magnet(time: number, frame: int64)
+  riv_clear_screen(RIV_COLOR_BLACK)
+  for y=0,<SCREEN_SIZE,10 do
+    for x=0,<SCREEN_SIZE,10 do
+      -- angle between mouse and point
+      local a = math.atan(mx - x, my - y)
+      -- draw a line in that direction
+      riv_draw_line(x, y, x+math.ifloor(math.cos(a)*7), y+math.ifloor(math.sin(a)*7), RIV_COLOR_WHITE)
+    end
+  end
+end
+
+local function lines(time: number, frame: int64)
+  local frame: int64 = riv.frame
+  local framebuffer: auto = (@*[SCREEN_SIZE][SCREEN_SIZE]uint8)(riv.framebuffer)
+  for y: usize=0,<SCREEN_SIZE do
+    for x: usize=0,<SCREEN_SIZE do
+      framebuffer[y][x] = ((frame + x + y) // 8) % RIV_NUM_COLORS
+    end
+  end
+end
+
+local function hexopus(time: number, frame: int64)
+  riv_clear_screen(RIV_COLOR_BLACK)
+  local da = math.cos(time/5*tau)/12
+  for j = 0,5 do
+    local x,y = 128.0, 128.0
+    local r   = 22.0
+    local a   = j/6 + time/8
+    for i = 1,20 do
+      local function draw_segment(x: number, y: number, r: number, a: number, c: uint32)
+        local lx, ly = 0, 0
+        for i=0,6 do
+          local x = math.ifloor(x + math.cos((a+i/6)*tau) * r)
+          local y = math.ifloor(y - math.sin((a+i/6)*tau) * r)
+          if i > 0 then
+            riv_draw_line(lx,ly,x,y,c)
+          end
+          lx = x
+          ly = y
+        end
+      end
+      draw_segment(x, y, r*.9, a, math.ifloor(8 + (i%9)))
+      x = x + math.cos(a*tau) * r
+      y = y - math.sin(a*tau) * r
+      a = a + da
+      r = r * (i < 10 and 0.8 or 0.9)
+      x = x + math.cos(a*tau) * r
+      y = y - math.sin(a*tau) * r
+    end
+  end
+end
+
+local demo = 0
+repeat
+  if riv.keys[RIV_GAMEPAD_SELECT].press then demo = demo + 1 end
+  if riv.keys[RIV_GAMEPAD_LEFT].down then mx = mx - 4 end
+  if riv.keys[RIV_GAMEPAD_RIGHT].down then mx = mx + 4 end
+  if riv.keys[RIV_GAMEPAD_UP].down then my = my - 4 end
+  if riv.keys[RIV_GAMEPAD_DOWN].down then my = my + 4 end
+
+  local time: number = riv.time
+  local frame: int64 = riv.frame
+  switch demo do
+  case 0 then spiral(time, frame)
+  case 1 then wheel(time, frame)
+  case 2 then pulse(time, frame)
+  case 3 then paint(time, frame)
+  case 4 then magnet(time, frame)
+  case 5 then lines(time, frame)
+  case 6 then hexopus(time, frame)
+  else
+    demo = 0
+  end
+until not riv_present()

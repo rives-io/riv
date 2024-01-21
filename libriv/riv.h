@@ -550,8 +550,8 @@ typedef struct riv_draw_state {
 typedef struct riv_context {
   // Public read-only fields
   uint64_t frame;                                     // Current frame number
-  int64_t millis;                                     // Current time in microseconds since first frame
-  double seconds;                                     // Current time in seconds since first frame
+  int64_t time_ms;                                    // Current time in milliseconds since first frame
+  double time;                                        // Current time in seconds since first frame
   uint32_t incard_len;                                // Input card length
   bool valid;                                         // Whether riv is initialized
   bool verifying;                                     // Whether we are verifying
@@ -605,8 +605,6 @@ RIV_API uint64_t riv_snprintf(char* s, uint64_t maxlen, const char* format, ...)
 
 // Basic
 
-RIV_API void riv_setup(int32_t argc, char** argv);    // Initialize RIV driver
-RIV_API void riv_shutdown();                          // Terminate RIV driver
 RIV_API bool riv_present();                           // Present current frame, returns true until quit is requested.
 
 // Images

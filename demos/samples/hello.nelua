@@ -1,0 +1,27 @@
+require 'riv'
+require 'math'
+require 'string'
+
+local function draw()
+  riv_clear_screen(RIV_COLOR_DARKSLATE)
+
+  local text = 'HELLO WORLD!'
+  local t = riv.time
+  riv.draw.pal_enabled = true
+  for col = 16,1,-2 do
+    for i=0,<12 do -- for each letter
+      local t1 = riv.time*30 + i*4 - col*2
+      local x = 128-(12*12)//2+i*12--     + math.ifloor(math.cos(2*math.pi*t1/90)*6)
+      local y = 120+(col-7)             + math.ifloor(math.cos(2*math.pi*t1/50)*10)
+      -- should font type and scale be part of draw state?
+      riv.draw.pal[1] = col
+      riv_draw_sprite(text.data[i], RIV_SPRITESHEET_FONT_5X7, x, y, 1, 1, 2, 2)
+      riv.draw.pal[1] = 1
+    end
+  end
+  riv.draw.pal_enabled = false
+  riv_draw_text("This is RIV!", RIV_SPRITESHEET_FONT_5X7, 128-(12*6)//2, 200, RIV_COLOR_RED, 1, 1, 1, 1)
+  riv_draw_text("Nice to see you.", RIV_SPRITESHEET_FONT_5X7, 128-(16*6)//2, 216, RIV_COLOR_YELLOW, 1, 1, 1, 1)
+end
+
+repeat draw() until not riv_present()

@@ -15,8 +15,6 @@ global function riv_printf(format: cstring <const>, ...: cvarargs): usize <cimpo
 global function riv_snprintf(s: cstring, maxlen: usize, format: cstring <const>, ...: cvarargs): usize <cimport,nodecl> end
 
 -- basic
-global function riv_setup(argc: int32, argv: *[0]cstring): void <cimport,nodecl> end
-global function riv_shutdown(): void <cimport,nodecl> end
 global function riv_present(): boolean <cimport,nodecl> end
 
 -- images
@@ -61,7 +59,7 @@ global function riv_rand_int(low: int64, high: int64): int64 <cimport,nodecl> en
 global function riv_rand_float(): float64 <cimport,nodecl> end
 
 -- Macro for generating tiny binaries.
-## function nostartfiles(libc) cflags '-nostartfiles'
+## function nostartfiles() cflags '-nostartfiles'
   local function _start() <entrypoint,noreturn,cattribute'externally_visible,naked'>
     ##[=[ cemit[[
   asm volatile(
@@ -80,19 +78,9 @@ global function riv_rand_float(): float64 <cimport,nodecl> end
     local argc: cint <register'a1',nodce,noinit>
     local argv: *[0]cstring <register'a2',nodce,noinit>
     local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl,noinline> end
-    ## if libc then
-      local main_callback: type = @function(cint, *cstring): cint
-      local function __libc_start_main(main: main_callback, argc: cint, argv: pointer, init: pointer, fini: pointer, rtld_fini: pointer, stack_end: pointer) <cimport,noreturn> end
-      local sp: pointer <register'a0',nodce,noinit>
-      __libc_start_main(nelua_main, (@cint)(argc), argv, nilptr, nilptr, nilptr, sp)
-    ## else
-      local res: cint = nelua_main(argc, argv)
-      local function exit_syscall(status: isize): void <inline,noreturn>
-        local a0: isize <register'a0',nodce> = status
-        ## cemit[[  asm volatile("li a7, 93; scall; ebreak;" : : "r"(a0));]]
-        ## cemit[[__builtin_unreachable();]]
-      end
-      exit_syscall(res)
-    ## end
+    local main_callback: type = @function(cint, *cstring): cint
+    local function __libc_start_main(main: main_callback, argc: cint, argv: pointer, init: pointer, fini: pointer, rtld_fini: pointer, stack_end: pointer) <cimport,noreturn> end
+    local sp: pointer <register'a0',nodce,noinit>
+    __libc_start_main(nelua_main, (@cint)(argc), argv, nilptr, nilptr, nilptr, sp)
   end
 ## end

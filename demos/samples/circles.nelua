@@ -1,0 +1,31 @@
+require 'riv'
+require 'math'
+
+local function draw_circles()
+  local r = 65
+  for i=0,31,1 do
+    local ix = 16 + i*32 % 256
+    local iy = 16 + (i*32 // 256)*64
+    riv_draw_circle_fill(ix, iy, i, RIV_COLOR_RED)
+    riv_draw_circle_line(ix, iy, i, RIV_COLOR_WHITE)
+    riv_draw_point(ix, iy, RIV_COLOR_YELLOW)
+  end
+end
+
+local function draw_boxes()
+  local r = 65
+  local t = riv.time
+  for i=0,31,1 do
+    local ix = 16 + i*32 % 256
+    local iy = 16 + (i*32 // 256)*64
+    riv_draw_box_fill(ix, iy, i, i, t, RIV_COLOR_BLUE)
+    riv_draw_box_line(ix, iy, i, i, t, RIV_COLOR_GREY)
+    riv_draw_point(ix, iy, RIV_COLOR_YELLOW)
+  end
+end
+
+repeat
+  riv_clear_screen(RIV_COLOR_DARKSLATE)
+  draw_boxes()
+  draw_circles()
+until not riv_present()

@@ -1,2 +1,3 @@
 NAME=snake
-include ../demo-nelua.mk
+DEMOLANG=nelua
+include ../demo-base.mk

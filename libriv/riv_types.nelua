@@ -404,8 +404,8 @@ global riv_draw_state: type <cimport,nodecl> = @record{
 }
 global riv_context: type <cimport,nodecl> = @record{
   frame: uint64,
-  millis: int64,
-  seconds: float64,
+  time_ms: int64,
+  time: float64,
   incard_len: uint32,
   valid: boolean,
   verifying: boolean,

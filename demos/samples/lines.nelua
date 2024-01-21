@@ -1,12 +1,9 @@
 require 'riv'
 
-riv_setup(argc, argv)
-
 local function frame()
   local framebuffer: *[0]uint8 = riv.framebuffer
   local frame: usize = riv.frame
   for y: usize=0,<256 do
-    ## cemit '#pragma GCC unroll 4'
     for x: usize=0,<256 do
       framebuffer[y*256+x] = ((frame + x + y) // 8) % RIV_NUM_COLORS
     end
@@ -14,6 +11,3 @@ local function frame()
 end
 
 repeat frame() until not riv_present()
-riv_shutdown()
-
-## nostartfiles()

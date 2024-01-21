@@ -31,6 +31,7 @@ global function exit(status: cint): void <cimport,cinclude'<stdlib.h>'> end
 --------------------------------------------------------------------------------
 -- Utilities
 
+require 'stringbuilder'
 local strconv: type = require 'detail.strconv'
 
 global function get_free_hugepages(): integer
@@ -42,4 +43,19 @@ global function get_free_hugepages(): integer
   if nread <= 0 then return 0 end
   local ok: boolean, res: integer = strconv.str2int((@cstring)(&buf[0]), 10)
   return res
+end
+
+global function get_cmdline(): string
+  local fd: cint = open('/proc/self/cmdline')
+  if fd < 0 then return '' end
+  defer close(fd) end
+  local sb: stringbuilder
+  repeat
+    local buf: [256]byte
+    local nread: isize = read(fd, &buf, #buf)
+    if nread > 0 then
+      sb:write((@string){data=&buf, size=nread})
+    end
+  until nread == 0
+  return sb:promote()
 end

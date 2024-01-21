@@ -18,11 +18,9 @@ require '.riv_draw'
 
 local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end
 
-global function riv_setup(argc: int32, argv: *[0]cstring): void <cexport>
+global function riv_init(): void <cattribute'constructor',cexport>
   -- initialize all code in top scopes
-  nelua_main(argc, argv)
-  -- zero riv
-  memory.zero(&riv, #@riv_context)
+  nelua_main(0, nilptr)
   -- open yield device
   riv_yield_open()
   -- map memory
@@ -66,8 +64,9 @@ global function riv_setup(argc: int32, argv: *[0]cstring): void <cexport>
   riv_yield(RIV_CONTROL_OPEN)
   -- retrieve input card from host
   riv_sync_incard()
-  -- initialize prng
-  riv_init_prng(argc, argv)
+  -- initialize prng using program arguments as entropy
+  local cmdline: string = get_cmdline()
+  riv_init_prng(cmdline)
   -- retrieve event log from fd
   local replaylog_fd_str: string = getenv('RIV_REPLAYLOG_FD')
   if #replaylog_fd_str > 0 then
@@ -88,7 +87,7 @@ global function riv_setup(argc: int32, argv: *[0]cstring): void <cexport>
   riv.valid = true
 end
 
-global function riv_shutdown(): void <cexport>
+global function riv_fini(): void <cattribute'destructor',cexport>
   -- ignore when not initialized
   if not riv.valid then return end
   -- save screenshot if needed
@@ -113,7 +112,7 @@ global function riv_present(): boolean <cexport>
   if riv.verifying then
     local event: riv_key_toggle_event = riv.verify_key_events[riv.verify_key_event_index]
     if event.key_code == 0xff and riv.frame >= event.frame + 1 then
-      riv_shutdown()
+      riv_fini()
       exit(0)
       return false
     end
@@ -124,7 +123,7 @@ global function riv_present(): boolean <cexport>
   riv_yield(RIV_CONTROL_PRESENT)
   -- should we stop?
   if riv.frame >= riv.stop_frame then
-    riv_shutdown()
+    riv_fini()
     exit(0)
     return false
   end
@@ -146,8 +145,8 @@ global function riv_present(): boolean <cexport>
   -- update time trackers
   -- TODO: clock can skew with target_fps changes, this could be detected
   local target_fps: uint64 = riv.framebuffer_desc.target_fps > 0 and riv.framebuffer_desc.target_fps or RIV_DEFAULT_TARGET_FPS
-  riv.seconds = frame / target_fps
-  riv.millis = (frame * 1000) // target_fps
+  riv.time = frame / target_fps
+  riv.time_ms = (frame * 1000) // target_fps
   riv.mmio_driver.frame = frame
   -- audio commands was flushed
   riv.mmio_driver.audio_command_len = 0

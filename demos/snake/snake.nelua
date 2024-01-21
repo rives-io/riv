@@ -1,5 +1,3 @@
-## pragma{nogc=true}
-
 require 'riv'
 
 -- Game types
@@ -214,9 +212,7 @@ local function init()
   init_game()
 end
 
-riv_setup(argc, argv)
 init()
 repeat frame() until not riv_present()
-riv_shutdown()
 
-## nostartfiles()
+## nostartfiles(true)
