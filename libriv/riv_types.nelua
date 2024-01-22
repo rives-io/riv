@@ -384,6 +384,12 @@ global riv_recti: type <cimport,nodecl> = @record{
   width: int64,
   height: int64
 }
+global riv_rectf: type <cimport,nodecl> = @record{
+  x: int64,
+  y: int64,
+  width: int64,
+  height: int64
+}
 global riv_image: type <cimport,nodecl> = @record{
   pixels: *uint8,
   width: uint16,

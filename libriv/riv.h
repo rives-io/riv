@@ -502,25 +502,33 @@ typedef struct riv_key_toggle_event {
   uint64_t frame;
 } riv_key_toggle_event;
 
-// Vector with 2 integers
+// Vector2 (integer)
 typedef struct riv_vec2i {
   int64_t x;
   int64_t y;
 } riv_vec2i;
 
-// Vector with 2 floats
+// Vector2 (float)
 typedef struct riv_vec2f {
   float x;
   float y;
 } riv_vec2f;
 
-// Rectangle
+// Rectangle (integer)
 typedef struct riv_recti {
   int64_t x;
   int64_t y;
   int64_t width;
   int64_t height;
 } riv_recti;
+
+// Rectangle (float)
+typedef struct riv_rectf {
+  int64_t x;
+  int64_t y;
+  int64_t width;
+  int64_t height;
+} riv_rectf;
 
 // Draw image
 typedef struct riv_image {
