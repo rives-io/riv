@@ -13,10 +13,9 @@
     </div>
     <script>
       async function rivemu_start() {
-        let response = await fetch('/antcopter.sqfs');
+        let response = await fetch('/particles.sqfs');
         let data = new Uint8Array(await response.arrayBuffer());
         let buf = Module._malloc(data.length);
-        console.log(buf, data.length);
         Module.HEAPU8.set(data, buf);
         Module.ccall('rivemu_start', null, ['number', 'number'], [buf, data.length]);
         Module._free(buf);

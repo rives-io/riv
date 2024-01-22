@@ -285,7 +285,11 @@ local function reset(): void
 
   machine:destroy()
   framelimiter = {}
+
   running = false
+
+  -- reset options
+  options = parse_options()
 end
 
 local function begin(): void
@@ -303,6 +307,8 @@ local function begin(): void
 end
 
 local function startup(): void
+  -- parse options
+  options = parse_options()
   io.printf('[RIVEMU] Startup\n')
   setup()
 ## if not ccinfo.is_emscripten then
@@ -545,9 +551,6 @@ sargs_setup(sargs_desc{
   argc=argc,
   argv=argv
 })
-
--- parse options
-options = parse_options()
 
 -- Application main loop.
 sapp_run(sapp_desc{
