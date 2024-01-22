@@ -27,7 +27,7 @@ COMP?=xz
 ASSETS_DIR?=assets
 
 # All of the following flags are known to help generating the small RISC-V ELF binaries
-CFLAGS+=-Os -ffast-math -DNDEBUG -flto=auto
+CFLAGS+=-Os -ffast-math -DNDEBUG
 CFLAGS+=-ffunction-sections -fdata-sections
 CFLAGS+=-fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables
 CFLAGS+=-mstrict-align -mshorten-memrefs -mno-riscv-attribute

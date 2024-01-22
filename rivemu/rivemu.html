@@ -13,7 +13,7 @@
     </div>
     <script>
       async function rivemu_start() {
-        let response = await fetch('/particles.sqfs');
+        let response = await fetch('/doom.sqfs');
         let data = new Uint8Array(await response.arrayBuffer());
         let buf = Module._malloc(data.length);
         Module.HEAPU8.set(data, buf);
@@ -40,12 +40,14 @@
         window.dispatchEvent(new Event('resize'));
       }
       function rivemu_on_finish(rivlog, outcard) {
+        /*
         console.log(rivlog);
         console.log(outcard);
+        */
       }
     </script>
     <input type="button" value="Restart" onclick="rivemu_start()">
-    <input type="button" value="Submit Replay" onclick="rivemu_stop()">
+    <input type="button" value="Stop" onclick="rivemu_stop()">
     <script async src="rivemu.js"></script>
   </body>
 </html>
