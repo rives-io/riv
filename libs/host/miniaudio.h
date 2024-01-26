@@ -16187,7 +16187,7 @@ static void ma_thread_wait__posix(ma_thread* pThread)
 static ma_result ma_mutex_init__posix(ma_mutex* pMutex)
 {
     int result;
-    
+
     if (pMutex == NULL) {
         return MA_INVALID_ARGS;
     }
@@ -40393,6 +40393,9 @@ static ma_result ma_context_uninit__webaudio(ma_context* pContext)
     /* Remove the global miniaudio object from window if there are no more references to it. */
     EM_ASM({
         if (typeof(window.miniaudio) !== 'undefined') {
+            miniaudio.unlock_event_types.map(function(event_type) {
+                document.removeEventListener(event_type, miniaudio.unlock, true);
+            });
             window.miniaudio.referenceCount -= 1;
             if (window.miniaudio.referenceCount === 0) {
                 delete window.miniaudio;

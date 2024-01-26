@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>RIVEMU</title>
+    <style>
+      body {
+        background-color: #111;
+        color: white;
+      }
+      #canvas {
+        background-color: black;
+        image-rendering: pixelated;
+      }
+      .wrapper {
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div style="top: 0px; left: 0px; height: 100%; width: 100%;">
+      <canvas id="canvas" width="768" height="768" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+      <div>
+        <button onclick="rivemu_stop()">stop</button>
+        <button onclick="rivemu_set_fullscreen()">fullscreen</button>
+      </div>
+      <div>
+        <button onclick="rivemu_start('cartridges/antcopter.sqfs')">antcopter</button>
+        <button onclick="rivemu_start('cartridges/game2048.sqfs')">game2048</button>
+        <button onclick="rivemu_start('cartridges/snake.sqfs')">snake</button>
+        <button onclick="rivemu_start('cartridges/doom.sqfs')">doom</button>
+      </div>
+      <div>
+        <button onclick="rivemu_start('cartridges/bounce.sqfs')">bounce</button>
+        <button onclick="rivemu_start('cartridges/circles.sqfs')">circles</button>
+        <button onclick="rivemu_start('cartridges/glyphs.sqfs')">glyphs</button>
+        <button onclick="rivemu_start('cartridges/hello.sqfs')">hello</button>
+        <button onclick="rivemu_start('cartridges/lines.sqfs')">lines</button>
+        <button onclick="rivemu_start('cartridges/many.sqfs')">many</button>
+        <button onclick="rivemu_start('cartridges/palette.sqfs')">palette</button>
+        <button onclick="rivemu_start('cartridges/particles.sqfs')">particles</button>
+        <button onclick="rivemu_start('cartridges/play.sqfs')">play</button>
+        <button onclick="rivemu_start('cartridges/wander.sqfs')">wander</button>
+        <button onclick="rivemu_start('cartridges/waves.sqfs')">waves</button>
+      </div>
+    </div>
+    <script>
+      var desiredWidth = 768;
+      var desiredHeight = 768;
+      function rivemu_update_canvas_size(wantedWidth, wantedHeight) {
+        desiredHeight = wantedHeight;
+        desiredWidth = wantedWidth;
+        const canvas = document.getElementById("canvas");
+        if (canvas) {
+          // Scale canvas while maintaining ratio and pixel perfect look
+          const canvasWidth = Math.floor(768 / wantedWidth) * wantedWidth;
+          const canvasHeight = Math.floor((wantedHeight / wantedWidth) * canvasWidth);
+          if (canvas.width != canvasWidth || canvas.height != canvasHeight) {
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            // Force notify resize in WASM
+            window.dispatchEvent(new Event('resize'));
+          }
+        }
+      }
+      async function rivemu_start(cartridge) {
+        // Stop previous run
+        Module.ccall('rivemu_stop');
+        // Retrieve cartridge
+        const response = await fetch(cartridge);
+        const data = new Uint8Array(await response.arrayBuffer());
+        // Start only in the next frame, because we need to wait last run to finish
+        window.requestAnimationFrame(function() {
+          // Restore canvas to original size while loading
+          rivemu_update_canvas_size(768, 768);
+          // Move cartridge into WASM memory
+          const buf = Module._malloc(data.length);
+          Module.HEAPU8.set(data, buf);
+          Module.ccall('rivemu_start_play', null, ['number', 'number', 'string'], [buf, data.length, '']);
+          Module._free(buf);
+        });
+      }
+      function rivemu_stop() {
+        Module.ccall('rivemu_stop');
+      }
+      function rivemu_on_outcard_update(outcard) {
+        /*
+        let outcard_str = new TextDecoder().decode(outcard);
+        if (outcard_str.substring(0, 4) == 'JSON') {
+          let scores = JSON.parse(outcard_str.substring(4));
+          console.log(scores);
+        }
+        */
+      }
+      function rivemu_on_begin(width, height) {
+        rivemu_update_canvas_size(width, height);
+      }
+      function rivemu_on_finish(rivlog, outcard) {
+        /*
+        console.log(rivlog);
+        console.log(outcard);
+        */
+      }
+      function rivemu_set_fullscreen() {
+        document.addEventListener('fullscreenchange', function() {
+          rivemu_update_canvas_size(desiredWidth, desiredHeight);
+        }, false);
+        const canvas = document.getElementById("canvas");
+        if (canvas) {
+          canvas.requestFullscreen();
+        }
+      }
+    </script>
+    <script async src="rivemu.js"></script>
+  </body>
+</html>

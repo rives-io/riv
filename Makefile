@@ -11,7 +11,7 @@ all-cross:
 	$(MAKE) demos-cross
 
 # Targets that uses the host toolchain
-libs kernel rootfs rivemu:
+libs kernel rootfs rivemu rivemu-web:
 	$(MAKE) -C $@
 
 libriv-cross:
@@ -57,7 +57,7 @@ download-images:
 	wget -O rootfs/rootfs.ext2 https://github.com/edubart/riv/releases/download/downloads/rootfs.ext2
 	wget -O kernel/linux-headers.tar.xz https://github.com/edubart/riv/releases/download/downloads/linux-headers.tar.xz
 
-.PHONY: kernel rootfs demos rivemu libs libriv tools download-images
+.PHONY: kernel rootfs demos rivemu libs libriv tools download-images rivemu-web
 
 ##################
 # Demo testing

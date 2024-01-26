@@ -37,10 +37,8 @@ if ccinfo.is_emscripten then
   -- export functions
   local export_functions = {
     '_main',
-    '_quit',
-    '_rivemu_start',
-    '_rivemu_start_ex',
-    '_rivemu_start_replay_ex',
+    '_rivemu_start_play',
+    '_rivemu_start_replay',
     '_rivemu_stop',
     '_malloc',
     '_free',
@@ -98,7 +96,7 @@ local function parse_options(): rivemu_options
     stop_frame = -1,
   }
   ## if ccinfo.is_wasm then
-  opts.no_quit = true
+  -- opts.no_quit = true
   ## end
   for i=0,<sargs_num_args() do
     local a: string = sargs_key_at(i)
@@ -253,47 +251,12 @@ end
 local options: rivemu_options
 local framelimiter: rivemu_framelimiter
 local running: boolean
+local initialized: boolean
 
--- Initialize application.
-local function setup(): void
-  io.printf('[RIVEMU] Setup\n')
-
-  -- init subsystems
-  rivemu_iocard.setup()
-  if not options.no_video then
-    rivemu_video.setup()
-  end
-  if not options.no_audio then
-    rivemu_audio.setup(options.speed)
-  end
-  rivemu_input.setup()
-end
-
--- Reset the application.
-local function reset(): void
-  io.printf('[RIVEMU] Reset\n')
-
-  -- reset subsystems
-  rivemu_iocard.reset()
-  if not options.no_video then
-    rivemu_video.reset()
-  end
-  if not options.no_audio then
-    rivemu_audio.reset()
-  end
-  rivemu_input.reset()
-
-  machine:destroy()
-  framelimiter = {}
-
-  running = false
-
-  -- reset options
-  options = parse_options()
-end
-
+-- Begin the machine entrypoint.
 local function begin(): void
-  io.printf('[RIVEMU] Start\n')
+  io.printf('[RIVEMU] Begin\n')
+
   -- initialize the machine
   local entrypoint: string <close> = options:entrypoint()
   machine = rivemu_machine.create(entrypoint, options.cartridge_filename, options.verify_filename)
@@ -306,14 +269,24 @@ local function begin(): void
   end
 end
 
-local function startup(): void
-  -- parse options
-  options = parse_options()
-  io.printf('[RIVEMU] Startup\n')
-  setup()
-## if not ccinfo.is_emscripten then
+-- Initialize application.
+local function setup(): void
+  io.printf('[RIVEMU] Setup\n')
+
+  -- init subsystems
+  rivemu_iocard.setup()
+  if not options.no_video then
+    rivemu_video.setup()
+    rivemu_video.present()
+  end
+  if not options.no_audio then
+    rivemu_audio.setup(options.speed)
+  end
+  rivemu_input.setup()
+
+  initialized = true
+
   begin()
-## end
 end
 
 local function finish(): void
@@ -381,9 +354,8 @@ end
 
 -- Terminate application.
 local function shutdown(): void
-  if running then
-    finish()
-  end
+  if not initialized then return end
+  finish()
 
   io.printf('[RIVEMU] Shutdown\n')
 
@@ -400,12 +372,21 @@ local function shutdown(): void
   end
 
   machine:destroy()
+  framelimiter = {}
+  options = {}
+  initialized = false
 end
 
 -- Run the machine until it yields the next frame.
 local function machine_frame(): void
   while true do
-    switch machine:run() do
+    local mcycle_end: uint64 = (@uint64)(-1)
+    if not machine:is_mmio_ready() then
+      -- advance just a few cycles to not freeze the application
+      -- and display a loading screen
+      mcycle_end = machine:read_mcycle() + 1024*1024
+    end
+    switch machine:run(mcycle_end) do
     case CM_BREAK_REASON_YIELDED_AUTOMATICALLY then
       -- execute control event from the yield
       switch machine:read_yield_data() do
@@ -424,7 +405,6 @@ local function machine_frame(): void
         if not options.no_video then
           rivemu_video.update_framebuffer()
         end
-        -- finish
         finish()
         return
       case RIV_CONTROL_PRESENT then
@@ -452,6 +432,9 @@ local function machine_frame(): void
       io.printf('[RIVEMU] Halted\n')
       finish()
       return
+    case CM_BREAK_REASON_REACHED_TARGET_MCYCLE then
+      -- set it continue
+      return
     else
       error('unexpected machine break reason')
       finish()
@@ -471,6 +454,7 @@ local function advance_frame(): void
   rivemu_input.poll()
 
   -- poll next frame from machine driver memory
+  local was_mmio_ready: boolean = machine:is_mmio_ready()
   local mcycle_start: uint64 = machine:read_mcycle()
   local time_start: float64 = os.now()
   machine_frame()
@@ -478,7 +462,7 @@ local function advance_frame(): void
   local time_elapsed: float64 = now - time_start
   local mcycle_elapsed: uint64 = machine:read_mcycle() - mcycle_start
 
-  if time_elapsed > 1.0/24.0 then
+  if was_mmio_ready and time_elapsed > 1.0/24.0 then
     io.stderr:printf('[RIVEMU] slow frame: %.2f ms, %.2f MHz\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
   end
 
@@ -503,11 +487,11 @@ local function frame(): void
     local refresh_rate: float64 = 60
     if not machine:is_mmio_ready() then -- first frame
       advance_frame()
-      if not options.no_audio then
-        rivemu_audio.start()
-      end
+      if machine:is_mmio_ready() then
       ## if ccinfo.is_emscripten then
-      do
+        if not options.no_audio then
+          rivemu_audio.start()
+        end
         local width: int32 <nodce> = machine.mmio_driver.framebuffer_desc.width
         local height: int32 <nodce> = machine.mmio_driver.framebuffer_desc.height
         local num_frames: int32 <nodce> = rivemu_input.get_replay_frames()
@@ -516,8 +500,8 @@ local function frame(): void
           rivemu_on_begin($0, $1, $2);
         }, width, height, num_frames);
         ]]
-      end
       ## end
+      end
       framelimiter.last_frame_time = os.now()
     elseif framelimiter.target_fps <= refresh_rate then
       if framelimiter:should_process_next_frame(os.now()) then
@@ -545,6 +529,7 @@ local function frame(): void
   end
 end
 
+-- Initialize args
 local argc: cint <cimport'argc'>
 local argv: *[0]cstring <cimport'argv'>
 sargs_setup(sargs_desc{
@@ -553,37 +538,33 @@ sargs_setup(sargs_desc{
 })
 
 -- Application main loop.
-sapp_run(sapp_desc{
-  init_cb = startup,
-  frame_cb = frame,
-  cleanup_cb = shutdown,
-  event_cb = rivemu_input.append_event,
-  width = 0,
-  height = 0,
-  window_title = "RIVEMU",
-  logger = {func = slog_func}
-})
-
-## if ccinfo.is_emscripten then
-
-local function rivemu_start(ptr: *uint8, len: int32): void <cexport'rivemu_start'>
-  reset()
-  io.printf('[RIVEMU] Starting cartridge...\n')
-  local contents: string = {data=(@*[0]byte)(ptr), size=len}
-  do
-    local cartridge_file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
-    fn_assert!(cartridge_file:write(contents))
-  end
-  options.cartridge_filename = '/cartridge.sqfs'
-  options.record_filename = '/replay.rivlog'
-  options.outcard_filename = '/replay.outcard'
-  options.recording = true
-  begin()
+local function run()
+  sapp_run(sapp_desc{
+    init_cb = setup,
+    frame_cb = frame,
+    cleanup_cb = shutdown,
+    event_cb = rivemu_input.append_event,
+    width = 768,
+    height = 768,
+    html5_canvas_name = "canvas",
+    html5_preserve_drawing_buffer = true,
+    window_title = "RIVEMU",
+    logger = {func = slog_func}
+  })
 end
 
-local function rivemu_start_ex(ptr: *uint8, len: int32, args: cstring): void <cexport'rivemu_start_ex'>
-  reset()
-  io.printf('[RIVEMU] Starting cartridge...\n')
+## if not ccinfo.is_emscripten then
+
+-- parse options and run
+options = parse_options()
+run()
+
+## else
+
+local function rivemu_start_play(ptr: *uint8, len: int32, args: cstring): void <cexport>
+  assert(not running and not initialized, 'rivemu is running, please stop it first')
+  io.printf('[RIVEMU] Starting play...\n')
+  options = parse_options()
   local contents: string = {data=(@*[0]byte)(ptr), size=len}
   do
     local cartridge_file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
@@ -594,12 +575,13 @@ local function rivemu_start_ex(ptr: *uint8, len: int32, args: cstring): void <ce
   options.outcard_filename = '/replay.outcard'
   options.entrypoint_args = args
   options.recording = true
-  begin()
+  run()
 end
 
-local function rivemu_start_replay_ex(cartridge_ptr: *uint8, cartridge_len: int32, rivlog_ptr: *uint8, rivlog_len: int32, args: cstring): void <cexport'rivemu_start_replay_ex'>
-  reset()
-  io.printf('[RIVEMU] Starting cartridge...\n')
+local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32, rivlog_ptr: *uint8, rivlog_len: int32, args: cstring): void <cexport>
+  assert(not running and not initialized, 'rivemu is running, please stop it first')
+  io.printf('[RIVEMU] Starting replay...\n')
+  options = parse_options()
   do
     local contents: string = {data=(@*[0]byte)(cartridge_ptr), size=cartridge_len}
     local file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
@@ -615,16 +597,12 @@ local function rivemu_start_replay_ex(cartridge_ptr: *uint8, cartridge_len: int3
   options.outcard_filename = '/replay.outcard'
   options.entrypoint_args = args
   options.replaying = true
-  begin()
+  run()
 end
 
-local function rivemu_stop(url: cstring): void <cexport'rivemu_stop'>
-  io.printf('[RIVEMU] Stopping cartridge...\n')
+local function rivemu_stop(url: cstring): void <cexport>
+  io.printf('[RIVEMU] Stopping...\n')
   finish()
-end
-
-local function quit(): void <cexport'quit'>
-  sapp_quit()
 end
 
 ## end

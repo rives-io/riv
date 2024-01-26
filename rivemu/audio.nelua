@@ -271,6 +271,10 @@ function rivemu_audio.shutdown(): void
   rivemu_audio.reset()
   -- destroy miniaudio
   ma_engine_uninit(&engine)
+  -- destroy state
+  global_pitch = 0
+  global_pcm_frame = 0
+  global_sample_rate = 0
 end
 
 -- Poll audio subsystem.

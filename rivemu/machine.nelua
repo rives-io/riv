@@ -240,14 +240,14 @@ function rivemu_machine:_setup_mmio(): boolean
 end
 
 -- Run the machine.
-function rivemu_machine:run(): CM_BREAK_REASON
+function rivemu_machine:run(mcycle_end: uint64): CM_BREAK_REASON
   -- store MMIO from host device into guest driver
   if self:is_mmio_ready() then
     self:_store_device_mmio()
   end
   -- run the machine
   local break_reason: CM_BREAK_REASON
-  cm_assert!(cm_machine_run(self.machine, (@uint64)(-1), &break_reason))
+  cm_assert!(cm_machine_run(self.machine, mcycle_end, &break_reason))
   -- load driver MMIO
   if break_reason == CM_BREAK_REASON_YIELDED_AUTOMATICALLY and self:read_yield_reason() == 0 then
     if self:_check_mmio() then -- is the MMIO still valid?
@@ -256,7 +256,8 @@ function rivemu_machine:run(): CM_BREAK_REASON
     elseif not self:_setup_mmio() then -- try to initialize it
       error('unable to connect MMIO')
     end
-  else -- for any other reason, MMIO becomes disconnected
+  elseif break_reason ~= CM_BREAK_REASON_REACHED_TARGET_MCYCLE then
+    -- for any other reason, MMIO becomes disconnected
     self:_reset_mmio()
   end
   -- return break reason

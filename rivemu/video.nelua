@@ -116,6 +116,26 @@ local function draw_framebuffer(screen_width: int64, screen_height: int64): void
   sgp_reset_image(0)
 end
 
+local function draw_loading(screen_width: int64, screen_height: int64): void
+  -- draw loading animation
+  local t: float64 = os.now()
+  local j: int64 = math.iround((math.abs(math.fract(t)*2 - 1)*2-1)*4)
+  for i=-4,4 do
+    local w: float32 = screen_width/16
+    local h: float32 = screen_width/16
+    if i == j then
+      h = h * 2
+      sgp_reset_color()
+    else
+      sgp_set_color(0.75, 0.75, 0.75, 1)
+    end
+    local x: float32 = screen_width/2 - i*w*1.5 - w/2
+    local y: float32 = (screen_height - h)/2
+    sgp_draw_filled_rect(x, y, w, h)
+  end
+  sgp_reset_color()
+end
+
 function rivemu_video.update_framebuffer()
   if not machine:is_mmio_ready() then return end
   update_framebuffer_desc()
@@ -131,8 +151,13 @@ function rivemu_video.present(): void
   sgp_viewport(0, 0, app_width, app_height)
   sgp_project(0, app_width, 0, app_height)
 
-  -- draw
-  draw_framebuffer(app_width, app_height)
+  if not machine:is_mmio_ready() then
+    -- draw loading animation
+    draw_loading(app_width, app_height)
+  else
+    -- draw
+    draw_framebuffer(app_width, app_height)
+  end
 
   -- dispatch draw commands
   sg_begin_default_pass(sg_pass_action{

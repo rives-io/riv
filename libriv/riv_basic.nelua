@@ -64,9 +64,8 @@ global function riv_init(): void <cattribute'constructor',cexport>
   riv_yield(RIV_CONTROL_OPEN)
   -- retrieve input card from host
   riv_sync_incard()
-  -- initialize prng using program arguments as entropy
-  local cmdline: string = get_cmdline()
-  riv_init_prng(cmdline)
+  -- initialize prng
+  riv_init_prng()
   -- retrieve event log from fd
   local replaylog_fd_str: string = getenv('RIV_REPLAYLOG_FD')
   if #replaylog_fd_str > 0 then

@@ -24,7 +24,6 @@
 
 # ignore generated binaries
 /rivemu/rivemu
-/rivemu/web
 /tools/bwrapbox/bwrapbox
 /tools/riv-unpacklog/riv-unpacklog
 /tools/bwrapbox/seccomp-filter
