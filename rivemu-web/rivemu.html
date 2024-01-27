@@ -12,106 +12,234 @@
       #canvas {
         background-color: black;
         image-rendering: pixelated;
+        outline: none;
       }
-      .wrapper {
+      .canvas-wrapper {
         text-align: center;
       }
     </style>
   </head>
   <body>
-    <div class="wrapper">
-      <div style="top: 0px; left: 0px; height: 100%; width: 100%;">
-      <canvas id="canvas" width="768" height="768" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+    <div class="canvas-wrapper">
+      <div style="top: 0px; left: 0px; height: 100%; width: 100%;"></div>
+      <canvas id="canvas" tabindex="-1" width="768" height="768" oncontextmenu="event.preventDefault()"></canvas>
+    </div>
+    <div style="font-family: monospace; width: 768px; margin: auto; text-align: left;">
       <div>
-        <button onclick="rivemu_stop()">stop</button>
-        <button onclick="rivemu_set_fullscreen()">fullscreen</button>
+        <button id="record" disabled="true" onclick="rivemuRecord()">Record</button>
+        <button id="replay" disabled="true" onclick="rivemuReplay()">Replay</button>
+        <button id="stop" disabled="true" onclick="rivemuStop()">Stop</button>
+        <button id="fullscreen" onclick="rivemuFullscreen()">Fullscreen</button>
+      </div>
+      <br/>
+      <div><b>Frame: </b><span id="frame">N/A</span></div>
+      <div><b>FPS: </b><span id="fps">N/A</span></div>
+      <div><b>CPU Speed: </b><span id="cpuSpeed">N/A</span></div>
+      <div><b>CPU Usage: </b><span id="cpuUsage">N/A</span></div>
+      <div><b>CPU Cycles: </b><span id="cpuCycles">N/A</span></div>
+      <div><b>Score: </b><span id="score">N/A</span></div>
+      <div><b>Finished: </b><span id="finished">N/A</span></div>
+      <div><b>Progress: </b><span id="progress">N/A</span></div>
+      <div><b>Cartridge Size: </b><span id="cartsize">N/A</span></div>
+      <div><b>Resolution: </b><span id="resolution">N/A</span></div>
+      <div><b>Log Size: </b><span id="logsize">N/A</span></div>
+      <div><b>Outhash: </b><span id="outhash">N/A</span></div>
+      <br/>
+      <div>
+        <button onclick="rivemuInsertCartridge('cartridges/antcopter.sqfs')">antcopter</button>
+        <button onclick="rivemuInsertCartridge('cartridges/game2048.sqfs')">game2048</button>
+        <button onclick="rivemuInsertCartridge('cartridges/snake.sqfs')">snake</button>
+        <button onclick="rivemuInsertCartridge('cartridges/doom.sqfs')">doom</button>
       </div>
       <div>
-        <button onclick="rivemu_start('cartridges/antcopter.sqfs')">antcopter</button>
-        <button onclick="rivemu_start('cartridges/game2048.sqfs')">game2048</button>
-        <button onclick="rivemu_start('cartridges/snake.sqfs')">snake</button>
-        <button onclick="rivemu_start('cartridges/doom.sqfs')">doom</button>
-      </div>
-      <div>
-        <button onclick="rivemu_start('cartridges/bounce.sqfs')">bounce</button>
-        <button onclick="rivemu_start('cartridges/circles.sqfs')">circles</button>
-        <button onclick="rivemu_start('cartridges/glyphs.sqfs')">glyphs</button>
-        <button onclick="rivemu_start('cartridges/hello.sqfs')">hello</button>
-        <button onclick="rivemu_start('cartridges/lines.sqfs')">lines</button>
-        <button onclick="rivemu_start('cartridges/many.sqfs')">many</button>
-        <button onclick="rivemu_start('cartridges/palette.sqfs')">palette</button>
-        <button onclick="rivemu_start('cartridges/particles.sqfs')">particles</button>
-        <button onclick="rivemu_start('cartridges/play.sqfs')">play</button>
-        <button onclick="rivemu_start('cartridges/wander.sqfs')">wander</button>
-        <button onclick="rivemu_start('cartridges/waves.sqfs')">waves</button>
+        <button onclick="rivemuInsertCartridge('cartridges/bounce.sqfs')">bounce</button>
+        <button onclick="rivemuInsertCartridge('cartridges/circles.sqfs')">circles</button>
+        <button onclick="rivemuInsertCartridge('cartridges/glyphs.sqfs')">glyphs</button>
+        <button onclick="rivemuInsertCartridge('cartridges/hello.sqfs')">hello</button>
+        <button onclick="rivemuInsertCartridge('cartridges/lines.sqfs')">lines</button>
+        <button onclick="rivemuInsertCartridge('cartridges/many.sqfs')">many</button>
+        <button onclick="rivemuInsertCartridge('cartridges/palette.sqfs')">palette</button>
+        <button onclick="rivemuInsertCartridge('cartridges/particles.sqfs')">particles</button>
+        <button onclick="rivemuInsertCartridge('cartridges/play.sqfs')">play</button>
+        <button onclick="rivemuInsertCartridge('cartridges/wander.sqfs')">wander</button>
+        <button onclick="rivemuInsertCartridge('cartridges/waves.sqfs')">waves</button>
       </div>
     </div>
     <script>
+      var lastRivlog;
+      var lastIncard = new Uint8Array([]);
+      var lastArgs = '';
+      var lastCartridge;
+      var lastFrame;
+      var totalFrames;
       var desiredWidth = 768;
       var desiredHeight = 768;
-      function rivemu_update_canvas_size(wantedWidth, wantedHeight, notifyRiv) {
+
+      let scoreElem = document.getElementById("score");
+      let finishedElem = document.getElementById("finished");
+      let progressElem = document.getElementById("progress");
+      let frameElem = document.getElementById("frame");
+      let fpsElem = document.getElementById("fps");
+      let cpuSpeedElem = document.getElementById("cpuSpeed");
+      let cpuUsageElem = document.getElementById("cpuUsage");
+      let cpuCyclesElem = document.getElementById("cpuCycles");
+      let textDecoder = new TextDecoder();
+
+      function rivemuBeforeStart() {
+        scoreElem.textContent = "N/A";
+        finishedElem.textContent = "N/A";
+        progressElem.textContent = "N/A";
+        frameElem.textContent = "N/A";
+        fpsElem.textContent = "N/A";
+        cpuSpeedElem.textContent = "N/A";
+        cpuUsageElem.textContent = "N/A";
+        document.getElementById("resolution").textContent = "N/A";
+        // Disable some buttons while recording/replaying
+        document.getElementById('stop').disabled = false;
+        document.getElementById('record').disabled = false;
+        document.getElementById('replay').disabled = false;
+        // Discard last log
+        delete lastRivlog;
+      }
+
+      function rivemuResizeCanvas(wantedWidth, wantedHeight, notifyRiv) {
         desiredHeight = wantedHeight;
         desiredWidth = wantedWidth;
         const canvas = document.getElementById("canvas");
-        if (canvas) {
-          // Scale canvas while maintaining ratio and pixel perfect look
-          const canvasWidth = Math.floor(768 / wantedWidth) * wantedWidth;
-          const canvasHeight = Math.floor((wantedHeight / wantedWidth) * canvasWidth);
-          if (canvas.width != canvasWidth || canvas.height != canvasHeight) {
-            canvas.width = canvasWidth;
-            canvas.height = canvasHeight;
-            // Force notify resize in RIV
-            if (notifyRiv) {
-              window.dispatchEvent(new Event('resize'));
-            }
+        canvas.focus();
+        // Scale canvas while maintaining ratio and pixel perfect look
+        const canvasWidth = Math.floor(768 / wantedWidth) * wantedWidth;
+        const canvasHeight = Math.floor((wantedHeight / wantedWidth) * canvasWidth);
+        if (canvas.width != canvasWidth || canvas.height != canvasHeight) {
+          canvas.width = canvasWidth;
+          canvas.height = canvasHeight;
+          // Force notify resize in RIV
+          if (notifyRiv) {
+            window.dispatchEvent(new Event('resize'));
           }
         }
+        return {"width":canvas.width, "height":canvas.height}
       }
-      async function rivemu_start(cartridge) {
+
+      async function rivemuInsertCartridge(cartridgeUrl) {
         // Stop previous run
-        Module.ccall('rivemu_stop');
+        rivemuStop();
         // Retrieve cartridge
-        const response = await fetch(cartridge);
-        const data = new Uint8Array(await response.arrayBuffer());
+        const response = await fetch(cartridgeUrl);
+        lastCartridge = new Uint8Array(await response.arrayBuffer());
+        lastArgs = '';
+        lastIncard = new Uint8Array([]);
+        document.getElementById("cartsize").textContent = Math.ceil(lastCartridge.length / 1024) + " KB";
+        // Start recording
+        rivemuRecord();
+      }
+
+      async function rivemuRecord() {
+        // Stop previous run
+        rivemuStop();
         // Start only in the next frame, because we need to wait last run to finish
         window.requestAnimationFrame(function() {
+          rivemuBeforeStart();
+          document.getElementById("logsize").textContent = "N/A";
+          document.getElementById("outhash").textContent = "N/A";
           // Restore canvas to original size while loading
-          rivemu_update_canvas_size(768, 768);
+          rivemuResizeCanvas(768, 768);
           // Move cartridge into WASM memory
-          const buf = Module._malloc(data.length);
-          Module.HEAPU8.set(data, buf);
-          Module.ccall('rivemu_start_play', null, ['number', 'number', 'string'], [buf, data.length, '']);
-          Module._free(buf);
+          const cartridgeBuf = Module._malloc(lastCartridge.length);
+          const incardBuf = Module._malloc(lastIncard.length);
+          Module.HEAPU8.set(lastCartridge, cartridgeBuf);
+          Module.HEAPU8.set(lastIncard, incardBuf);
+          Module.ccall('rivemu_start_record', null, ['number', 'number', 'number', 'number', 'string'], [
+            cartridgeBuf, lastCartridge.length,
+            incardBuf, lastIncard.length,
+            lastArgs
+          ]);
+          Module._free(cartridgeBuf);
+          Module._free(incardBuf);
         });
       }
-      function rivemu_stop() {
+
+      function rivemuReplay() {
+        // Stop previous run
+        rivemuStop();
+        // Start only in the next frame, because we need to wait last run to finish
+        window.requestAnimationFrame(function() {
+          rivemuBeforeStart();
+          // Restore canvas to original size while loading
+          rivemuResizeCanvas(768, 768);
+          // Move cartridge into WASM memory
+          const cartridgeBuf = Module._malloc(lastCartridge.length);
+          const incardBuf = Module._malloc(lastIncard.length);
+          const rivlogBuf = Module._malloc(lastRivlog.length);
+          Module.HEAPU8.set(lastCartridge, cartridgeBuf);
+          Module.HEAPU8.set(lastIncard, incardBuf);
+          Module.HEAPU8.set(lastRivlog, rivlogBuf);
+          Module.ccall('rivemu_start_replay', null, ['number', 'number', 'number', 'number', 'string', 'number', 'number'], [
+            cartridgeBuf, lastCartridge.length,
+            incardBuf, lastIncard.length,
+            lastArgs,
+            rivlogBuf, lastRivlog.length
+          ]);
+          Module._free(cartridgeBuf);
+          Module._free(incardBuf);
+          Module._free(rivlogBuf);
+        });
+      }
+
+      function rivemuStop() {
         Module.ccall('rivemu_stop');
       }
-      function rivemu_on_outcard_update(outcard) {
-        /*
-        let outcard_str = new TextDecoder().decode(outcard);
-        if (outcard_str.substring(0, 4) == 'JSON') {
-          let scores = JSON.parse(outcard_str.substring(4));
-          console.log(scores);
-        }
-        */
-      }
-      function rivemu_on_begin(width, height) {
-        rivemu_update_canvas_size(width, height, true);
-      }
-      function rivemu_on_finish(rivlog, outcard) {
-        /*
-        console.log(rivlog);
-        console.log(outcard);
-        */
-      }
-      function rivemu_set_fullscreen() {
+
+      function rivemuFullscreen() {
         document.addEventListener('fullscreenchange', function() {
-          rivemu_update_canvas_size(desiredWidth, desiredHeight, true);
+          rivemuResizeCanvas(desiredWidth, desiredHeight, true);
         }, false);
         const canvas = document.getElementById("canvas");
         if (canvas) {
           canvas.requestFullscreen();
+        }
+      }
+
+      function rivemu_on_begin(width, height, target_fps, total_frames) {
+        lastFrame = 0;
+        totalFrames = total_frames;
+        const size = rivemuResizeCanvas(width, height, true);
+        document.getElementById("resolution").textContent =
+          width+"x"+height+"@"+target_fps + " -> " + size.width+"x"+size.height+"@60";
+        frameElem.textContent = "0";
+        if (total_frames > 0) {
+          progressElem.textContent = "0%";
+        }
+      }
+
+      function rivemu_on_finish(rivlog, outcard, outcard_hash) {
+        // We need to make a deep copy of a Uint8Array here, otherwise
+        lastRivlog = new Uint8Array(rivlog);
+
+        document.getElementById("outhash").textContent = outcard_hash;
+        document.getElementById("logsize").textContent = rivlog.length + " bytes";
+        document.getElementById('stop').disabled = true;
+        document.getElementById('replay').disabled = false;
+      }
+
+      function rivemu_on_frame(outcard, frame, fps, mips, cpu_usage, cycles) {
+        fpsElem.textContent = fps.toFixed(2) + " fps";
+        cpuSpeedElem.textContent = mips.toFixed(2) + " MIPS";
+        cpuUsageElem.textContent = cpu_usage.toFixed(2) + " %";
+        cpuCyclesElem.textContent = (cycles / 1000000).toFixed(3) + " M (" + ((100*cycles)/(600*128000000)).toFixed(2) + "%)";
+        frameElem.textContent = frame;
+        if (totalFrames > 0) {
+          progressElem.textContent = (frame*100/totalFrames).toFixed(2) + "%";
+        }
+        let outcard_str = textDecoder.decode(outcard);
+        if (outcard_str.substring(0, 4) == 'JSON') {
+          let scores = JSON.parse(outcard_str.substring(4));
+          if (typeof scores.score !== 'undefined') {
+            scoreElem.textContent = scores.score;
+          }
+          if (typeof scores.finished !== 'undefined') {
+            finishedElem.textContent = scores.finished;
+          }
         }
       }
     </script>

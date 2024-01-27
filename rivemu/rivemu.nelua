@@ -37,7 +37,7 @@ if ccinfo.is_emscripten then
   -- export functions
   local export_functions = {
     '_main',
-    '_rivemu_start_play',
+    '_rivemu_start_record',
     '_rivemu_start_replay',
     '_rivemu_stop',
     '_malloc',
@@ -71,6 +71,7 @@ local rivemu_options: type = @record{
   replay_filename: string,
   record_filename: string,
   verify_filename: string,
+  verify_outhash: string,
   incard_filename: string,
   outcard_filename: string,
   outhash_filename: string,
@@ -115,6 +116,10 @@ local function parse_options(): rivemu_options
       assert(not opts.recording, 'already recording')
       opts.verify_filename = sargs_value_at(i)
       opts.verifying = true
+      opts.wait_halt = true
+    elseif a == '-verify-outhash' then
+      assert(opts.verifying, 'not verifying')
+      opts.verify_outhash = sargs_value_at(i)
     elseif a == '-cartridge' then
       opts.cartridge_filename = sargs_value_at(i)
     elseif a == '-load-incard' then
@@ -155,34 +160,37 @@ local function parse_options(): rivemu_options
     elseif a == '-help' or a == '--help' or a == '-h' then
       io.printf("Usage: rivemu [options]\n")
       io.write[[
--cartridge <filename>
+-cartridge=<filename>
   Cartridge to run.
 
--load-incard <filename>
+-load-incard=<filename>
   Load input card from a file.
 
--save-outcard <filename>
+-save-outcard=<filename>
   Save output card to a file.
 
--save-outhash <filename>
+-save-outhash=<filename>
   Save output card SHA256 hash to a file as a hexadecimal string.
 
--save-screenshot <filename>
+-save-screenshot=<filename>
   Save screenshot of last frame to a PNG image file.
 
--record <filename>
+-record=<filename>
   Record game to an input log.
 
--replay <filename>
+-replay=<filename>
   Replay game from an input log.
 
--verify <filename>
-  Replay game from an input log.
+-verify=<filename>
+  Verify a game from an input log.
 
--speed <speed>
+-verify-outhash=<hash>
+  Verify a game output card hash.
+
+-speed=<speed>
   Set replay speed.
 
--stop-frame <frame>
+-stop-frame=<frame>
   Set frame to stop.
 
 -no-audio
@@ -233,6 +241,13 @@ function rivemu_options:entrypoint(): string
     end
     entrypoint_sb:write('riv-run')
   end
+  if self.verifying and #self.verify_outhash > 0 then
+    entrypoint_sb:write('&& \z
+      echo "', self.verify_outhash, ' /run/outcard" > /run/outcard.sha256sum && \z
+      busybox sha256sum -cs /run/outcard.sha256sum && \z
+      echo [RIVEMU] Outcard hash verification OK!!'
+    )
+  end
   if #self.entrypoint_args > 0 then
     if #entrypoint_sb > 0 then
       entrypoint_sb:write(' ')
@@ -255,9 +270,13 @@ local function begin(): void
   running = true
 
   if options.recording then -- start recording
+    io.printf('[RIVEMU] Recording...\n')
     rivemu_input.start_recording()
   elseif options.replaying then -- start replaying
+    io.printf('[RIVEMU] Replaying...\n')
     rivemu_input.load_replay_from_file(options.replay_filename)
+  elseif options.verifying then
+    io.printf('[RIVEMU] Verifying...\n')
   end
 end
 
@@ -303,6 +322,22 @@ local function finish(): void
     rivemu_input.save_replay(options.record_filename)
   end
 
+  if #options.screenshot_filename > 0 then
+    rivemu_video.save_screenshot(options.screenshot_filename)
+  end
+
+  if options.wait_halt then
+    io.printf('[RIVEMU] Waiting halt...\n')
+    repeat until machine:run((@uint64)(-1)) == CM_BREAK_REASON_HALTED
+  end
+
+  if options.print_final_hash then
+    local root_hash: string <close> = hexhash(machine:get_root_hash())
+    io.printf('[RIVEMU] Cycles %d: %s\n', machine:read_mcycle(), root_hash)
+  else
+    io.printf('[RIVEMU] Cycles %d\n', machine:read_mcycle())
+  end
+
   ## if ccinfo.is_emscripten then
     do
       local rivlog_filename: string = options.replaying and options.replay_filename or options.record_filename
@@ -324,24 +359,12 @@ local function finish(): void
     EM_ASM({
       let rivlog = HEAPU8.subarray($0, $0 + $1);
       let outcard = HEAPU8.subarray($2, $2 + $3);
-      let outcard_hash = UTF8ToString($4);
-      rivemu_on_finish(rivlog, outcard, outcard_hash);
+      let outhash = UTF8ToString($4);
+      rivemu_on_finish(rivlog, outcard, outhash);
     }, rivlog_ptr, rivlog_len, outcard_ptr, outcard_len, outhash_ptr);
     ]]
   end
   ## end
-
-  if options.wait_halt then
-    io.printf('[RIVEMU] Waiting halt...\n')
-    repeat until machine:run((@uint64)(-1)) == CM_BREAK_REASON_HALTED
-  end
-
-  if options.print_final_hash then
-    local root_hash: string <close> = hexhash(machine:get_root_hash())
-    io.printf('[RIVEMU] Cycles %d: %s\n', machine:read_mcycle(), root_hash)
-  else
-    io.printf('[RIVEMU] Cycles %d\n', machine:read_mcycle())
-  end
 
   if not options.no_quit then
     sapp_quit()
@@ -358,9 +381,6 @@ local function shutdown(): void
   rivemu_iocard.shutdown()
   rivemu_input.shutdown()
   if not options.no_video then
-    if #options.screenshot_filename > 0 then
-      rivemu_video.save_screenshot(options.screenshot_filename)
-    end
     rivemu_video.shutdown()
   end
   if not options.no_audio then
@@ -456,10 +476,41 @@ local function advance_frame(): void
   machine_frame()
   local now: float64 = os.now()
   local time_elapsed: float64 = now - time_start
-  local mcycle_elapsed: uint64 = machine:read_mcycle() - mcycle_start
+  local last_mcycle: uint64 = machine:read_mcycle()
+  local mcycle_elapsed: uint64 = last_mcycle - mcycle_start
+  local mmio_ready: boolean = machine:is_mmio_ready()
 
   if was_mmio_ready and time_elapsed > 1.0/24.0 then
     io.stderr:printf('[RIVEMU] Slow frame: %.2f ms, %.2f MHz\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
+  end
+
+  -- local root_hash: string <close> = hexhash(machine:get_root_hash())
+  -- print(root_hash)
+
+  if running then
+    framelimiter.target_fps = machine.mmio_driver.framebuffer_desc.target_fps * options.speed
+    framelimiter:update_stats(now, time_elapsed, mcycle_elapsed)
+    if options.print_stats then
+      framelimiter:print_stats()
+    end
+  end
+
+  -- notify when game begins
+  if not was_mmio_ready and mmio_ready then
+    ## if ccinfo.is_emscripten then
+      if not options.no_audio then
+        rivemu_audio.start()
+      end
+      local width: int32 <nodce> = machine.mmio_driver.framebuffer_desc.width
+      local height: int32 <nodce> = machine.mmio_driver.framebuffer_desc.height
+      local target_fps: int32 <nodce> = machine.mmio_driver.framebuffer_desc.target_fps
+      local num_frames: int32 <nodce> = rivemu_input.get_replay_frames()
+        cemit![[
+      EM_ASM({
+        rivemu_on_begin($0, $1, $2, $3);
+      }, width, height, target_fps, num_frames);
+      ]]
+    ## end
   end
 
   -- force finish when replay ends
@@ -468,12 +519,30 @@ local function advance_frame(): void
     finish()
   end
 
-  if running then
-    framelimiter.target_fps = machine.mmio_driver.framebuffer_desc.target_fps * options.speed
-    if options.print_stats then
-      framelimiter:print_stats(now, time_elapsed, mcycle_elapsed)
-    end
+  -- notify frames
+  if running and mmio_ready then
+    ## if ccinfo.is_emscripten then
+    local outcard_data: span(byte) = rivemu_iocard.get_outcard_data()
+    local ptr: *uint8 <nodce> = (@*uint8)(outcard_data.data)
+    local len: int32 <nodce> = (@int32)(outcard_data.size)
+    local frame: int32 <nodce> = (@int32)(machine.mmio_driver.frame)
+    local fps: float64 <nodce> = framelimiter.fps
+    local mips: int32 <nodce> = framelimiter.mips
+    local cpu_usage: float64 <nodce> = framelimiter.cpu_usage
+    local cycles: float64 <nodce> = last_mcycle
+    cemit![[
+  EM_ASM({
+    let outcard = HEAPU8.subarray($0, $0 + $1);
+    rivemu_on_frame(outcard, $2, $3, $4, $5, $6);
+  }, ptr, len, frame, fps, mips, cpu_usage, cycles);
+  ]]
+    ## end
   end
+end
+
+
+local function notify_frame(): void
+  if not running then return end
 end
 
 -- Poll next frame.
@@ -483,21 +552,6 @@ local function frame(): void
     local refresh_rate: float64 = 60
     if not machine:is_mmio_ready() then -- first frame
       advance_frame()
-      if machine:is_mmio_ready() then
-      ## if ccinfo.is_emscripten then
-        if not options.no_audio then
-          rivemu_audio.start()
-        end
-        local width: int32 <nodce> = machine.mmio_driver.framebuffer_desc.width
-        local height: int32 <nodce> = machine.mmio_driver.framebuffer_desc.height
-        local num_frames: int32 <nodce> = rivemu_input.get_replay_frames()
-          cemit![[
-        EM_ASM({
-          rivemu_on_begin($0, $1, $2);
-        }, width, height, num_frames);
-        ]]
-      ## end
-      end
       framelimiter.last_frame_time = os.now()
     elseif framelimiter.target_fps <= refresh_rate then
       if framelimiter:should_process_next_frame(os.now()) then
@@ -557,17 +611,22 @@ run()
 
 ## else
 
-local function rivemu_start_play(ptr: *uint8, len: int32, args: cstring): void <cexport>
+local function rivemu_start_record(cartridge_ptr: *uint8, cartridge_len: int32, incard_ptr: *uint8, incard_len: int32, args: cstring): void <cexport>
   assert(not running and not initialized, 'rivemu is running, please stop it first')
-  io.printf('[RIVEMU] Starting play...\n')
   options = parse_options()
-  local contents: string = {data=(@*[0]byte)(ptr), size=len}
   do
-    local cartridge_file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
-    fn_assert!(cartridge_file:write(contents))
+    local contents: string = {data=(@*[0]byte)(cartridge_ptr), size=cartridge_len}
+    local file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
+    fn_assert!(file:write(contents))
+  end
+  do
+    local contents: string = {data=(@*[0]byte)(incard_ptr), size=incard_len}
+    local file: filestream <close> = fn_assert!(io.open('/replay.incard', 'wb'))
+    fn_assert!(file:write(contents))
   end
   options.cartridge_filename = '/cartridge.sqfs'
   options.record_filename = '/replay.rivlog'
+  options.incard_filename = '/replay.incard'
   options.outcard_filename = '/replay.outcard'
   options.outhash_filename = '/replay.outhash'
   options.entrypoint_args = args
@@ -575,13 +634,17 @@ local function rivemu_start_play(ptr: *uint8, len: int32, args: cstring): void <
   run()
 end
 
-local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32, rivlog_ptr: *uint8, rivlog_len: int32, args: cstring): void <cexport>
+local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32, incard_ptr: *uint8, incard_len: int32, args: cstring, rivlog_ptr: *uint8, rivlog_len: int32): void <cexport>
   assert(not running and not initialized, 'rivemu is running, please stop it first')
-  io.printf('[RIVEMU] Starting replay...\n')
   options = parse_options()
   do
     local contents: string = {data=(@*[0]byte)(cartridge_ptr), size=cartridge_len}
     local file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
+    fn_assert!(file:write(contents))
+  end
+  do
+    local contents: string = {data=(@*[0]byte)(incard_ptr), size=incard_len}
+    local file: filestream <close> = fn_assert!(io.open('/replay.incard', 'wb'))
     fn_assert!(file:write(contents))
   end
   do
@@ -591,6 +654,7 @@ local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32, 
   end
   options.cartridge_filename = '/cartridge.sqfs'
   options.replay_filename = '/replay.rivlog'
+  options.incard_filename = '/replay.incard'
   options.outcard_filename = '/replay.outcard'
   options.outhash_filename = '/replay.outhash'
   options.entrypoint_args = args

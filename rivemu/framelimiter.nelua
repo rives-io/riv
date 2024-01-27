@@ -13,6 +13,10 @@ global rivemu_framelimiter: type = @record{
   mcycle_elapsed_sum: uint64,
   frame_counter: uint64,
   stats_last_time: float64,
+
+  fps: float64,
+  mips: float64,
+  cpu_usage: float64,
 }
 
 -- Return true when we should process the next frame.
@@ -32,23 +36,26 @@ function rivemu_framelimiter:should_process_next_frame(now: float64): boolean
   end
 end
 
--- Print the frame rate statistics to stderr every second.
-function rivemu_framelimiter:print_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64): void
+-- Update statistics.
+function rivemu_framelimiter:update_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64): void
   self.frame_counter = self.frame_counter + 1
   self.time_elapsed_sum = self.time_elapsed_sum + time_elapsed
   self.mcycle_elapsed_sum = self.mcycle_elapsed_sum + mcycle_elapsed
   local last_time_elapsed: float64 = now - self.stats_last_time
-  if last_time_elapsed >= 1.0 then
-    if not machine:is_halted() then
-      local fps: float64 = self.frame_counter / last_time_elapsed
-      local mips: float64 = self.mcycle_elapsed_sum / (self.time_elapsed_sum * 1000000.0)
-      local cpu_usage: float64 = (self.time_elapsed_sum * 100.0) / last_time_elapsed
-      io.printf('[RIVEMU] frame=%d fps=%.2f guest_cpu_clock=%.2fMHz host_cpu_usage=%.2f%%\n',
-        machine.mmio_driver.frame, fps / last_time_elapsed, mips, cpu_usage)
-    end
+  if last_time_elapsed >= 0.25 then
+    self.fps = self.frame_counter / last_time_elapsed
+    self.mips = self.mcycle_elapsed_sum / (self.time_elapsed_sum * 1000000.0)
+    self.cpu_usage = (self.time_elapsed_sum * 100.0) / last_time_elapsed
     self.frame_counter = 0
     self.time_elapsed_sum = 0
     self.mcycle_elapsed_sum = 0
     self.stats_last_time = now
   end
+end
+
+-- Print the frame rate statistics to stderr every second.
+function rivemu_framelimiter:print_stats(): void
+  local frame: int64 = machine:is_halted() and (@int64)(machine.mmio_driver.frame) or -1
+  io.printf('[RIVEMU] frame=%d fps=%.2f guest_cpu_clock=%.2fMIPS host_cpu_usage=%.2f%%\n',
+    frame, self.fps, self.mips, self.cpu_usage)
 end

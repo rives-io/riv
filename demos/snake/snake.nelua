@@ -82,7 +82,6 @@ local function init_game()
   nextmove = 0
   score = 0
   finished = false
-  save_score()
   set_tile(headpos, Direction.UP)
   set_tile(tailpos, Direction.UP)
   respawn_apple()
@@ -151,7 +150,6 @@ local function poll_game()
     if score > max_score then
       max_score = score
     end
-    save_score()
     respawn_apple()
     riv_waveform(riv_waveform_desc{
       type = RIV_WAVEFORM_SINE,
@@ -168,7 +166,6 @@ local function poll_game()
     -- decrease score
     if score > TILE_SCORE_PENALITY then
       score = score - TILE_SCORE_PENALITY
-      save_score()
     end
     -- eat tail
     local taildir = get_tile(tailpos)
@@ -202,6 +199,7 @@ local function frame()
   poll_events()
   poll_game()
   draw()
+  save_score()
 end
 
 local function init()

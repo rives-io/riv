@@ -25,17 +25,10 @@ end
 function rivemu_iocard.update_outcard(): void
   outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_MMIOSIZE_INOUTBUFFER)
   machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, outcard_data)
+end
 
-  ## if ccinfo.is_emscripten then
-  local ptr: *uint8 <nodce> = (@*uint8)(outcard_data.data)
-  local len: int32 <nodce> = (@int32)(outcard_data.size)
-  cemit![[
-EM_ASM({
-  let outcard = HEAPU8.subarray($0, $0 + $1);
-  rivemu_on_outcard_update(outcard);
-}, ptr, len);
-]]
-  ## end
+function rivemu_iocard.get_outcard_data(): span(byte)
+  return outcard_data
 end
 
 function rivemu_iocard.load_incard(filename: string): void
