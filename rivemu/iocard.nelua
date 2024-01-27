@@ -49,7 +49,7 @@ end
 
 function rivemu_iocard.save_outhash(filename: string): void
   local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
-  local hash: string <close> = hexhash(keccak256(outcard_data))
+  local hash: string <close> = hexhash(sha256hash(outcard_data))
   fn_assert!(file:write(hash))
   io.printf("[RIVEMU] Saved output card hash '%s'\n", filename)
 end
@@ -62,11 +62,6 @@ end
 
 function rivemu_iocard.print_outcard(): void
   local contents: string = {data=outcard_data.data, size=outcard_data.size}
-  local hash: string <close> = hexhash(keccak256(outcard_data))
-  io.printf([[
-[RIVEMU] Outcard hash: %s
-==== BEGIN OUTCARD ====
-%s
-==== END OUTCARD ====
-]], hash, contents)
+  local hash: string <close> = hexhash(sha256hash(outcard_data))
+  io.printf("[RIVEMU] Outcard sha256sum: %s\n", hash, contents)
 end

@@ -6,3 +6,7 @@ all:
 	mkdir -p cartridges
 	find ../demos -name '*.sqfs' -exec cp {} cartridges/ \;
 	emrun rivemu.html
+
+clean:
+	rm -rf cartridges
+	rm -f rivemu.{js,wasm}

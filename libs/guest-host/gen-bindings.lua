@@ -1,15 +1,15 @@
 local nldecl = require 'nelua.plugins.nldecl'
 
--- sha3
+-- sha256
 nldecl.generate_bindings_file{
-  output_file = 'sha3.nelua',
-  includes = {'sha3.h'},
+  output_file = 'sha256.nelua',
+  includes = {'sha256.h'},
   include_dirs = {'.'},
-  include_names = {'^sha3', '^SHA3'},
+  include_names = {'^sha256', '^sha256'},
   output_head = [==[
 ##[[
-cinclude 'sha3.h'
-cfile 'sha3.c'
+cinclude 'sha256.h'
+cfile 'sha256.c'
 ]]
 ]==]
 }

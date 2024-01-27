@@ -165,7 +165,7 @@ local function parse_options(): rivemu_options
   Save output card to a file.
 
 -save-outhash <filename>
-  Save output card Keccak-256 hash to a file as a hexadecimal string.
+  Save output card SHA256 hash to a file as a hexadecimal string.
 
 -save-screenshot <filename>
   Save screenshot of last frame to a PNG image file.
@@ -221,7 +221,7 @@ function rivemu_options:entrypoint(): string
   local entrypoint_sb: stringbuilder <close>
   if #self.cartridge_filename > 0 then
     if self.verifying then
-      entrypoint_sb:write('RIV_CARTRIDGE=/dev/mtdblock1 RIV_REPLAYLOG=/dev/mtdblock2 RIV_OUTCARD=/run/outcard ')
+      entrypoint_sb:write('RIV_CARTRIDGE=/dev/mtdblock1 RIV_REPLAYLOG=/dev/mtdblock2 RIV_OUTCARD=/run/outcard RIV_OUTHASH=/run/outhash ')
     else
       entrypoint_sb:write('RIV_CARTRIDGE=/dev/mtdblock1 ')
     end
@@ -239,12 +239,6 @@ function rivemu_options:entrypoint(): string
     end
     entrypoint_sb:write(self.entrypoint_args)
   end
-  if self.verifying and self.no_yield then
-    entrypoint_sb:write(';\z
-      echo ==== BEGIN OUTCARD ====;\z
-      cat /run/outcard;echo;\z
-      echo ==== END OUTCARD ====')
-  end
   return entrypoint_sb:promote()
 end
 
@@ -255,8 +249,6 @@ local initialized: boolean
 
 -- Begin the machine entrypoint.
 local function begin(): void
-  io.printf('[RIVEMU] Begin\n')
-
   -- initialize the machine
   local entrypoint: string <close> = options:entrypoint()
   machine = rivemu_machine.create(entrypoint, options.cartridge_filename, options.verify_filename)
@@ -292,7 +284,6 @@ end
 local function finish(): void
   if not running then return end
   running = false
-  io.printf('[RIVEMU] Finish\n')
 
   if not options.no_audio then
     rivemu_audio.stop()
@@ -325,19 +316,24 @@ local function finish(): void
       local outcard_ptr: *uint8 <nodce> = (@*uint8)(outcard_data.data)
       local outcard_len: int32 <nodce> = (@int32)(outcard_data.size)
 
+      local outhash_file: filestream <close> = fn_assert!(io.open(options.outhash_filename, 'rb'))
+      local outhash_data: string <close> = fn_assert!(outhash_file:read('a'))
+      local outhash_ptr: cstring <nodce> = (@cstring)(outhash_data.data)
+
       cemit![[
     EM_ASM({
       let rivlog = HEAPU8.subarray($0, $0 + $1);
       let outcard = HEAPU8.subarray($2, $2 + $3);
-      rivemu_on_finish(rivlog, outcard);
-    }, rivlog_ptr, rivlog_len, outcard_ptr, outcard_len);
+      let outcard_hash = UTF8ToString($4);
+      rivemu_on_finish(rivlog, outcard, outcard_hash);
+    }, rivlog_ptr, rivlog_len, outcard_ptr, outcard_len, outhash_ptr);
     ]]
   end
   ## end
 
   if options.wait_halt then
     io.printf('[RIVEMU] Waiting halt...\n')
-    repeat until machine:run() == CM_BREAK_REASON_HALTED
+    repeat until machine:run((@uint64)(-1)) == CM_BREAK_REASON_HALTED
   end
 
   if options.print_final_hash then
@@ -355,9 +351,9 @@ end
 -- Terminate application.
 local function shutdown(): void
   if not initialized then return end
-  finish()
-
   io.printf('[RIVEMU] Shutdown\n')
+
+  finish()
 
   rivemu_iocard.shutdown()
   rivemu_input.shutdown()
@@ -463,7 +459,7 @@ local function advance_frame(): void
   local mcycle_elapsed: uint64 = machine:read_mcycle() - mcycle_start
 
   if was_mmio_ready and time_elapsed > 1.0/24.0 then
-    io.stderr:printf('[RIVEMU] slow frame: %.2f ms, %.2f MHz\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
+    io.stderr:printf('[RIVEMU] Slow frame: %.2f ms, %.2f MHz\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
   end
 
   -- force finish when replay ends
@@ -573,6 +569,7 @@ local function rivemu_start_play(ptr: *uint8, len: int32, args: cstring): void <
   options.cartridge_filename = '/cartridge.sqfs'
   options.record_filename = '/replay.rivlog'
   options.outcard_filename = '/replay.outcard'
+  options.outhash_filename = '/replay.outhash'
   options.entrypoint_args = args
   options.recording = true
   run()
@@ -595,13 +592,14 @@ local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32, 
   options.cartridge_filename = '/cartridge.sqfs'
   options.replay_filename = '/replay.rivlog'
   options.outcard_filename = '/replay.outcard'
+  options.outhash_filename = '/replay.outhash'
   options.entrypoint_args = args
   options.replaying = true
   run()
 end
 
 local function rivemu_stop(url: cstring): void <cexport>
-  io.printf('[RIVEMU] Stopping...\n')
+  io.printf('[RIVEMU] Stop requested\n')
   finish()
 end
 

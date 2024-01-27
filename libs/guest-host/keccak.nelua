@@ -1,8 +1,8 @@
-require '.sha3'
+require '.sha256'
 
-global function keccak256(data: span(byte)): [32]byte
+global function sha256hash(data: span(byte)): [32]byte
   local hash: [32]byte
-  assert(sha3_HashBuffer(256, SHA3_FLAGS_KECCAK, data.data, data.size, &hash, #hash) == SHA3_RETURN_OK, 'keccak failed')
+  sha256(data.data, data.size, &hash)
   return hash
 end
 

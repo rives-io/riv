@@ -1,99 +1,130 @@
 #!/bin/sh
 run() {
+  local BWRAPBOX_FLAGS=""
+
+  # mount cartridge
   if ! busybox mount -o ro,noatime,nosuid,nodev,exec "$RIV_CARTRIDGE" /cartridge; then
-    >&2 echo "[RIVOS] Failed to mount cartridge filesystem."
+    >&2 echo "[RIV-OS] Failed to mount cartridge filesystem."
     return 1
   fi
-  local STATUS
+
+  # find cartridge entry point
   local EXE=$(busybox find /cartridge -maxdepth 1 -type f -executable -print -quit)
   if ! [[ $EXE =~ ^[-_./a-zA-Z0-9]+$ ]]; then
-    >&2 echo "[RIVOS] Invalid executable filename \"$EXE\"."
+    >&2 echo "[RIV-OS] Invalid executable filename \"$EXE\"."
     busybox umount /cartridge
     return 1
   fi
   if ! [[ -x "$EXE" ]]; then
-    >&2 echo "[RIVOS] No executable file found in cartridge."
+    >&2 echo "[RIV-OS] No executable file found in cartridge."
     busybox umount /cartridge
     return 1
   fi
-  if [ -n "$RIV_NO_YIELD" ]; then # disable yield device
-    BWRAPBOX_FLAGS="--setenv RIV_NO_YIELD y"
+
+  # configure yield device
+  if [ -n "$RIV_NO_YIELD" ]; then
+    BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_NO_YIELD y"
   else
-    BWRAPBOX_FLAGS="--dev-bind /dev/yield /dev/yield"
+    BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --dev-bind /dev/yield /dev/yield"
     if ! busybox chmod 660 /dev/yield && busybox chown root:cartridge /dev/yield; then
-      >&2 echo "[RIVOS] Unable to give cartridge access to yield device."
+      >&2 echo "[RIV-OS] Unable to give cartridge access to yield device."
       busybox umount /cartridge
       return 1
     fi
   fi
+
+  # stop frame flags
   if [ -n "$RIV_STOP_FRAME" ]; then
     BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_STOP_FRAME $RIV_STOP_FRAME"
   fi
+
+  # setup screenshot fd
   local RIV_SCREENSHOT=$(busybox mktemp --tmpdir=/run screenshot.XXXXXXXXXXX)
   BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_SCREENSHOT_FD 5"
-  echo "[RIVOS] Running cartridge executable:" "$EXE" "$@"
+
+  # copy incard to iocard
+  local RIV_IOCARD=$(busybox mktemp --tmpdir=/run iocard.XXXXXXXXXXX)
+  if [ -n "$RIV_INCARD" ]; then
+    if ! busybox cp "$RIV_INCARD" "$RIV_IOCARD"; then
+      >&2 echo "[RIV-OS] Unable to copy incard to iocard."
+      busybox rm -f "$RIV_IOCARD" "$RIV_SCREENSHOT"
+      busybox umount /cartridge
+      return 1
+    fi
+  else
+    if ! busybox truncate -s 0 "$RIV_IOCARD"; then
+      >&2 echo "[RIV-OS] Unable to create empty iocard."
+      busybox rm -f "$RIV_IOCARD" "$RIV_SCREENSHOT"
+      busybox umount /cartridge
+      return 1
+    fi
+  fi
+  BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_IOCARD_FD 4"
+
+  # run
+  echo "[RIV-OS] Running cartridge executable:" "$EXE" "$@"
+  local STATUS
   if [ ! -n "$RIV_REPLAYLOG" ]; then  # play
-    # run
     riv-bwrapbox $BWRAPBOX_FLAGS -- "$EXE" "$@" \
+        4<>"$RIV_IOCARD" \
         5<>"$RIV_SCREENSHOT"
     STATUS=$?
   else # verify replay
     local RIV_UNPACKED_REPLAYLOG=$(busybox mktemp --tmpdir=/run replaylog.XXXXXXXXXXX)
-    local RIV_IOCARD=$(busybox mktemp --tmpdir=/run iocard.XXXXXXXXXXX)
-    # copy incard to iocard
-    if [ -n "$RIV_INCARD" ]; then
-      if ! busybox cp "$RIV_INCARD" "$RIV_IOCARD"; then
-        >&2 echo "[RIVOS] Unable to copy incard to iocard."
-        busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD" "$RIV_SCREENSHOT"
-        busybox umount /cartridge
-        return 1
-      fi
-    else
-      if ! busybox truncate -s 0 "$RIV_IOCARD"; then
-        >&2 echo "[RIVOS] Unable to create empty iocard."
-        busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD" "$RIV_SCREENSHOT"
-        busybox umount /cartridge
-        return 1
-      fi
-    fi
     # prepare event log
     if ! riv-unpacklog <"$RIV_REPLAYLOG" >"$RIV_UNPACKED_REPLAYLOG"; then
-      >&2 echo "[RIVOS] Unable to unpack rivlog."
+      >&2 echo "[RIV-OS] Unable to unpack rivlog."
       busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD" "$RIV_SCREENSHOT"
       busybox umount /cartridge
       return 1
     fi
-    # run
-    BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_REPLAYLOG_FD 3 --setenv RIV_IOCARD_FD 4"
+    BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_REPLAYLOG_FD 3"
     BWRAPBOX_VERIFY_LIMITS=y \
       riv-bwrapbox $BWRAPBOX_FLAGS -- "$EXE" "$@" \
         3<"$RIV_UNPACKED_REPLAYLOG" \
         4<>"$RIV_IOCARD" \
         5<>"$RIV_SCREENSHOT"
     STATUS=$?
-    # copy iocard to outcard
-    if [ -n "$RIV_OUTCARD" ]; then
-      if ! busybox cp "$RIV_IOCARD" "$RIV_OUTCARD"; then
-        >&2 echo "[RIVOS] Unable to copy iocard to outcard."
-        busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD" "$RIV_SCREENSHOT"
-        busybox umount /cartridge
-        return 1
-      fi
-    fi
-    busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD"
+    busybox rm -f "$RIV_UNPACKED_REPLAYLOG"
   fi
+
+  # copy outhash
+  local OUTHASH=$(busybox sha256sum "$RIV_IOCARD" | busybox cut -d' ' -f1)
+  echo "[RIV-OS] Outcard sha256sum: $OUTHASH"
+  if [ -n "$RIV_OUTHASH" ]; then
+    if ! echo -n "$OUTHASH" > "$RIV_OUTHASH"; then
+      >&2 echo "[RIV-OS] Unable to write outhash."
+      busybox rm -f "$RIV_IOCARD" "$RIV_SCREENSHOT"
+      busybox umount /cartridge
+    fi
+  fi
+
+  # copy outcard
+  if [ -n "$RIV_OUTCARD" ]; then
+    if ! busybox cp "$RIV_IOCARD" "$RIV_OUTCARD"; then
+      >&2 echo "[RIV-OS] Unable to copy iocard to outcard."
+      busybox rm -f "$RIV_IOCARD" "$RIV_SCREENSHOT"
+      busybox umount /cartridge
+      return 1
+    fi
+  fi
+  busybox rm -f "$RIV_IOCARD"
+
   # copy screenshot
   if [ -n "$RIV_SAVE_SCREENSHOT" ]; then
     busybox cp "$RIV_SCREENSHOT" "$RIV_SAVE_SCREENSHOT"
   fi
   busybox rm -f "$RIV_SCREENSHOT"
+
   # finished
-  echo "[RIVOS] Cartridge finished with status $STATUS"
+  echo "[RIV-OS] Cartridge finished with status $STATUS"
   busybox umount /cartridge
   return $STATUS
 }
+
 # run cartridge
 run "$@" &
 CARTRIDGE_PID=$!
+
 # wait cartridge
 wait $CARTRIDGE_PID

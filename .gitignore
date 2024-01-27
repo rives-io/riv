@@ -21,6 +21,7 @@
 *.js
 *.wasm
 *.png
+build
 
 # ignore generated binaries
 /rivemu/rivemu

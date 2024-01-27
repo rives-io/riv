@@ -49,7 +49,7 @@
     <script>
       var desiredWidth = 768;
       var desiredHeight = 768;
-      function rivemu_update_canvas_size(wantedWidth, wantedHeight) {
+      function rivemu_update_canvas_size(wantedWidth, wantedHeight, notifyRiv) {
         desiredHeight = wantedHeight;
         desiredWidth = wantedWidth;
         const canvas = document.getElementById("canvas");
@@ -60,8 +60,10 @@
           if (canvas.width != canvasWidth || canvas.height != canvasHeight) {
             canvas.width = canvasWidth;
             canvas.height = canvasHeight;
-            // Force notify resize in WASM
-            window.dispatchEvent(new Event('resize'));
+            // Force notify resize in RIV
+            if (notifyRiv) {
+              window.dispatchEvent(new Event('resize'));
+            }
           }
         }
       }
@@ -95,7 +97,7 @@
         */
       }
       function rivemu_on_begin(width, height) {
-        rivemu_update_canvas_size(width, height);
+        rivemu_update_canvas_size(width, height, true);
       }
       function rivemu_on_finish(rivlog, outcard) {
         /*
@@ -105,7 +107,7 @@
       }
       function rivemu_set_fullscreen() {
         document.addEventListener('fullscreenchange', function() {
-          rivemu_update_canvas_size(desiredWidth, desiredHeight);
+          rivemu_update_canvas_size(desiredWidth, desiredHeight, true);
         }, false);
         const canvas = document.getElementById("canvas");
         if (canvas) {

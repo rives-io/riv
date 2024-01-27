@@ -44,6 +44,7 @@ clean:
 	$(MAKE) -C rootfs clean
 	$(MAKE) -C libriv clean
 	$(MAKE) -C rivemu clean
+	$(MAKE) -C rivemu-web clean
 	$(MAKE) -C demos clean
 	$(MAKE) -C tools clean
 	$(MAKE) -C libs clean

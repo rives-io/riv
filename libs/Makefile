@@ -7,7 +7,7 @@ SPNG_BRANCH=master
 
 all: | update-libs update-bindings
 
-update-libs: update-miniz update-sha3 update-sokol update-sokol_gp update-spng update-miniaudio update-cartesi
+update-libs: update-miniz update-sha256 update-sokol update-sokol_gp update-spng update-miniaudio update-cartesi
 
 update-bindings:
 	cd guest-host && nelua-lua gen-bindings.lua
@@ -17,8 +17,9 @@ update-miniz:
 	wget -O guest-host/miniz-$(MINIZ_VERSION).zip https://github.com/richgel999/miniz/releases/download/$(MINIZ_VERSION)/miniz-$(MINIZ_VERSION).zip
 	cd guest-host && unzip -o miniz-$(MINIZ_VERSION).zip miniz.h miniz.c && rm -f miniz-$(MINIZ_VERSION).zip
 
-update-sha3:
-	wget -O guest-host/sha3.c https://raw.githubusercontent.com/brainhub/SHA3IUF/$(SHA3_BRANCH)/sha3.c
+update-sha256:
+	wget -O guest-host/sha256.h https://raw.githubusercontent.com/ilvn/SHA256/main/sha256.h
+	wget -O guest-host/sha256.c https://raw.githubusercontent.com/ilvn/SHA256/main/sha256.c
 
 update-sokol:
 	wget -O host/sokol_gfx.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_gfx.h

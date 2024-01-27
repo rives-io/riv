@@ -1,0 +1,16 @@
+##[[
+cinclude 'sha256.h'
+cfile 'sha256.c'
+]]
+global sha256_context: type <cimport,nodecl> = @record{
+  buf: [64]uint8,
+  hash: [8]uint32,
+  bits: [2]uint32,
+  len: uint32,
+  rfu__: uint32,
+  W: [64]uint32
+}
+global function sha256_init(ctx: *sha256_context): void <cimport,nodecl> end
+global function sha256_hash(ctx: *sha256_context, data: pointer, len: csize): void <cimport,nodecl> end
+global function sha256_done(ctx: *sha256_context, hash: *uint8): void <cimport,nodecl> end
+global function sha256(data: pointer, len: csize, hash: *uint8): void <cimport,nodecl> end

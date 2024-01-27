@@ -231,5 +231,5 @@ function rivemu_video.save_screenshot(filename: string): void
   local screenshot_data: string = riv_encode_png_screenshot()
   local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
   fn_assert!(file:write(screenshot_data))
-  io.printf("[RIVEMU] Saved last frame screenshot '%s'\n", filename)
+  io.printf("[RIVEMU] Saved screenshot '%s'\n", filename)
 end
