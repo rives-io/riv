@@ -1821,6 +1821,11 @@ global sapp_desc: type <cimport,nodecl> = @record{
   html5_preserve_drawing_buffer: boolean,
   html5_premultiplied_alpha: boolean,
   html5_ask_leave_site: boolean,
+  html5_bubble_mouse_events: boolean,
+  html5_bubble_touch_events: boolean,
+  html5_bubble_wheel_events: boolean,
+  html5_bubble_key_events: boolean,
+  html5_bubble_char_events: boolean,
   ios_keyboard_resizes_canvas: boolean
 }
 global sapp_html5_fetch_error: type <cimport,nodecl,using> = @enum(cint){

@@ -218,11 +218,16 @@
       function rivemu_on_finish(rivlog, outcard, outcard_hash) {
         // We need to make a deep copy of a Uint8Array here, otherwise
         lastRivlog = new Uint8Array(rivlog);
-
         document.getElementById("outhash").textContent = outcard_hash;
         document.getElementById("logsize").textContent = rivlog.length + " bytes";
         document.getElementById('stop').disabled = true;
         document.getElementById('replay').disabled = false;
+        // Show outcard
+        let outcard_str = textDecoder.decode(outcard);
+        if (outcard_str.substring(0, 4) == 'JSON') {
+          let scores = JSON.parse(outcard_str.substring(4));
+          console.log(scores);
+        }
       }
 
       function rivemu_on_frame(outcard, frame, fps, mips, cpu_usage, cycles) {
