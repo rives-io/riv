@@ -99,7 +99,7 @@ local function parse_options(): rivemu_options
   ## if ccinfo.is_wasm then
   -- opts.no_quit = true
   ## end
-  for i=0,<sargs_num_args() do
+  for i: int32=0,<sargs_num_args() do
     local a: string = sargs_key_at(i)
     if a == '-record' then
       assert(not opts.replaying, 'already replaying')

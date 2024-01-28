@@ -70,7 +70,7 @@ local function riv_encode_png_screenshot(): string
   -- Detect palette size
   local num_pixels: usize = riv.framebuffer_desc.width * riv.framebuffer_desc.height
   local num_colors: usize = 0
-  for i=0,<num_pixels do
+  for i: usize=0,<num_pixels do
     if riv.framebuffer[i] > num_colors then num_colors = riv.framebuffer[i] end
   end
   num_colors = num_colors + 1

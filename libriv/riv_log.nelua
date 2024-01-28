@@ -49,7 +49,7 @@ local function make_key_map(key_events: span(riv_key_toggle_event)): (riv_key_ma
   local len: usize = 0
   for _, event: riv_key_toggle_event in ipairs(key_events) do
     local key: uint8 = event.key_code
-    if key ~= 0 and not haskey[key] then
+    if not haskey[key] then
       local idx: uint8 = (@uint8)(len)
       haskey[key] = true
       key2idx[key] = idx
@@ -114,9 +114,9 @@ function riv_log.save(filename: string, key_events: span(riv_key_toggle_event), 
     local key_idx: uint8 = key2idx[event.key_code]
     local frame_delta: uint64 = event.frame - prev_frame
     packed_key_events[i] = key_idx
-    ## for j=1,4 do
-      if #[j]# <= frame_delta_size then
-        packed_key_events[key_events.size + i*frame_delta_size + #[j-1]#] = (frame_delta >> #[(j-1)*8]#) & 0xff
+    ## for j=0,3 do
+      if #[j]# < frame_delta_size then
+        packed_key_events[key_events.size + i*frame_delta_size + #[j]#] = (@uint8)((frame_delta >> #[j*8]#) & 0xff)
       end
     ## end
     prev_frame = event.frame
@@ -170,7 +170,7 @@ function riv_log.load_from_filestream(file: filestream): (vector(riv_key_toggle_
   local packed_key_events: span(byte) = new(@byte, (1 + frame_delta_size) * header.key_events_size)
   defer delete(packed_key_events) end
   if header.key_events_size > 0 then
-    local packed_key_events_str: string <close> = fn_assert!(file:read(packed_key_events.size))
+    local packed_key_events_str: string <close> = fn_assert!(file:read((@int64)(packed_key_events.size)))
     assert(packed_key_events_str.size <= packed_key_events.size, 'malformed riv log key events')
     if header.flags & RIV_LOGFLAGS_COMPRESSED_MZ ~= 0 then
       local uncompressed_len: csize = tinfl_decompress_mem_to_mem(
@@ -190,9 +190,9 @@ function riv_log.load_from_filestream(file: filestream): (vector(riv_key_toggle_
   for i: usize=0,<key_events.size do
     local key_idx: uint8 = packed_key_events[i]
     local frame_delta: uint64 = 0
-    ## for j=1,4 do
-      if #[j]# <= frame_delta_size then
-        frame_delta = frame_delta | (packed_key_events[key_events.size + i*frame_delta_size + #[j-1]#] << #[(j-1)*8]#)
+    ## for j=0,3 do
+      if #[j]# < frame_delta_size then
+        frame_delta = frame_delta | ((@uint64)(packed_key_events[key_events.size + i*frame_delta_size + #[j]#]) << #[j*8]#)
       end
     ## end
     frame_delta = frame_delta & frame_delta_mask
