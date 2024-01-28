@@ -9,6 +9,10 @@
         background-color: #111;
         color: white;
       }
+      .small-font {
+        font-size: 12px;
+        font-family: monospace;
+      }
       #canvas {
         background-color: black;
         image-rendering: pixelated;
@@ -33,33 +37,40 @@
       </div>
       <br/>
       <div><b>Status: </b><span id="status">Stopped</span></div>
+      <div><b>Time: </b><span id="time">N/A</span></div>
       <div><b>Frame: </b><span id="frame">N/A</span></div>
+      <div><b>Score: </b><span id="score">N/A</span></div>
       <div><b>FPS: </b><span id="fps">N/A</span></div>
       <div><b>CPU Speed: </b><span id="cpuSpeed">N/A</span></div>
       <div><b>CPU Usage: </b><span id="cpuUsage">N/A</span></div>
       <div><b>CPU Cycles: </b><span id="cpuCycles">N/A</span></div>
-      <div><b>Score: </b><span id="score">N/A</span></div>
       <div><b>Finished: </b><span id="finished">N/A</span></div>
       <div><b>Progress: </b><span id="progress">N/A</span></div>
-      <div><b>Log Size: </b><span id="logsize">N/A</span></div>
-      <div><b>Outcard SHA256: </b><span id="outhash">N/A</span></div>
       <div><b>Resolution: </b><span id="resolution">N/A</span></div>
-      <h3>Cartridge</h3>
-      <div><b>Cartridge Size: </b><span id="cartsize">N/A</span></div>
-      <br/>
       <div>
-        <button id="upload_cartridge" onclick="rivemuUploadCartridge()">Upload Cartridge</button>
-        <button id="download_cartridge" disabled="true" onclick="rivemuDownloadCartridge()">Download Cartridge</button>
+        <b>Cartridge: </b>
+        <span id="cartsize">N/A</span> - <span id="carthash">N/A</span>
+        <button id="upload_cartridge" class="small-font" onclick="rivemuUploadCartridge()">Upload</button>
+        <button id="download_cartridge" class="small-font" disabled="true" onclick="rivemuDownloadCartridge()">Download</button>
       </div>
       <div>
-        <button id="upload_log" onclick="rivemuUploadLog()">Upload Log</button>
-        <button id="download_log" disabled="true" onclick="rivemuDownloadLog()">Download Log</button>
+        <b>In Card: </b><span id="insize">N/A</span> - <span id="inhash">N/A</span>
+        <button id="upload_incard" class="small-font" onclick="rivemuUploadIncard()">Upload</button>
+        <button id="download_incard" class="small-font" onclick="rivemuDownloadIncard()">Download</button>
       </div>
       <div>
-        <button id="upload_incard" onclick="rivemuUploadIncard()">Upload Incard</button>
-        <button id="download_incard" onclick="rivemuDownloadIncard()">Download Incard</button>
+        <b>Log: </b><span id="logsize">N/A</span> - <span id="loghash">N/A</span>
+        <button id="upload_log" class="small-font" onclick="rivemuUploadLog()">Upload</button>
+        <button id="download_log" class="small-font" disabled="true" onclick="rivemuDownloadLog()">Download</button>
+      </div>
       <div>
-        <button id="download_outcard" disabled="true" onclick="rivemuDownloadOutcard()">Download Outcard</button>
+        <b>Out Card: </b><span id="outsize">N/A</span> - <span id="outhash">N/A</span>
+        <button id="download_outcard" class="small-font" disabled="true" onclick="rivemuDownloadOutcard()">Download</button>
+      </div>
+      <div>
+        <b>Args: </b><span id="argssize">N/A</span> - <span id="argshash">N/A</span>
+        <br/>
+        <input type="text" class="small-font" id="args" style="width: 100%"/>
       </div>
       <h3>Games</h3>
       <div>
@@ -91,10 +102,13 @@
       var lastCartridge;
       var lastFrame;
       var lastTotalFrames;
+      var lastTargetFps;
       var desiredWidth = 768;
       var desiredHeight = 768;
 
       let statusElem = document.getElementById("status");
+      let argsElem = document.getElementById("args");
+      let timeElem = document.getElementById("time");
       let scoreElem = document.getElementById("score");
       let finishedElem = document.getElementById("finished");
       let progressElem = document.getElementById("progress");
@@ -106,9 +120,25 @@
       let resolutionElem = document.getElementById("resolution");
       let canvasElem = document.getElementById("canvas");
       let logsizeElem = document.getElementById("logsize");
+      let loghashElem = document.getElementById("loghash");
+      let argshashElem = document.getElementById("argshash");
+      let argssizeElem = document.getElementById("argssize");
+      let inhashElem = document.getElementById("inhash");
+      let insizeElem = document.getElementById("insize");
       let outhashElem = document.getElementById("outhash");
+      let outsizeElem = document.getElementById("outsize");
       let cartsizeElem = document.getElementById("cartsize");
+      let carthashElem = document.getElementById("carthash");
       let textDecoder = new TextDecoder();
+      let textEncode = new TextEncoder();
+
+      // Return SHA256 hexadecimal string from a chunk of data.
+      async function sha256sum(data) {
+        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+        return hashHex;
+      }
 
       // Open an user file dialog for saving a file.
       function downloadFileDialog(data, filename) {
@@ -150,7 +180,8 @@
           return null;
         }
         const buffer = await response.arrayBuffer();
-        return new Uint8Array(buffer);
+        const data = new Uint8Array(buffer);
+        return data;
       }
 
       // Fetch a file from a URL.
@@ -161,13 +192,15 @@
           return;
         }
         const buffer = await response.arrayBuffer();
-        return new Uint8Array(buffer);
+        const data = new Uint8Array(buffer);
+        return data;
       }
 
       // Called before record/replaying.
-      function rivemuBeforeStart(log, cartridge, incard, args) {
+      async function rivemuBeforeStart(log, cartridge, incard, args) {
         // Update statistics
         scoreElem.textContent = "N/A";
+        timeElem.textContent = "N/A";
         finishedElem.textContent = "N/A";
         progressElem.textContent = "N/A";
         frameElem.textContent = "N/A";
@@ -177,12 +210,21 @@
         cpuCyclesElem.textContent= "N/A";
         resolutionElem.textContent = "N/A";
         cartsizeElem.textContent = Math.ceil(cartridge.length / 1024) + " KB";
-        if (!log) {
-          logsizeElem.textContent = "N/A";
-          outhashElem.textContent = "N/A";
-          statusElem.textContent = "Recording...";
-        } else {
+        carthashElem.textContent = await sha256sum(cartridge);
+        inhashElem.textContent = await sha256sum(incard);
+        insizeElem.textContent = incard.length + " bytes";
+        argshashElem.textContent = await sha256sum(textEncode.encode(args));
+        argssizeElem.textContent = args.length + " bytes";
+        if (log) {
           statusElem.textContent = "Replaying...";
+          logsizeElem.textContent = log.length + " bytes";
+          loghashElem.textContent = await sha256sum(log);
+        } else {
+          statusElem.textContent = "Recording...";
+          logsizeElem.textContent = "N/A";
+          loghashElem.textContent = "N/A";
+          outhashElem.textContent = "N/A";
+          outsizeElem.textContent = "N/A";
         }
 
         // Disable some buttons while recording/replaying
@@ -251,20 +293,19 @@
       }
 
       // Start recording a log.
-      async function rivemuRecord(cartridge, incard, args) {
+      function rivemuRecord(cartridge, incard, args) {
         // Stop previous run
         rivemuStop();
         // Start only in the next frame, because we need to wait last run to finish
-        window.requestAnimationFrame(function() {
+        window.requestAnimationFrame(async function() {
           // Set default arguments
           cartridge = cartridge || lastCartridge;
           incard = incard || lastIncard;
-          console.log(incard);
-          args = args || lastArgs;
+          args = args || argsElem.value;
           lastCartridge = cartridge;
           lastIncard = incard;
           lastArgs = args;
-          rivemuBeforeStart(null, cartridge, incard, args);
+          await rivemuBeforeStart(null, cartridge, incard, args);
           // Move cartridge into WASM memory
           const cartridgeBuf = Module._malloc(cartridge.length);
           const incardBuf = Module._malloc(incard.length);
@@ -285,17 +326,17 @@
         // Stop previous run
         rivemuStop();
         // Start only in the next frame, because we need to wait last run to finish
-        window.requestAnimationFrame(function() {
+        window.requestAnimationFrame(async function() {
           // Set default arguments
           log = log || lastLog;
           cartridge = cartridge || lastCartridge;
           incard = incard || lastIncard;
-          args = args || lastArgs;
+          args = args || argsElem.value;
           lastLog = log;
           lastCartridge = cartridge;
           lastIncard = incard;
           lastArgs = args;
-          rivemuBeforeStart(log, cartridge, incard, args);
+          await rivemuBeforeStart(log, cartridge, incard, args);
           // Move cartridge into WASM memory
           const cartridgeBuf = Module._malloc(cartridge.length);
           const incardBuf = Module._malloc(incard.length);
@@ -327,6 +368,7 @@
       function rivemu_on_begin(width, height, target_fps, total_frames) {
         lastFrame = 0;
         lastTotalFrames = total_frames;
+        lastTargetFps = target_fps;
         const size = rivemuResizeCanvas(width, height, true);
         resolutionElem.textContent =
           width+"x"+height+"@"+target_fps + " -> " + size.width+"x"+size.height+"@60";
@@ -337,31 +379,38 @@
       }
 
       // Called by RIVEMU after the last frame.
-      function rivemu_on_finish(log, outcard, outhash) {
+      async function rivemu_on_finish(log, outcard, outhash) {
         // We need to make a deep copy of a Uint8Array here, otherwise
         lastLog = new Uint8Array(log);
         lastOutcard = new Uint8Array(outcard);
-        outhashElem.textContent = outhash;
-        logsizeElem.textContent = log.length + " bytes";
-        statusElem.textContent = "Stopped";
-        document.getElementById('stop').disabled = true;
-        document.getElementById('replay').disabled = false;
-        document.getElementById('download_outcard').disabled = false;
-        document.getElementById('download_log').disabled = false;
         // Show outcard
         let outcard_str = textDecoder.decode(outcard);
         if (outcard_str.substring(0, 4) == 'JSON') {
           let scores = JSON.parse(outcard_str.substring(4));
           console.log(scores);
         }
+        // Update buttons
+        document.getElementById('stop').disabled = true;
+        document.getElementById('replay').disabled = false;
+        document.getElementById('download_outcard').disabled = false;
+        document.getElementById('download_log').disabled = false;
+        // Update labels
+        statusElem.textContent = "Stopped";
+        outhashElem.textContent = outhash;
+        outsizeElem.textContent = outcard.length + " bytes";
+        logsizeElem.textContent = log.length + " bytes";
+        loghashElem.textContent = await sha256sum(log);
       }
 
       // Called by RIVEMU on every frame.
       function rivemu_on_frame(outcard, frame, fps, mips, cpu_usage, cycles) {
+        const mins = Math.floor(frame / (60 * lastTargetFps));
+        const secs = (frame / lastTargetFps) - (60 * mins);
+        timeElem.textContent = mins + " mins " + secs.toFixed(3) + " secs";
         fpsElem.textContent = fps.toFixed(2) + " fps";
         cpuSpeedElem.textContent = mips.toFixed(2) + " MIPS";
         cpuUsageElem.textContent = cpu_usage.toFixed(2) + " %";
-        cpuCyclesElem.textContent = (cycles / 1000000).toFixed(3) + " M (" + ((100*cycles)/(600*128000000)).toFixed(2) + "%)";
+        cpuCyclesElem.textContent = (cycles / 1000000).toFixed(3) + " M (" + ((100*cycles)/(600*128000000)).toFixed(2) + "% quota)";
         frameElem.textContent = frame;
         if (lastTotalFrames > 0) {
           progressElem.textContent = (frame*100/lastTotalFrames).toFixed(2) + "%";
