@@ -73,7 +73,7 @@ global function riv_init(): void <cattribute'constructor',cexport>
     local replaylog_fd: int32 = replaylog_fd_str.data[0] - '0'_b
     local replaylog_size: isize = lseek(replaylog_fd, 0, SEEK_END)
     assert(replaylog_size > #@riv_key_toggle_event, 'invalid replay log fd size')
-    local replaylog_ptr: pointer = mmap(nilptr, replaylog_size, PROT_READ, MAP_SHARED, replaylog_fd, 0)
+    local replaylog_ptr: pointer = mmap(nilptr, (@usize)(replaylog_size), PROT_READ, MAP_SHARED, replaylog_fd, 0)
     assert(replaylog_ptr ~= MAP_FAILED, 'replay log fd mmap failed')
     riv.verify_key_events = (@*[0]riv_key_toggle_event)(replaylog_ptr)
   end
@@ -145,7 +145,7 @@ global function riv_present(): boolean <cexport>
   -- TODO: clock can skew with target_fps changes, this could be detected
   local target_fps: uint64 = riv.framebuffer_desc.target_fps > 0 and riv.framebuffer_desc.target_fps or RIV_DEFAULT_TARGET_FPS
   riv.time = frame / target_fps
-  riv.time_ms = (frame * 1000) // target_fps
+  riv.time_ms = (@int64)((frame * 1000) // target_fps)
   riv.mmio_driver.frame = frame
   -- audio commands was flushed
   riv.mmio_driver.audio_command_len = 0

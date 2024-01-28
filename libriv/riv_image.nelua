@@ -58,7 +58,7 @@ local function convert_rgba_to_plte(pixels_rgba: *[0]uint32, pixels_plte: *[0]ui
           local d: int64 = rgb_distance2(rgba, plte[j])
           if d < mind then
             mind = d
-            col = j
+            col = (@uint8)(j)
           end
         end
       end

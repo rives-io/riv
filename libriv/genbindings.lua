@@ -23,6 +23,7 @@ nldecl.generate_bindings_file{
     riv_mmio_size = 'uint64',
     riv_mmio_start = 'uint64',
     riv_vaddr_base = 'uint64',
+    riv_constants = 'uint32',
   },
   gsubs = {
     {'global function [^\n]+\n', ''},

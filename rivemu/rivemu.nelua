@@ -597,7 +597,7 @@ local function run()
     width = 768,
     height = 768,
     html5_canvas_name = "canvas",
-    html5_preserve_drawing_buffer = true,
+    html5_canvas_resize = true,
     window_title = "RIVEMU",
     logger = {func = slog_func}
   })

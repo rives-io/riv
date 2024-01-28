@@ -5,7 +5,7 @@ require 'memory'
 require '.riv_types'
 
 global function riv_sync_incard(): void
-  riv.incard_len = riv.mmio_device.incard_len & (RIV_MMIOSIZE_INOUTBUFFER-1)
+  riv.incard_len = riv.mmio_device.incard_len & (@uint32)(RIV_MMIOSIZE_INOUTBUFFER-1)
 
   -- retrieve input card from fd
   local iocard_fd_str: string = getenv('RIV_IOCARD_FD')
@@ -14,10 +14,10 @@ global function riv_sync_incard(): void
     local iocard_size: isize = lseek(iocard_fd, 0, SEEK_END)
     assert(iocard_size >= 0 and iocard_size < RIV_MMIOSIZE_INOUTBUFFER, 'invalid iocard fd size')
     if iocard_size > 0 then
-      local iocard_ptr: pointer = mmap(nilptr, iocard_size, PROT_READ, MAP_SHARED, iocard_fd, 0)
+      local iocard_ptr: pointer = mmap(nilptr, (@usize)(iocard_size), PROT_READ, MAP_SHARED, iocard_fd, 0)
       assert(iocard_ptr ~= MAP_FAILED, 'iocard fd mmap failed')
-      memory.copy(riv.inoutbuffer, iocard_ptr, iocard_size)
-      munmap(iocard_ptr, iocard_size)
+      memory.copy(riv.inoutbuffer, iocard_ptr, (@usize)(iocard_size))
+      munmap(iocard_ptr, (@usize)(iocard_size))
     end
     riv.incard_len = (@uint32)(iocard_size)
     riv.verify_iocard_fd = iocard_fd

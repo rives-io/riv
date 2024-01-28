@@ -219,7 +219,7 @@ global riv_sound_format: type <cimport,nodecl,using> = @enum(uint8){
   RIV_SOUNDFORMAT_MP3 = 8,
   RIV_SOUNDFORMAT_OGG = 9
 }
-global riv_constants: type <cimport,nodecl,using> = @enum(int32){
+global riv_constants: type <cimport,nodecl,using> = @enum(uint32){
   RIV_DEFAULT_WIDTH = 256,
   RIV_DEFAULT_HEIGHT = 256,
   RIV_DEFAULT_TARGET_FPS = 60,

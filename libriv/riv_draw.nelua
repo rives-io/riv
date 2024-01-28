@@ -5,7 +5,7 @@ require 'memory'
 require 'math'
 require '.riv_types'
 
-local function memset(s: pointer, c: cint, n: csize): pointer <cimport,cinclude'<string.h>'> end
+local function memset(s: pointer, c: int32, n: usize): pointer <cimport,cinclude'<string.h>'> end
 
 global function riv_init_draw(): void
   -- set initial clip big enough for all screen sizes
@@ -13,7 +13,7 @@ global function riv_init_draw(): void
   riv.draw.clip.height = 16384
   -- set initial swap palette
   for i: usize = 0,<256 do
-    riv.draw.pal[i] = i
+    riv.draw.pal[i] = (@uint8)(i)
   end
   -- set default fonts
   riv.images[RIV_IMAGE_FONT_3X5].width = #[fonts.f3x5.cols * fonts.f3x5.cell_width]#
@@ -65,7 +65,7 @@ global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: u
       local ix0: int64, ix1: int64 = math.max(x0, cx0), math.min(x1, cx1)
       local dx: int64 = ix1 - ix0 + 1
       if dx > 0 then
-        memset(&fb[y0*fw + ix0], co, dx)
+        memset(&fb[y0*fw + ix0], co, (@usize)(dx))
       end
     end
   elseif x0 == x1 then -- vertical line
@@ -128,10 +128,10 @@ global function riv_draw_rect_fill(x0: int64, y0: int64, w: int64, h: int64, col
   if dx > 0 and dy > 0 then
     if dx ~= fw then
       for y: int64=iy0,<iy1 do
-        memset(&fb[y*fw + ix0], co, dx)
+        memset(&fb[y*fw + ix0], co, (@usize)(dx))
       end
     else
-      memset(&fb[iy0*fw + ix0], co, (iy1-iy0)*dx)
+      memset(&fb[iy0*fw + ix0], co, (@usize)((iy1-iy0)*dx))
     end
   end
 end
@@ -151,10 +151,10 @@ global function riv_draw_rect_line(x0: int64, y0: int64, w: int64, h: int64, col
     local x1: int64 = x0 + w - 1
     local y1: int64 = y0 + h - 1
     if y0 >= cy0 and y0 <= cy1 then -- top
-      memset(&fb[y0*fw + ix0], co, dx)
+      memset(&fb[y0*fw + ix0], co, (@usize)(dx))
     end
     if y1 >= cy0 and y1 <= cy1 then -- bottom
-      memset(&fb[y1*fw + ix0], co, dx)
+      memset(&fb[y1*fw + ix0], co, (@usize)(dx))
     end
     local vy0: int64, vy1: int64 = math.max(y0+1,iy0), math.min(y1, cy1+1)
     if x0 >= cx0 and x0 <= cx1 then -- left
@@ -191,8 +191,8 @@ global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32
       local ix1: int64 = math.min(ox + erx, cx1)
       local dx: int64 = ix1 - ix0 + 1
       if dx > 0 then
-        if iy0v then memset(&fb[iy0*fw + ix0], co, dx) end
-        if iy1v then memset(&fb[iy1*fw + ix0], co, dx) end
+        if iy0v then memset(&fb[iy0*fw + ix0], co, (@usize)(dx)) end
+        if iy1v then memset(&fb[iy1*fw + ix0], co, (@usize)(dx)) end
       end
     end
   end
@@ -255,8 +255,8 @@ global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, 
       local ix1: int64 = math.min(ox + irx, cx1)
       local dx: int64 = ix1 - ix0 + 1
       if dx > 0 then
-        if iy0v then memset(&fb[iy0*fw + ix0], co, dx) end
-        if iy1v then memset(&fb[iy1*fw + ix0], co, dx) end
+        if iy0v then memset(&fb[iy0*fw + ix0], co, (@usize)(dx)) end
+        if iy1v then memset(&fb[iy1*fw + ix0], co, (@usize)(dx)) end
       end
     end
   end
@@ -352,7 +352,7 @@ global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int6
       local ix1: int64 = math.min(math.ifloor(ix1f + 0.125_f32), cx1)
       local dx: int64 = ix1 - ix0 + 1
       if dx > 0 then
-        memset(&fb[iy*fw + ix0], co, dx)
+        memset(&fb[iy*fw + ix0], co, (@usize)(dx))
       end
     end
   end
@@ -580,12 +580,12 @@ global function riv_draw_sprite(n: uint32, sps_id: uint64, x0: int64, y0: int64,
   local img: *riv_image = &riv.images[img_id]
   local imgw: int64 = img.width
   local imgh: int64 = img.height
-  local imgcols: uint32 = imgw // w
+  local imgcols: uint32 = (@uint32)(imgw) // w
   if unlikely(imgcols == 0) then return end
   local sx0: int64 = (n % imgcols)*w
   local sy0: int64 = (n // imgcols)*h
-  w = w * nw
-  h = h * nh
+  w = w * (@uint32)(nw)
+  h = h * (@uint32)(nh)
   ## draw_image_hot_loop()
 end
 
@@ -604,7 +604,7 @@ global function riv_draw_text(text: cstring <const>, sps_id: uint64, x0: int64, 
     oldpal_enabled = riv.draw.pal_enabled
     riv.draw.pal_enabled = true
     oldcol1 = riv.draw.pal[1]
-    riv.draw.pal[1] = col
+    riv.draw.pal[1] = (@uint8)(col)
   end
   repeat
     local glyph: uint32 = data[i]

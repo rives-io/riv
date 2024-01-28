@@ -31,7 +31,7 @@ global function riv_make_soundbuffer(desc: *riv_soundbuffer_desc): uint64 <cexpo
   -- copy buffer
   memory.copy(&riv.audiobuffer[riv.audiobuffer_off], desc.data.data, desc.data.size)
   desc.data.data = (@*uint8)((@usize)(riv.audiobuffer_off))
-  riv.audiobuffer_off = riv.audiobuffer_off + desc.data.size
+  riv.audiobuffer_off = riv.audiobuffer_off + (@uint32)(desc.data.size)
   -- choose sound buffer id
   desc.id = riv.soundbuffer_gen + 1
   riv.soundbuffer_gen = desc.id
