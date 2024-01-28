@@ -32,6 +32,7 @@
         <button id="fullscreen" onclick="rivemuFullscreen()">Fullscreen</button>
       </div>
       <br/>
+      <div><b>Status: </b><span id="status">Stopped</span></div>
       <div><b>Frame: </b><span id="frame">N/A</span></div>
       <div><b>FPS: </b><span id="fps">N/A</span></div>
       <div><b>CPU Speed: </b><span id="cpuSpeed">N/A</span></div>
@@ -40,17 +41,34 @@
       <div><b>Score: </b><span id="score">N/A</span></div>
       <div><b>Finished: </b><span id="finished">N/A</span></div>
       <div><b>Progress: </b><span id="progress">N/A</span></div>
-      <div><b>Cartridge Size: </b><span id="cartsize">N/A</span></div>
-      <div><b>Resolution: </b><span id="resolution">N/A</span></div>
       <div><b>Log Size: </b><span id="logsize">N/A</span></div>
-      <div><b>Outhash: </b><span id="outhash">N/A</span></div>
+      <div><b>Outcard SHA256: </b><span id="outhash">N/A</span></div>
+      <div><b>Resolution: </b><span id="resolution">N/A</span></div>
+      <h3>Cartridge</h3>
+      <div><b>Cartridge Size: </b><span id="cartsize">N/A</span></div>
       <br/>
       <div>
-        <button onclick="rivemuInsertCartridge('cartridges/antcopter.sqfs')">antcopter</button>
-        <button onclick="rivemuInsertCartridge('cartridges/game2048.sqfs')">game2048</button>
-        <button onclick="rivemuInsertCartridge('cartridges/snake.sqfs')">snake</button>
-        <button onclick="rivemuInsertCartridge('cartridges/doom.sqfs')">doom</button>
+        <button id="upload_cartridge" onclick="rivemuUploadCartridge()">Upload Cartridge</button>
+        <button id="download_cartridge" disabled="true" onclick="rivemuDownloadCartridge()">Download Cartridge</button>
       </div>
+      <div>
+        <button id="upload_log" onclick="rivemuUploadLog()">Upload Log</button>
+        <button id="download_log" disabled="true" onclick="rivemuDownloadLog()">Download Log</button>
+      </div>
+      <div>
+        <button id="upload_incard" onclick="rivemuUploadIncard()">Upload Incard</button>
+        <button id="download_incard" onclick="rivemuDownloadIncard()">Download Incard</button>
+      <div>
+        <button id="download_outcard" disabled="true" onclick="rivemuDownloadOutcard()">Download Outcard</button>
+      </div>
+      <h3>Games</h3>
+      <div>
+        <button onclick="rivemuInsertCartridge('cartridges/antcopter.sqfs')">Antcopter</button>
+        <button onclick="rivemuInsertCartridge('cartridges/game2048.sqfs')">2048</button>
+        <button onclick="rivemuInsertCartridge('cartridges/snake.sqfs')">Snake</button>
+        <button onclick="rivemuInsertCartridge('cartridges/doom.sqfs')">DOOM</button>
+      </div>
+      <h3>Demos</h3>
       <div>
         <button onclick="rivemuInsertCartridge('cartridges/bounce.sqfs')">bounce</button>
         <button onclick="rivemuInsertCartridge('cartridges/circles.sqfs')">circles</button>
@@ -66,15 +84,17 @@
       </div>
     </div>
     <script>
-      var lastRivlog;
-      var lastIncard = new Uint8Array([]);
       var lastArgs = '';
+      var lastIncard = new Uint8Array([]);
+      var lastOutcard;
+      var lastLog;
       var lastCartridge;
       var lastFrame;
-      var totalFrames;
+      var lastTotalFrames;
       var desiredWidth = 768;
       var desiredHeight = 768;
 
+      let statusElem = document.getElementById("status");
       let scoreElem = document.getElementById("score");
       let finishedElem = document.getElementById("finished");
       let progressElem = document.getElementById("progress");
@@ -83,9 +103,70 @@
       let cpuSpeedElem = document.getElementById("cpuSpeed");
       let cpuUsageElem = document.getElementById("cpuUsage");
       let cpuCyclesElem = document.getElementById("cpuCycles");
+      let resolutionElem = document.getElementById("resolution");
+      let canvasElem = document.getElementById("canvas");
+      let logsizeElem = document.getElementById("logsize");
+      let outhashElem = document.getElementById("outhash");
+      let cartsizeElem = document.getElementById("cartsize");
       let textDecoder = new TextDecoder();
 
-      function rivemuBeforeStart() {
+      // Open an user file dialog for saving a file.
+      function downloadFileDialog(data, filename) {
+        if (typeof data === 'undefined') {
+          return;
+        }
+        let blob = new Blob([data], { type: "application/octet-stream" });
+        let url = URL.createObjectURL(blob);
+        let el = document.createElement('a');
+        el.style.display = 'none';
+        el.download = filename;
+        el.href = url;
+        document.body.appendChild(el);
+        el.click();
+        URL.revokeObjectURL(url);
+        el.remove();
+      }
+
+      // Open an user file dialog for downloading a file.
+      async function uploadFileDialog(ext) {
+        let src = await new Promise(function(resolve, reject) {
+          let el = document.createElement("input");
+          el.type = "file";
+          el.accept = ext;
+          el.addEventListener('change', function() {
+            if (el.files.length) {
+              resolve(el.files[0]);
+            } else {
+              reject("No file");
+            }
+            el.remove();
+          });
+          el.click();
+        });
+        let url = URL.createObjectURL(src);
+        let response = await fetch(url);
+        URL.revokeObjectURL(url);
+        if (!response.ok) {
+          return null;
+        }
+        const buffer = await response.arrayBuffer();
+        return new Uint8Array(buffer);
+      }
+
+      // Fetch a file from a URL.
+      async function downloadFile(url) {
+        // Retrieve cartridge
+        const response = await fetch(url);
+        if (!response.ok) {
+          return;
+        }
+        const buffer = await response.arrayBuffer();
+        return new Uint8Array(buffer);
+      }
+
+      // Called before record/replaying.
+      function rivemuBeforeStart(log, cartridge, incard, args) {
+        // Update statistics
         scoreElem.textContent = "N/A";
         finishedElem.textContent = "N/A";
         progressElem.textContent = "N/A";
@@ -93,121 +174,161 @@
         fpsElem.textContent = "N/A";
         cpuSpeedElem.textContent = "N/A";
         cpuUsageElem.textContent = "N/A";
-        document.getElementById("resolution").textContent = "N/A";
+        cpuCyclesElem.textContent= "N/A";
+        resolutionElem.textContent = "N/A";
+        cartsizeElem.textContent = Math.ceil(cartridge.length / 1024) + " KB";
+        if (!log) {
+          logsizeElem.textContent = "N/A";
+          outhashElem.textContent = "N/A";
+          statusElem.textContent = "Recording...";
+        } else {
+          statusElem.textContent = "Replaying...";
+        }
+
         // Disable some buttons while recording/replaying
         document.getElementById('stop').disabled = false;
         document.getElementById('record').disabled = false;
         document.getElementById('replay').disabled = false;
-        // Discard last log
-        delete lastRivlog;
+        document.getElementById('download_cartridge').disabled = false;
+
+        // Restore canvas to original size while loading
+        rivemuResizeCanvas(768, 768);
       }
 
+      // Called when resolution changes.
       function rivemuResizeCanvas(wantedWidth, wantedHeight, notifyRiv) {
         desiredHeight = wantedHeight;
         desiredWidth = wantedWidth;
-        const canvas = document.getElementById("canvas");
-        canvas.focus();
+        canvasElem.focus();
         // Scale canvas while maintaining ratio and pixel perfect look
         const canvasWidth = Math.floor(768 / wantedWidth) * wantedWidth;
         const canvasHeight = Math.floor((wantedHeight / wantedWidth) * canvasWidth);
-        if (canvas.width != canvasWidth || canvas.height != canvasHeight) {
-          canvas.width = canvasWidth;
-          canvas.height = canvasHeight;
+        if (canvasElem.width != canvasWidth || canvasElem.height != canvasHeight) {
+          canvasElem.width = canvasWidth;
+          canvasElem.height = canvasHeight;
           // Force notify resize in RIV
           if (notifyRiv) {
             window.dispatchEvent(new Event('resize'));
           }
         }
-        return {"width":canvas.width, "height":canvas.height}
+        return {"width":canvasElem.width, "height":canvasElem.height}
       }
 
-      async function rivemuInsertCartridge(cartridgeUrl) {
-        // Stop previous run
-        rivemuStop();
-        // Retrieve cartridge
-        const response = await fetch(cartridgeUrl);
-        if (response.ok) {
-          const buffer = await response.arrayBuffer();
-          lastCartridge = new Uint8Array(buffer);
-          lastArgs = '';
-          lastIncard = new Uint8Array([]);
-          document.getElementById("cartsize").textContent = Math.ceil(lastCartridge.length / 1024) + " KB";
-          // Start recording
-          rivemuRecord();
-        }
+      async function rivemuInsertCartridge(url) {
+        rivemuRecord(await downloadFile(url));
       }
 
-      async function rivemuRecord() {
-        // Stop previous run
-        rivemuStop();
-        // Start only in the next frame, because we need to wait last run to finish
-        window.requestAnimationFrame(function() {
-          rivemuBeforeStart();
-          document.getElementById("logsize").textContent = "N/A";
-          document.getElementById("outhash").textContent = "N/A";
-          // Restore canvas to original size while loading
-          rivemuResizeCanvas(768, 768);
-          // Move cartridge into WASM memory
-          const cartridgeBuf = Module._malloc(lastCartridge.length);
-          const incardBuf = Module._malloc(lastIncard.length);
-          Module.HEAPU8.set(lastCartridge, cartridgeBuf);
-          Module.HEAPU8.set(lastIncard, incardBuf);
-          Module.ccall('rivemu_start_record', null, ['number', 'number', 'number', 'number', 'string'], [
-            cartridgeBuf, lastCartridge.length,
-            incardBuf, lastIncard.length,
-            lastArgs
-          ]);
-          Module._free(cartridgeBuf);
-          Module._free(incardBuf);
-        });
+      async function rivemuUploadCartridge() {
+        rivemuRecord(await uploadFileDialog(".sqfs"));
       }
 
-      function rivemuReplay() {
-        // Stop previous run
-        rivemuStop();
-        // Start only in the next frame, because we need to wait last run to finish
-        window.requestAnimationFrame(function() {
-          rivemuBeforeStart();
-          // Restore canvas to original size while loading
-          rivemuResizeCanvas(768, 768);
-          // Move cartridge into WASM memory
-          const cartridgeBuf = Module._malloc(lastCartridge.length);
-          const incardBuf = Module._malloc(lastIncard.length);
-          const rivlogBuf = Module._malloc(lastRivlog.length);
-          Module.HEAPU8.set(lastCartridge, cartridgeBuf);
-          Module.HEAPU8.set(lastIncard, incardBuf);
-          Module.HEAPU8.set(lastRivlog, rivlogBuf);
-          Module.ccall('rivemu_start_replay', null, ['number', 'number', 'number', 'number', 'string', 'number', 'number'], [
-            cartridgeBuf, lastCartridge.length,
-            incardBuf, lastIncard.length,
-            lastArgs,
-            rivlogBuf, lastRivlog.length
-          ]);
-          Module._free(cartridgeBuf);
-          Module._free(incardBuf);
-          Module._free(rivlogBuf);
-        });
+      function rivemuDownloadCartridge() {
+        downloadFileDialog(lastCartridge, "cartridge.sqfs");
+      }
+
+      async function rivemuUploadLog() {
+        rivemuReplay(await uploadFileDialog(".rivlog"));
+      }
+
+      function rivemuDownloadLog() {
+        downloadFileDialog(lastLog, "gameplay.rivlog");
+      }
+
+      async function rivemuUploadIncard() {
+        rivemuRecord(null, await uploadFileDialog(".rivincard"));
+      }
+
+      function rivemuDownloadIncard() {
+        downloadFileDialog(lastIncard, "gameplay.rivincard");
+      }
+
+      function rivemuDownloadOutcard() {
+        downloadFileDialog(lastOutcard, "gameplay.rivoutcard");
       }
 
       function rivemuStop() {
         Module.ccall('rivemu_stop');
       }
 
+      // Start recording a log.
+      async function rivemuRecord(cartridge, incard, args) {
+        // Stop previous run
+        rivemuStop();
+        // Start only in the next frame, because we need to wait last run to finish
+        window.requestAnimationFrame(function() {
+          // Set default arguments
+          cartridge = cartridge || lastCartridge;
+          incard = incard || lastIncard;
+          console.log(incard);
+          args = args || lastArgs;
+          lastCartridge = cartridge;
+          lastIncard = incard;
+          lastArgs = args;
+          rivemuBeforeStart(null, cartridge, incard, args);
+          // Move cartridge into WASM memory
+          const cartridgeBuf = Module._malloc(cartridge.length);
+          const incardBuf = Module._malloc(incard.length);
+          Module.HEAPU8.set(cartridge, cartridgeBuf);
+          Module.HEAPU8.set(incard, incardBuf);
+          Module.ccall('rivemu_start_record', null, ['number', 'number', 'number', 'number', 'string'], [
+            cartridgeBuf, cartridge.length,
+            incardBuf, incard.length,
+            args
+          ]);
+          Module._free(cartridgeBuf);
+          Module._free(incardBuf);
+        });
+      }
+
+      // Start replaying a log.
+      function rivemuReplay(log, cartridge, incard, args) {
+        // Stop previous run
+        rivemuStop();
+        // Start only in the next frame, because we need to wait last run to finish
+        window.requestAnimationFrame(function() {
+          // Set default arguments
+          log = log || lastLog;
+          cartridge = cartridge || lastCartridge;
+          incard = incard || lastIncard;
+          args = args || lastArgs;
+          lastLog = log;
+          lastCartridge = cartridge;
+          lastIncard = incard;
+          lastArgs = args;
+          rivemuBeforeStart(log, cartridge, incard, args);
+          // Move cartridge into WASM memory
+          const cartridgeBuf = Module._malloc(cartridge.length);
+          const incardBuf = Module._malloc(incard.length);
+          const logBuf = Module._malloc(log.length);
+          Module.HEAPU8.set(cartridge, cartridgeBuf);
+          Module.HEAPU8.set(incard, incardBuf);
+          Module.HEAPU8.set(log, logBuf);
+          Module.ccall('rivemu_start_replay', null, ['number', 'number', 'number', 'number', 'string', 'number', 'number'], [
+            cartridgeBuf, cartridge.length,
+            incardBuf, incard.length,
+            args,
+            logBuf, log.length
+          ]);
+          Module._free(cartridgeBuf);
+          Module._free(incardBuf);
+          Module._free(logBuf);
+        });
+      }
+
+      // Enter fullscreen mode.
       function rivemuFullscreen() {
         document.addEventListener('fullscreenchange', function() {
           rivemuResizeCanvas(desiredWidth, desiredHeight, true);
         }, false);
-        const canvas = document.getElementById("canvas");
-        if (canvas) {
-          canvas.requestFullscreen();
-        }
+        canvasElem.requestFullscreen();
       }
 
+      // Called by RIVEMU before the first frame.
       function rivemu_on_begin(width, height, target_fps, total_frames) {
         lastFrame = 0;
-        totalFrames = total_frames;
+        lastTotalFrames = total_frames;
         const size = rivemuResizeCanvas(width, height, true);
-        document.getElementById("resolution").textContent =
+        resolutionElem.textContent =
           width+"x"+height+"@"+target_fps + " -> " + size.width+"x"+size.height+"@60";
         frameElem.textContent = "0";
         if (total_frames > 0) {
@@ -215,13 +336,18 @@
         }
       }
 
-      function rivemu_on_finish(rivlog, outcard, outcard_hash) {
+      // Called by RIVEMU after the last frame.
+      function rivemu_on_finish(log, outcard, outhash) {
         // We need to make a deep copy of a Uint8Array here, otherwise
-        lastRivlog = new Uint8Array(rivlog);
-        document.getElementById("outhash").textContent = outcard_hash;
-        document.getElementById("logsize").textContent = rivlog.length + " bytes";
+        lastLog = new Uint8Array(log);
+        lastOutcard = new Uint8Array(outcard);
+        outhashElem.textContent = outhash;
+        logsizeElem.textContent = log.length + " bytes";
+        statusElem.textContent = "Stopped";
         document.getElementById('stop').disabled = true;
         document.getElementById('replay').disabled = false;
+        document.getElementById('download_outcard').disabled = false;
+        document.getElementById('download_log').disabled = false;
         // Show outcard
         let outcard_str = textDecoder.decode(outcard);
         if (outcard_str.substring(0, 4) == 'JSON') {
@@ -230,14 +356,15 @@
         }
       }
 
+      // Called by RIVEMU on every frame.
       function rivemu_on_frame(outcard, frame, fps, mips, cpu_usage, cycles) {
         fpsElem.textContent = fps.toFixed(2) + " fps";
         cpuSpeedElem.textContent = mips.toFixed(2) + " MIPS";
         cpuUsageElem.textContent = cpu_usage.toFixed(2) + " %";
         cpuCyclesElem.textContent = (cycles / 1000000).toFixed(3) + " M (" + ((100*cycles)/(600*128000000)).toFixed(2) + "%)";
         frameElem.textContent = frame;
-        if (totalFrames > 0) {
-          progressElem.textContent = (frame*100/totalFrames).toFixed(2) + "%";
+        if (lastTotalFrames > 0) {
+          progressElem.textContent = (frame*100/lastTotalFrames).toFixed(2) + "%";
         }
         let outcard_str = textDecoder.decode(outcard);
         if (outcard_str.substring(0, 4) == 'JSON') {

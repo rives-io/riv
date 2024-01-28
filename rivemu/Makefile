@@ -31,7 +31,7 @@ rivemu: rivemu.nelua $(DEPS)
 	touch $@
 
 rivemu.js: rivemu.nelua $(DEPS)
-	nelua $(NELUA_FLAGS) \
+	nelua --release $(NELUA_FLAGS) \
 		--cc=$(WASM_CC) \
 		--cflags="$(CFLAGS) $(INCS)" \
 		--output $@ $<

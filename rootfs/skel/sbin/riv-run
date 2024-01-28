@@ -51,6 +51,7 @@ run() {
       busybox umount /cartridge
       return 1
     fi
+    BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_INCARD_FD 4"
   else
     if ! busybox truncate -s 0 "$RIV_IOCARD"; then
       >&2 echo "[RIV-OS] Unable to create empty iocard."
@@ -59,7 +60,7 @@ run() {
       return 1
     fi
   fi
-  BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_IOCARD_FD 4"
+  BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_OUTCARD_FD 4"
 
   # run
   echo "[RIV-OS] Running cartridge executable:" "$EXE" "$@"

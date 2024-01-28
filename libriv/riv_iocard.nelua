@@ -4,31 +4,34 @@ require 'linux'
 require 'memory'
 require '.riv_types'
 
-global function riv_sync_incard(): void
+global function riv_sync_incard(): void <noinline>
   riv.incard_len = riv.mmio_device.incard_len & (@uint32)(RIV_MMIOSIZE_INOUTBUFFER-1)
 
   -- retrieve input card from fd
-  local iocard_fd_str: string = getenv('RIV_IOCARD_FD')
-  if #iocard_fd_str > 0 then
-    local iocard_fd: int32 = iocard_fd_str.data[0] - '0'_b
-    local iocard_size: isize = lseek(iocard_fd, 0, SEEK_END)
-    assert(iocard_size >= 0 and iocard_size < RIV_MMIOSIZE_INOUTBUFFER, 'invalid iocard fd size')
-    if iocard_size > 0 then
-      local iocard_ptr: pointer = mmap(nilptr, (@usize)(iocard_size), PROT_READ, MAP_SHARED, iocard_fd, 0)
-      assert(iocard_ptr ~= MAP_FAILED, 'iocard fd mmap failed')
-      memory.copy(riv.inoutbuffer, iocard_ptr, (@usize)(iocard_size))
-      munmap(iocard_ptr, (@usize)(iocard_size))
+  local fd_str: string = getenv('RIV_INCARD_FD')
+  if #fd_str > 0 then
+    local fd: int32 = fd_str.data[0] - '0'_b
+    local size: isize = lseek(fd, 0, SEEK_END)
+    assert(size >= 0 and size < RIV_MMIOSIZE_INOUTBUFFER, 'invalid incard fd size')
+    if size > 0 then
+      local ptr: pointer = mmap(nilptr, (@usize)(size), PROT_READ, MAP_SHARED, fd, 0)
+      assert(ptr ~= MAP_FAILED, 'incard fd mmap failed')
+      memory.copy(riv.inoutbuffer, ptr, (@usize)(size))
+      munmap(ptr, (@usize)(size))
     end
-    riv.incard_len = (@uint32)(iocard_size)
-    riv.verify_iocard_fd = iocard_fd
+    riv.incard_len = (@uint32)(size)
   end
 end
 
-global function riv_sync_outcard(): void
+global function riv_sync_outcard(): void <noinline>
   riv.mmio_driver.outcard_len = riv.outcard_len
-  if riv.verify_iocard_fd > 0 then
-    assert(lseek(riv.verify_iocard_fd, 0, SEEK_SET) == 0, 'iocard lseek failed')
-    assert(write(riv.verify_iocard_fd, riv.inoutbuffer, riv.outcard_len) == riv.outcard_len, 'iocard write failed')
-    assert(ftruncate(riv.verify_iocard_fd, riv.outcard_len) == 0, 'iocard ftruncate failed')
+
+  -- save output card to fd
+  local fd_str: string = getenv('RIV_OUTCARD_FD')
+  if #fd_str > 0 then
+    local fd: int32 = fd_str.data[0] - '0'_b
+    assert(lseek(fd, 0, SEEK_SET) == 0, 'outcard lseek failed')
+    assert(write(fd, riv.inoutbuffer, riv.outcard_len) == riv.outcard_len, 'outcard write failed')
+    assert(ftruncate(fd, riv.outcard_len) == 0, 'outcard ftruncate failed')
   end
 end
