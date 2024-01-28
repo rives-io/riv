@@ -529,7 +529,7 @@ local function advance_frame(): void
     local len: int32 <nodce> = (@int32)(outcard_data.size)
     local frame: int32 <nodce> = (@int32)(machine.mmio_driver.frame)
     local fps: float64 <nodce> = framelimiter.fps
-    local mips: int32 <nodce> = framelimiter.mips
+    local mips: float64 <nodce> = framelimiter.mips
     local cpu_usage: float64 <nodce> = framelimiter.cpu_usage
     local cycles: float64 <nodce> = last_mcycle
     cemit![[

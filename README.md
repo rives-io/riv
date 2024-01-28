@@ -18,16 +18,11 @@ recorded game replays on-chain.
 
 ## Quick Examples
 
-The following games were ported to RIV, and you can play them in your browser:
+The following games were ported to RIV, and you can play and replay them in your browser:
 
-- [Classic DOOM](https://rivcm.surge.sh/?-cartridge=demos/doom/doom.sqfs).
-- [Antcopter](https://rivcm.surge.sh/?-cartridge=demos/antcopter/antcopter.sqfs).
-- [A snake clone](https://rivcm.surge.sh/?-cartridge=demos/snake/snake.sqfs).
-
-Also watch game replays of the same games in the following URLs, to visualize what's being verified on-chain:
-- [A replay of DOOM](https://rivcm.surge.sh/?-cartridge=demos/doom/doom.sqfs&-replay=doom.rivlog)
-- [A replay of Antcopter](https://rivcm.surge.sh/?-cartridge=demos/antcopter/antcopter.sqfs&-replay=antcopter.rivlog)
-- [A replay of Snake](https://rivcm.surge.sh/?-cartridge=demos/snake/snake.sqfs&-replay=snake.rivlog)
+- [Classic DOOM](https://rivemu.surge.sh/).
+- [Antcopter](https://rivemu.surge.sh/).
+- [Snake](https://rivemu.surge.sh/).
 
 ## Advantages
 

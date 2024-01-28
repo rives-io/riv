@@ -36,6 +36,7 @@ build
 /tools/bwrapbox/bwrapbox.c
 /tools/riv-unpacklog/riv-unpacklog.c
 /demos/*/*.c
+/files
 
 # ignore kernel stuff
 kernel/image-kernel-*
