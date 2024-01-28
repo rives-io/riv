@@ -5784,6 +5784,7 @@ _SOKOL_PRIVATE void _sapp_emsc_register_eventhandlers(void) {
 }
 
 _SOKOL_PRIVATE void _sapp_emsc_unregister_eventhandlers(void) {
+    emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, 0, true, 0);
     emscripten_set_mousedown_callback(_sapp.html5_canvas_selector, 0, true, 0);
     emscripten_set_mouseup_callback(_sapp.html5_canvas_selector, 0, true, 0);
     emscripten_set_mousemove_callback(_sapp.html5_canvas_selector, 0, true, 0);

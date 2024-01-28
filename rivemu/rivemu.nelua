@@ -288,6 +288,7 @@ local function setup(): void
   rivemu_iocard.setup()
   if not options.no_video then
     rivemu_video.setup()
+    rivemu_video.set_loading(true)
     rivemu_video.present()
   end
   if not options.no_audio then
@@ -497,6 +498,7 @@ local function advance_frame(): void
 
   -- notify when game begins
   if not was_mmio_ready and mmio_ready then
+    rivemu_video.set_loading(false)
     ## if ccinfo.is_emscripten then
       if not options.no_audio then
         rivemu_audio.start()
@@ -597,7 +599,7 @@ local function run()
     width = 768,
     height = 768,
     html5_canvas_name = "canvas",
-    html5_canvas_resize = true,
+    html5_preserve_drawing_buffer = true,
     window_title = "RIVEMU",
     logger = {func = slog_func}
   })

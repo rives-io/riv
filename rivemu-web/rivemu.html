@@ -126,12 +126,15 @@
         rivemuStop();
         // Retrieve cartridge
         const response = await fetch(cartridgeUrl);
-        lastCartridge = new Uint8Array(await response.arrayBuffer());
-        lastArgs = '';
-        lastIncard = new Uint8Array([]);
-        document.getElementById("cartsize").textContent = Math.ceil(lastCartridge.length / 1024) + " KB";
-        // Start recording
-        rivemuRecord();
+        if (response.ok) {
+          const buffer = await response.arrayBuffer();
+          lastCartridge = new Uint8Array(buffer);
+          lastArgs = '';
+          lastIncard = new Uint8Array([]);
+          document.getElementById("cartsize").textContent = Math.ceil(lastCartridge.length / 1024) + " KB";
+          // Start recording
+          rivemuRecord();
+        }
       }
 
       async function rivemuRecord() {

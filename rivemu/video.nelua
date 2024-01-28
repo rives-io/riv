@@ -16,6 +16,7 @@ local fb_pixel_count: int64
 local fb_image: sg_image
 local framebuffer: [RIV_MMIOSIZE_FRAMEBUFFER]byte
 local framebuffer_rgba: [RIV_MMIOSIZE_FRAMEBUFFER]uint32
+local loading: boolean = false
 
 -- Destroy the window framebuffer image.
 local function destroy_framebuffer_image(): void
@@ -32,6 +33,7 @@ function rivemu_video.reset(): void
   fb_pixel_count = 0
   memory.zero(&framebuffer[0], RIV_MMIOSIZE_FRAMEBUFFER)
   memory.zero(&framebuffer_rgba[0], RIV_MMIOSIZE_FRAMEBUFFER * 4)
+  loading = false
 end
 
 -- Initialize video subsystem.
@@ -40,6 +42,10 @@ function rivemu_video.setup(): void
   assert(sg_isvalid(), 'failed to initialize Sokol GFX')
   sgp_setup(sgp_desc{})
   assert(sgp_is_valid(), 'failed to initialize SGP')
+end
+
+function rivemu_video.set_loading(enabled: boolean): void
+  loading = enabled
 end
 
 -- Terminate video subsystem.
@@ -151,7 +157,7 @@ function rivemu_video.present(): void
   sgp_viewport(0, 0, app_width, app_height)
   sgp_project(0, app_width, 0, app_height)
 
-  if not machine:is_mmio_ready() then
+  if loading then
     -- draw loading animation
     draw_loading(app_width, app_height)
   else
