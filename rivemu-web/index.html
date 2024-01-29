@@ -289,6 +289,7 @@
       }
 
       async function rivemuInsertCartridge(url) {
+        await rivemuStop();
         statusElem.textContent = "Downloading cartridge...";
         rivemuRecord(await downloadFile(url));
       }
