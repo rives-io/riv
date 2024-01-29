@@ -37,7 +37,7 @@ function rivemu_framelimiter:should_process_next_frame(now: float64): boolean
 end
 
 -- Update statistics.
-function rivemu_framelimiter:update_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64): void
+function rivemu_framelimiter:update_stats(now: float64, time_elapsed: float64, mcycle_elapsed: uint64): boolean
   self.frame_counter = self.frame_counter + 1
   self.time_elapsed_sum = self.time_elapsed_sum + time_elapsed
   self.mcycle_elapsed_sum = self.mcycle_elapsed_sum + mcycle_elapsed
@@ -50,12 +50,14 @@ function rivemu_framelimiter:update_stats(now: float64, time_elapsed: float64, m
     self.time_elapsed_sum = 0
     self.mcycle_elapsed_sum = 0
     self.stats_last_time = now
+    return true
   end
+  return false
 end
 
 -- Print the frame rate statistics to stderr every second.
 function rivemu_framelimiter:print_stats(): void
-  local frame: int64 = machine:is_halted() and (@int64)(machine.mmio_driver.frame) or -1
+  local frame: int64 = machine:is_mmio_ready() and (@int64)(machine.mmio_driver.frame) or -1
   io.printf('[RIVEMU] frame=%d fps=%.2f guest_cpu_clock=%.2fMIPS host_cpu_usage=%.2f%%\n',
     frame, self.fps, self.mips, self.cpu_usage)
 end

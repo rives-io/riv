@@ -412,7 +412,7 @@ end
 local function machine_frame(): void
   while true do
     local mcycle_end: uint64 = (@uint64)(-1)
-    if loading then
+    if loading and not options.no_yield then
       -- advance just a few cycles to not freeze the application
       -- and display a loading screen
       mcycle_end = machine:read_mcycle() + 1024*1024
@@ -468,7 +468,7 @@ local function machine_frame(): void
       finish()
       return
     case CM_BREAK_REASON_REACHED_TARGET_MCYCLE then
-      -- set it continue
+      -- continue
       return
     else
       error('unexpected machine break reason')
@@ -501,7 +501,7 @@ local function advance_frame(): void
   local mcycle_elapsed: uint64 = last_mcycle - mcycle_start
 
   if not loading and time_elapsed > 1.0/24.0 then
-    io.stderr:printf('[RIVEMU] Slow frame: %.2f ms, %.2f MHz\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
+    io.stderr:printf('[RIVEMU] Slow frame: %.2f ms, %.2f MIPS\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
   end
 
   -- local root_hash: string <close> = hexhash(machine:get_root_hash())
@@ -509,8 +509,7 @@ local function advance_frame(): void
 
   if running then
     framelimiter.target_fps = machine.mmio_driver.framebuffer_desc.target_fps * options.speed
-    framelimiter:update_stats(now, time_elapsed, mcycle_elapsed)
-    if options.print_stats then
+    if framelimiter:update_stats(now, time_elapsed, mcycle_elapsed) and options.print_stats then
       framelimiter:print_stats()
     end
   end
