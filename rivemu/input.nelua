@@ -281,7 +281,7 @@ function rivemu_input.is_replay_at_end(): boolean
 end
 
 function rivemu_input.get_replay_frames(): uint64
-  return log_last_frame
+  return replaying and log_last_frame + 1 or 0
 end
 
 -- Poll for keyboard/mouse input events.
