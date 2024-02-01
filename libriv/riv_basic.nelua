@@ -72,7 +72,7 @@ global function riv_init(): void <cattribute'constructor',cexport>
     riv.verifying = true
     local replaylog_fd: int32 = replaylog_fd_str.data[0] - '0'_b
     local replaylog_size: isize = lseek(replaylog_fd, 0, SEEK_END)
-    assert(replaylog_size > #@riv_key_toggle_event, 'invalid replay log fd size')
+    assert(replaylog_size >= #@riv_key_toggle_event, 'invalid replay log fd size')
     local replaylog_ptr: pointer = mmap(nilptr, (@usize)(replaylog_size), PROT_READ, MAP_SHARED, replaylog_fd, 0)
     assert(replaylog_ptr ~= MAP_FAILED, 'replay log fd mmap failed')
     riv.verify_key_events = (@*[0]riv_key_toggle_event)(replaylog_ptr)
