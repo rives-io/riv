@@ -499,16 +499,21 @@ local function advance_frame(): void
   local time_elapsed: float64 = now - time_start
   local last_mcycle: uint64 = machine:read_mcycle()
   local mcycle_elapsed: uint64 = last_mcycle - mcycle_start
+  local target_fps: uint32 = machine.mmio_driver.framebuffer_desc.target_fps
 
-  if not loading and time_elapsed > 1.0/24.0 then
-    io.stderr:printf('[RIVEMU] Slow frame: %.2f ms, %.2f MIPS\n', time_elapsed * 1000.0, (mcycle_elapsed / (time_elapsed * 1000000.0)))
+  if not loading and target_fps > 0 and time_elapsed > 1.0/target_fps then
+    io.stderr:printf('[RIVEMU] SLOW FRAME: frame=%d elapsed_time=%.2fms elapsed_cycles=%.2fM cpu_speed=%.2fMIPS\n',
+      machine.mmio_driver.frame,
+      time_elapsed * 1000.0,
+      mcycle_elapsed / 1000000.0,
+      mcycle_elapsed / (time_elapsed * 1000000.0))
   end
 
   -- local root_hash: string <close> = hexhash(machine:get_root_hash())
   -- print(root_hash)
 
   if running then
-    framelimiter.target_fps = machine.mmio_driver.framebuffer_desc.target_fps * options.speed
+    framelimiter.target_fps = target_fps * options.speed
     if framelimiter:update_stats(now, time_elapsed, mcycle_elapsed) and options.print_stats then
       framelimiter:print_stats()
     end
@@ -522,7 +527,7 @@ local function advance_frame(): void
       end
       local width: int32 <nodce> = machine.mmio_driver.framebuffer_desc.width
       local height: int32 <nodce> = machine.mmio_driver.framebuffer_desc.height
-      local target_fps: int32 <nodce> = machine.mmio_driver.framebuffer_desc.target_fps
+      local target_fps: int32 <nodce> = (@int32)(target_fps)
       local num_frames: int32 <nodce> = rivemu_input.get_replay_frames()
       cemit![[
         EM_ASM({
