@@ -20,9 +20,9 @@ recorded game replays on-chain.
 
 The following games were ported to RIV, and you can play and replay them in your browser:
 
-- [Classic DOOM](https://edubart.github.io/rivemu-website/).
-- [Antcopter](https://edubart.github.io/rivemu-website/).
-- [Snake](https://edubart.github.io/rivemu-website/).
+- [Classic DOOM](https://edubart.github.io/riv/).
+- [Antcopter](https://edubart.github.io/riv/).
+- [Snake](https://edubart.github.io/riv/).
 
 ## Advantages
 
