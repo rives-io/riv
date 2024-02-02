@@ -1,0 +1,127 @@
+@import url('https://cdnjs.cloudflare.com/ajax/libs/Iosevka/11.1.1/iosevka/iosevka.min.css');
+* {
+  font-family: 'Iosevka Web', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+body {
+  background-color: #131415;
+  color: white;
+  font-size: 14px;
+  margin: 0;
+}
+.canvas-wrapper {
+  text-align: center;
+  position: relative;
+}
+.content-wrapper {
+  max-width: 768px;
+  margin: auto;
+  text-align: left;
+}
+#canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 768px;
+  max-height: 768px;
+  background-color: black;
+  image-rendering: pixelated;
+  outline: none;
+}
+#cartridges {
+  display: block;
+  margin: 4px auto;
+}
+.canvas-noclick {
+  user-select: none;
+  pointer-events: none;
+}
+.canvas-overlay {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%);
+  width: 100%;
+  height: 100%;
+  max-width: 768px;
+  max-height: 768px;
+  z-index: 999;
+  background-color: rgba(0, 0, 0, 0.5);
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media screen and (max-width: 767px), screen and (max-height: 767px) {
+  #canvas, .canvas-overlay {
+    max-width: 512px;
+    max-height: 512px;
+  }
+  .content-wrapper {
+    max-width: 768px;
+  }
+}
+@media screen and (max-width: 511px), screen and (max-height: 511px)  {
+  #canvas, .canvas-overlay {
+    max-width: 256px;
+    max-height: 256px;
+  }
+  .content-wrapper {
+    max-width: 512px;
+  }
+}
+.right {
+  float: right;
+}
+.center {
+  text-align: center;
+}
+.row {
+  display: flex;
+}
+.m-4 {
+}
+.column-2 {
+  flex: 50%;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th {
+  width: 80px;
+  padding-right: 8px;
+  text-align: right;
+}
+td {
+  color: #aaa;
+}
+button {
+  outline: none;
+  cursor: pointer;
+}
+#button-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+#button-box button {
+  margin: 0 2px;
+}
+#button-box svg {
+  display: block;
+}
+#change-speed {
+  font-size: 11px;
+  font-weight: bold;
+}
+.svg-button {
+  cursor: pointer;
+  margin-top: 24px;
+  font-size: 96px;
+  background: none;
+  border: none;
+  color: #ddd;
+}
+.svg-button:hover {
+  color: #fff;
+}
