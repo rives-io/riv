@@ -5,9 +5,22 @@ require 'vector'
 require 'io'
 require 'macros'
 
+## if ccinfo.is_emscripten then
+require 'emscripten'
+## end
+
 require 'riv_log'
 
 require '.machine'
+
+-- Input subsystem state.
+local poll_events: vector(sapp_event)
+local log_key_events: vector(riv_key_toggle_event)
+local log_last_frame: uint64
+local replay_log_index: usize
+local recording: boolean
+local replaying: boolean
+local key_pressed_state: [RIV_NUM_KEYCODE]boolean
 
 --------------------------------------------------------------------------------
 
@@ -68,10 +81,10 @@ local function translate_keycode(keycode: sapp_keycode): riv_key_code
   case SAPP_KEYCODE_BACKSPACE then return RIV_KEYCODE_BACKSPACE
   case SAPP_KEYCODE_INSERT then return RIV_KEYCODE_INSERT
   case SAPP_KEYCODE_DELETE then return RIV_KEYCODE_DELETE
-  case SAPP_KEYCODE_RIGHT then return RIV_KEYCODE_RIGHT
-  case SAPP_KEYCODE_LEFT then return RIV_KEYCODE_LEFT
-  case SAPP_KEYCODE_DOWN then return RIV_KEYCODE_DOWN
   case SAPP_KEYCODE_UP then return RIV_KEYCODE_UP
+  case SAPP_KEYCODE_DOWN then return RIV_KEYCODE_DOWN
+  case SAPP_KEYCODE_LEFT then return RIV_KEYCODE_LEFT
+  case SAPP_KEYCODE_RIGHT then return RIV_KEYCODE_RIGHT
   case SAPP_KEYCODE_PAGE_UP then return RIV_KEYCODE_PAGE_UP
   case SAPP_KEYCODE_PAGE_DOWN then return RIV_KEYCODE_PAGE_DOWN
   case SAPP_KEYCODE_HOME then return RIV_KEYCODE_HOME
@@ -124,41 +137,168 @@ end
 
 local function translate_keycode_to_gamepad(keycode: sapp_keycode): riv_key_code
   switch keycode do
-  case SAPP_KEYCODE_RIGHT then return RIV_GAMEPAD_RIGHT
-  case SAPP_KEYCODE_LEFT then return RIV_GAMEPAD_LEFT
-  case SAPP_KEYCODE_DOWN then return RIV_GAMEPAD_DOWN
   case SAPP_KEYCODE_UP then return RIV_GAMEPAD_UP
+  case SAPP_KEYCODE_DOWN then return RIV_GAMEPAD_DOWN
+  case SAPP_KEYCODE_LEFT then return RIV_GAMEPAD_LEFT
+  case SAPP_KEYCODE_RIGHT then return RIV_GAMEPAD_RIGHT
   case SAPP_KEYCODE_Z then return RIV_GAMEPAD_A1
   case SAPP_KEYCODE_X then return RIV_GAMEPAD_A2
   case SAPP_KEYCODE_C then return RIV_GAMEPAD_A3
-  case SAPP_KEYCODE_S then return RIV_GAMEPAD_A4
-  case SAPP_KEYCODE_A then return RIV_GAMEPAD_L1
-  case SAPP_KEYCODE_Q then return RIV_GAMEPAD_L2
-  case SAPP_KEYCODE_1 then return RIV_GAMEPAD_L3
+  case SAPP_KEYCODE_V then return RIV_GAMEPAD_A4
+  case SAPP_KEYCODE_S then return RIV_GAMEPAD_L1
   case SAPP_KEYCODE_D then return RIV_GAMEPAD_R1
-  case SAPP_KEYCODE_E then return RIV_GAMEPAD_R2
-  case SAPP_KEYCODE_3 then return RIV_GAMEPAD_R3
-  case SAPP_KEYCODE_ENTER then return RIV_GAMEPAD_START
-  case SAPP_KEYCODE_SPACE then return RIV_GAMEPAD_SELECT
+  case SAPP_KEYCODE_A then return RIV_GAMEPAD_L2
+  case SAPP_KEYCODE_F then return RIV_GAMEPAD_R2
+  case SAPP_KEYCODE_W then return RIV_GAMEPAD_SELECT
+  case SAPP_KEYCODE_E then return RIV_GAMEPAD_START
+  case SAPP_KEYCODE_Q then return RIV_GAMEPAD_L3
+  case SAPP_KEYCODE_R then return RIV_GAMEPAD_R3
   else return RIV_KEYCODE_INVALID end
 end
+
+local function track_key(key_code: riv_key_code, down: boolean): boolean
+  -- ignore unsupported key codes
+  if key_code == RIV_KEYCODE_INVALID then return false end
+  -- ignore keys not tracked
+  if not machine.mmio_driver.tracked_keys[key_code] then return false end
+  -- ignore key down events when the key is already pressed
+  if key_pressed_state[key_code] and down then return false end
+  -- ignore key up events when the key is not pressed
+  if not key_pressed_state[key_code] and not down then return false end
+  -- append new event
+  key_pressed_state[key_code] = down
+  return true
+end
+
+local function push_key_toggle(key_code: riv_key_code): boolean <inline>
+  local index: uint32 = machine.mmio_device.key_toggle_count
+  if index >= #machine.mmio_device.key_toggles then return false end
+  machine.mmio_device.key_toggles[index] = key_code
+  machine.mmio_device.key_toggle_count = index + 1
+  return true
+end
+
+--------------------------------------------------------------------------------
+-- Game pad
+
+local gamepad_connected_count: int32 = 0
+
+## if ccinfo.is_emscripten then
+
+local prev_gamepads_state: [RIV_NUM_GAMEPADS]EmscriptenGamepadEvent
+local gamepads_state: [RIV_NUM_GAMEPADS]EmscriptenGamepadEvent
+local gamepad_mapping: [RIV_NUM_GAMEPAD_BUTTONS]uint8
+local GAMEPAD_QUIT <comptime> = 16
+do -- set standard gamepad mapping
+  gamepad_mapping[0] = RIV_GAMEPAD_A1
+  gamepad_mapping[1] = RIV_GAMEPAD_A2
+  gamepad_mapping[2] = RIV_GAMEPAD_A3
+  gamepad_mapping[3] = RIV_GAMEPAD_A4
+  gamepad_mapping[4] = RIV_GAMEPAD_L1
+  gamepad_mapping[5] = RIV_GAMEPAD_R1
+  gamepad_mapping[6] = RIV_GAMEPAD_L2
+  gamepad_mapping[7] = RIV_GAMEPAD_R2
+  gamepad_mapping[8] = RIV_GAMEPAD_SELECT
+  gamepad_mapping[9] = RIV_GAMEPAD_START
+  gamepad_mapping[10] = RIV_GAMEPAD_L3
+  gamepad_mapping[11] = RIV_GAMEPAD_R3
+  gamepad_mapping[12] = RIV_GAMEPAD_UP
+  gamepad_mapping[13] = RIV_GAMEPAD_DOWN
+  gamepad_mapping[14] = RIV_GAMEPAD_LEFT
+  gamepad_mapping[15] = RIV_GAMEPAD_RIGHT
+  -- 16 = home
+  -- 17 = screenshot
+end
+
+local function on_gamepad_callback(eventType: cint, gamepadEvent: *EmscriptenGamepadEvent, userData: pointer): cint
+  if eventType == EMSCRIPTEN_EVENT_GAMEPADCONNECTED and
+     gamepadEvent and gamepadEvent.connected == EM_TRUE and
+     gamepadEvent.index >= 0 and gamepadEvent.index < RIV_NUM_GAMEPADS and
+     gamepads_state[gamepadEvent.index].connected == EM_FALSE then
+    io.printf('[RIVEMU] Gamepad %d connected with %s mapping: %s\n', gamepadEvent.index+1, (@cstring)(&gamepadEvent.mapping[0]), (@cstring)(&gamepadEvent.id[0]))
+    gamepads_state[gamepadEvent.index] = $gamepadEvent
+    -- first event must be with all buttons in the default state
+    gamepads_state[gamepadEvent.index].axis = {}
+    gamepads_state[gamepadEvent.index].analogButton = {}
+    gamepads_state[gamepadEvent.index].digitalButton = {}
+    prev_gamepads_state[gamepadEvent.index] = gamepads_state[gamepadEvent.index]
+    gamepad_connected_count = gamepad_connected_count + 1
+  end
+  return EM_FALSE
+end
+
+local function setup_gamepad(): void
+  -- check if game pad is supported
+  if emscripten_sample_gamepad_data() ~= EMSCRIPTEN_RESULT_SUCCESS then return end
+  local num_gamepads: int32 = emscripten_get_num_gamepads()
+  if num_gamepads <= 0 then return end
+  -- reconnect gamepads from previous run
+  for index: int32=0,<num_gamepads do
+    local gamepad_state: EmscriptenGamepadEvent
+    if emscripten_get_gamepad_status(index, &gamepad_state) == EMSCRIPTEN_RESULT_SUCCESS and gamepad_state.connected == EM_TRUE then
+      on_gamepad_callback(EMSCRIPTEN_EVENT_GAMEPADCONNECTED, &gamepad_state, nilptr)
+    end
+  end
+  -- install gamepad callbacks
+  emscripten_set_gamepadconnected_callback_on_thread(nilptr, EM_TRUE, on_gamepad_callback, EM_CALLBACK_THREAD_CONTEXT_CALLING_THREAD)
+end
+
+local function shutdown_gamepad(): void
+  -- uninstall gamepad callbacks
+  emscripten_set_gamepadconnected_callback_on_thread(nilptr, EM_TRUE, nilptr, EM_CALLBACK_THREAD_CONTEXT_CALLING_THREAD)
+  gamepads_state = {}
+  prev_gamepads_state = {}
+  gamepad_connected_count = 0
+end
+
+local function poll_gamepads(): void
+  if gamepad_connected_count == 0 then return end
+  if emscripten_sample_gamepad_data() ~= EMSCRIPTEN_RESULT_SUCCESS then return end
+  for index: uint32=0,<RIV_NUM_GAMEPADS do
+    local prev_gamepad: *EmscriptenGamepadEvent = &prev_gamepads_state[index]
+    local gamepad: *EmscriptenGamepadEvent = &gamepads_state[index]
+    -- skip disconnected gamepads
+    if gamepad.connected ~= EM_TRUE then continue end
+    -- update previous and current gamepad state
+    $prev_gamepad = $gamepad
+    if emscripten_get_gamepad_status(index, gamepad) ~= EMSCRIPTEN_RESULT_SUCCESS or
+       gamepad.connected == EM_FALSE then -- disconnected
+      io.printf('[RIVEMU] Gamepad %d disconnected\n', index+1)
+      gamepad_connected_count = gamepad_connected_count - 1
+      $gamepad = {}
+    end
+    -- push key toggles
+    for i: uint32=0,<math.min(math.max(gamepad.numButtons, prev_gamepad.numButtons), RIV_NUM_GAMEPAD_BUTTONS) do -- check buttons
+      if gamepad.digitalButton[i] ~= prev_gamepad.digitalButton[i] then -- button state changed
+        local key_code: riv_key_code = gamepad_mapping[i] + (@uint8)(index)*RIV_NUM_GAMEPAD_BUTTONS
+        local down: boolean = gamepad.digitalButton[i] == 1
+        if track_key(key_code, down) then
+          push_key_toggle(key_code)
+        end
+      end
+    end
+    if gamepad.digitalButton[GAMEPAD_QUIT] == EM_TRUE then
+      sapp_quit()
+    end
+  end
+end
+
+## else
+
+local function setup_gamepad(): void end
+local function shutdown_gamepad(): void end
+local function poll_gamepads(): void end
+
+## end
 
 --------------------------------------------------------------------------------
 
 -- Input subsystem.
 global rivemu_input = @record{}
 
--- Input subsystem state.
-local poll_events: vector(sapp_event)
-local log_key_events: vector(riv_key_toggle_event)
-local log_last_frame: uint64
-local replay_log_index: usize
-local recording: boolean
-local replaying: boolean
-local key_pressed_state: [RIV_NUM_KEYCODE]boolean
-
 -- Initialize input subsystem.
 function rivemu_input.setup(): void
+  setup_gamepad()
 end
 
 -- Reset input subsystem.
@@ -175,6 +315,7 @@ end
 -- Terminate input subsystem.
 function rivemu_input.shutdown(): void
   rivemu_input.reset()
+  shutdown_gamepad()
 end
 
 -- Reset keyboard state.
@@ -182,25 +323,12 @@ function rivemu_input.reset_keys_state()
   key_pressed_state = {}
 end
 
-local function track_key(key_code: riv_key_code, down: boolean, up: boolean): boolean
-  -- ignore unsupported key codes
-  if key_code == RIV_KEYCODE_INVALID then return false end
-  -- ignore keys not tracked
-  if not machine.mmio_driver.tracked_keys[key_code] then return false end
-  -- ignore key down events when the key is already pressed
-  if key_pressed_state[key_code] and down then return false end
-  -- ignore key up events when the key is not pressed
-  if not key_pressed_state[key_code] and up then return false end
-  -- append new event
-  key_pressed_state[key_code] = down
-  return true
-end
-
 -- Poll keyboards events coming from the application window.
 local function poll_keyboard_events(): void
-  local index: uint32 = 0
-
   --TODO: save key modifiers
+
+  -- reset event count
+  machine.mmio_device.key_toggle_count = 0
 
   -- poll keyboard events
   for _, event: *sapp_event in mipairs(poll_events) do
@@ -210,28 +338,22 @@ local function poll_keyboard_events(): void
     local up: boolean = event.type == SAPP_EVENTTYPE_KEY_UP
     -- ignore non key up/down events
     if not (down or up) then continue end
-    do -- translate key code
-      local key_code: riv_key_code = translate_keycode(event.key_code)
-      if track_key(key_code, down, up) then
-        machine.mmio_device.key_toggles[index] = key_code
-        index = index + 1
-        -- stop when event list is full, this is almost impossible, here just for sanity
-        if index >= #machine.mmio_device.key_toggles then break end
-      end
-    end
-    do -- translate gamepad code
+    -- translate key code
+    local key_code: riv_key_code = translate_keycode(event.key_code)
+    if track_key(key_code, down) then
+      push_key_toggle(key_code)
+    elseif gamepad_connected_count == 0 and not machine.mmio_driver.tracked_keys[key_code] then
+      -- emulate gamepad
       local gamepad_code: riv_key_code = translate_keycode_to_gamepad(event.key_code)
-      if track_key(gamepad_code, down, up) then
-        machine.mmio_device.key_toggles[index] = gamepad_code
-        index = index + 1
-        -- stop when event list is full, this is almost impossible, here just for sanity
-        if index >= #machine.mmio_device.key_toggles then break end
+      if track_key(gamepad_code, down) then
+        push_key_toggle(gamepad_code)
       end
     end
   end
-  machine.mmio_device.key_toggle_count = index
+  poll_gamepads()
 
   -- fill remaining key toggles with 0
+  local index: uint32 = machine.mmio_device.key_toggle_count
   while index < #machine.mmio_device.key_toggles do
     machine.mmio_device.key_toggles[index] = 0
     index = index + 1

@@ -56,3 +56,21 @@ cinclude 'spng.c'
 ]]
 ]==]
 }
+
+-- emscripten
+nldecl.generate_bindings_file{
+  output_file = 'emscripten.nelua',
+  includes = {
+    '<emscripten/emscripten.h>',
+    '<emscripten/html5.h>'
+  },
+  cc = 'emcc',
+  -- include_dirs = {'.'},
+  include_names = {'^em_', '^EM_', '^emscripten_', '^EMSCRIPTEN_'},
+  output_head = [==[
+##[[
+cinclude '<emscripten/emscripten.h>'
+cinclude '<emscripten/html5.h>'
+]]
+]==]
+}

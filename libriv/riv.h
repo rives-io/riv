@@ -124,10 +124,10 @@ typedef enum riv_key_code {
   RIV_KEYCODE_TAB                 = 99,
   RIV_KEYCODE_INSERT              = 100,
   RIV_KEYCODE_DELETE              = 101,
-  RIV_KEYCODE_LEFT                = 102,
+  RIV_KEYCODE_UP                  = 102,
   RIV_KEYCODE_DOWN                = 103,
-  RIV_KEYCODE_RIGHT               = 104,
-  RIV_KEYCODE_UP                  = 105,
+  RIV_KEYCODE_LEFT                = 104,
+  RIV_KEYCODE_RIGHT               = 105,
   RIV_KEYCODE_PAGE_UP             = 106,
   RIV_KEYCODE_PAGE_DOWN           = 107,
   RIV_KEYCODE_HOME                = 108,
@@ -150,23 +150,93 @@ typedef enum riv_key_code {
   // ASCII 125 }
   // ASCII 126 ~
   // 127 is reserved
-  RIV_GAMEPAD_LEFT                = 128, // Keyboard Left
-  RIV_GAMEPAD_DOWN                = 129, // Keyboard Down
-  RIV_GAMEPAD_RIGHT               = 130, // Keyboard Right
-  RIV_GAMEPAD_UP                  = 131, // Keyboard Up
-  RIV_GAMEPAD_A1                  = 132, // Keyboard Z
-  RIV_GAMEPAD_A2                  = 133, // Keyboard X
-  RIV_GAMEPAD_A3                  = 134, // Keyboard C
-  RIV_GAMEPAD_A4                  = 135, // Keyboard S
-  RIV_GAMEPAD_L1                  = 136, // Keyboard A
-  RIV_GAMEPAD_L2                  = 137, // Keyboard Q
-  RIV_GAMEPAD_L3                  = 138, // Keyboard 1
-  RIV_GAMEPAD_R1                  = 139, // Keyboard D
-  RIV_GAMEPAD_R2                  = 140, // Keyboard E
-  RIV_GAMEPAD_R3                  = 141, // Keyboard 3
-  RIV_GAMEPAD_START               = 142, // Keyboard Enter
-  RIV_GAMEPAD_SELECT              = 143, // Keyboard Space
-  RIV_NUM_KEYCODE                 = 144,
+  // Game pad 1
+  RIV_GAMEPAD1_UP                  = 128, // Alias for Keyboard Up
+  RIV_GAMEPAD1_DOWN                = 129, // Alias for Keyboard Down
+  RIV_GAMEPAD1_LEFT                = 130, // Alias for Keyboard Left
+  RIV_GAMEPAD1_RIGHT               = 131, // Alias for Keyboard Right
+  RIV_GAMEPAD1_A1                  = 132, // Alias for Keyboard Z
+  RIV_GAMEPAD1_A2                  = 133, // Alias for Keyboard X
+  RIV_GAMEPAD1_A3                  = 134, // Alias for Keyboard C
+  RIV_GAMEPAD1_A4                  = 135, // Alias for Keyboard V
+  RIV_GAMEPAD1_L1                  = 136, // Alias for Keyboard S
+  RIV_GAMEPAD1_R1                  = 137, // Alias for Keyboard D
+  RIV_GAMEPAD1_L2                  = 138, // Alias for Keyboard A
+  RIV_GAMEPAD1_R2                  = 139, // Alias for Keyboard F
+  RIV_GAMEPAD1_SELECT              = 140, // Alias for Keyboard W
+  RIV_GAMEPAD1_START               = 141, // Alias for Keyboard E
+  RIV_GAMEPAD1_L3                  = 142, // Alias for Keyboard Q
+  RIV_GAMEPAD1_R3                  = 143, // Alias for Keyboard R
+  // Game pad 2
+  RIV_GAMEPAD2_UP                  = 144,
+  RIV_GAMEPAD2_DOWN                = 145,
+  RIV_GAMEPAD2_LEFT                = 146,
+  RIV_GAMEPAD2_RIGHT               = 147,
+  RIV_GAMEPAD2_A1                  = 148,
+  RIV_GAMEPAD2_A2                  = 149,
+  RIV_GAMEPAD2_A3                  = 150,
+  RIV_GAMEPAD2_A4                  = 151,
+  RIV_GAMEPAD2_L1                  = 152,
+  RIV_GAMEPAD2_R1                  = 153,
+  RIV_GAMEPAD2_L2                  = 154,
+  RIV_GAMEPAD2_R2                  = 155,
+  RIV_GAMEPAD2_SELECT              = 156,
+  RIV_GAMEPAD2_START               = 157,
+  RIV_GAMEPAD2_L3                  = 158,
+  RIV_GAMEPAD2_R3                  = 159,
+  // Game pad 3
+  RIV_GAMEPAD3_UP                  = 160,
+  RIV_GAMEPAD3_DOWN                = 161,
+  RIV_GAMEPAD3_LEFT                = 162,
+  RIV_GAMEPAD3_RIGHT               = 163,
+  RIV_GAMEPAD3_A1                  = 164,
+  RIV_GAMEPAD3_A2                  = 165,
+  RIV_GAMEPAD3_A3                  = 166,
+  RIV_GAMEPAD3_A4                  = 167,
+  RIV_GAMEPAD3_L1                  = 168,
+  RIV_GAMEPAD3_R1                  = 169,
+  RIV_GAMEPAD3_L2                  = 170,
+  RIV_GAMEPAD3_R2                  = 171,
+  RIV_GAMEPAD3_SELECT              = 172,
+  RIV_GAMEPAD3_START               = 173,
+  RIV_GAMEPAD3_L3                  = 174,
+  RIV_GAMEPAD3_R3                  = 175,
+  // Game pad 4
+  RIV_GAMEPAD4_UP                  = 176,
+  RIV_GAMEPAD4_DOWN                = 177,
+  RIV_GAMEPAD4_LEFT                = 178,
+  RIV_GAMEPAD4_RIGHT               = 179,
+  RIV_GAMEPAD4_A1                  = 180,
+  RIV_GAMEPAD4_A2                  = 181,
+  RIV_GAMEPAD4_A3                  = 182,
+  RIV_GAMEPAD4_A4                  = 183,
+  RIV_GAMEPAD4_L1                  = 184,
+  RIV_GAMEPAD4_R1                  = 185,
+  RIV_GAMEPAD4_L2                  = 186,
+  RIV_GAMEPAD4_R2                  = 187,
+  RIV_GAMEPAD4_SELECT              = 188,
+  RIV_GAMEPAD4_START               = 189,
+  RIV_GAMEPAD4_L3                  = 190,
+  RIV_GAMEPAD4_R3                  = 191,
+  // Number of keys
+  RIV_NUM_KEYCODE                  = 192,
+  // Aliases
+  RIV_GAMEPAD_UP                   = RIV_GAMEPAD1_UP,
+  RIV_GAMEPAD_DOWN                 = RIV_GAMEPAD1_DOWN,
+  RIV_GAMEPAD_LEFT                 = RIV_GAMEPAD1_LEFT,
+  RIV_GAMEPAD_RIGHT                = RIV_GAMEPAD1_RIGHT,
+  RIV_GAMEPAD_A1                   = RIV_GAMEPAD1_A1,
+  RIV_GAMEPAD_A2                   = RIV_GAMEPAD1_A2,
+  RIV_GAMEPAD_A3                   = RIV_GAMEPAD1_A3,
+  RIV_GAMEPAD_A4                   = RIV_GAMEPAD1_A4,
+  RIV_GAMEPAD_L1                   = RIV_GAMEPAD1_L1,
+  RIV_GAMEPAD_R1                   = RIV_GAMEPAD1_R1,
+  RIV_GAMEPAD_L2                   = RIV_GAMEPAD1_L2,
+  RIV_GAMEPAD_R2                   = RIV_GAMEPAD1_R2,
+  RIV_GAMEPAD_SELECT               = RIV_GAMEPAD1_SELECT,
+  RIV_GAMEPAD_START                = RIV_GAMEPAD1_START,
+  RIV_GAMEPAD_L3                   = RIV_GAMEPAD1_L3,
+  RIV_GAMEPAD_R3                   = RIV_GAMEPAD1_R3,
 } riv_key_code;
 
 // Default palette color indexes
@@ -282,6 +352,9 @@ typedef enum riv_constants {
   RIV_MAX_COLORS = 256,
   RIV_MAX_IMAGES = 256,
   RIV_MAX_SPRITESHEETS = 256,
+  RIV_MAX_KEY_TOGGLES = 64,
+  RIV_NUM_GAMEPADS = 4,
+  RIV_NUM_GAMEPAD_BUTTONS = 16,
   RIV_INVALID_ID = 0,
 } riv_constants;
 
@@ -475,7 +548,7 @@ typedef struct riv_mmio_device {
   riv_mmio_header header;
   uint32_t incard_len;
   uint32_t key_toggle_count;
-  uint8_t key_toggles[RIV_NUM_KEYCODE];
+  uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];
 } riv_mmio_device;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -566,7 +639,7 @@ typedef struct riv_context {
   bool yielding;                                      // Whether an audio/video/input devices are connected and yielding
   uint32_t key_modifiers;                             // NIY
   uint32_t key_toggle_count;                          // Number of toggled keys in this frame
-  uint8_t key_toggles[RIV_NUM_KEYCODE];               // Toggled key in this frame (in order)
+  uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];           // Toggled key in this frame (in order)
   riv_key_state keys[RIV_NUM_KEYCODE];                // Current keyboard state
   // Public read/write fields
   uint32_t outcard_len;                               // Output card length

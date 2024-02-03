@@ -133,8 +133,10 @@ global function riv_present(): boolean <cexport>
       local event: riv_key_toggle_event = riv.verify_key_events[riv.verify_key_event_index]
       if event.frame ~= riv.frame or event.key_code == 0xff then break end
       riv.verify_key_event_index = riv.verify_key_event_index + 1
-      riv.mmio_device.key_toggles[key_index] = event.key_code
-      key_index = key_index + 1
+      if key_index < (@uint32)(#riv.mmio_device.key_toggles) then
+        riv.mmio_device.key_toggles[key_index] = event.key_code
+        key_index = key_index + 1
+      end
     end
     riv.mmio_device.key_toggle_count = key_index
   end
