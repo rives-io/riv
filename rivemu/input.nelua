@@ -277,6 +277,28 @@ local function poll_gamepads(): void
         end
       end
     end
+    -- emulate axis control
+    if math.max(gamepad.numAxes, prev_gamepad.numAxes) >= 2 then
+      if gamepad.axis[0] ~= prev_gamepad.axis[0] then
+        local a: float64 = gamepad.axis[0]
+        if track_key(RIV_GAMEPAD_LEFT, a <= -0.5) then
+          push_key_toggle(RIV_GAMEPAD_LEFT)
+        end
+        if track_key(RIV_GAMEPAD_RIGHT, a >= 0.5) then
+          push_key_toggle(RIV_GAMEPAD_RIGHT)
+        end
+      end
+      if gamepad.axis[1] ~= prev_gamepad.axis[1] then
+        local a: float64 = gamepad.axis[1]
+        if track_key(RIV_GAMEPAD_UP, a <= -0.5) then
+          push_key_toggle(RIV_GAMEPAD_UP)
+        end
+        if track_key(RIV_GAMEPAD_DOWN, a >= 0.5) then
+          push_key_toggle(RIV_GAMEPAD_DOWN)
+        end
+      end
+    end
+    -- use home button to quit
     if gamepad.digitalButton[GAMEPAD_QUIT] == EM_TRUE then
       sapp_quit()
     end
