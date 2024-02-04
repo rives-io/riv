@@ -4,7 +4,6 @@ all:
 	rm -rf cartridges
 	mkdir -p cartridges
 	find ../demos -name '*.sqfs' -exec cp {} cartridges/ \;
-	find cartridges -name '*.sqfs' -exec mv {} {}.png \;
 	emrun index.html
 
 clean:

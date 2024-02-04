@@ -45,10 +45,6 @@ nldecl.generate_bindings_file{
   output_foot = [[
 global RIV_DRIVER_MAGIC: riv_magic_buffer <cimport,nodecl>
 global RIV_DEVICE_MAGIC: riv_magic_buffer <cimport,nodecl>
-## if RIV_IMPL then
-global riv: riv_context <cexport>
-## else
-global riv: riv_context <cimport,nodecl>
-## end
+global riv: *riv_context <cimport,nodecl>
 ]]
 }

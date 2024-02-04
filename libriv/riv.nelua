@@ -6,7 +6,7 @@ require 'riv_types'
 global argc: cint <cimport'argc',nodecl>
 global argv: *[0]cstring <cimport'argv',nodecl>
 
-global riv: riv_context <cimport,nodecl>
+global riv: *riv_context <cimport,nodecl>
 
 -- util
 global function riv_version(): uint64 <cimport,nodecl> end

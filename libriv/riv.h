@@ -420,6 +420,7 @@ typedef enum riv_vaddr_base {
   RIV_VADDR_INOUTBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_INOUTBUFFER,
   RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_AUDIOBUFFER,
   RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_FRAMEBUFFER,
+  RIV_VADDR_RIV_CONTEXT  = 0x20000000,
 } riv_vaddr_base;
 
 // RIV driver magic when initializing
@@ -674,18 +675,18 @@ typedef struct riv_context {
 ////////////////////////////////////////////////////////////////////////////////
 // RIV API
 
-extern riv_context riv;
+static riv_context *const riv = (riv_context*)RIV_VADDR_RIV_CONTEXT;
 
 // Utilities
 
 RIV_API uint64_t riv_version(void);                                               // Get the RIV runtime version
 RIV_API uint64_t riv_rdcycle(void);                                               // Get the current machine cycle, THIS IS NOT REPRODUCIBLE, use for bench-marking only
 RIV_API uint64_t riv_printf(const char* format, ...);                             // Print to standard output, use for debugging
-RIV_API uint64_t riv_snprintf(char* s, uint64_t maxlen, const char* format, ...); // Print to standard output, use for debugging
+RIV_API uint64_t riv_snprintf(char* s, uint64_t maxlen, const char* format, ...); // Print to a string
 
 // Basic
 
-RIV_API bool riv_present();                           // Present current frame, returns true until quit is requested.
+RIV_API bool riv_present();  // Present current frame, returns true until quit is requested.
 
 // Images
 
@@ -720,8 +721,8 @@ RIV_API riv_vec2i riv_draw_text(const char* text, riv_id sps_id, int64_t x0, int
 
 // Sound system
 
-RIV_API uint64_t riv_make_soundbuffer(riv_soundbuffer_desc* desc); // Create a new sound buffer
-RIV_API void riv_destroy_soundbuffer(riv_id sndbuf_id);             // Destroy a sound buffer
+RIV_API uint64_t riv_make_soundbuffer(riv_soundbuffer_desc* desc);   // Create a new sound buffer
+RIV_API void riv_destroy_soundbuffer(riv_id sndbuf_id);              // Destroy a sound buffer
 RIV_API uint64_t riv_sound(riv_sound_desc* desc);                    // Play a sound buffer or update a sound
 RIV_API uint64_t riv_waveform(riv_waveform_desc* desc);              // Play a waveform sound
 

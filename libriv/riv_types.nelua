@@ -341,7 +341,8 @@ global riv_vaddr_base: type <cimport,nodecl,using> = @enum(uint64){
   RIV_VADDR_MMIO_DEVICE = 268500992,
   RIV_VADDR_INOUTBUFFER = 268566528,
   RIV_VADDR_AUDIOBUFFER = 268828672,
-  RIV_VADDR_FRAMEBUFFER = 269615104
+  RIV_VADDR_FRAMEBUFFER = 269615104,
+  RIV_VADDR_RIV_CONTEXT = 536870912
 }
 global riv_id: type <cimport,nodecl> = @uint64
 global riv_span_uint8: type <cimport,nodecl> = @record{
@@ -520,8 +521,4 @@ global RIV_VERSION_PATCH: cint <comptime> = 0
 global RIV_VERSION: cint <comptime> = 2000
 global RIV_DRIVER_MAGIC: riv_magic_buffer <cimport,nodecl>
 global RIV_DEVICE_MAGIC: riv_magic_buffer <cimport,nodecl>
-## if RIV_IMPL then
-global riv: riv_context <cexport>
-## else
-global riv: riv_context <cimport,nodecl>
-## end
+global riv: *riv_context <cimport,nodecl>
