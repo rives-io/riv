@@ -1,4 +1,4 @@
-NAME=tcc
+NAME=jit
 
 COMP?=xz
 ASSETS_DIR?=assets

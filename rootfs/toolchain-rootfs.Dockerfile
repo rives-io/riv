@@ -19,9 +19,6 @@ RUN apk add bash squashfs-tools su-exec bubblewrap
 # Install development dependencies
 RUN apk add libarchive-dev libseccomp-dev
 
-# Install tcc
-RUN apk add tcc@testing tcc-libs@testing tcc-dev@testing
-
 # Build other packages inside /root
 WORKDIR /root
 
@@ -29,10 +26,20 @@ WORKDIR /root
 RUN wget -O BR903-ELFkickers.tar.gz https://github.com/BR903/ELFkickers/tarball/e7fba942df51e756897224cff5aa853de8fafd90 && \
     tar -xzf BR903-ELFkickers.tar.gz && \
     cd BR903-ELFkickers-*  && \
-    make && \
+    make -j4 && \
     make install prefix=/usr && \
     cd .. && \
     rm -rf BR903-ELFkickers-*
+
+# Install c2m
+RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/16acc27debe24b5a488ed88e0baa7d799a0aeaed && \
+    tar -xzf vnmakarov-mir.tar.gz && \
+    cd vnmakarov-mir-* && \
+    echo "echo fail" > check-threads.sh && \
+    make -j4 && \
+    make install PREFIX=/usr && \
+    cd .. && \
+    rm -rf vnmakarov-mir-*
 
 # Install genext2fs
 RUN wget -O genext2fs.tar.gz https://github.com/cartesi/genext2fs/archive/refs/tags/v1.5.3.tar.gz && \
@@ -40,7 +47,7 @@ RUN wget -O genext2fs.tar.gz https://github.com/cartesi/genext2fs/archive/refs/t
     cd genext2fs-* && \
     ./autogen.sh && \
     ./configure && \
-    make PREFIX=/usr && \
+    make -j4 PREFIX=/usr && \
     make install PREFIX=/usr && \
     cd .. && \
     rm -rf genext2fs-*
@@ -74,11 +81,11 @@ RUN wget -O rfinnie-twuewand.tar.gz https://github.com/rfinnie/twuewand/tarball/
     cd .. && \
     rm -rf rfinnie-twuewand-*
 
+
 # Download apks to be installed in rootfs
 WORKDIR /root/apks
 RUN apk fetch \
         musl libgcc libstdc++ bubblewrap libcap2
-RUN apk fetch pkgconfig tcc tcc-libs tcc-dev tcc-libs-static
 
 # Install linux and linux-headers
 WORKDIR /root
@@ -122,7 +129,6 @@ RUN cp -a /etc/apk etc/apk && \
 
 # Install musl utilities
 RUN ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
-    ln -s ld-musl-riscv64.so.1 lib/ld-linux-riscv64-lp64d.so.1 && \
     ln -s ../../lib/ld-musl-riscv64.so.1 usr/lib/libc.so && \
     cp -a /usr/bin/ldd usr/bin/ldd && \
     apk info -L musl-dev | grep usr/include | while read file; do install -Dm644 /$file $file; done && \
@@ -132,6 +138,15 @@ RUN ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
 RUN cp -a /usr/bin/bwrapbox /rootfs/usr/bin/bwrapbox && \
     cp -a /usr/lib/bwrapbox /rootfs/usr/lib/bwrapbox && \
     cp -a /usr/sbin/rndaddentropy /rootfs/usr/sbin/rndaddentropy
+
+# Install mir
+RUN cp -a /usr/bin/c2m /rootfs/usr/bin/c2m && strip /rootfs/usr/bin/c2m && \
+    cp -a /usr/bin/m2b /rootfs/usr/bin/m2b && strip /rootfs/usr/bin/m2b && \
+    cp -a /usr/bin/b2m /rootfs/usr/bin/b2m && strip /rootfs/usr/bin/b2m && \
+    cp -a /usr/lib/libmir.so.0.1.0 /rootfs/usr/lib/libmir.so.0.1.0 && strip -S -x /rootfs/usr/lib/libmir.so.0.1.0 && \
+    ln -s libmir.so.0.1.0 /rootfs/usr/lib/libmir.so.0 && \
+    cp -a /usr/include/c2mir.h /rootfs/usr/include/ && \
+    cp -a /usr/include/mir* /rootfs/usr/include/
 
 # Install system configs
 COPY rootfs/skel/etc etc
@@ -156,9 +171,6 @@ COPY libs/guest-host libs/guest-host
 COPY libriv libriv
 RUN make -C libriv install install-dev PREFIX=/usr && \
     make -C libriv install install-c-dev PREFIX=/usr DESTDIR=/rootfs
-
-# Fix crt1.o for linking with TCC
-RUN gcc -Os -ffreestanding -fPIC -c libriv/crt1.c -o /rootfs/usr/lib/crt1.o
 
 # Install riv tools
 COPY tools tools
