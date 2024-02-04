@@ -1,0 +1,83 @@
+require 'riv'
+require 'math'
+
+riv.framebuffer_desc.width = 128
+riv.framebuffer_desc.height = 128
+
+riv.images[1] = {
+  pixels=#[([[
+0000000000888700
+0000000008888880
+0070070008ffff80
+00077000085ff580
+0007700008ffff80
+0070070088888888
+0000000008888880
+0000000000800800
+]]):gsub('%s',''):gsub('.', function(c) return string.char(string.byte(c) - string.byte('0')) end)]#,
+  width=16,
+  height=8,
+}
+riv.spritesheets[1] = {
+  image_id = 1,
+  cell_width = 8,
+  cell_height = 8,
+}
+
+local size: number = 10
+local ballx: number = 64
+local bally: number = size
+local floor_y = 100
+
+-- starting velocity
+local velx: number = math.random()*6-3
+local vely: number = math.random()*6-3
+
+local function _draw()
+  riv_clear_screen(RIV_COLOR_DARKSLATE)
+  riv_draw_text("press x to shake", RIV_SPRITESHEET_FONT_5X7, 10,10, RIV_COLOR_WHITE, 1, 1, 1, 1)
+  -- fillp(░)
+  riv_draw_rect_fill(0,floor_y,128,128,12)
+  -- fillp() -- reset
+  riv_draw_circle_fill(ballx,bally,2*size,14)
+  riv_draw_sprite(1,1,ballx-4-velx, bally-4-vely, 1,1,1,1)
+end
+
+local function _update()
+  -- move ball left/right
+  if ballx+velx < 0+size or ballx+velx > 128-size then
+    -- bounce on side!
+    velx = -velx
+    -- sfx(1)
+  else
+    -- move by x velocity
+    ballx = ballx + velx
+  end
+  -- move ball up/down
+  if bally+vely < 0+size or bally+vely > floor_y-size then
+    -- bounce on floor/ceiling
+    vely = vely * -0.9
+    -- sfx(0)
+    -- if bounce was too small, bump into air
+    if vely < 0 and vely > -0.5 then
+      velx = math.random()*6-3
+      vely = -math.random()*5-4
+      -- sfx(3)
+    end
+  else
+    bally = bally + vely
+  end
+  -- gravity!
+  vely = vely + 0.2
+  -- press X to randomly choose a new velocity
+  if riv.keys[RIV_GAMEPAD_SELECT].press then
+    velx = math.random()*6-3
+    vely = math.random()*6-8
+    -- sfx(2)
+  end
+end
+
+repeat
+  _update()
+  _draw()
+until not riv_present()
