@@ -49,10 +49,14 @@ install: libriv.so
 	ln -sf libriv.so.0.2 $(DESTDIR)$(PREFIX)/lib/libriv.so.0
 	ln -sf libriv.so.0 $(DESTDIR)$(PREFIX)/lib/libriv.so
 
-install-dev:
+install-c-dev:
 	mkdir -p $(DESTDIR)$(PREFIX)/include
 	install -m644 riv.h $(DESTDIR)$(PREFIX)/include/riv.h
 
+install-nelua-dev:
+	mkdir -p $(DESTDIR)$(PREFIX)/include
 	mkdir -p $(DESTDIR)$(PREFIX)/lib/nelua/lib
 	install -m644 riv.nelua $(DESTDIR)$(PREFIX)/lib/nelua/lib/riv.nelua
 	install -m644 riv_types.nelua $(DESTDIR)$(PREFIX)/lib/nelua/lib/riv_types.nelua
+
+install-dev: install-c-dev install-nelua-dev

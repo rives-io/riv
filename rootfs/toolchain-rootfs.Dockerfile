@@ -6,6 +6,8 @@ FROM --platform=linux/riscv64 riscv64/busybox:1.36 AS busybox-stage
 # Toolchain stage
 FROM --platform=linux/riscv64 riscv64/alpine:20231219 AS toolchain-rootfs-stage
 
+RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
+
 RUN apk update && apk upgrade
 
 # Add development packages
@@ -17,8 +19,8 @@ RUN apk add bash squashfs-tools su-exec bubblewrap
 # Install development dependencies
 RUN apk add libarchive-dev libseccomp-dev
 
-# Musl link aliases
-RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so
+# Install tcc
+RUN apk add tcc@testing tcc-libs@testing tcc-dev@testing
 
 # Build other packages inside /root
 WORKDIR /root
@@ -76,6 +78,7 @@ RUN wget -O rfinnie-twuewand.tar.gz https://github.com/rfinnie/twuewand/tarball/
 WORKDIR /root/apks
 RUN apk fetch \
         musl libgcc libstdc++ bubblewrap libcap2
+RUN apk fetch pkgconfig tcc tcc-libs tcc-dev tcc-libs-static
 
 # Install linux and linux-headers
 WORKDIR /root
@@ -119,7 +122,11 @@ RUN cp -a /etc/apk etc/apk && \
 
 # Install musl utilities
 RUN ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
-    cp -a /usr/bin/ldd usr/bin/ldd
+    ln -s ld-musl-riscv64.so.1 lib/ld-linux-riscv64-lp64d.so.1 && \
+    ln -s ../../lib/ld-musl-riscv64.so.1 usr/lib/libc.so && \
+    cp -a /usr/bin/ldd usr/bin/ldd && \
+    apk info -L musl-dev | grep usr/include | while read file; do install -Dm644 /$file $file; done && \
+    apk info -L musl-dev | grep usr/lib | grep crt | while read file; do install -Dm644 /$file $file; done
 
 # Install bwrapbox and rndaddentropy
 RUN cp -a /usr/bin/bwrapbox /rootfs/usr/bin/bwrapbox && \
@@ -148,7 +155,10 @@ COPY libs/guest-host libs/guest-host
 # Install libriv
 COPY libriv libriv
 RUN make -C libriv install install-dev PREFIX=/usr && \
-    make -C libriv install PREFIX=/usr DESTDIR=/rootfs
+    make -C libriv install install-c-dev PREFIX=/usr DESTDIR=/rootfs
+
+# Fix crt1.o for linking with TCC
+RUN gcc -Os -ffreestanding -fPIC -c libriv/crt1.c -o /rootfs/usr/lib/crt1.o
 
 # Install riv tools
 COPY tools tools
