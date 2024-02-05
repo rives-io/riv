@@ -521,10 +521,10 @@ local function advance_frame(): void
 
   -- notify when game begins
   if not loading and was_loading then
+    if not options.no_audio then
+      rivemu_audio.start()
+    end
     ## if ccinfo.is_emscripten then
-      if not options.no_audio then
-        rivemu_audio.start()
-      end
       local width: int32 <nodce> = machine.mmio_driver.framebuffer_desc.width
       local height: int32 <nodce> = machine.mmio_driver.framebuffer_desc.height
       local target_fps: int32 <nodce> = (@int32)(target_fps)
