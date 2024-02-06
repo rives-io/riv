@@ -1,7 +1,8 @@
+-- This file contains code related to input and output cards.
+
 require 'io'
 require 'macros'
 require 'keccak'
-
 require '.machine'
 
 global rivemu_iocard: type = @record{}

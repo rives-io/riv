@@ -1,10 +1,9 @@
--- This file contains all code related to the video subsystem.
+-- This file contains code related to the video subsystem.
 
 require 'math'
 require 'sokol'
 require 'miniz'
 require 'spng'
-
 require '.machine'
 
 -- Video subsystem.

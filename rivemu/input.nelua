@@ -1,16 +1,13 @@
--- This file contains all code related to keyboard/mouse input subsystem.
+-- This file contains code related to keyboard/mouse input subsystem.
 
 require 'sokol'
 require 'vector'
 require 'io'
 require 'macros'
-
 ## if ccinfo.is_emscripten then
 require 'emscripten'
 ## end
-
 require 'riv_log'
-
 require '.machine'
 
 -- Input subsystem state.

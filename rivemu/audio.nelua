@@ -1,9 +1,17 @@
--- This file contains all code related to the audio subsystem.
+-- This file contains code related to the audio subsystem.
+
+-- miniaudio worklets
+##[[
+if ccinfo.is_emscripten then
+  -- cdefine 'MA_ENABLE_AUDIO_WORKLETS'
+  -- cflags '-sAUDIO_WORKLET=1 -sWASM_WORKERS=1'
+  -- cflags '-sASYNCIFY'
+end
+]]
 
 require 'vector'
-require 'miniaudio'
 require 'hashmap'
-
+require 'miniaudio'
 require '.machine'
 require '.mathx'
 

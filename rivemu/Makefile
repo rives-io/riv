@@ -1,17 +1,32 @@
 PREFIX=/usr/local
-WASM_CC=emcc
 
 # Release flags
 CC=gcc
 CFLAGS+=-Wall
-LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none -z relro -z now
 NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
+ifeq ($(CC), tcc)
+	CFLAGS+=-w
+else ifeq ($(CC), emcc)
+	CFLAGS+=-sNO_DISABLE_EXCEPTION_CATCHING
+else # gcc based
+	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none -z relro -z now
+endif
 
-ifeq ($(debug), yes)
-	CFLAGS+=-Og
+ifeq ($(CC), emcc)
+	RIVEMU=rivemu.js
 else
-	CFLAGS+=-O2 -DNDEBUG
-	NELUA_FLAGS+=--strip-bin
+	RIVEMU=rivemu
+endif
+
+ifeq ($(debug), yes) #debug
+	CFLAGS+=-Og -g
+else # release
+	ifeq ($(CC), emcc)
+		CFLAGS+=-O3 -DNDEBUG -g0 -s
+	else # gcc based
+		CFLAGS+=-O2 -DNDEBUG -g0
+		NELUA_FLAGS+=--strip-bin
+	endif
 endif
 
 DEPS=*.nelua \
@@ -21,7 +36,7 @@ DEPS=*.nelua \
 	../libriv/riv_log.nelua \
 	../libriv/riv.h
 
-rivemu: rivemu.nelua $(DEPS)
+$(RIVEMU): rivemu.nelua $(DEPS)
 	nelua $(NELUA_FLAGS) \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS) $(INCS)" \
@@ -30,16 +45,8 @@ rivemu: rivemu.nelua $(DEPS)
 		--output $@ $<
 	touch $@
 
-rivemu.js: rivemu.nelua $(DEPS)
-	nelua --release $(NELUA_FLAGS) \
-		--cc=$(WASM_CC) \
-		--cflags="$(CFLAGS) $(INCS)" \
-		--output $@ $<
-	touch $@
-
 clean:
-	rm -rf web
-	rm -f rivemu rivemu.c rivemu.js rivemu.wasm
+	rm -f rivemu rivemu.c rivemu.js rivemu.exe rivemu.wasm
 
 install: rivemu
 	mkdir -p $(DESTDIR)$(PREFIX)/rivemu

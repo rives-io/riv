@@ -1,4 +1,4 @@
--- This file contains all code related to frame limiting and frame counting.
+-- This file contains code related to frame limiting and frame counting.
 
 require 'io'
 require 'math'

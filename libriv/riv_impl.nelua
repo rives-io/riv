@@ -3,7 +3,6 @@
 require 'memory'
 require 'string'
 require 'linux'
-
 require '.riv_types'
 require '.riv_yield'
 require '.riv_iocard'
@@ -16,14 +15,13 @@ require '.riv_image'
 require '.riv_sprite'
 require '.riv_draw'
 
-local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end
-
 global function riv_init(): void <cattribute'constructor',cexport>
   -- map riv
   local prot: cint = PROT_READ | PROT_WRITE
   local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE
   assert(mmap(riv, #@riv_context, prot, flags, -1, 0) == riv, 'riv mmap failed')
   -- initialize all code in top scopes
+  local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end
   nelua_main(0, nilptr)
   -- open yield device
   riv_yield_open()

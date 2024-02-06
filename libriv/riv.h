@@ -6,7 +6,7 @@
 
 #define RIV_VERSION_MAJOR 0
 #define RIV_VERSION_MINOR 2
-#define RIV_VERSION_PATCH 0
+#define RIV_VERSION_PATCH 2
 #define RIV_VERSION (RIV_VERSION_MAJOR*1000000 + RIV_VERSION_MINOR*1000 + RIV_VERSION_PATCH)
 
 #ifndef RIV_API
@@ -675,6 +675,7 @@ typedef struct riv_context {
 ////////////////////////////////////////////////////////////////////////////////
 // RIV API
 
+// Global RIV context
 static riv_context *const riv = (riv_context*)RIV_VADDR_RIV_CONTEXT;
 
 // Utilities
@@ -719,7 +720,7 @@ RIV_API void riv_draw_image_rect(riv_id img_id, int64_t x0, int64_t y0, int64_t 
 RIV_API void riv_draw_sprite(uint32_t n, riv_id sps_id, int64_t x0, int64_t y0, int64_t nw, int64_t nh, int64_t mw, int64_t mh);
 RIV_API riv_vec2i riv_draw_text(const char* text, riv_id sps_id, int64_t x0, int64_t y0, int64_t col, int64_t mw, int64_t mh, int64_t sx, int64_t sy);
 
-// Sound system
+// Audio
 
 RIV_API uint64_t riv_make_soundbuffer(riv_soundbuffer_desc* desc);   // Create a new sound buffer
 RIV_API void riv_destroy_soundbuffer(riv_id sndbuf_id);              // Destroy a sound buffer

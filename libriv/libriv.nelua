@@ -1,8 +1,10 @@
 ##[[
+-- Riv does not use garbage collection
 pragma{nogc=true}
-libpath(fs.join(fs.scriptdir(2), 'libs', 'guest-host', '?.nelua'))
 
-RIV_IMPL = true
+-- Allow requiring third party libraries
+libpath(fs.join(fs.scriptdir(2), 'libs', 'guest-host', '?.nelua'))
 ]]
 
-require '.riv_basic'
+-- Implement the riv library
+require '.riv_impl'

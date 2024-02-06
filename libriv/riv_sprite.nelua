@@ -1,7 +1,7 @@
 ## pragmas.unitname = ''
 
-require '.riv_types'
 require 'io'
+require '.riv_types'
 
 local function generate_sprite_id(): uint64
   local spr_id: uint64 = riv.sprite_gen

@@ -3,29 +3,24 @@
 
 require 'riv_types'
 
-global argc: cint <cimport'argc',nodecl>
-global argv: *[0]cstring <cimport'argv',nodecl>
-
-global riv: *riv_context <cimport,nodecl>
-
--- util
+-- Utilities
 global function riv_version(): uint64 <cimport,nodecl> end
 global function riv_rdcycle(): uint64 <cimport,nodecl> end
 global function riv_printf(format: cstring <const>, ...: cvarargs): usize <cimport,nodecl> end
 global function riv_snprintf(s: cstring, maxlen: usize, format: cstring <const>, ...: cvarargs): usize <cimport,nodecl> end
 
--- basic
+-- Basic
 global function riv_present(): boolean <cimport,nodecl> end
 
--- images
+-- Images
 global function riv_make_image(filename: cstring <const>, color_key: int64): uint64 <cimport,nodecl> end
 global function riv_destroy_image(img_id: uint64): void <cimport,nodecl> end
 
--- sprites
+-- Sprites
 global function riv_make_spritesheet(img_id: uint64, w: uint32, h: uint32): uint64 <cimport,nodecl> end
 global function riv_destroy_spritesheet(sps_id: uint64): void <cimport,nodecl> end
 
--- drawing
+-- Drawing
 global function riv_clear_screen(col: uint32): void <cimport,nodecl> end
 global function riv_draw_point(x: int64, y: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: uint32): void <cimport,nodecl> end
@@ -45,13 +40,13 @@ global function riv_draw_image_rect(img_id: uint64, x0: int64, y0: int64, w: int
 global function riv_draw_sprite(n: uint32, sps_id: uint64, x0: int64, y0: int64, nw: int64, nh: int64, mw: int64, mh: int64): void <cimport,nodecl> end
 global function riv_draw_text(text: cstring <const>, sps_id: uint64, x0: int64, y0: int64, col: int64, mw: int64, mh: int64, sx: int64, sy: int64): riv_vec2i <cimport,nodecl> end
 
--- sound system
+-- Audio
 global function riv_make_soundbuffer(desc: *riv_soundbuffer_desc): uint64 <cimport,nodecl> end
 global function riv_destroy_soundbuffer(sndbuf_id: uint64): void <cimport,nodecl> end
 global function riv_sound(desc: *riv_sound_desc): uint64 <cimport,nodecl> end
 global function riv_waveform(desc: *riv_waveform_desc): uint64 <cimport,nodecl> end
 
--- prng
+-- Pseudo random number generator (PRNG)
 global function riv_srand(a: uint64, b: uint64): void <cimport,nodecl> end
 global function riv_rand(): uint64 <cimport,nodecl> end
 global function riv_rand_uint(high: uint64): uint64 <cimport,nodecl> end

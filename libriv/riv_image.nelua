@@ -5,11 +5,9 @@ require 'io'
 require 'hashmap'
 require 'math'
 require 'C.stdio'
+require 'C.stdlib'
 require 'C.string'
 require 'C.errno'
-
-local function malloc(size: csize): pointer <cimport,cinclude'<stdlib.h>'> end
-local function free(ptr: pointer): void <cimport,cinclude'<stdlib.h>'> end
 
 local function generate_image_id(): uint64
   local img_id: uint64 = riv.image_gen
@@ -108,13 +106,13 @@ global function riv_make_image(filename: cstring <const>, color_key: int64): uin
   -- allocate pixel buffers
   local num_pixels: usize = ihdr.width*ihdr.height
   local size_rgba: usize = num_pixels*4
-  local pixels_rgba: *[0]uint32 = (@*[0]uint32)(malloc(size_rgba))
+  local pixels_rgba: *[0]uint32 = (@*[0]uint32)(C.malloc(size_rgba))
   if not pixels_rgba then
     io.stderr:writef('ERROR: unable to make image %d from file "%s": out of memory\n', img_id, filename)
     return 0
   end
-  defer free(pixels_rgba) end
-  local pixels_plte: *[0]uint8 = (@*[0]uint8)(malloc(num_pixels))
+  defer C.free(pixels_rgba) end
+  local pixels_plte: *[0]uint8 = (@*[0]uint8)(C.malloc(num_pixels))
   if not pixels_plte then
     io.stderr:writef('ERROR: unable to make image %d from file "%s": out of memory\n', img_id, filename)
     return 0
@@ -123,7 +121,7 @@ global function riv_make_image(filename: cstring <const>, color_key: int64): uin
   spngerr = spng_decode_image(ctx, pixels_rgba, size_rgba, SPNG_FMT_RGBA8, 0)
   if spngerr ~= 0 then
     io.stderr:writef('ERROR: unable to make image %d from file "%s": %s\n', img_id, filename, spng_strerror(spngerr))
-    free(pixels_plte)
+    C.free(pixels_plte)
     return 0
   end
   convert_rgba_to_plte(pixels_rgba, pixels_plte, num_pixels, (@uint8)(math.clamp(color_key, 0, RIV_MAX_COLORS-1)))
@@ -142,7 +140,7 @@ global function riv_destroy_image(img_id: uint64): void <cexport>
   if img_id <= 0 or img_id >= RIV_MAX_IMAGES then return end
   local img: *riv_image = &riv.images[img_id]
   if img.owned and img.pixels ~= nilptr then
-    free(img.pixels)
+    C.free(img.pixels)
   end
   $img = {}
 end

@@ -10,7 +10,7 @@ else
 	TOOLCHAIN_PREFIX=$(shell $(CC) -dumpmachine)-
 endif
 
-# Release flags
+# basic flags
 CFLAGS+=-Wall
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
 LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
@@ -19,7 +19,7 @@ NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
 
 ifeq ($(debug), yes)
 	CFLAGS+=-Og
-else
+else # release flags
 	CFLAGS+=-O2 -DNDEBUG -fno-stack-protector -ffast-math
 	STRIPFLAGS+=--strip-unneeded --remove-section=.comment
 	NELUA_FLAGS+=--strip-bin --stripflags="$(STRIPFLAGS)"

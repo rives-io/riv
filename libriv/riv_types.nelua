@@ -258,11 +258,11 @@ global riv_rgb_code: type <cimport,nodecl,using> = @enum(uint32){
   RIV_RGB_PURPLE = 5378692,
   RIV_RGB_DARKPURPLE = 3868733
 }
-global riv_pixel_format: type <cimport,nodecl,using> = @enum(uint8){
+global riv_pixel_format: type <cimport,nodecl,using> = @enum(uint32){
   RIV_PIXELFORMAT_PLT256 = 0,
   RIV_NUM_PIXELFORMAT = 1
 }
-global riv_waveform_type: type <cimport,nodecl,using> = @enum(uint8){
+global riv_waveform_type: type <cimport,nodecl,using> = @enum(uint32){
   RIV_WAVEFORM_NONE = 0,
   RIV_WAVEFORM_SINE = 1,
   RIV_WAVEFORM_SQUARE = 2,
@@ -271,7 +271,7 @@ global riv_waveform_type: type <cimport,nodecl,using> = @enum(uint8){
   RIV_WAVEFORM_NOISE = 5,
   RIV_WAVEFORM_PULSE = 6
 }
-global riv_sound_format: type <cimport,nodecl,using> = @enum(uint8){
+global riv_sound_format: type <cimport,nodecl,using> = @enum(uint32){
   RIV_SOUNDFORMAT_NONE = 0,
   RIV_SOUNDFORMAT_U8 = 1,
   RIV_SOUNDFORMAT_S16 = 2,
@@ -296,24 +296,24 @@ global riv_constants: type <cimport,nodecl,using> = @enum(uint32){
   RIV_NUM_GAMEPAD_BUTTONS = 16,
   RIV_INVALID_ID = 0
 }
-global riv_image_id: type <cimport,nodecl,using> = @enum(int32){
+global riv_image_id: type <cimport,nodecl,using> = @enum(uint32){
   RIV_IMAGE_NONE = 0,
   RIV_IMAGE_FONT_5X7 = 255,
   RIV_IMAGE_FONT_3X5 = 254
 }
-global riv_spritesheet_id: type <cimport,nodecl,using> = @enum(int32){
+global riv_spritesheet_id: type <cimport,nodecl,using> = @enum(uint32){
   RIV_SPRITESHEET_NONE = 0,
   RIV_SPRITESHEET_FONT_5X7 = 255,
   RIV_SPRITESHEET_FONT_3X5 = 254
 }
-global riv_control_command: type <cimport,nodecl,using> = @enum(uint8){
+global riv_control_command: type <cimport,nodecl,using> = @enum(uint32){
   RIV_CONTROL_NONE = 0,
   RIV_CONTROL_OPEN = 1,
   RIV_CONTROL_CLOSE = 2,
   RIV_CONTROL_PRESENT = 3,
   RIV_CONTROL_FLUSH_AUDIO = 4
 }
-global riv_audio_command_type: type <cimport,nodecl,using> = @enum(uint8){
+global riv_audio_command_type: type <cimport,nodecl,using> = @enum(uint32){
   RIV_AUDIOCOMMAND_NONE = 0,
   RIV_AUDIOCOMMAND_MAKE_SOUNDBUFFER = 1,
   RIV_AUDIOCOMMAND_DESTROY_SOUNDBUFFER = 2,
@@ -346,7 +346,7 @@ global riv_vaddr_base: type <cimport,nodecl,using> = @enum(uint64){
 }
 global riv_id: type <cimport,nodecl> = @uint64
 global riv_span_uint8: type <cimport,nodecl> = @record{
-  data: *uint8,
+  data: *[0]uint8,
   size: uint64
 }
 global riv_framebuffer_desc: type <cimport,nodecl> = @record{
@@ -459,7 +459,7 @@ global riv_rectf: type <cimport,nodecl> = @record{
   height: int64
 }
 global riv_image: type <cimport,nodecl> = @record{
-  pixels: *uint8,
+  pixels: *[0]uint8,
   width: uint16,
   height: uint16,
   color_key: int16,

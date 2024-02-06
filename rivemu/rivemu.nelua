@@ -1,55 +1,17 @@
--- This file contains all code related to the audio subsystem.
+-- This file contains the entry point for RIVEMU.
 
 ##[[
-pragma{
-  nogc=true,
-}
+-- Riv emulator does not use garbage collection
+pragma{nogc=true}
+
+-- Allow requiring third party libraries
 local projdir = fs.scriptdir(2)
 libpath(fs.join(projdir, 'libriv', '?.nelua'))
 libpath(fs.join(projdir, 'libs', 'host', '?.nelua'))
 libpath(fs.join(projdir, 'libs', 'guest-host', '?.nelua'))
-
 if ccinfo.is_emscripten then
-  -- cartesi machine
   cflags('-I'..projdir..'/cartesi-machine-v0.15.2_wasm/include')
   ldflags('-L'..projdir..'/cartesi-machine-v0.15.2_wasm/lib')
-
-  -- basic flags
-  cflags('-sFULL_ES3 -sSTACK_SIZE=4MB -sTOTAL_MEMORY=384MB -sNO_DISABLE_EXCEPTION_CATCHING=1')
-
-  -- miniaudio worklets
-  -- cdefine 'MA_ENABLE_AUDIO_WORKLETS'
-  -- cflags '-sAUDIO_WORKLET=1 -sWASM_WORKERS=1'
-  -- cflags '-sASYNCIFY'
-  cflags '-O3 -g0'
-
-  -- debugging
-  -- cflags '-Og -g'
-  -- cflags '-sSAFE_HEAP'
-  -- cflags '-sASSERTIONS=2'
-  -- cflags '-fsanitize=undefined,address'
-
-  -- embed files
-  cflags('--embed-file '..projdir..'/rootfs/rootfs.ext2@rootfs/rootfs.ext2')
-  cflags('--embed-file '..projdir..'/kernel/linux.bin@kernel/linux.bin')
-  cflags('--embed-file '..projdir..'/kernel/rom.bin@kernel/rom.bin')
-
-  -- export functions
-  local export_functions = {
-    '_main',
-    '_rivemu_start_record',
-    '_rivemu_start_replay',
-    '_rivemu_stop',
-    '_malloc',
-    '_free',
-  }
-  cflags "-s ENVIRONMENT=web"
-  cflags('-sEXPORTED_FUNCTIONS='..table.concat(export_functions,','))
-  local export_runtime_functions = {
-    'ccall',
-    'cwrap',
-  }
-  cflags('-sEXPORTED_RUNTIME_METHODS='..table.concat(export_runtime_functions,','))
 end
 ]]
 
@@ -540,20 +502,20 @@ local function advance_frame(): void
   -- notify frames
   if not loading and running then
     ## if ccinfo.is_emscripten then
-    local outcard_data: span(byte) = rivemu_iocard.get_outcard_data()
-    local ptr: *uint8 <nodce> = (@*uint8)(outcard_data.data)
-    local len: int32 <nodce> = (@int32)(outcard_data.size)
-    local frame: int32 <nodce> = (@int32)(machine.mmio_driver.frame)
-    local fps: float64 <nodce> = framelimiter.fps
-    local mips: float64 <nodce> = framelimiter.mips
-    local cpu_usage: float64 <nodce> = framelimiter.cpu_usage
-    local cycles: float64 <nodce> = last_mcycle
-    cemit![[
-      EM_ASM({
-        let outcard = HEAPU8.subarray($0, $0 + $1);
-        rivemu_on_frame(outcard, $2, $3, $4, $5, $6);
-      }, ptr, len, frame, fps, mips, cpu_usage, cycles);
-    ]]
+      local outcard_data: span(byte) = rivemu_iocard.get_outcard_data()
+      local ptr: *uint8 <nodce> = (@*uint8)(outcard_data.data)
+      local len: int32 <nodce> = (@int32)(outcard_data.size)
+      local frame: int32 <nodce> = (@int32)(machine.mmio_driver.frame)
+      local fps: float64 <nodce> = framelimiter.fps
+      local mips: float64 <nodce> = framelimiter.mips
+      local cpu_usage: float64 <nodce> = framelimiter.cpu_usage
+      local cycles: float64 <nodce> = last_mcycle
+      cemit![[
+        EM_ASM({
+          let outcard = HEAPU8.subarray($0, $0 + $1);
+          rivemu_on_frame(outcard, $2, $3, $4, $5, $6);
+        }, ptr, len, frame, fps, mips, cpu_usage, cycles);
+      ]]
     ## end
   end
 
@@ -688,9 +650,44 @@ end
 
 local function rivemu_stop(url: cstring): boolean <cexport>
   if not started then return false end
-  io.printf('[RIVEMU] Stop requested\n')
+  io.printf('[RIVEMU] Stop requested!\n')
   sapp_quit()
   return true
 end
+
+##[[
+-- Disable default Nelua cflags for debug/release mode
+require('nelua.cdefs').compilers_flags.emcc.cflags_devel = ""
+
+-- Set required emscripten flags
+cflags('-sFULL_ES3 -sSTACK_SIZE=4MB -sTOTAL_MEMORY=384MB')
+
+-- debugging
+-- cflags '-sSAFE_HEAP'
+-- cflags '-sASSERTIONS=2'
+-- cflags '-fsanitize=undefined,address'
+
+-- Export functions to web environment
+cflags('-sENVIRONMENT=web')
+local export_functions = {
+  '_main',
+  '_rivemu_start_record',
+  '_rivemu_start_replay',
+  '_rivemu_stop',
+  '_malloc',
+  '_free',
+}
+cflags('-sEXPORTED_FUNCTIONS='..table.concat(export_functions,','))
+local export_runtime_functions = {
+  'ccall',
+  'cwrap',
+}
+cflags('-sEXPORTED_RUNTIME_METHODS='..table.concat(export_runtime_functions,','))
+
+-- Embed files
+cflags('--embed-file '..projdir..'/rootfs/rootfs.ext2@rootfs/rootfs.ext2')
+cflags('--embed-file '..projdir..'/kernel/linux.bin@kernel/linux.bin')
+cflags('--embed-file '..projdir..'/kernel/rom.bin@kernel/rom.bin')
+]]
 
 ## end
