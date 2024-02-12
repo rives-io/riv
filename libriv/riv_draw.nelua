@@ -42,8 +42,8 @@ local function riv_get_clip_limits(): (int64, int64, int64, int64, int64) <inlin
 end
 
 global function riv_draw_point(x: int64, y: int64, col: uint32): void <cexport>
-  x = x - riv.draw.origin.x
-  y = y - riv.draw.origin.y
+  x = x + riv.draw.origin.x
+  y = y + riv.draw.origin.y
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   if not (x >= cx0 and y >= cy0 and x <= cx1 and y <= cy1) then return end
   local co: uint8 = (@uint8)(col)
@@ -52,8 +52,8 @@ global function riv_draw_point(x: int64, y: int64, col: uint32): void <cexport>
 end
 
 global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: uint32): void <cexport>
-  x0 = x0 - riv.draw.origin.x x1 = x1 - riv.draw.origin.x
-  y0 = y0 - riv.draw.origin.y y1 = y1 - riv.draw.origin.y
+  x0 = x0 + riv.draw.origin.x x1 = x1 + riv.draw.origin.x
+  y0 = y0 + riv.draw.origin.y y1 = y1 + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
   local fb: *[0]uint8 = riv.framebuffer
@@ -115,8 +115,8 @@ end
 
 global function riv_draw_rect_fill(x0: int64, y0: int64, w: int64, h: int64, col: uint32): void <cexport>
   if unlikely(w <= 0 or h <= 0) then return end
-  x0 = x0 - riv.draw.origin.x
-  y0 = y0 - riv.draw.origin.y
+  x0 = x0 + riv.draw.origin.x
+  y0 = y0 + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
   local fb: *[0]uint8 = riv.framebuffer
@@ -137,8 +137,8 @@ end
 
 global function riv_draw_rect_line(x0: int64, y0: int64, w: int64, h: int64, col: uint32): void <cexport>
   if unlikely(w <= 0 or h <= 0) then return end
-  x0 = x0 - riv.draw.origin.x
-  y0 = y0 - riv.draw.origin.y
+  x0 = x0 + riv.draw.origin.x
+  y0 = y0 + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
   local fb: *[0]uint8 = riv.framebuffer
@@ -171,8 +171,8 @@ end
 
 global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32): void <cexport>
   if unlikely(d <= 0) then return end
-  ox = ox - riv.draw.origin.x
-  oy = oy - riv.draw.origin.y
+  ox = ox + riv.draw.origin.x
+  oy = oy + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
   local fb: *[0]uint8 = riv.framebuffer
@@ -199,8 +199,8 @@ end
 
 global function riv_draw_circle_line(ox: int64, oy: int64, d: int64, col: uint32): void <cexport>
   if unlikely(d <= 0) then return end
-  ox = ox - riv.draw.origin.x
-  oy = oy - riv.draw.origin.y
+  ox = ox + riv.draw.origin.x
+  oy = oy + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
   local fb: *[0]uint8 = riv.framebuffer
@@ -231,8 +231,8 @@ end
 
 global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, col: uint32): void <cexport>
   if unlikely(w <= 0 or h <= 0) then return end
-  ox = ox - riv.draw.origin.x
-  oy = oy - riv.draw.origin.y
+  ox = ox + riv.draw.origin.x
+  oy = oy + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
   local fb: *[0]uint8 = riv.framebuffer
@@ -263,8 +263,8 @@ end
 
 global function riv_draw_ellipse_line(ox: int64, oy: int64, w: int64, h: int64, col: uint32): void <cexport>
   if unlikely(w <= 0 or h <= 0) then return end
-  ox = ox - riv.draw.origin.x
-  oy = oy - riv.draw.origin.y
+  ox = ox + riv.draw.origin.x
+  oy = oy + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
   local fb: *[0]uint8 = riv.framebuffer
@@ -304,8 +304,8 @@ global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int6
   elseif y0 == y1 and y1 == y2 then -- horizontal line
     riv_draw_line(math.min(x0,x1,x2), y0, math.max(x0,x1,x2), y0, col)
   else
-    x0 = x0 - riv.draw.origin.x  x1 = x1 - riv.draw.origin.x  x2 = x2 - riv.draw.origin.x
-    y0 = y0 - riv.draw.origin.y  y1 = y1 - riv.draw.origin.y  y2 = y2 - riv.draw.origin.y
+    x0 = x0 + riv.draw.origin.x  x1 = x1 + riv.draw.origin.x  x2 = x2 + riv.draw.origin.x
+    y0 = y0 + riv.draw.origin.y  y1 = y1 + riv.draw.origin.y  y2 = y2 + riv.draw.origin.y
     local co: uint8 = (@uint8)(col)
     if riv.draw.pal_enabled then co = riv.draw.pal[co] end
     local fb: *[0]uint8 = riv.framebuffer
@@ -466,8 +466,8 @@ end
   local imgp: *[0]uint8 = img.pixels
   if unlikely(sx0 + w > imgw or sy0 + h > imgh or not imgp) then return end
   local imgcolkey: uint64 = (@uint64)(img.color_key)
-  x0 = x0 - riv.draw.origin.x
-  y0 = y0 - riv.draw.origin.y
+  x0 = x0 + riv.draw.origin.x
+  y0 = y0 + riv.draw.origin.y
   local fb: *[0]uint8 = riv.framebuffer
   local pal: *[0]uint8 = riv.draw.pal_enabled and &riv.draw.pal or nilptr
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()

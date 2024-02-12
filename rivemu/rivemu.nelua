@@ -46,6 +46,7 @@ local rivemu_options: type = @record{
   no_audio: boolean,
   no_video: boolean,
   no_yield: boolean,
+  no_loading: boolean,
   no_quit: boolean,
   wait_halt: boolean,
   print_final_hash: boolean,
@@ -102,8 +103,11 @@ local function parse_options(): rivemu_options
       opts.no_audio = true
     elseif a == '-no-video' then
       opts.no_video = true
+    elseif a == '-no-loading' then
+      opts.no_loading = true
     elseif a == '-no-yield' then
       opts.no_yield = true
+      opts.no_loading = true
       opts.no_video = true
       opts.no_audio = true
     elseif a == '-no-quit' then
@@ -157,6 +161,9 @@ local function parse_options(): rivemu_options
 
 -no-video
   Disable video.
+
+-no-loading
+  Disable the loading screen.
 
 -no-yield
   Disable yield device when verifying (also disable audio and video).
@@ -376,7 +383,7 @@ end
 local function machine_frame(): void
   while true do
     local mcycle_end: uint64 = (@uint64)(-1)
-    if loading and not options.no_yield then
+    if loading and not options.no_loading then
       -- advance just a few cycles to not freeze the application
       -- and display a loading screen
       mcycle_end = machine:read_mcycle() + 1024*1024
