@@ -43,6 +43,7 @@ local rivemu_options: type = @record{
   verifying: boolean,
   print_stats: boolean,
   print_hash: boolean,
+  pixel_perfect: boolean,
   no_audio: boolean,
   no_video: boolean,
   no_yield: boolean,
@@ -118,6 +119,8 @@ local function parse_options(): rivemu_options
       opts.print_stats = true
     elseif a == '-print-final-hash' then
       opts.print_final_hash = true
+    elseif a == '-pixel-perfect' then
+      opts.pixel_perfect = true
     elseif a == '-args' then
       opts.entrypoint_args = sargs_value_at(i)
     elseif a == '-help' or a == '--help' or a == '-h' then
@@ -179,6 +182,9 @@ local function parse_options(): rivemu_options
 
 -print-final-hash
   Print final machine root hash.
+
+-pixel-perfect
+  Resize screen while maintaining pixel perfect sizes.
 
 -args <args>
   Append arguments when running the cartridge.
@@ -257,7 +263,7 @@ local function startup(): void
   -- init subsystems
   rivemu_iocard.setup()
   if not options.no_video then
-    rivemu_video.setup()
+    rivemu_video.setup(options.pixel_perfect)
     rivemu_video.set_loading(true)
     rivemu_video.present()
   end

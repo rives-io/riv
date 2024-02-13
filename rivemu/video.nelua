@@ -13,6 +13,7 @@ global rivemu_video = @record{}
 local fb_desc: riv_framebuffer_desc
 local fb_pixel_count: int64
 local fb_image: sg_image
+local fb_pixel_perfect: boolean
 local framebuffer: [RIV_MMIOSIZE_FRAMEBUFFER]byte
 local framebuffer_rgba: [RIV_MMIOSIZE_FRAMEBUFFER]uint32
 local loading: boolean = false
@@ -37,11 +38,12 @@ function rivemu_video.reset(): void
 end
 
 -- Initialize video subsystem.
-function rivemu_video.setup(): void
+function rivemu_video.setup(pixel_perfect: boolean): void
   sg_setup(sg_desc{context = sapp_sgcontext(), logger = {func = slog_func}})
   assert(sg_isvalid(), 'failed to initialize Sokol GFX')
   sgp_setup(sgp_desc{})
   assert(sgp_is_valid(), 'failed to initialize SGP')
+  fb_pixel_perfect = pixel_perfect
 end
 
 function rivemu_video.set_loading(enabled: boolean): void
@@ -101,13 +103,15 @@ local function update_framebuffer_video_mem(): void
 end
 
 -- Fit a box into another box while preserving aspect ratio.
-local function fit_box(inner_width: int64, inner_height: int64, outer_width: int64, outer_height: int64): (int64, int64, int64, int64)
-  local scale: number = 0
+local function fit_box(inner_width: int64, inner_height: int64, outer_width: int64, outer_height: int64, pixel_perfect: boolean): (int64, int64, int64, int64)
+  local scale: float64 = 0
   if inner_height > 0 and inner_height > 0 then
     if inner_height*outer_width >= inner_width*outer_height then -- full vertical
-      scale = (outer_height >= inner_height) and (outer_height / inner_height) or (outer_height / inner_height)
+      local ratio: float64 = pixel_perfect and (outer_height // inner_height) or (outer_height / inner_height)
+      scale = (outer_height >= inner_height) and ratio or (outer_height / inner_height)
     else -- full horizontal
-      scale = (outer_width >= inner_width) and (outer_width / inner_width) or (outer_width / inner_width)
+      local ratio: float64 = pixel_perfect and (outer_width // inner_width) or (outer_width / inner_width)
+      scale = (outer_width >= inner_width) and ratio or (outer_width / inner_width)
     end
   end
   local width: int64, height: int64 = math.ifloor(inner_width * scale), math.ifloor(inner_height * scale)
@@ -119,7 +123,7 @@ end
 local function draw_framebuffer(screen_width: int64, screen_height: int64): void
   if fb_pixel_count == 0 then return end
   sgp_set_image(0, fb_image)
-  sgp_draw_filled_rect(fit_box(fb_desc.width, fb_desc.height, screen_width, screen_height))
+  sgp_draw_filled_rect(fit_box(fb_desc.width, fb_desc.height, screen_width, screen_height, fb_pixel_perfect))
   sgp_reset_image(0)
 end
 
