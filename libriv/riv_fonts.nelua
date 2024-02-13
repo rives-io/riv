@@ -1,3 +1,4 @@
+##[==[
 -- Primary font
 local f5x7_font = {
   image_pixels = ([[
@@ -131,7 +132,8 @@ local f3x5_font = {
   rows = 8,
 }
 
-return {
+riv_fonts = {
   f3x5 = f3x5_font,
   f5x7 = f5x7_font,
 }
+]==]

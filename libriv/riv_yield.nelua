@@ -23,6 +23,8 @@ end
 global function riv_yield_close(): void
   if riv.yield_fd <= 0 then return end
   assert(close(riv.yield_fd) >= 0, 'close yield fd failed')
+  riv.yield_fd = 0
+  riv.yielding = false
 end
 
 -- Suspend execution for the host to handle an event.

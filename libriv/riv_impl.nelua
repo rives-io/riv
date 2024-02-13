@@ -1,6 +1,5 @@
 ## pragmas.unitname = ''
 
-require 'memory'
 require 'string'
 require 'linux'
 require '.riv_types'
@@ -23,15 +22,14 @@ global function riv_init(): void <cattribute'constructor',cexport>
   -- initialize all code in top scopes
   local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end
   nelua_main(0, nilptr)
-  -- open yield device
-  riv_yield_open()
   -- map shared memory
   assert(get_free_hugepages() == 1, 'no free hugepage')
   local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
   assert(mmap(mmio, RIV_MMIOSIZE_HUGEPAGE, prot, flags | MAP_HUGETLB, -1, 0) == mmio, 'mmio mmap failed')
   assert(get_free_hugepages() == 0, 'no used hugepage')
+  -- open yield device
+  riv_yield_open()
   -- initialize device
-  memory.zero(mmio, RIV_MMIOSIZE_HUGEPAGE)
   riv.stop_frame = (@uint64)(-1)
   riv.mmio_driver = (@*riv_mmio_driver)(RIV_VADDR_MMIO_DRIVER)
   riv.mmio_device = (@*riv_mmio_device)(RIV_VADDR_MMIO_DEVICE)
@@ -86,7 +84,7 @@ global function riv_init(): void <cattribute'constructor',cexport>
   riv.valid = true
 end
 
-global function riv_fini(): void <cattribute'destructor',cexport>
+global function riv_deinit(): void
   -- ignore when not initialized
   if not riv.valid then return end
   -- save screenshot if needed
@@ -95,15 +93,18 @@ global function riv_fini(): void <cattribute'destructor',cexport>
   riv_sync_outcard()
   -- tell the host we finished, the host may use inoutbuffer
   riv_yield(RIV_CONTROL_CLOSE)
-  -- unmap shared memory
-  local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
-  memory.zero(mmio, RIV_MMIOSIZE_HUGEPAGE)
-  assert(munmap(mmio, RIV_MMIOSIZE_HUGEPAGE) == 0, 'mmio munmap failed')
-  assert(get_free_hugepages() == 1, 'no freed hugepage')
   -- close yield device
   riv_yield_close()
+  riv.valid = false
+end
+
+global function riv_fini(): void <cattribute'destructor',cexport>
+  riv_deinit()
+  -- unmap shared memory
+  local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
+  assert(munmap(mmio, RIV_MMIOSIZE_HUGEPAGE) == 0, 'mmio munmap failed')
+  assert(get_free_hugepages() == 1, 'no freed hugepage')
   -- unmap riv context
-  memory.zero(riv, #@riv_context)
   assert(munmap(riv, RIV_MMIOSIZE_HUGEPAGE) == 0, 'riv munmap failed')
 end
 
@@ -112,7 +113,7 @@ global function riv_present(): boolean <cexport>
   if riv.verifying then
     local event: riv_key_toggle_event = riv.verify_key_events[riv.verify_key_event_index]
     if event.key_code == 0xff and riv.frame >= event.frame + 1 then
-      riv_fini()
+      riv_deinit()
       exit(0)
       return false
     end
@@ -123,7 +124,7 @@ global function riv_present(): boolean <cexport>
   riv_yield(RIV_CONTROL_PRESENT)
   -- should we stop?
   if riv.frame >= riv.stop_frame then
-    riv_fini()
+    riv_deinit()
     exit(0)
     return false
   end

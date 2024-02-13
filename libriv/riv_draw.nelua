@@ -1,10 +1,10 @@
 ## pragmas.unitname = ''
-## local fonts = require 'riv_fonts'
 
 require 'memory'
 require 'math'
 require 'C.string'
 require '.riv_types'
+require '.riv_fonts'
 
 global function riv_init_draw(): void
   -- set initial clip big enough for all screen sizes
@@ -15,19 +15,19 @@ global function riv_init_draw(): void
     riv.draw.pal[i] = (@uint8)(i)
   end
   -- set default fonts
-  riv.images[RIV_IMAGE_FONT_3X5].width = #[fonts.f3x5.cols * fonts.f3x5.cell_width]#
-  riv.images[RIV_IMAGE_FONT_3X5].height = #[fonts.f3x5.rows * fonts.f3x5.cell_height]#
-  riv.images[RIV_IMAGE_FONT_3X5].pixels = (@*[0]uint8)(#[fonts.f3x5.image_pixels]#)
+  riv.images[RIV_IMAGE_FONT_3X5].width = #[riv_fonts.f3x5.cols * riv_fonts.f3x5.cell_width]#
+  riv.images[RIV_IMAGE_FONT_3X5].height = #[riv_fonts.f3x5.rows * riv_fonts.f3x5.cell_height]#
+  riv.images[RIV_IMAGE_FONT_3X5].pixels = (@*[0]uint8)(#[riv_fonts.f3x5.image_pixels]#)
   riv.spritesheets[RIV_SPRITESHEET_FONT_3X5].image_id = RIV_IMAGE_FONT_3X5
-  riv.spritesheets[RIV_SPRITESHEET_FONT_3X5].cell_width = #[fonts.f3x5.cell_width]#
-  riv.spritesheets[RIV_SPRITESHEET_FONT_3X5].cell_height = #[fonts.f3x5.cell_height]#
+  riv.spritesheets[RIV_SPRITESHEET_FONT_3X5].cell_width = #[riv_fonts.f3x5.cell_width]#
+  riv.spritesheets[RIV_SPRITESHEET_FONT_3X5].cell_height = #[riv_fonts.f3x5.cell_height]#
 
-  riv.images[RIV_IMAGE_FONT_5X7].width = #[fonts.f5x7.cols * fonts.f5x7.cell_width]#
-  riv.images[RIV_IMAGE_FONT_5X7].height = #[fonts.f5x7.rows * fonts.f5x7.cell_height]#
-  riv.images[RIV_IMAGE_FONT_5X7].pixels = (@*[0]uint8)(#[fonts.f5x7.image_pixels]#)
+  riv.images[RIV_IMAGE_FONT_5X7].width = #[riv_fonts.f5x7.cols * riv_fonts.f5x7.cell_width]#
+  riv.images[RIV_IMAGE_FONT_5X7].height = #[riv_fonts.f5x7.rows * riv_fonts.f5x7.cell_height]#
+  riv.images[RIV_IMAGE_FONT_5X7].pixels = (@*[0]uint8)(#[riv_fonts.f5x7.image_pixels]#)
   riv.spritesheets[RIV_SPRITESHEET_FONT_5X7].image_id = RIV_IMAGE_FONT_5X7
-  riv.spritesheets[RIV_SPRITESHEET_FONT_5X7].cell_width = #[fonts.f5x7.cell_width]#
-  riv.spritesheets[RIV_SPRITESHEET_FONT_5X7].cell_height = #[fonts.f5x7.cell_height]#
+  riv.spritesheets[RIV_SPRITESHEET_FONT_5X7].cell_width = #[riv_fonts.f5x7.cell_width]#
+  riv.spritesheets[RIV_SPRITESHEET_FONT_5X7].cell_height = #[riv_fonts.f5x7.cell_height]#
 end
 
 global function riv_clear_screen(col: uint32): void <cexport>
