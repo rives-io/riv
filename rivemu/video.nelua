@@ -6,6 +6,17 @@ require 'miniz'
 require 'spng'
 require '.machine'
 
+## cdefine 'SOKOL_SHDC_IMPL'
+## cinclude 'crt.glsl.h'
+
+local crt_uniforms: type <cimport'crt_uniforms_t',nodecl> = @record{
+  iResolution: sgp_vec2,
+  iTime: float32,
+  _pad_12: [4]uint8,
+}
+
+local function crt_program_shader_desc(backend: sg_backend): *sg_shader_desc <cimport,nodecl> end
+
 -- Video subsystem.
 global rivemu_video = @record{}
 
@@ -18,6 +29,8 @@ local framebuffer: [RIV_MMIOSIZE_FRAMEBUFFER]byte
 local framebuffer_rgba: [RIV_MMIOSIZE_FRAMEBUFFER]uint32
 local loading: boolean = false
 local loading_start: float64 = 0
+local crt_pip: sg_pipeline
+local crt_shd: sg_shader
 
 -- Destroy the window framebuffer image.
 local function destroy_framebuffer_image(): void
@@ -37,6 +50,21 @@ function rivemu_video.reset(): void
   loading = false
 end
 
+local function load_crt_pip(): void
+  -- initialize shader
+  crt_shd = sg_make_shader(crt_program_shader_desc(sg_query_backend()))
+  if sg_query_shader_state(crt_shd) ~= SG_RESOURCESTATE_VALID then
+    io.stderr:write("WARNING: failed to make custom pipeline shader\n")
+    return
+  end
+  local crt_pip_desc: sgp_pipeline_desc = {shader = crt_shd, has_vs_color = true}
+  crt_pip = sgp_make_pipeline(&crt_pip_desc)
+  if sg_query_pipeline_state(crt_pip) ~= SG_RESOURCESTATE_VALID then
+    io.stderr:write("WARNING: failed to make custom pipeline\n")
+    return
+  end
+end
+
 -- Initialize video subsystem.
 function rivemu_video.setup(pixel_perfect: boolean): void
   sg_setup(sg_desc{context = sapp_sgcontext(), logger = {func = slog_func}})
@@ -44,6 +72,7 @@ function rivemu_video.setup(pixel_perfect: boolean): void
   sgp_setup(sgp_desc{})
   assert(sgp_is_valid(), 'failed to initialize SGP')
   fb_pixel_perfect = pixel_perfect
+  load_crt_pip()
 end
 
 function rivemu_video.set_loading(enabled: boolean): void
@@ -54,6 +83,8 @@ end
 -- Terminate video subsystem.
 function rivemu_video.shutdown(): void
   rivemu_video.reset()
+  sg_destroy_pipeline(crt_pip)
+  sg_destroy_shader(crt_shd)
   sgp_shutdown()
   sg_shutdown()
 end
@@ -122,9 +153,16 @@ end
 -- Draw the framebuffer into the window screen.
 local function draw_framebuffer(screen_width: int64, screen_height: int64): void
   if fb_pixel_count == 0 then return end
+  sgp_set_pipeline(crt_pip)
+  local uniform: crt_uniforms
+  uniform.iResolution.x = screen_width
+  uniform.iResolution.y = screen_height
+  uniform.iTime = sapp_frame_count() / 60.0
+  sgp_set_uniform(&uniform, #@crt_uniforms)
   sgp_set_image(0, fb_image)
   sgp_draw_filled_rect(fit_box(fb_desc.width, fb_desc.height, screen_width, screen_height, fb_pixel_perfect))
   sgp_reset_image(0)
+  sgp_reset_pipeline()
 end
 
 local function draw_intro_bg(screen_width: int64, screen_height: int64, t: float64): void
