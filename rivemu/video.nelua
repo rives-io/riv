@@ -16,6 +16,7 @@ local fb_image: sg_image
 local framebuffer: [RIV_MMIOSIZE_FRAMEBUFFER]byte
 local framebuffer_rgba: [RIV_MMIOSIZE_FRAMEBUFFER]uint32
 local loading: boolean = false
+local loading_start: float64 = 0
 
 -- Destroy the window framebuffer image.
 local function destroy_framebuffer_image(): void
@@ -45,6 +46,7 @@ end
 
 function rivemu_video.set_loading(enabled: boolean): void
   loading = enabled
+  loading_start = os.now()
 end
 
 -- Terminate video subsystem.
@@ -103,9 +105,9 @@ local function fit_box(inner_width: int64, inner_height: int64, outer_width: int
   local scale: number = 0
   if inner_height > 0 and inner_height > 0 then
     if inner_height*outer_width >= inner_width*outer_height then -- full vertical
-      scale = (outer_height >= inner_height) and (outer_height // inner_height) or (outer_height / inner_height)
+      scale = (outer_height >= inner_height) and (outer_height / inner_height) or (outer_height / inner_height)
     else -- full horizontal
-      scale = (outer_width >= inner_width) and (outer_width // inner_width) or (outer_width / inner_width)
+      scale = (outer_width >= inner_width) and (outer_width / inner_width) or (outer_width / inner_width)
     end
   end
   local width: int64, height: int64 = math.ifloor(inner_width * scale), math.ifloor(inner_height * scale)
@@ -121,24 +123,89 @@ local function draw_framebuffer(screen_width: int64, screen_height: int64): void
   sgp_reset_image(0)
 end
 
-local function draw_loading(screen_width: int64, screen_height: int64): void
-  -- draw loading animation
-  local t: float64 = os.now()
+local function draw_intro_bg(screen_width: int64, screen_height: int64, t: float64): void
+  local i: int64 = 0
+  local l: int64 = screen_height//128
+  local colors: [10]sgp_color = {
+    {0.85, 0.15, 0.15, 1.0},
+    {0.15, 0.15, 0.85, 1.0},
+    {0.4, 0.4, 0.4, 1.0},
+    {0.8, 0.8, 0.8, 1.0},
+  }
+  local is: int64 = int64(t * 8) % 2 * 2
+  for y: int64=0,<screen_height,l do
+    i = (i + 1) % 2
+    local col: sgp_color = colors[is + i]
+    sgp_set_color(col.r, col.g, col.b, col.a)
+    sgp_draw_filled_rect(0, y, screen_width, l)
+  end
+end
+
+local function draw_loading(screen_width: int64, screen_height: int64, t: float64): void
   local j: int64 = math.iround((math.abs(math.fract(t)*2 - 1)*2-1)*4)
   for i=-4,4 do
     local w: float32 = screen_width/16
     local h: float32 = screen_width/16
     if i == j then
       h = h * 2
-      sgp_reset_color()
+      sgp_set_color(1.0, 1.0, 1.0, 1.0)
     else
-      sgp_set_color(0.75, 0.75, 0.75, 1)
+      sgp_set_color(0.75, 0.75, 0.75, 1.0)
     end
     local x: float32 = screen_width/2 - i*w*1.5 - w/2
-    local y: float32 = (screen_height - h)/2
+    local y: float32 = (screen_height - h)/2 + screen_height/4
     sgp_draw_filled_rect(x, y, w, h)
   end
   sgp_reset_color()
+end
+
+local function draw_pixels(pixels: string, x: int64, y: int64, pw: int64, ph: int64): void
+  local ix: int64 = x
+  local iy: int64 = y
+  for i: int64=0,<#pixels do
+    local c: byte = pixels.data[i]
+    if c == '\n'_b then
+      iy = iy + ph
+      ix = x
+    else
+      if c == '#'_b then
+        sgp_draw_filled_rect(ix, iy, pw, ph)
+      end
+      ix = ix + pw
+    end
+  end
+end
+
+local function draw_logo_fadein(screen_width: int64, screen_height: int64, t: float64): void
+  local pw: int64 = screen_width//128
+  local w: int64 = pw * 30
+  local h: int64 = pw * 7
+  local x: int64 = (screen_width - w)//2
+  local y: int64 = (screen_height - h)//2-- - 1.75*screen_width/16
+  local v: float64 = math.ifloor((math.min(t*4.0, 1.0))*8)/8
+  sgp_set_color(v, v, v, 1.0)
+  draw_pixels([[
+##### ##### #   # #####  ####
+#   #   #   #   # #     #
+#   #   #   #   # #     #
+####    #   #   # ####  #####
+#   #   #   #   # #         #
+#   #   #    # #  #         #
+#   # #####   #   ##### ####
+]], x, y, pw, pw)
+end
+
+local function draw_intro_loading(screen_width: int64, screen_height: int64, t: float64): void
+  local t: float64 = os.now() - loading_start
+  if t < 0.25 then
+    draw_intro_bg(screen_width, screen_height, t)
+    return
+  end
+  t = t - 0.25
+  draw_logo_fadein(screen_width, screen_height, t)
+  if t < 0.25 then return end
+  t = t - 0.25
+  draw_loading(screen_width, screen_height, t)
 end
 
 function rivemu_video.update_framebuffer()
@@ -157,8 +224,8 @@ function rivemu_video.present(): void
   sgp_project(0, app_width, 0, app_height)
 
   if loading then
-    -- draw loading animation
-    draw_loading(app_width, app_height)
+    -- draw intro + loading animation
+    draw_intro_loading(app_width, app_height)
   else
     -- draw
     draw_framebuffer(app_width, app_height)

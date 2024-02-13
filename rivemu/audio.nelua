@@ -247,6 +247,7 @@ function rivemu_audio.setup(pitch: float64): void
   ma_engine_set_volume(&engine, DEFAULT_VOLUME)
   global_sample_rate = ma_engine_get_sample_rate(&engine)
   global_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine)
+
 end
 
 -- Reset audio subsystem.
@@ -419,6 +420,39 @@ local function handle_waveform(desc: riv_waveform_desc): void
   end
   ma_assert!(ma_sound_start(asound))
   sounds[desc.id] = Sound{=asound, =waveform}
+end
+
+function rivemu_audio.start_boot_sound()
+  handle_waveform{
+    id = 1,
+    type = RIV_WAVEFORM_TRIANGLE,
+    delay = 0/8,
+    attack = 0.01,
+    decay = 1/8.0,
+    release = 0.01,
+    start_frequency = 440.0,
+    amplitude = 0.1,
+  }
+  handle_waveform{
+    id = 2,
+    type = RIV_WAVEFORM_TRIANGLE,
+    delay = 1/8,
+    attack = 0.01,
+    decay = 1/8.0,
+    release = 0.01,
+    start_frequency = 2*440.0,
+    amplitude = 0.1,
+  }
+  handle_waveform{
+    id = 3,
+    type = RIV_WAVEFORM_TRIANGLE,
+    delay = 2/8.0,
+    attack = 0.01,
+    decay = 1/8.0,
+    release = 0.02,
+    start_frequency = 4*440.0,
+    amplitude = 0.1,
+  }
 end
 
 -- Control audio subsystem.

@@ -256,6 +256,8 @@ local function startup(): void
   end
   if not options.no_audio then
     rivemu_audio.setup(options.speed)
+    rivemu_audio.start()
+    rivemu_audio.start_boot_sound()
   end
   rivemu_input.setup()
 
@@ -483,9 +485,6 @@ local function advance_frame(): void
 
   -- notify when game begins
   if not loading and was_loading then
-    if not options.no_audio then
-      rivemu_audio.start()
-    end
     ## if ccinfo.is_emscripten then
       local width: int32 <nodce> = machine.mmio_driver.framebuffer_desc.width
       local height: int32 <nodce> = machine.mmio_driver.framebuffer_desc.height
