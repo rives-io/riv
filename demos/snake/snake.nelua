@@ -1,4 +1,9 @@
 require 'riv'
+require 'math'
+require 'string'
+
+local argc: int32 <cimport,nodecl>
+local argv: *[0]cstring <cimport,nodecl>
 
 -- Game types
 local Point2D = @record{x: int32, y: int32}
@@ -6,21 +11,49 @@ local Direction = @enum(byte){NONE=0, UP, DOWN, RIGHT, LEFT}
 local Color = @byte
 
 -- Game constants
-local TILE_SIZE <comptime> = 8
-local GRID_SIZE <comptime> = 16
-local APPLE_SCORE <comptime> = 32
-local TILE_SCORE_PENALITY <comptime> = 1
-local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
+local MAX_GRID_SIZE <comptime> = 128
+local SCREEN_SIZE <comptime> = 128
+
+-- Game parameters
+local grid_size: uint32 = 16
+local tile_size: int64 = SCREEN_SIZE/grid_size
+local speed: int64 = 8
+local apple_score: int64 = 32
+local time_penality: int64 = 1
+
+do -- parse game parameters
+  local i = 1
+  while i < argc do
+    if argv[i] == '-size' then
+      grid_size = math.clamp(1 << tointeger(argv[i+1]), 2, 128)
+      tile_size = SCREEN_SIZE/grid_size
+      i = i + 2
+    elseif argv[i] == '-speed' then
+      speed = math.clamp(tointeger(argv[i+1]), 1, 60)
+      i = i + 2
+    elseif argv[i] == '-apple-score' then
+      apple_score = tointeger(argv[i+1])
+      i = i + 2
+    elseif argv[i] == '-time-penality' then
+      time_penality = tointeger(argv[i+1])
+      i = i + 2
+    else
+      error 'unknown argument'
+    end
+  end
+end
+
+local tile_size: int64 = SCREEN_SIZE/grid_size
 
 -- Game state variables
 local headpos: Point2D, tailpos: Point2D, applepos: Point2D
-local score: uint64
+local score: int64
+local max_score: int64
 local moves: uint64
-local max_score: uint64
 local frames: uint64
 local apples: uint64
 local movedir: Direction
-local tiles: [GRID_SIZE][GRID_SIZE]Direction
+local tiles: [SCREEN_SIZE][SCREEN_SIZE]Direction
 local last_turn_frame: uint64
 local finish_frames: uint64
 local finished: boolean
@@ -58,12 +91,12 @@ end
 
 local function respawn_apple()
   -- return when there is not enough space to spawn anymore
-  if apples + 2 >= GRID_SIZE * GRID_SIZE then return end
+  if apples + 2 >= grid_size * grid_size then return end
   -- respawn until there is no collision with its body
   repeat
     applepos = Point2D{
-      x = riv_rand_uint(GRID_SIZE-1),
-      y = riv_rand_uint(GRID_SIZE-1)
+      x = riv_rand_uint(grid_size-1),
+      y = riv_rand_uint(grid_size-1)
     }
   until not has_tile(applepos)
 end
@@ -71,14 +104,14 @@ end
 local function save_score()
   local finished_str: string = finished and 'true' or 'false'
   riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MMIOSIZE_INOUTBUFFER,
-    [[JSON{"score":%u,"apples":%u,"moves":%u,"frames":%u,"max_score":%u,"finished":%s}]],
-      score, apples, moves, frames, max_score, finished_str)
+    [[JSON{"score":%d,"max_score":%d,"apples":%u,"moves":%u,"frames":%u,"finished":%s}]],
+      score, max_score, apples, moves, frames, finished_str)
   riv_printf("%s\n", (@cstring)(riv.inoutbuffer))
 end
 
 local function init_game()
   tiles = {}
-  headpos = Point2D{x=GRID_SIZE//2, y=GRID_SIZE//2}
+  headpos = Point2D{x=grid_size//2, y=grid_size//2}
   tailpos = Point2D{x=headpos.x,    y=headpos.y+1}
   movedir = Direction.UP
   score = 0
@@ -135,7 +168,6 @@ local function check_turn(keycode: uint8, dir: Direction, turned: boolean)
 end
 
 local function poll_keys()
-  if frames == 0 then return end
   local turned = false
   turned = turned or check_turn(RIV_GAMEPAD_UP, Direction.UP, turned)
   turned = turned or check_turn(RIV_GAMEPAD_DOWN, Direction.DOWN, turned)
@@ -152,7 +184,7 @@ local function poll_game()
   headpos = move_point(headpos, movedir)
 
   -- check collision with map boundaries
-  if headpos.x >= GRID_SIZE or headpos.y >= GRID_SIZE or
+  if headpos.x >= grid_size or headpos.y >= grid_size or
      headpos.x < 0 or headpos.y < 0 then
     game_over()
     return
@@ -170,7 +202,7 @@ local function poll_game()
   -- check collision with apple
   if headpos.x == applepos.x and headpos.y == applepos.y then
     apples = apples + 1
-    score = score + APPLE_SCORE
+    score = score + apple_score
     if score > max_score then
       max_score = score
     end
@@ -188,9 +220,7 @@ local function poll_game()
     })
   else
     -- decrease score
-    if score > TILE_SCORE_PENALITY then
-      score = score - TILE_SCORE_PENALITY
-    end
+    score = score - time_penality
     -- eat tail
     local taildir = get_tile(tailpos)
     reset_tile(tailpos)
@@ -199,15 +229,15 @@ local function poll_game()
 end
 
 local function draw_apple()
-  riv_draw_rect_fill(applepos.x*TILE_SIZE, applepos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE, RIV_COLOR_LIGHTRED)
+  riv_draw_rect_fill(applepos.x*tile_size, applepos.y*tile_size, tile_size, tile_size, RIV_COLOR_LIGHTRED)
 end
 
 local function draw_snake()
-  for x=0,<GRID_SIZE do
-    for y=0,<GRID_SIZE do
+  for x=0,<grid_size do
+    for y=0,<grid_size do
       local pos = Point2D{x=x,y=y}
       if has_tile(pos) then -- snake is present at this tile
-        riv_draw_rect_fill(pos.x*TILE_SIZE, pos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE, RIV_COLOR_LIGHTGREEN)
+        riv_draw_rect_fill(pos.x*tile_size, pos.y*tile_size, tile_size, tile_size, RIV_COLOR_LIGHTGREEN)
       end
     end
   end
@@ -253,7 +283,6 @@ local function update()
      riv.keys[RIV_GAMEPAD_START].press then
     init_game()
     end
-  else
   end
   if started and not finished then
     poll_keys()
@@ -271,7 +300,7 @@ end
 local function init()
   riv.framebuffer_desc.width = SCREEN_SIZE
   riv.framebuffer_desc.height = SCREEN_SIZE
-  riv.framebuffer_desc.target_fps = 8
+  riv.framebuffer_desc.target_fps = speed
   riv.framebuffer_desc.pixel_format = RIV_PIXELFORMAT_PLT256
 end
 

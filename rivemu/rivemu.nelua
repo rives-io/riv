@@ -186,7 +186,7 @@ local function parse_options(): rivemu_options
 -pixel-perfect
   Resize screen while maintaining pixel perfect sizes.
 
--args <args>
+-args=<args>
   Append arguments when running the cartridge.
 ]]
       os.exit(0)
