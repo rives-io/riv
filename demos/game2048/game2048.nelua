@@ -1,0 +1,419 @@
+## pragma{gc=true}
+
+require 'riv'
+require 'math'
+require 'string'
+require 'vector'
+
+riv.palette[2]  = 0x656E77
+riv.palette[3]  = 0x667A8F
+riv.palette[4]  = 0xA0ADBB
+riv.palette[5]  = 0xB4C1CD
+riv.palette[6]  = 0x13B5DD
+riv.palette[7]  = 0x2EC2ED
+riv.palette[8]  = 0x50C8ED
+riv.palette[9]  = 0x61CCED
+riv.palette[10] = 0x72CFED
+riv.palette[11] = 0xC8E0ED
+riv.palette[12] = 0xDAE4EE
+riv.palette[13] = 0x6395F5
+riv.palette[14] = 0x3B5EF6
+riv.palette[15] = 0x5F7CF6
+riv.palette[16] = 0xEFF8FA
+riv.palette[17] = 0xFFFFFF
+
+-- Compile time constants
+local SCREEN_WIDTH <comptime> = 300
+local SCREEN_HEIGH <comptime> = 400
+riv.framebuffer_desc.width = SCREEN_WIDTH
+riv.framebuffer_desc.height = SCREEN_HEIGH
+local TILEMAP_WIDTH <comptime> = 256
+local TILEMAP_OFFSET: riv_vec2f = {
+  (SCREEN_WIDTH - TILEMAP_WIDTH) // 2,
+  SCREEN_HEIGH - TILEMAP_WIDTH - (SCREEN_WIDTH - TILEMAP_WIDTH) // 2
+}
+local TILE_SPACING <comptime> = 12
+local TILE_COUNT <comptime> = 4
+local TILE_WIDTH <comptime> = (TILEMAP_WIDTH - (TILE_COUNT+1)*TILE_SPACING) // TILE_COUNT
+
+-- Timer
+local Timer = @record { started: number, duration: number }
+function Timer:elapsed(): number
+  return riv.time - self.started
+end
+function Timer:delay(delay: number)
+  self.started = self.started + delay
+end
+function Timer:progress(): number
+  if self.duration == 0 then return 1.0 end
+  return math.min(self:elapsed() / self.duration, 1.0)
+end
+function Timer:finished(): boolean
+  if self.duration == 0 then return false end
+  return (riv.time - self.started) >= self.duration
+end
+function Timer:restart()
+  self.started = riv.time
+end
+function Timer.create(duration: number): Timer
+  return Timer{riv.time, duration}
+end
+function Timer.create_delayed(duration: number, delay: number): Timer
+  return Timer{riv.time + delay, duration}
+end
+
+-- TileAnim
+local TileAnimKind = @enum { NONE=0, MOVE, RAISE, MERGE}
+local TileAnim = @record {
+  kind: TileAnimKind,
+  n: integer,
+  timer: Timer,
+  movepos: riv_vec2f
+}
+function TileAnim.createMove(n: integer, duration: number, movepos: riv_vec2f): TileAnim
+  return TileAnim{kind = TileAnimKind.MOVE, n=n, timer=Timer.create(duration), movepos = movepos}
+end
+function TileAnim.createRaise(n: integer, duration: number): TileAnim
+  return TileAnim{kind = TileAnimKind.RAISE, n=n, timer=Timer.create(duration)}
+end
+function TileAnim.createMerge(n: integer, duration: number, delay: number): TileAnim
+  return TileAnim{kind = TileAnimKind.MERGE, n=n, timer=Timer.create_delayed(duration, delay)}
+end
+
+-- Game variables
+local TileMap = @[TILE_COUNT][TILE_COUNT]integer
+local tiles: TileMap
+local AnimTileMap = @[TILE_COUNT][TILE_COUNT]vector(TileAnim)
+local tileanims: AnimTileMap
+local statetimer: Timer
+local score: integer
+local GameState = @enum{ IDLE=0, NEW, SPAWNING, SLIDING }
+local gamestate: GameState
+local notify: record{text:string, timer:Timer}
+
+local function set_game_state(state: GameState, duration: number)
+  gamestate = state
+  statetimer = Timer.create(duration)
+end
+
+local function clear_animations()
+  for x=0,TILE_COUNT-1 do
+    for y=0,TILE_COUNT-1 do
+      tileanims[x][y]:clear()
+    end
+  end
+end
+
+local function get_random_avaiable_tile(): (integer, integer)
+  local availables: [(TILE_COUNT*TILE_COUNT)]record{x: integer, y: integer}
+  local index = 0
+  for x=0,TILE_COUNT-1 do
+    for y=0,TILE_COUNT-1 do
+      if tiles[x][y] == 0 then
+        availables[index] = {x, y}
+        index = index + 1
+      end
+    end
+  end
+  if index == 0 then return -1, -1 end
+  index = riv_rand_int(0, index-1)
+  return availables[index].x, availables[index].y
+end
+
+local function spawn_tile(duration: number)
+  local x, y = get_random_avaiable_tile()
+  if x == -1 then return end
+  tiles[x][y] = 1
+  tileanims[x][y]:push(TileAnim.createRaise(1, duration))
+end
+
+local function destroy_animations()
+  for x=0,TILE_COUNT-1 do
+    for y=0,TILE_COUNT-1 do
+      tileanims[x][y]:destroy()
+    end
+  end
+end
+
+local function destroy_notify()
+  notify.text:destroy()
+  notify = {}
+end
+
+local function report_score()
+  riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MMIOSIZE_INOUTBUFFER, [[JSON{"score":%d}]], score)
+end
+
+local function reset_game()
+  local NEW_DURATION <comptime> = 0.1
+  tiles = (@TileMap)()
+  destroy_animations()
+  destroy_notify()
+  score = 0
+  report_score()
+  statetimer = {}
+  spawn_tile(NEW_DURATION)
+  spawn_tile(NEW_DURATION)
+  set_game_state(GameState.NEW, NEW_DURATION)
+end
+
+local function slide_tiles(keydir: integer)
+  local SLIDE_DURATION <comptime> = 0.1
+  local MERGE_DURATION <comptime> = 0.2
+  local slidden = false
+  local addscore = 0
+  clear_animations()
+
+  ## function macro_process_tile()
+    local n = tiles[x][y]
+    local movepos: riv_vec2f = {x, y}
+    tileanims[x][y]:push(TileAnim.createMove(n, SLIDE_DURATION, movepos))
+    if n > 0 then
+      local nn = n
+      if ln == n then
+        nn = n + 1
+        addscore = addscore + (1 << nn)
+        ln = 0
+      else
+        ln = n
+        lx = lx + lxs
+        ly = ly + lys
+      end
+      if y ~= ly or x ~= lx then
+        tileanims[x][y][0].movepos = {lx, ly}
+        tiles[x][y] = 0
+        tiles[lx][ly] = nn
+        if n ~= nn then
+          tileanims[lx][ly]:push(TileAnim.createMerge(nn, MERGE_DURATION, SLIDE_DURATION))
+        end
+        slidden = true
+      end
+    end
+  ## end
+
+  if keydir == RIV_GAMEPAD_UP then
+    local lxs, lys = 0, 1
+    for x=0,TILE_COUNT-1,1 do
+      local lx, ly, ln = x, -1, 0
+      for y=0,TILE_COUNT-1,1 do
+        ## macro_process_tile()
+      end
+    end
+  elseif keydir == RIV_GAMEPAD_DOWN then
+    local lxs, lys = 0, -1
+    for x=0,TILE_COUNT-1 do
+      local lx, ly, ln = x, TILE_COUNT, 0
+      for y=TILE_COUNT-1,0,-1 do
+        ## macro_process_tile()
+      end
+    end
+  elseif keydir == RIV_GAMEPAD_LEFT then
+    local lxs, lys = 1, 0
+    for y=0,TILE_COUNT-1 do
+      local lx, ly, ln = -1, y, 0
+      for x=0,TILE_COUNT-1,1 do
+        ## macro_process_tile()
+      end
+    end
+  elseif keydir == RIV_GAMEPAD_RIGHT then
+    local lxs, lys = -1, 0
+    for y=0,TILE_COUNT-1 do
+      local lx, ly, ln = TILE_COUNT, y, 0
+      for x=TILE_COUNT-1,0,-1 do
+        ## macro_process_tile()
+      end
+    end
+  end
+
+  if slidden then
+    set_game_state(GameState.SLIDING, SLIDE_DURATION)
+  else
+    clear_animations()
+  end
+
+  if addscore > 0 then
+    score = score + addscore
+    report_score()
+    destroy_notify()
+    notify = {string.format('+%d', addscore), Timer.create(1.0)}
+  end
+end
+
+local function get_tile_rect(x: number, y: number): riv_recti
+  return (@riv_recti){
+    TILEMAP_OFFSET.x + (x+1)*TILE_SPACING + x*TILE_WIDTH,
+    TILEMAP_OFFSET.y + (y+1)*TILE_SPACING + y*TILE_WIDTH,
+    TILE_WIDTH, TILE_WIDTH}
+end
+
+local function draw_boxed_text(text: string, rect: riv_recti, fontsize: integer, fgcolor: uint32)
+  if #text == 0 then return end
+  local spacing = math.ceil(fontsize / 20)
+  fontsize = 3
+  local textsize = riv_draw_text(text, RIV_SPRITESHEET_FONT_5X7, 0, 0, -1, fontsize, fontsize, fontsize, fontsize)
+  local pos: riv_vec2f = { rect.x + (rect.width - textsize.x) // 2,
+                         rect.y + (rect.height - textsize.y) // 2 }
+  riv_draw_text(text, RIV_SPRITESHEET_FONT_5X7, pos.x, pos.y, fgcolor, fontsize, fontsize, fontsize, fontsize)
+end
+
+local function draw_tiles_grid()
+  local bgrect: riv_recti = { TILEMAP_OFFSET.x, TILEMAP_OFFSET.y, TILEMAP_WIDTH, TILEMAP_WIDTH }
+  riv_draw_rect_fill(bgrect.x, bgrect.y, bgrect.width, bgrect.height, 4)
+  for i=0,TILE_COUNT-1 do
+    for j=0,TILE_COUNT-1 do
+      local tilerect: riv_recti = get_tile_rect(i, j)
+      riv_draw_rect_fill(tilerect.x, tilerect.y, tilerect.width, tilerect.height, 5)
+    end
+  end
+end
+
+local TILE_COLORS: [10]record{fg: uint8, bg: uint8} = {
+  {fg=2, bg=12}, -- 2
+  {fg=2, bg=12}, -- 4
+  {fg=1, bg=13}, -- 16
+  {fg=1, bg=15}, -- 32
+  {fg=1, bg=14}, -- 64
+  {fg=1, bg=10}, -- 128
+  {fg=1, bg=9}, -- 256
+  {fg=1, bg=8}, -- 512
+  {fg=1, bg=6}, -- 1024
+  {fg=1, bg=7}  -- 2048
+}
+
+
+local function scale_rect(rect: riv_recti, scale: number): riv_recti
+  local newrect: riv_recti
+  newrect.width = rect.width * scale
+  newrect.height = rect.height * scale
+  newrect.x = rect.x + (rect.width - newrect.width) / 2
+  newrect.y = rect.y + (rect.height - newrect.height) / 2
+  return newrect
+end
+
+local function draw_tile(x: number, y: number, num: integer, scale: number, opacity: number)
+  if num == 0 then return end
+  local color = TILE_COLORS[(num-1) % #TILE_COLORS]
+  local rect = scale_rect(get_tile_rect(x, y), scale)
+  local fontsize = (@integer)(math.ceil(8*scale))*5
+  riv_draw_rect_fill(rect.x, rect.y, rect.width, rect.height, color.bg)
+  local tiletext <close> = tostring(1 << num)
+  draw_boxed_text(tiletext, rect, fontsize, color.fg)
+end
+
+local function ease_in_back(x: number): number
+  return (1.70158+1)*x*x*x - 1.70158*x*x
+end
+local function ease_out_back(x: number): number
+  return 1-ease_in_back(1-x)
+end
+
+local function draw_tiles()
+  for x=0,TILE_COUNT-1 do
+    for y=0,TILE_COUNT-1 do
+      local opacity = 1
+      local scale = 1
+      local pos: riv_vec2f = {x, y}
+      local num = tiles[x][y]
+      local animcount = #tileanims[x][y]
+      if animcount > 0 then
+        for i=0,animcount-1 do
+          local anim = &tileanims[x][y][i]
+          if not anim.timer:finished() then
+            num = anim.n
+            local fact = anim.timer:progress()
+            if anim.kind == TileAnimKind.MOVE then
+              pos.x = pos.x*(1-fact) + anim.movepos.x * fact
+              pos.y = pos.y*(1-fact) + anim.movepos.y * fact
+            elseif anim.kind == TileAnimKind.RAISE then
+              opacity = fact*fact
+            elseif anim.kind == TileAnimKind.MERGE then
+              scale = ease_out_back(fact)
+            end
+            break
+          end
+        end
+      end
+      draw_tile(pos.x, pos.y, num, scale, opacity)
+    end
+  end
+end
+
+local function draw_score()
+  local rect: riv_recti = {8, 8, 128, 96}
+  local titlerect: riv_recti = {rect.x, rect.y + 8, rect.width, 20}
+  local textrect: riv_recti = {rect.x, rect.y + 8, rect.width, rect.height}
+  riv_draw_rect_fill(rect.x, rect.y, rect.width, rect.height, 4)
+  draw_boxed_text('score', titlerect, 20, 12)
+  local scoretext <close> = tostring(score)
+  draw_boxed_text(scoretext, textrect, 40, 1)
+end
+
+local function draw_notifications()
+  if notify.timer:finished() then return end
+  local f = notify.timer:progress()
+  local opacity = 1 - f*f
+  local rect: riv_recti = {128, 32-math.ifloor(f * 32), 128, 96}
+  draw_boxed_text(notify.text, rect, 60, RIV_COLOR_BLACK)
+end
+
+local function draw()
+  riv_clear_screen(16)
+  draw_tiles_grid()
+  draw_tiles()
+  draw_score()
+  draw_notifications()
+end
+
+local function check_slide()
+  if gamestate == GameState.SLIDING or gamestate == GameState.NEW then return end
+  if riv.keys[RIV_GAMEPAD_UP].press then
+    slide_tiles(RIV_GAMEPAD_UP)
+  elseif riv.keys[RIV_GAMEPAD_DOWN].press then
+    slide_tiles(RIV_GAMEPAD_DOWN)
+  elseif riv.keys[RIV_GAMEPAD_LEFT].press then
+    slide_tiles(RIV_GAMEPAD_LEFT)
+  elseif riv.keys[RIV_GAMEPAD_RIGHT].press then
+    slide_tiles(RIV_GAMEPAD_RIGHT)
+  end
+end
+
+local function check_newgame(gesture: cint)
+  if riv.keys[RIV_GAMEPAD_SELECT].press then
+    reset_game()
+  end
+end
+
+local function update()
+  check_slide()
+  check_newgame()
+
+  if statetimer:finished() then
+    if gamestate == GameState.SLIDING then
+      local SPAWN_DURATION <comptime> = 0.1
+      spawn_tile(SPAWN_DURATION)
+      set_game_state(GameState.SPAWNING, SPAWN_DURATION)
+    elseif gamestate == GameState.SPAWNING or gamestate == GameState.NEW then
+      clear_animations()
+      set_game_state(GameState.IDLE, 0)
+    end
+  end
+end
+
+local function frame()
+  update()
+  draw()
+end
+
+local function init()
+  reset_game()
+end
+
+local function terminate()
+  destroy_animations()
+  destroy_notify()
+end
+
+-- Setup Window and Game
+init()
+repeat frame() until not riv_present()
+terminate()

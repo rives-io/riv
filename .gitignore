@@ -20,7 +20,6 @@
 *.outcard
 *.js
 *.wasm
-*.png
 build
 
 # ignore generated binaries
@@ -43,4 +42,5 @@ kernel/image-kernel-*
 
 demos/doom
 demos/antcopter
+demos/monky
 cartesi-machine-*_wasm

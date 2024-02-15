@@ -1,5 +1,5 @@
 all:
-	$(MAKE) -C ../rivemu rivemu.js
+	$(MAKE) -C ../rivemu rivemu.js CC=emcc
 	cp ../rivemu/rivemu.{js,wasm} .
 	rm -rf cartridges
 	mkdir -p cartridges
