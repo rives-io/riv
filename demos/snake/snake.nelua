@@ -6,23 +6,25 @@ local Direction = @enum(byte){NONE=0, UP, DOWN, RIGHT, LEFT}
 local Color = @byte
 
 -- Game constants
-local TILE_SIZE <comptime> = 1
+local TILE_SIZE <comptime> = 8
 local GRID_SIZE <comptime> = 16
 local APPLE_SCORE <comptime> = 32
 local TILE_SCORE_PENALITY <comptime> = 1
 local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
-local MOVE_DELAY <comptime> = 1
 
 -- Game state variables
 local nextmove: uint64
 local headpos: Point2D, tailpos: Point2D, applepos: Point2D
 local score: uint64
 local max_score: uint64
+local frames: uint64
 local apples: uint64
 local movedir: Direction
 local tiles: [GRID_SIZE][GRID_SIZE]Direction
 local last_turn_frame: uint64
+local finish_frames: uint64
 local finished: boolean
+local started: boolean
 
 local function move_point(pos: Point2D, dir: Direction)
   switch dir
@@ -70,7 +72,7 @@ local function save_score()
   local finished_str: string = finished and 'true' or 'false'
   riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MMIOSIZE_INOUTBUFFER,
     [[JSON{"score":%u,"apples":%u,"frames":%u,"max_score":%u,"finished":%s}]],
-      score, apples, riv.frame, max_score, finished_str)
+      score, apples, frames, max_score, finished_str)
   riv_printf("%s\n", (@cstring)(riv.inoutbuffer))
 end
 
@@ -81,6 +83,8 @@ local function init_game()
   movedir = Direction.UP
   nextmove = 0
   score = 0
+  frames = 0
+  started = true
   finished = false
   set_tile(headpos, Direction.UP)
   set_tile(tailpos, Direction.UP)
@@ -91,8 +95,6 @@ end
 local function game_over()
   finished = true
   riv_printf('[SNAKE] GAME OVER\n')
-  riv.quit = true
-  -- init_game()
 end
 
 local function check_turn(keycode: uint8, dir: Direction, turned: boolean)
@@ -110,7 +112,7 @@ local function check_turn(keycode: uint8, dir: Direction, turned: boolean)
   return false
 end
 
-local function poll_events()
+local function poll_keys()
   local turned = false
   turned = check_turn(RIV_GAMEPAD_UP, Direction.UP, turned)
   turned = check_turn(RIV_GAMEPAD_DOWN, Direction.DOWN, turned)
@@ -119,10 +121,6 @@ local function poll_events()
 end
 
 local function poll_game()
-  local now = riv.frame
-  if now < nextmove then return end
-  nextmove = now + MOVE_DELAY
-
   -- move the head
   set_tile(headpos, movedir)
   headpos = move_point(headpos, movedir)
@@ -175,7 +173,7 @@ local function poll_game()
 end
 
 local function draw_apple()
-  riv.framebuffer[applepos.y * GRID_SIZE + applepos.x] = RIV_COLOR_LIGHTRED
+  riv_draw_rect_fill(applepos.x*TILE_SIZE, applepos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE, RIV_COLOR_LIGHTRED)
 end
 
 local function draw_snake()
@@ -183,23 +181,65 @@ local function draw_snake()
     for y=0,<GRID_SIZE do
       local pos = Point2D{x=x,y=y}
       if has_tile(pos) then -- snake is present at this tile
-        riv.framebuffer[pos.y * GRID_SIZE + pos.x] = RIV_COLOR_LIGHTGREEN
+        riv_draw_rect_fill(pos.x*TILE_SIZE, pos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE, RIV_COLOR_LIGHTGREEN)
       end
     end
   end
 end
 
+local function draw_intro()
+  local col: uint32 = riv.frame % 2 == 0 and RIV_COLOR_LIGHTRED or RIV_COLOR_DARKRED
+  riv_draw_text("snake", RIV_SPRITESHEET_FONT_5X7, (128 - 58)//2, 50, RIV_COLOR_LIGHTGREEN, 2, 2, 2, 2)
+  riv_draw_text("PRESS TO START", RIV_SPRITESHEET_FONT_5X7, (128 - 83)//2, 70, col, 1, 1, 1, 1)
+end
+
+local function draw_game_over()
+  riv_draw_text("GAME OVER", RIV_SPRITESHEET_FONT_5X7, (128 - 106)//2, (128 - 14)//2, RIV_COLOR_RED, 2, 2, 2, 2)
+  finish_frames = finish_frames + 1
+  if finish_frames > 24 then
+    riv.quit = true
+  end
+end
+
 local function draw()
   riv_clear_screen(RIV_COLOR_DARKSLATE)
-  draw_apple()
-  draw_snake()
+  if started then
+    draw_apple()
+    draw_snake()
+    if finished then
+      draw_game_over()
+    end
+  else
+    draw_intro()
+  end
+end
+
+local function update()
+  if not started then
+    if riv.keys[RIV_GAMEPAD_UP].press or
+     riv.keys[RIV_GAMEPAD_DOWN].press or
+     riv.keys[RIV_GAMEPAD_LEFT].press or
+     riv.keys[RIV_GAMEPAD_RIGHT].press or
+     riv.keys[RIV_GAMEPAD_A1].press or
+     riv.keys[RIV_GAMEPAD_A2].press or
+     riv.keys[RIV_GAMEPAD_A3].press or
+     riv.keys[RIV_GAMEPAD_A4].press or
+     riv.keys[RIV_GAMEPAD_START].press then
+    init_game()
+    end
+  else
+  end
+  if started and not finished then
+    poll_keys()
+    poll_game()
+    save_score()
+    frames = frames + 1
+  end
 end
 
 local function frame()
-  poll_events()
-  poll_game()
+  update()
   draw()
-  save_score()
 end
 
 local function init()
@@ -207,7 +247,6 @@ local function init()
   riv.framebuffer_desc.height = SCREEN_SIZE
   riv.framebuffer_desc.target_fps = 8
   riv.framebuffer_desc.pixel_format = RIV_PIXELFORMAT_PLT256
-  init_game()
 end
 
 init()
