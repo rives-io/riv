@@ -13,9 +13,9 @@ local TILE_SCORE_PENALITY <comptime> = 1
 local SCREEN_SIZE <comptime> = TILE_SIZE * GRID_SIZE
 
 -- Game state variables
-local nextmove: uint64
 local headpos: Point2D, tailpos: Point2D, applepos: Point2D
 local score: uint64
+local moves: uint64
 local max_score: uint64
 local frames: uint64
 local apples: uint64
@@ -71,8 +71,8 @@ end
 local function save_score()
   local finished_str: string = finished and 'true' or 'false'
   riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MMIOSIZE_INOUTBUFFER,
-    [[JSON{"score":%u,"apples":%u,"frames":%u,"max_score":%u,"finished":%s}]],
-      score, apples, frames, max_score, finished_str)
+    [[JSON{"score":%u,"apples":%u,"moves":%u,"frames":%u,"max_score":%u,"finished":%s}]],
+      score, apples, moves, frames, max_score, finished_str)
   riv_printf("%s\n", (@cstring)(riv.inoutbuffer))
 end
 
@@ -81,18 +81,40 @@ local function init_game()
   headpos = Point2D{x=GRID_SIZE//2, y=GRID_SIZE//2}
   tailpos = Point2D{x=headpos.x,    y=headpos.y+1}
   movedir = Direction.UP
-  nextmove = 0
   score = 0
   frames = 0
+  moves = 0
   started = true
   finished = false
   set_tile(headpos, Direction.UP)
   set_tile(tailpos, Direction.UP)
   respawn_apple()
+  riv_waveform(riv_waveform_desc{
+    type = RIV_WAVEFORM_SQUARE,
+    attack = 0.01,
+    decay = 0.01,
+    sustain = 0.1,
+    release = 0.01,
+    start_frequency = 220,
+    end_frequency = 220*3,
+    amplitude = 0.2,
+    sustain_level = 0.5,
+  })
   riv_printf('[SNAKE] NEW GAME\n')
 end
 
 local function game_over()
+  riv_waveform(riv_waveform_desc{
+    type = RIV_WAVEFORM_SQUARE,
+    attack = 0.01,
+    decay = 0.01,
+    sustain = 0.1,
+    release = 0.01,
+    start_frequency = 220,
+    end_frequency = 220*0.5,
+    amplitude = 0.2,
+    sustain_level = 0.5,
+  })
   finished = true
   riv_printf('[SNAKE] GAME OVER\n')
 end
@@ -113,11 +135,15 @@ local function check_turn(keycode: uint8, dir: Direction, turned: boolean)
 end
 
 local function poll_keys()
+  if frames == 0 then return end
   local turned = false
-  turned = check_turn(RIV_GAMEPAD_UP, Direction.UP, turned)
-  turned = check_turn(RIV_GAMEPAD_DOWN, Direction.DOWN, turned)
-  turned = check_turn(RIV_GAMEPAD_RIGHT, Direction.RIGHT, turned)
-  turned = check_turn(RIV_GAMEPAD_LEFT, Direction.LEFT, turned)
+  turned = turned or check_turn(RIV_GAMEPAD_UP, Direction.UP, turned)
+  turned = turned or check_turn(RIV_GAMEPAD_DOWN, Direction.DOWN, turned)
+  turned = turned or check_turn(RIV_GAMEPAD_RIGHT, Direction.RIGHT, turned)
+  turned = turned or check_turn(RIV_GAMEPAD_LEFT, Direction.LEFT, turned)
+  if turned then
+    moves = moves + 1
+  end
 end
 
 local function poll_game()
@@ -150,14 +176,14 @@ local function poll_game()
     end
     respawn_apple()
     riv_waveform(riv_waveform_desc{
-      type = RIV_WAVEFORM_SINE,
+      type = RIV_WAVEFORM_SQUARE,
       attack = 0.01,
       decay = 0.01,
       sustain = 0.1,
       release = 0.01,
       start_frequency = 220,
       end_frequency = 220*3,
-      amplitude = 0.5,
+      amplitude = 0.2,
       sustain_level = 0.5,
     })
   else
