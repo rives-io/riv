@@ -2,9 +2,6 @@ require 'riv'
 require 'math'
 require 'string'
 
-local argc: int32 <cimport,nodecl>
-local argv: *[0]cstring <cimport,nodecl>
-
 -- Game types
 local Point2D = @record{x: int32, y: int32}
 local Direction = @enum(byte){NONE=0, UP, DOWN, RIGHT, LEFT}
