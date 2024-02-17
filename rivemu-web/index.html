@@ -105,8 +105,6 @@
       var lastFrame;
       var lastTotalFrames;
       var lastTargetFps;
-      var desiredWidth = 768;
-      var desiredHeight = 768;
       var runtimeInitialized = false;
 
       let statusElem = document.getElementById("status");
@@ -266,28 +264,6 @@
         document.getElementById('record').disabled = false;
         document.getElementById('replay').disabled = false;
         document.getElementById('download_cartridge').disabled = false;
-
-        // Restore canvas to original size while loading
-        rivemuResizeCanvas(768, 768);
-      }
-
-      // Called when resolution changes.
-      function rivemuResizeCanvas(wantedWidth, wantedHeight, notifyRiv) {
-        desiredHeight = wantedHeight;
-        desiredWidth = wantedWidth;
-        canvasElem.focus();
-        // Scale canvas while maintaining ratio and pixel perfect look
-        const canvasWidth = Math.floor(768 / wantedWidth) * wantedWidth;
-        const canvasHeight = Math.floor((wantedHeight / wantedWidth) * canvasWidth);
-        if (canvasElem.width != canvasWidth || canvasElem.height != canvasHeight) {
-          canvasElem.width = canvasWidth;
-          canvasElem.height = canvasHeight;
-          // Force notify resize in RIV
-          if (notifyRiv) {
-            window.dispatchEvent(new Event('resize'));
-          }
-        }
-        return {"width":canvasElem.width, "height":canvasElem.height}
       }
 
       async function rivemuInsertCartridge(url) {
@@ -396,9 +372,6 @@
 
       // Enter fullscreen mode.
       function rivemuFullscreen() {
-        document.addEventListener('fullscreenchange', function() {
-          rivemuResizeCanvas(desiredWidth, desiredHeight, true);
-        }, false);
         canvasElem.requestFullscreen();
       }
 
@@ -407,9 +380,8 @@
         lastFrame = 0;
         lastTotalFrames = total_frames;
         lastTargetFps = target_fps;
-        const size = rivemuResizeCanvas(width, height, true);
         resolutionElem.textContent =
-          width+"x"+height+"@"+target_fps + " -> " + size.width+"x"+size.height+"@60";
+          width+"x"+height+"@"+target_fps + " -> " + canvasElem.width+"x"+canvasElem.height+"@60";
         frameElem.textContent = "0";
         if (total_frames > 0) {
           progressElem.textContent = "0%";

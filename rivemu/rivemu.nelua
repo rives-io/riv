@@ -234,6 +234,8 @@ local framelimiter: rivemu_framelimiter
 local running: boolean
 local loading: boolean
 local started: boolean
+local default_canvas_width: int32 = 768
+local got_initial_canvas_width: boolean
 
 -- Begin the machine entrypoint.
 local function begin(): void
@@ -372,7 +374,6 @@ local function shutdown(): void
 
   machine:destroy()
   framelimiter = {}
-  options = {}
   started = false
   loading = false
 
@@ -503,7 +504,31 @@ local function advance_frame(): void
       local height: int32 <nodce> = machine.mmio_driver.framebuffer_desc.height
       local target_fps: int32 <nodce> = (@int32)(target_fps)
       local num_frames: int32 <nodce> = rivemu_input.get_replay_frames()
+      local canvas_width: int32 <nodce> = (default_canvas_width // width) * width
+      local canvas_height: int32 <nodce> = math.ifloor((height / width) * canvas_width)
+      cinclude![[
+static void _sapp_emsc_resize(int width, int height) {
+    if (_sapp.desc.high_dpi) {
+        _sapp.dpi_scale = emscripten_get_device_pixel_ratio();
+    }
+    _sapp.window_width = width;
+    _sapp.window_height = height;
+    _sapp.framebuffer_width = (int)roundf(width * _sapp.dpi_scale);
+    _sapp.framebuffer_height = (int)roundf(height * _sapp.dpi_scale);
+    SOKOL_ASSERT((_sapp.framebuffer_width > 0) && (_sapp.framebuffer_height > 0));
+    emscripten_set_canvas_element_size(_sapp.html5_canvas_selector, _sapp.framebuffer_width, _sapp.framebuffer_height);
+    #if defined(SOKOL_WGPU)
+        // on WebGPU: recreate size-dependent rendering surfaces
+        _sapp_emsc_wgpu_size_changed();
+    #endif
+    if (_sapp_events_enabled()) {
+        _sapp_init_event(SAPP_EVENTTYPE_RESIZED);
+        _sapp_call_event(&_sapp.event);
+    }
+}
+]]
       cemit![[
+        _sapp_emsc_resize(canvas_width, canvas_height);
         EM_ASM({
           rivemu_on_begin($0, $1, $2, $3);
         }, width, height, target_fps, num_frames);
@@ -575,6 +600,16 @@ local function frame(): void
   if not options.no_video then
     rivemu_video.present()
   end
+  -- restart when requested
+  if sapp_restart then
+    sapp_restart = false
+    local no_quit: boolean = options.no_quit
+    options.no_quit = true
+    io.printf('[RIVEMU] Restarting...\n')
+    shutdown()
+    options.no_quit = no_quit
+    startup()
+  end
 end
 
 -- Initialize args
@@ -587,15 +622,25 @@ sargs_setup(sargs_desc{
 
 -- Application main loop.
 local function run()
+  ## if ccinfo.is_emscripten then
+    if not got_initial_canvas_width then
+      local width: cint, height: cint
+      if emscripten_get_canvas_element_size("#canvas", &width, &height) == EMSCRIPTEN_RESULT_SUCCESS then
+        default_canvas_width = width
+      end
+      got_initial_canvas_width = true
+    end
+  ## end
   sapp_run(sapp_desc{
     init_cb = startup,
     frame_cb = frame,
     cleanup_cb = shutdown,
     event_cb = rivemu_input.append_event,
-    width = 768,
-    height = 768,
+    width = default_canvas_width,
+    height = default_canvas_width,
     html5_canvas_name = "canvas",
     html5_preserve_drawing_buffer = true,
+    html5_canvas_resize = true,
     window_title = "RIVEMU",
     logger = {func = slog_func}
   })
@@ -629,6 +674,7 @@ local function rivemu_start_record(cartridge_ptr: *uint8, cartridge_len: int32, 
   options.outhash_filename = '/replay.outhash'
   options.entrypoint_args = args
   options.recording = true
+  options.no_quit = true
   run()
 end
 
