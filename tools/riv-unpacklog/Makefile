@@ -6,7 +6,7 @@ ifeq ($(HOST_ARCH),riscv64)
 	TOOLCHAIN_PREFIX=
 	CC=$(TOOLCHAIN_PREFIX)gcc
 else
-	CC=riscv64-linux-musl-gcc
+	CC=riscv64-buildroot-linux-musl-gcc
 	TOOLCHAIN_PREFIX=$(shell $(CC) -dumpmachine)-
 endif
 

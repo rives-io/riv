@@ -5,8 +5,8 @@ ifeq ($(HOST_ARCH),riscv64)
 	CC=$(TOOLCHAIN_PREFIX)gcc
 	CXX=$(TOOLCHAIN_PREFIX)g++
 else
-	CC=riscv64-linux-musl-gcc
-	CXX=riscv64-linux-musl-g++
+	CC=riscv64-buildroot-linux-musl-gcc
+	CXX=riscv64-buildroot-linux-musl-g++
 	TOOLCHAIN_PREFIX=$(shell $(CC) -dumpmachine)-
 	DEPS=../../libriv/riv.h ../../libriv/libriv.so
 	ifeq ($(DEMOLANG),nelua)
