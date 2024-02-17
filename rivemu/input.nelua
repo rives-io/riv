@@ -18,6 +18,7 @@ local replay_log_index: usize
 local recording: boolean
 local replaying: boolean
 local key_pressed_state: [RIV_NUM_KEYCODE]boolean
+global sapp_restart: boolean
 
 --------------------------------------------------------------------------------
 
@@ -185,7 +186,9 @@ local gamepad_connected_count: int32 = 0
 local prev_gamepads_state: [RIV_NUM_GAMEPADS]EmscriptenGamepadEvent
 local gamepads_state: [RIV_NUM_GAMEPADS]EmscriptenGamepadEvent
 local gamepad_mapping: [RIV_NUM_GAMEPAD_BUTTONS]uint8
-local GAMEPAD_QUIT <comptime> = 16
+local GAMEPAD_HOME <comptime> = 16
+local GAMEPAD_CAPTURE <comptime> = 17
+
 do -- set standard gamepad mapping
   gamepad_mapping[0] = RIV_GAMEPAD_A1
   gamepad_mapping[1] = RIV_GAMEPAD_A2
@@ -228,7 +231,6 @@ local function setup_gamepad(): void
   -- check if game pad is supported
   if emscripten_sample_gamepad_data() ~= EMSCRIPTEN_RESULT_SUCCESS then return end
   local num_gamepads: int32 = emscripten_get_num_gamepads()
-  if num_gamepads <= 0 then return end
   -- reconnect gamepads from previous run
   for index: int32=0,<num_gamepads do
     local gamepad_state: EmscriptenGamepadEvent
@@ -296,8 +298,12 @@ local function poll_gamepads(): void
       end
     end
     -- use home button to quit
-    if gamepad.digitalButton[GAMEPAD_QUIT] == EM_TRUE then
+    if gamepad.digitalButton[GAMEPAD_HOME] == EM_TRUE then
       sapp_quit()
+    end
+    -- use capture button to restart
+    if gamepad.digitalButton[GAMEPAD_CAPTURE] == EM_TRUE then
+      sapp_restart = true
     end
   end
 end
