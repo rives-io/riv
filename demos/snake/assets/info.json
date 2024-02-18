@@ -2,8 +2,6 @@
     "name": "Snake",
     "summary": "Traditional snake game",
     "description": "Use arrow to move, the game ends when the snake hits itself or a wall.\nThe score increases for every eaten apple, but decreases while time passes, so be quick!",
-    "version": "0.1-beta",
-    "status": "prototype",
     "tags": ["action", "strategy", "puzzle", "2d", "snake"],
     "authors": [{
         "name": "Eduardo Bart",
