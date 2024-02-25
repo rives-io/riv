@@ -9,6 +9,9 @@ global rivemu_iocard: type = @record{}
 
 local outbuffer: [RIV_MMIOSIZE_INOUTBUFFER]byte
 local outcard_data: span(byte)
+local outhist: stringbuilder
+local outhist_tracking: boolean
+local outhist_tracking_json: boolean
 
 function rivemu_iocard.setup(): void
   outcard_data.data = &outbuffer[0]
@@ -16,6 +19,8 @@ end
 
 function rivemu_iocard.reset(): void
   outcard_data.size = 0
+  outhist_tracking = false
+  outhist_tracking_json = false
   memory.zero(&outbuffer[0], RIV_MMIOSIZE_INOUTBUFFER)
 end
 
@@ -26,10 +31,42 @@ end
 function rivemu_iocard.update_outcard(): void
   outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_MMIOSIZE_INOUTBUFFER)
   machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, outcard_data)
+
+  if outhist_tracking then
+    local outcard_str: string = {data=outcard_data.data, size=outcard_data.size}
+    if machine.mmio_driver.frame == 0 then
+      outhist_tracking_json = #outcard_str >= 4 and outcard_str:subview(1,4) == 'JSON'
+    end
+
+    if outhist_tracking_json then
+      if machine.mmio_driver.frame == 0 then
+        outhist:write('[\n')
+      else
+        outhist:write(',\n')
+      end
+      outhist:write(outcard_str:subview(5))
+    else
+      outhist:write(outcard_str)
+    end
+  end
 end
 
 function rivemu_iocard.get_outcard_data(): span(byte)
   return outcard_data
+end
+
+function rivemu_iocard.start_tracking_outhist(): void
+  outhist_tracking = true
+  outhist:clear()
+end
+
+function rivemu_iocard.stop_tracking_outhist(): void
+  if not outhist_tracking then return end
+  if outhist_tracking_json then
+    outhist:write('\n]\n')
+    outhist_tracking_json = false
+  end
+  outhist_tracking = false
 end
 
 function rivemu_iocard.load_incard(filename: string): void
@@ -52,6 +89,12 @@ function rivemu_iocard.save_outcard(filename: string): void
   local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
   fn_assert!(file:write(outcard_data))
   io.printf("[RIVEMU] Saved output card data '%s'\n", filename)
+end
+
+function rivemu_iocard.save_outhist(filename: string): void
+  local file: filestream <close> = fn_assert!(io.open(filename, 'wb'))
+  fn_assert!(file:write(outhist:view()))
+  io.printf("[RIVEMU] Saved output card history '%s'\n", filename)
 end
 
 function rivemu_iocard.print_outcard(): void

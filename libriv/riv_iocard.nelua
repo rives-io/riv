@@ -4,13 +4,22 @@ require 'linux'
 require 'memory'
 require '.riv_types'
 
+local outhist_tracking_json: boolean = false
+
+local function get_env_fd(name: string): int32
+  local fd_str: string = getenv(name)
+  if #fd_str > 0 and #fd_str == 1 then
+    return fd_str.data[0] - '0'_b
+  end
+  return -1
+end
+
 global function riv_sync_incard(): void <noinline>
   riv.incard_len = riv.mmio_device.incard_len & (@uint32)(RIV_MMIOSIZE_INOUTBUFFER-1)
 
   -- retrieve input card from fd
-  local fd_str: string = getenv('RIV_INCARD_FD')
-  if #fd_str > 0 then
-    local fd: int32 = fd_str.data[0] - '0'_b
+  local fd: int32 = get_env_fd('RIV_INCARD_FD')
+  if fd > 0 then
     local size: isize = lseek(fd, 0, SEEK_END)
     assert(size >= 0 and size < RIV_MMIOSIZE_INOUTBUFFER, 'invalid incard fd size')
     if size > 0 then
@@ -23,15 +32,40 @@ global function riv_sync_incard(): void <noinline>
   end
 end
 
-global function riv_sync_outcard(): void <noinline>
+global function riv_sync_outcard(last: boolean): void <noinline>
   riv.mmio_driver.outcard_len = riv.outcard_len
 
-  -- save output card to fd
-  local fd_str: string = getenv('RIV_OUTCARD_FD')
-  if #fd_str > 0 then
-    local fd: int32 = fd_str.data[0] - '0'_b
-    assert(lseek(fd, 0, SEEK_SET) == 0, 'outcard lseek failed')
-    assert(write(fd, riv.inoutbuffer, riv.outcard_len) == riv.outcard_len, 'outcard write failed')
-    assert(ftruncate(fd, riv.outcard_len) == 0, 'outcard ftruncate failed')
+  local outcard_str: string = {data=riv.inoutbuffer, riv.outcard_len}
+
+  do -- save output card to fd
+    local fd: int32 = get_env_fd('RIV_OUTCARD_FD')
+    if fd > 0 then
+      assert(lseek(fd, 0, SEEK_SET) == 0, 'outcard lseek failed')
+      assert(write(fd, outcard_str.data, outcard_str.size) == outcard_str.size, 'outcard write failed')
+      assert(ftruncate(fd, outcard_str.size) == 0, 'outcard ftruncate failed')
+    end
+  end
+
+  do -- save output history to fd
+    local fd: int32 = get_env_fd('RIV_OUTHIST_FD')
+    if fd > 0 then
+      if riv.frame == 0 then
+        outhist_tracking_json = #outcard_str >= 4 and outcard_str:subview(1,4) == 'JSON'
+      end
+      if outhist_tracking_json then
+        if riv.frame == 0 then
+          assert(write(fd, '[\n'_cstring, 2) == 2, 'outhist write failed')
+        else
+          assert(write(fd, ',\n'_cstring, 2) == 2, 'outhist write failed')
+        end
+        outcard_str = outcard_str:subview(5)
+        assert(write(fd, outcard_str.data, outcard_str.size) == outcard_str.size, 'outhist write failed')
+        if last then
+          assert(write(fd, '\n]\n'_cstring, 2) == 2, 'outhist write failed')
+        end
+      else
+        assert(write(fd, outcard_str.data, outcard_str.size) == outcard_str.size, 'outhist write failed')
+      end
+    end
   end
 end

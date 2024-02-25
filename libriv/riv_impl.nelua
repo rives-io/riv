@@ -90,7 +90,7 @@ global function riv_deinit(): void
   -- save screenshot if needed
   riv_save_screenshot_fd()
   -- copy outcard description to driver
-  riv_sync_outcard()
+  riv_sync_outcard(true)
   -- tell the host we finished, the host may use inoutbuffer
   riv_yield(RIV_CONTROL_CLOSE)
   -- close yield device
@@ -119,7 +119,7 @@ global function riv_present(): boolean <cexport>
     end
   end
   -- copy outcard description to driver
-  riv_sync_outcard()
+  riv_sync_outcard(false)
   -- present
   riv_yield(RIV_CONTROL_PRESENT)
   -- should we stop?

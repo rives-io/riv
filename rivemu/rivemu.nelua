@@ -36,11 +36,13 @@ local rivemu_options: type = @record{
   verify_outhash: string,
   incard_filename: string,
   outcard_filename: string,
+  outhist_filename: string,
   outhash_filename: string,
   screenshot_filename: string,
   recording: boolean,
   replaying: boolean,
   verifying: boolean,
+  tracking_outhist: boolean,
   print_stats: boolean,
   print_hash: boolean,
   pixel_perfect: boolean,
@@ -87,6 +89,9 @@ local function parse_options(): rivemu_options
       opts.incard_filename = sargs_value_at(i)
     elseif a == '-save-outcard' then
       opts.outcard_filename = sargs_value_at(i)
+    elseif a == '-save-outhist' then
+      opts.outhist_filename = sargs_value_at(i)
+      opts.tracking_outhist = true
     elseif a == '-save-outhash' then
       opts.outhash_filename = sargs_value_at(i)
     elseif a == '-save-screenshot' then
@@ -213,18 +218,18 @@ function rivemu_options:entrypoint(): string
     end
     entrypoint_sb:write('riv-run')
   end
-  if self.verifying and #self.verify_outhash > 0 then
-    entrypoint_sb:write('&& \z
-      echo "', self.verify_outhash, ' /run/outcard" > /run/outcard.sha256sum && \z
-      busybox sha256sum -cs /run/outcard.sha256sum && \z
-      echo [RIVEMU] Outcard hash verification OK!!'
-    )
-  end
   if #self.entrypoint_args > 0 then
     if #entrypoint_sb > 0 then
       entrypoint_sb:write(' ')
     end
     entrypoint_sb:write(self.entrypoint_args)
+  end
+  if self.verifying and #self.verify_outhash > 0 then
+    entrypoint_sb:write(' && \z
+      echo "', self.verify_outhash, ' /run/outcard" > /run/outcard.sha256sum && \z
+      busybox sha256sum -cs /run/outcard.sha256sum && \z
+      echo [RIVEMU] Outcard hash verification OK!!'
+    )
   end
   return entrypoint_sb:promote()
 end
@@ -252,6 +257,9 @@ local function begin(): void
     rivemu_input.load_replay_from_file(options.replay_filename)
   elseif options.verifying then
     io.printf('[RIVEMU] Verifying...\n')
+  end
+  if options.tracking_outhist then
+    rivemu_iocard.start_tracking_outhist()
   end
 end
 
@@ -295,12 +303,19 @@ local function finish(): void
     rivemu_audio.stop()
   end
 
+  if options.tracking_outhist then
+    rivemu_iocard.stop_tracking_outhist()
+  end
+
   if not options.no_yield then
     if #options.outhash_filename > 0 then
       rivemu_iocard.save_outhash(options.outhash_filename)
     end
     if #options.outcard_filename > 0 then
       rivemu_iocard.save_outcard(options.outcard_filename)
+    end
+    if #options.outhist_filename > 0 then
+      rivemu_iocard.save_outhist(options.outhist_filename)
     end
     rivemu_iocard.print_outcard()
   end

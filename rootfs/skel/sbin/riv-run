@@ -39,83 +39,102 @@ run() {
   fi
 
   # setup screenshot fd
-  local RIV_SCREENSHOT=$(busybox mktemp --tmpdir=/run screenshot.XXXXXXXXXXX)
+  local RIV_SCREENSHOT_FILE=$(busybox mktemp --tmpdir=/run screenshot.XXXXXXXXXXX)
   BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_SCREENSHOT_FD 5"
 
   # copy incard to iocard
-  local RIV_IOCARD=$(busybox mktemp --tmpdir=/run iocard.XXXXXXXXXXX)
+  local RIV_IOCARD_FILE=$(busybox mktemp --tmpdir=/run iocard.XXXXXXXXXXX)
   if [ -n "$RIV_INCARD" ]; then
-    if ! busybox cp "$RIV_INCARD" "$RIV_IOCARD"; then
+    if ! busybox cp "$RIV_INCARD" "$RIV_IOCARD_FILE"; then
       >&2 echo "[RIV-OS] Unable to copy incard to iocard."
-      busybox rm -f "$RIV_IOCARD" "$RIV_SCREENSHOT"
+      busybox rm -f "$RIV_IOCARD_FILE" "$RIV_SCREENSHOT_FILE"
       busybox umount /cartridge
       return 1
     fi
     BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_INCARD_FD 4"
   else
-    if ! busybox truncate -s 0 "$RIV_IOCARD"; then
+    if ! busybox truncate -s 0 "$RIV_IOCARD_FILE"; then
       >&2 echo "[RIV-OS] Unable to create empty iocard."
-      busybox rm -f "$RIV_IOCARD" "$RIV_SCREENSHOT"
+      busybox rm -f "$RIV_IOCARD_FILE" "$RIV_SCREENSHOT_FILE"
       busybox umount /cartridge
       return 1
     fi
   fi
   BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_OUTCARD_FD 4"
 
+  # setup outhist file
+  local RIV_OUTHIST_FILE=$(busybox mktemp --tmpdir=/run outhist.XXXXXXXXXXX)
+  if [ -n "$RIV_OUTHIST" ]; then
+    BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_OUTHIST_FD 6"
+  fi
+
   # run
   echo "[RIV-OS] Running cartridge executable:" "$EXE" "$@"
   local STATUS
   if [ ! -n "$RIV_REPLAYLOG" ]; then  # play
     riv-bwrapbox $BWRAPBOX_FLAGS -- "$EXE" "$@" \
-        4<>"$RIV_IOCARD" \
-        5<>"$RIV_SCREENSHOT"
+        4<>"$RIV_IOCARD_FILE" \
+        5<>"$RIV_SCREENSHOT_FILE" \
+        6<>"$RIV_OUTHIST_FILE"
     STATUS=$?
   else # verify replay
-    local RIV_UNPACKED_REPLAYLOG=$(busybox mktemp --tmpdir=/run replaylog.XXXXXXXXXXX)
+    local RIV_REPLAYLOG_FILE=$(busybox mktemp --tmpdir=/run replaylog.XXXXXXXXXXX)
     # prepare event log
-    if ! riv-unpacklog <"$RIV_REPLAYLOG" >"$RIV_UNPACKED_REPLAYLOG"; then
+    if ! riv-unpacklog <"$RIV_REPLAYLOG" >"$RIV_REPLAYLOG_FILE"; then
       >&2 echo "[RIV-OS] Unable to unpack rivlog."
-      busybox rm -f "$RIV_UNPACKED_REPLAYLOG" "$RIV_IOCARD" "$RIV_SCREENSHOT"
+      busybox rm -f "$RIV_REPLAYLOG_FILE" "$RIV_IOCARD_FILE" "$RIV_OUTHIST_FILE" "$RIV_SCREENSHOT_FILE"
       busybox umount /cartridge
       return 1
     fi
     BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_REPLAYLOG_FD 3"
     BWRAPBOX_VERIFY_LIMITS=y \
       riv-bwrapbox $BWRAPBOX_FLAGS -- "$EXE" "$@" \
-        3<"$RIV_UNPACKED_REPLAYLOG" \
-        4<>"$RIV_IOCARD" \
-        5<>"$RIV_SCREENSHOT"
+        3<"$RIV_REPLAYLOG_FILE" \
+        4<>"$RIV_IOCARD_FILE" \
+        5<>"$RIV_SCREENSHOT_FILE" \
+        6<>"$RIV_OUTHIST_FILE"
     STATUS=$?
-    busybox rm -f "$RIV_UNPACKED_REPLAYLOG"
+    busybox rm -f "$RIV_REPLAYLOG_FILE"
   fi
 
   # copy outhash
-  local OUTHASH=$(busybox sha256sum "$RIV_IOCARD" | busybox cut -d' ' -f1)
+  local OUTHASH=$(busybox sha256sum "$RIV_IOCARD_FILE" | busybox cut -d' ' -f1)
   echo "[RIV-OS] Outcard sha256sum: $OUTHASH"
   if [ -n "$RIV_OUTHASH" ]; then
     if ! echo -n "$OUTHASH" > "$RIV_OUTHASH"; then
       >&2 echo "[RIV-OS] Unable to write outhash."
-      busybox rm -f "$RIV_IOCARD" "$RIV_SCREENSHOT"
+      busybox rm -f "$RIV_IOCARD_FILE" "$RIV_OUTHIST_FILE" "$RIV_SCREENSHOT_FILE"
       busybox umount /cartridge
     fi
   fi
 
   # copy outcard
   if [ -n "$RIV_OUTCARD" ]; then
-    if ! busybox cp "$RIV_IOCARD" "$RIV_OUTCARD"; then
+    if ! busybox cp "$RIV_IOCARD_FILE" "$RIV_OUTCARD"; then
       >&2 echo "[RIV-OS] Unable to copy iocard to outcard."
-      busybox rm -f "$RIV_IOCARD" "$RIV_SCREENSHOT"
+      busybox rm -f "$RIV_IOCARD_FILE" "$RIV_OUTHIST_FILE" "$RIV_SCREENSHOT_FILE"
       busybox umount /cartridge
       return 1
     fi
   fi
-  busybox rm -f "$RIV_IOCARD"
+  busybox rm -f "$RIV_IOCARD_FILE"
+
+  # copy outhist
+  if [ -n "$RIV_OUTHIST" ]; then
+    if ! busybox cp "$RIV_OUTHIST_FILE" "$RIV_OUTHIST"; then
+      >&2 echo "[RIV-OS] Unable to copy output history."
+      busybox rm -f "$RIV_OUTHIST_FILE" "$RIV_SCREENSHOT_FILE"
+      busybox umount /cartridge
+      return 1
+    fi
+  fi
+  busybox rm -f "$RIV_OUTHIST_FILE"
 
   # copy screenshot
   if [ -n "$RIV_SAVE_SCREENSHOT" ]; then
-    busybox cp "$RIV_SCREENSHOT" "$RIV_SAVE_SCREENSHOT"
+    busybox cp "$RIV_SCREENSHOT_FILE" "$RIV_SAVE_SCREENSHOT"
   fi
-  busybox rm -f "$RIV_SCREENSHOT"
+  busybox rm -f "$RIV_SCREENSHOT_FILE"
 
   # finished
   echo "[RIV-OS] Cartridge finished with status $STATUS"
