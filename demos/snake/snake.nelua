@@ -249,7 +249,7 @@ end
 local function draw_game_over()
   riv_draw_text("GAME OVER", RIV_SPRITESHEET_FONT_5X7, (128 - 106)//2, (128 - 14)//2, RIV_COLOR_RED, 2, 2, 2, 2)
   finish_frames = finish_frames + 1
-  if finish_frames > 24 then
+  if finish_frames > speed then
     riv.quit = true
   end
 end
