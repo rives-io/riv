@@ -1,7 +1,6 @@
 all:
 	$(MAKE) -C ../rivemu rivemu.js CC=emcc
 	cp ../rivemu/rivemu.{js,wasm} .
-	rm -rf cartridges
 	mkdir -p cartridges
 	find ../demos -name '*.sqfs' -exec cp {} cartridges/ \;
 	emrun index.html
