@@ -1,0 +1,6 @@
+{
+    "name": "2048",
+    "summary": "Join the tiles to get 2048!",
+    "description": "Use your arrow keys to move the tiles. Tiles with the same number merge into one when they touch. Add them up to reach 2048!",
+    "tags": ["puzzle", "2d"]
+}

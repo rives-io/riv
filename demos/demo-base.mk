@@ -11,6 +11,7 @@ else
 	DEPS=../../libriv/riv.h ../../libriv/libriv.so
 	ifeq ($(DEMOLANG),nelua)
 		DEPS+=../../libriv/riv.nelua
+		DEPS+=*.nelua
 		NELUA_FLAGS+=-L../../libriv/?.nelua
 	endif
 endif
