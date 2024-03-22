@@ -1,10 +1,10 @@
 ################################
 # Busybox stage
-FROM --platform=linux/riscv64 riscv64/busybox:1.36 AS busybox-stage
+FROM --platform=linux/riscv64 riscv64/busybox:1.36.1 AS busybox-stage
 
 ################################
 # Toolchain stage
-FROM --platform=linux/riscv64 riscv64/alpine:20231219 AS toolchain-rootfs-stage
+FROM --platform=linux/riscv64 riscv64/alpine:20240315 AS toolchain-rootfs-stage
 
 RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
 
@@ -31,8 +31,8 @@ RUN wget -O BR903-ELFkickers.tar.gz https://github.com/BR903/ELFkickers/tarball/
     cd .. && \
     rm -rf BR903-ELFkickers-*
 
-# Install c2m
-RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/16acc27debe24b5a488ed88e0baa7d799a0aeaed && \
+# Install mir jit
+RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/5dcba9a5e500f821dafbbf1db729742038bc5a80 && \
     tar -xzf vnmakarov-mir.tar.gz && \
     cd vnmakarov-mir-* && \
     echo "echo fail" > check-threads.sh && \
@@ -53,13 +53,13 @@ RUN wget -O genext2fs.tar.gz https://github.com/cartesi/genext2fs/archive/refs/t
     rm -rf genext2fs-*
 
 # Install nelua
-RUN wget -O nelua-lang.tar.gz https://github.com/edubart/nelua-lang/archive/refs/tags/20240113.tar.gz && \
-    tar -xzf nelua-lang.tar.gz && \
-    cd nelua-lang-* && \
+RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarball/05a2633a18dfdde7389394b9289da582c10e79bc && \
+    tar -xzf edubart-nelua-lang.tar.gz && \
+    cd edubart-nelua-lang-* && \
     make && \
     make install PREFIX=/usr && \
     cd .. && \
-    rm -rf nelua-lang.tar.gz nelua-lang-*
+    rm -rf edubart-nelua-lang-*
 
 # Install bwrapbox
 RUN wget -O bwrapbox.tar.gz https://github.com/edubart/bwrapbox/archive/refs/tags/v0.2.2.tar.gz && \
@@ -80,7 +80,6 @@ RUN wget -O rfinnie-twuewand.tar.gz https://github.com/rfinnie/twuewand/tarball/
     make -C rndaddentropy install PREFIX=/usr && \
     cd .. && \
     rm -rf rfinnie-twuewand-*
-
 
 # Download apks to be installed in rootfs
 WORKDIR /root/apks

@@ -22,7 +22,7 @@
 
 #define CM_VERSION_MAJOR 0
 #define CM_VERSION_MINOR 15
-#define CM_VERSION_PATCH 2
+#define CM_VERSION_PATCH 3
 #define CM_VERSION_LABEL ""
 
 #define _CM_STR_HELPER(x) #x

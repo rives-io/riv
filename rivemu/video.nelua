@@ -39,7 +39,7 @@ end
 
 -- Initialize video subsystem.
 function rivemu_video.setup(pixel_perfect: boolean): void
-  sg_setup(sg_desc{context = sapp_sgcontext(), logger = {func = slog_func}})
+  sg_setup(sg_desc{environment = sglue_environment(), logger = {func = slog_func}})
   assert(sg_isvalid(), 'failed to initialize Sokol GFX')
   sgp_setup(sgp_desc{})
   assert(sgp_is_valid(), 'failed to initialize SGP')
@@ -236,11 +236,14 @@ function rivemu_video.present(): void
   end
 
   -- dispatch draw commands
-  sg_begin_default_pass(sg_pass_action{
-    colors={{load_action=SG_LOADACTION_CLEAR, clear_value={r=0,g=0,b=0,a=1}}},
-    depth={load_action=SG_LOADACTION_DONTCARE},
-    stencil={load_action=SG_LOADACTION_DONTCARE}
-  }, app_width, app_height)
+  sg_begin_pass(sg_pass{
+    swapchain = sglue_swapchain(),
+    action = sg_pass_action{
+      colors={{load_action=SG_LOADACTION_CLEAR, clear_value={r=0,g=0,b=0,a=1}}},
+      depth={load_action=SG_LOADACTION_DONTCARE},
+      stencil={load_action=SG_LOADACTION_DONTCARE}
+    }
+  })
   sgp_flush()
   sgp_end()
   sg_end_pass()

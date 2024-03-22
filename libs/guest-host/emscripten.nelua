@@ -211,7 +211,7 @@ global EmscriptenBatteryEvent: type <cimport,nodecl> = @record{
 }
 global em_battery_callback_func: type <cimport,nodecl> = @function(eventType: cint, batteryEvent: *EmscriptenBatteryEvent, userData: pointer): cint
 global em_beforeunload_callback: type <cimport,nodecl> = @function(eventType: cint, reserved: pointer, userData: pointer): cstring
-global EMSCRIPTEN_WEBGL_CONTEXT_HANDLE: type <cimport,nodecl> = @isize
+global EMSCRIPTEN_WEBGL_CONTEXT_HANDLE: type <cimport,nodecl> = @usize
 global EMSCRIPTEN_WEBGL_CONTEXT_PROXY_MODE: type <cimport,nodecl> = @cint
 global EM_WEBGL_POWER_PREFERENCE: type <cimport,nodecl> = @cint
 global EmscriptenWebGLContextAttributes: type <cimport,nodecl> = @record{

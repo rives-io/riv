@@ -1,5 +1,5 @@
 MINIZ_VERSION=3.0.2
-CARTESI_VERSION=0.15.2
+CARTESI_VERSION=0.15.3
 SOKOL_TAG=master
 SHA3_BRANCH=master
 MINIAUDIO_BRANCH=master
@@ -26,6 +26,7 @@ update-sokol:
 	wget -O host/sokol_app.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_app.h
 	wget -O host/sokol_args.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_args.h
 	wget -O host/sokol_log.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_log.h
+	wget -O host/sokol_glue.h https://raw.githubusercontent.com/floooh/sokol/$(SOKOL_TAG)/sokol_glue.h
 
 update-sokol_gp:
 	wget -O host/sokol_gp.h https://raw.githubusercontent.com/edubart/sokol_gp/$(SOKOL_TAG)/sokol_gp.h

@@ -20,6 +20,7 @@
 *.outcard
 *.js
 *.wasm
+*.deb
 build
 
 # ignore generated binaries

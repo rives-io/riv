@@ -54,7 +54,7 @@ end
 -- sokol
 nldecl.generate_bindings_file{
   output_file = 'sokol.nelua',
-  includes = {'sokol_gfx.h', 'sokol_gp.h', 'sokol_app.h', 'sokol_args.h', 'sokol_log.h'},
+  includes = {'sokol_gfx.h', 'sokol_gp.h', 'sokol_app.h', 'sokol_args.h', 'sokol_log.h', 'sokol_glue.h'},
   include_dirs = {'.'},
   include_names = {
     '^sg_', '^SG_',
@@ -62,6 +62,7 @@ nldecl.generate_bindings_file{
     '^sgp_', '^SGP_',
     '^sargs_', '^SARGS_',
     '^slog_', '^SLOG_',
+    '^sglue_', '^SGLUE_',
   },
   output_head =
 [==[
@@ -104,6 +105,10 @@ elseif ccinfo.is_windows then
   linklib 'user32'
   linklib 'shell32'
 end
+-- sokol_glue
+cdefine 'SOKOL_GLUE_API_DECL static'
+cdefine 'SOKOL_GLUE_IMPL'
+cinclude 'sokol_glue.h'
 -- sokol_args
 cdefine 'SOKOL_ARGS_API_DECL static'
 cdefine 'SOKOL_ARGS_IMPL'
@@ -113,26 +118,5 @@ cdefine 'SOKOL_LOG_API_DECL static'
 cdefine 'SOKOL_LOG_IMPL'
 cinclude 'sokol_log.h'
 ]]
-]==],
-  output_foot =
-[==[
-global function sapp_sgcontext(): sg_context_desc
-  local desc: sg_context_desc
-  desc.color_format = (@sg_pixel_format)(sapp_color_format())
-  desc.depth_format = (@sg_pixel_format)(sapp_depth_format())
-  desc.sample_count = sapp_sample_count()
-  desc.metal.device = sapp_metal_get_device()
-  desc.metal.renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor
-  desc.metal.drawable_cb = sapp_metal_get_drawable
-  desc.d3d11.device = sapp_d3d11_get_device()
-  desc.d3d11.device_context = sapp_d3d11_get_device_context()
-  desc.d3d11.render_target_view_cb = sapp_d3d11_get_render_target_view
-  desc.d3d11.depth_stencil_view_cb = sapp_d3d11_get_depth_stencil_view
-  desc.wgpu.device = sapp_wgpu_get_device()
-  desc.wgpu.render_view_cb = sapp_wgpu_get_render_view
-  desc.wgpu.resolve_view_cb = sapp_wgpu_get_resolve_view
-  desc.wgpu.depth_stencil_view_cb = sapp_wgpu_get_depth_stencil_view
-  return desc
-end
 ]==]
 }
