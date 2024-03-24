@@ -1,3 +1,5 @@
+//usr/bin/sh-exec c2m -L/usr/lib -lriv -w -O3 "$0" -eb "$@"
+
 #include <riv.h>
 
 int main(int argc, char** argv) {

@@ -141,7 +141,6 @@ RUN cp -a /usr/bin/bwrapbox /rootfs/usr/bin/bwrapbox && \
 # Install mir
 RUN cp -a /usr/bin/c2m /rootfs/usr/bin/c2m && strip /rootfs/usr/bin/c2m && \
     cp -a /usr/bin/m2b /rootfs/usr/bin/m2b && strip /rootfs/usr/bin/m2b && \
-    cp -a /usr/bin/b2m /rootfs/usr/bin/b2m && strip /rootfs/usr/bin/b2m && \
     cp -a /usr/lib/libmir.so.0.1.0 /rootfs/usr/lib/libmir.so.0.1.0 && strip -S -x /rootfs/usr/lib/libmir.so.0.1.0 && \
     ln -s libmir.so.0.1.0 /rootfs/usr/lib/libmir.so.0 && \
     cp -a /usr/include/c2mir.h /rootfs/usr/include/ && \
@@ -152,6 +151,9 @@ COPY rootfs/skel/etc etc
 RUN ln -s ../proc/mounts etc/mtab && \
     chmod 600 etc/shadow && \
     sed -i '/^ *# /d' etc/sysctl.conf
+
+# Install bin
+COPY rootfs/skel/bin bin
 
 # Install init
 COPY rootfs/skel/sbin sbin

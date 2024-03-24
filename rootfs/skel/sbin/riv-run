@@ -26,7 +26,7 @@ run() {
     BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_NO_YIELD y"
   else
     BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --dev-bind /dev/yield /dev/yield"
-    if ! busybox chmod 660 /dev/yield && busybox chown root:cartridge /dev/yield; then
+    if ! busybox chmod 660 /dev/yield || ! busybox chown root:cartridge /dev/yield; then
       >&2 echo "[RIV-OS] Unable to give cartridge access to yield device."
       busybox umount /cartridge
       return 1
@@ -72,7 +72,7 @@ run() {
   echo "[RIV-OS] Running cartridge executable:" "$EXE" "$@"
   local STATUS
   if [ ! -n "$RIV_REPLAYLOG" ]; then  # play
-    riv-bwrapbox $BWRAPBOX_FLAGS -- "$EXE" "$@" \
+    riv-bwrapbox $BWRAPBOX_FLAGS -- /usr/bin/sh-exec "$EXE" "$@" \
         4<>"$RIV_IOCARD_FILE" \
         5<>"$RIV_SCREENSHOT_FILE" \
         6<>"$RIV_OUTHIST_FILE"
@@ -88,7 +88,7 @@ run() {
     fi
     BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_REPLAYLOG_FD 3"
     BWRAPBOX_VERIFY_LIMITS=y \
-      riv-bwrapbox $BWRAPBOX_FLAGS -- "$EXE" "$@" \
+      riv-bwrapbox $BWRAPBOX_FLAGS -- /usr/bin/sh-exec "$EXE" "$@" \
         3<"$RIV_REPLAYLOG_FILE" \
         4<>"$RIV_IOCARD_FILE" \
         5<>"$RIV_SCREENSHOT_FILE" \
