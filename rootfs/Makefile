@@ -26,12 +26,10 @@ rootfs.hash.txt: rootfs.ext2
 
 shell: rootfs.ext2
 	cartesi-machine \
+		--append-init=USER=root \
 		--flash-drive=label:root,filename:$< \
 		--ram-image=../kernel/linux.bin \
-		--rom-image=../kernel/rom.bin \
-		--append-rom-bootargs="TERM=$(TERM) LINES=$(shell tput lines) COLUMNS=$(shell tput cols)" \
-		--htif-yield-automatic \
-		-i exec /bin/ash
+		-it exec /bin/ash
 
 toolchain:
 	docker build --target toolchain-rootfs-stage --tag riv/toolchain:devel --file toolchain-rootfs.Dockerfile --progress plain ..

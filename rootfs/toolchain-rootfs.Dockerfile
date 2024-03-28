@@ -70,17 +70,6 @@ RUN wget -O bwrapbox.tar.gz https://github.com/edubart/bwrapbox/archive/refs/tag
     cd .. && \
     rm -rf bwrapbox-*
 
-# Install rndaddentropy
-RUN wget -O rfinnie-twuewand.tar.gz https://github.com/rfinnie/twuewand/tarball/d73ba08d81f80c04f87bb1f97ee7216ca16f202d && \
-    tar -xzf rfinnie-twuewand.tar.gz && \
-    cd rfinnie-twuewand-* && \
-    sed -i 's|sys/fcntl.h|fcntl.h|g' rndaddentropy/rndaddentropy.c && \
-    export LDFLAGS="-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu,--relax,--sort-common,--sort-section=name -z relro -z now -s" && \
-    make -C rndaddentropy && \
-    make -C rndaddentropy install PREFIX=/usr && \
-    cd .. && \
-    rm -rf rfinnie-twuewand-*
-
 # Download apks to be installed in rootfs
 WORKDIR /root/apks
 RUN apk fetch \
@@ -93,8 +82,8 @@ COPY kernel/linux-headers.tar.xz linux-headers.tar.xz
 RUN apk add linux-headers && \
     cd / && rm `apk info -L linux-headers | grep -F ".h"`
 RUN tar -xf linux-headers.tar.xz && \
-    cp -R opt/riscv/kernel/work/linux-headers/include/* /usr/include/ && \
-    rm -rf opt linux-headers*
+    cp -R include/* /usr/include/ && \
+    rm -rf include
 
 # Install workaround to run env as current user
 RUN adduser -D -u 500 cartridge cartridge
@@ -133,10 +122,9 @@ RUN ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
     apk info -L musl-dev | grep usr/include | while read file; do install -Dm644 /$file $file; done && \
     apk info -L musl-dev | grep usr/lib | grep crt | while read file; do install -Dm644 /$file $file; done
 
-# Install bwrapbox and rndaddentropy
+# Install bwrapbox
 RUN cp -a /usr/bin/bwrapbox /rootfs/usr/bin/bwrapbox && \
-    cp -a /usr/lib/bwrapbox /rootfs/usr/lib/bwrapbox && \
-    cp -a /usr/sbin/rndaddentropy /rootfs/usr/sbin/rndaddentropy
+    cp -a /usr/lib/bwrapbox /rootfs/usr/lib/bwrapbox
 
 # Install mir
 RUN cp -a /usr/bin/c2m /rootfs/usr/bin/c2m && strip /rootfs/usr/bin/c2m && \
@@ -148,18 +136,11 @@ RUN cp -a /usr/bin/c2m /rootfs/usr/bin/c2m && strip /rootfs/usr/bin/c2m && \
 
 # Install system configs
 COPY rootfs/skel/etc etc
+COPY rootfs/skel/bin bin
+COPY rootfs/skel/sbin sbin
 RUN ln -s ../proc/mounts etc/mtab && \
     chmod 600 etc/shadow && \
     sed -i '/^ *# /d' etc/sysctl.conf
-
-# Install bin
-COPY rootfs/skel/bin bin
-
-# Install init
-COPY rootfs/skel/sbin sbin
-RUN sed -i '/^ *# /d;/^$/d' sbin/init && \
-    mkdir -p opt/cartesi/bin && \
-    ln -s ../../../sbin/init opt/cartesi/bin/init
 
 ################################
 # Build and install riv stuff

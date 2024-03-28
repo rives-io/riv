@@ -10,8 +10,8 @@ libpath(fs.join(projdir, 'libriv', '?.nelua'))
 libpath(fs.join(projdir, 'libs', 'host', '?.nelua'))
 libpath(fs.join(projdir, 'libs', 'guest-host', '?.nelua'))
 if ccinfo.is_emscripten then
-  cflags('-I'..projdir..'/cartesi-machine-v0.15.2_wasm/include')
-  ldflags('-L'..projdir..'/cartesi-machine-v0.15.2_wasm/lib')
+  cflags('-I'..projdir..'/cartesi-machine-v0.16.1_wasm/include')
+  ldflags('-L'..projdir..'/cartesi-machine-v0.16.1_wasm/lib')
 end
 ]]
 
@@ -206,9 +206,9 @@ function rivemu_options:entrypoint(): string
   local entrypoint_sb: stringbuilder <close>
   if #self.cartridge_filename > 0 then
     if self.verifying then
-      entrypoint_sb:write('RIV_CARTRIDGE=/dev/mtdblock1 RIV_REPLAYLOG=/dev/mtdblock2 RIV_OUTCARD=/run/outcard RIV_OUTHASH=/run/outhash ')
+      entrypoint_sb:write('RIV_CARTRIDGE=/dev/pmem1 RIV_REPLAYLOG=/dev/pmem2 RIV_OUTCARD=/run/outcard RIV_OUTHASH=/run/outhash ')
     else
-      entrypoint_sb:write('RIV_CARTRIDGE=/dev/mtdblock1 ')
+      entrypoint_sb:write('RIV_CARTRIDGE=/dev/pmem1 ')
     end
     if self.stop_frame >= 0 then
       entrypoint_sb:write('RIV_STOP_FRAME=', self.stop_frame, ' ')

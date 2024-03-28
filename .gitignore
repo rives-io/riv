@@ -41,7 +41,7 @@ build
 # ignore kernel stuff
 kernel/image-kernel-*
 
-demos/doom
+demos/freedoom
 demos/antcopter
 demos/monky
 cartesi-machine-*_wasm

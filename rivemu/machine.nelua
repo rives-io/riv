@@ -78,12 +78,11 @@ function rivemu_machine.create(entrypoint: string, cartridge_filename: string, r
   flash_drive_count = flash_drive_count + 1
 
   -- bootargs
-  local bootargs: string <close> = "console=hvc0 \z
-    rootfstype=ext2 root=/dev/mtdblock0 \z
-    rw quiet \z
-    swiotlb=noforce \z
-    init=/opt/cartesi/bin/init \z
-    mtdparts=flash.0:-(root) -- " .. entrypoint
+  local bootargs: string = "\z
+    no4lvl quiet \z
+    earlycon=sbi console=hvc0 \z
+    rootfstype=ext2 root=/dev/pmem0 rw \z
+    init=/usr/sbin/cartesi-init"
 
   -- set config
   local config: cm_machine_config = $defconfig
@@ -91,9 +90,10 @@ function rivemu_machine.create(entrypoint: string, cartridge_filename: string, r
     image_filename = './kernel/linux.bin',
     length = RIV_MMIOSIZE_RAM
   }
-  config.rom = {
-    image_filename = './kernel/rom.bin',
-    bootargs = bootargs
+  config.dtb = {
+    bootargs = bootargs,
+    init = "",
+    entrypoint = entrypoint
   }
   config.htif = {
     yield_automatic = true,
