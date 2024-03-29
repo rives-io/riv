@@ -45,8 +45,8 @@ clean:
 
 install: libriv.so
 	mkdir -p $(DESTDIR)$(PREFIX)/lib
-	install -m755 libriv.so $(DESTDIR)$(PREFIX)/lib/libriv.so.0.2
-	ln -sf libriv.so.0.2 $(DESTDIR)$(PREFIX)/lib/libriv.so.0
+	install -m755 libriv.so $(DESTDIR)$(PREFIX)/lib/libriv.so.0.3
+	ln -sf libriv.so.0.3 $(DESTDIR)$(PREFIX)/lib/libriv.so.0
 	ln -sf libriv.so.0 $(DESTDIR)$(PREFIX)/lib/libriv.so
 
 install-c-dev:
