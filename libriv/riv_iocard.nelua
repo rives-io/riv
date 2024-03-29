@@ -15,17 +15,17 @@ local function get_env_fd(name: string): int32
 end
 
 global function riv_sync_incard(): void <noinline>
-  riv.incard_len = riv.incard_len & (@uint32)(RIV_MMIOSIZE_INOUTBUFFER-1)
+  riv.incard_len = riv.incard_len & (@uint32)(RIV_MMIOSIZE_INCARD-1)
 
   -- retrieve input card from fd
   local fd: int32 = get_env_fd('RIV_INCARD_FD')
   if fd > 0 then
     local size: isize = lseek(fd, 0, SEEK_END)
-    assert(size >= 0 and size < RIV_MMIOSIZE_INOUTBUFFER, 'invalid incard fd size')
+    assert(size >= 0 and size < RIV_MMIOSIZE_INCARD, 'invalid incard fd size')
     if size > 0 then
       local ptr: pointer = mmap(nilptr, (@usize)(size), PROT_READ, MAP_SHARED, fd, 0)
       assert(ptr ~= MAP_FAILED, 'incard fd mmap failed')
-      memory.copy(&riv.inoutbuffer[0], ptr, (@usize)(size))
+      memory.copy(&riv.incard[0], ptr, (@usize)(size))
       munmap(ptr, (@usize)(size))
     end
     riv.incard_len = (@uint32)(size)
@@ -35,7 +35,7 @@ end
 global function riv_sync_outcard(last: boolean): void <noinline>
   riv.outcard_len = riv.outcard_len
 
-  local outcard_str: string = {data=&riv.inoutbuffer[0], riv.outcard_len}
+  local outcard_str: string = {data=&riv.outcard[0], riv.outcard_len}
 
   do -- save output card to fd
     local fd: int32 = get_env_fd('RIV_OUTCARD_FD')

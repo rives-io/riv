@@ -398,9 +398,10 @@ typedef enum riv_mmio_size {
   RIV_MMIOSIZE_CONTEXT      = 8*1024*1024, // 8 MB
   RIV_MMIOSIZE_MMIO_DRIVER  =      4*1024, // 4 KB
   RIV_MMIOSIZE_MMIO_DEVICE  =      4*1024, // 4 KB
-  RIV_MMIOSIZE_INOUTBUFFER  = 1*1024*1024, // 1 MB
-  RIV_MMIOSIZE_AUDIOBUFFER  = 1*1024*1024, // 1 MB
+  RIV_MMIOSIZE_INCARD       = 2*1024*1024, // 2 MB
+  RIV_MMIOSIZE_OUTCARD      = 2*1024*1024, // 2 MB
   RIV_MMIOSIZE_FRAMEBUFFER  = 2*1024*1024, // 2 MB
+  RIV_MMIOSIZE_AUDIOBUFFER  = 1*1024*1024, // 1 MB
 } riv_mmio_size;
 
 // Memory mapped virtual address bases
@@ -408,9 +409,10 @@ typedef enum riv_vaddr_base {
   RIV_VADDR_CONTEXT      = 0x10000000,
   RIV_VADDR_MMIO_DRIVER  = RIV_VADDR_CONTEXT,
   RIV_VADDR_MMIO_DEVICE  = RIV_VADDR_MMIO_DRIVER + RIV_MMIOSIZE_MMIO_DRIVER,
-  RIV_VADDR_INOUTBUFFER  = RIV_VADDR_MMIO_DEVICE + RIV_MMIOSIZE_MMIO_DEVICE,
-  RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_INOUTBUFFER + RIV_MMIOSIZE_INOUTBUFFER,
-  RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_AUDIOBUFFER + RIV_MMIOSIZE_AUDIOBUFFER,
+  RIV_VADDR_INCARD       = RIV_VADDR_MMIO_DEVICE + RIV_MMIOSIZE_MMIO_DEVICE,
+  RIV_VADDR_OUTCARD      = RIV_VADDR_INCARD + RIV_MMIOSIZE_INCARD,
+  RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_OUTCARD + RIV_MMIOSIZE_OUTCARD,
+  RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_FRAMEBUFFER + RIV_MMIOSIZE_FRAMEBUFFER,
 } riv_vaddr_base;
 
 // Canaries
@@ -624,9 +626,10 @@ typedef struct riv_context {
   uint8_t padding[4008];                              // Align to next 4KB page
 
   // Buffers
-  uint8_t inoutbuffer[RIV_MMIOSIZE_INOUTBUFFER];      // [RW] Input/output card buffer
-  uint8_t audiobuffer[RIV_MMIOSIZE_AUDIOBUFFER];
+  uint8_t incard[RIV_MMIOSIZE_INCARD];                // [RW] Input/output card buffer
+  uint8_t outcard[RIV_MMIOSIZE_OUTCARD];              // [RW] Input/output card buffer
   uint8_t framebuffer[RIV_MMIOSIZE_FRAMEBUFFER];      // [RW] Screen frame buffer
+  uint8_t audiobuffer[RIV_MMIOSIZE_AUDIOBUFFER];
 
   // General
   int64_t time_ms;                                    // [R] Current time in milliseconds since first frame

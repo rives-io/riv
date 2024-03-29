@@ -18,7 +18,8 @@ global function riv_init(): void <cattribute'constructor',cexport>
   -- check addresses
   assert((@usize)(&riv.mmio_driver_header) == RIV_VADDR_MMIO_DRIVER, 'invalid RIV_VADDR_MMIO_DRIVER')
   assert((@usize)(&riv.mmio_device_header) == RIV_VADDR_MMIO_DEVICE, 'invalid RIV_VADDR_MMIO_DEVICE')
-  assert((@usize)(&riv.inoutbuffer) == RIV_VADDR_INOUTBUFFER, 'invalid RIV_VADDR_INOUTBUFFER')
+  assert((@usize)(&riv.incard) == RIV_VADDR_INCARD, 'invalid RIV_VADDR_INCARD')
+  assert((@usize)(&riv.outcard) == RIV_VADDR_OUTCARD, 'invalid RIV_VADDR_OUTCARD')
   assert((@usize)(&riv.audiobuffer) == RIV_VADDR_AUDIOBUFFER, 'invalid RIV_VADDR_AUDIOBUFFER')
   assert((@usize)(&riv.framebuffer) == RIV_VADDR_FRAMEBUFFER, 'invalid RIV_VADDR_FRAMEBUFFER')
   -- map riv memory
@@ -88,7 +89,7 @@ global function riv_deinit(): void
   riv_save_screenshot_fd()
   -- copy outcard description to driver
   riv_sync_outcard(true)
-  -- tell the host we finished, the host may use inoutbuffer
+  -- tell the host we finished, the host may copy outcard
   riv_yield(RIV_CONTROL_CLOSE)
   -- close yield device
   riv_yield_close()

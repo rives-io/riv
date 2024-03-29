@@ -23,10 +23,6 @@ nldecl.generate_bindings_file{
     -- enums
     {'enum%(cint%)', 'enum(uint32)'},
     -- sized arrays
-    {'inoutbuffer: %*', 'inoutbuffer: *[0]'},
-    {'framebuffer: %*', 'framebuffer: *[0]'},
-    {'audiobuffer: %*', 'audiobuffer: *[0]'},
-    {'tracked_keys: %*', 'tracked_keys: *[0]'},
     {'pixels: %*', 'pixels: *[0]'},
     {'data: %*', 'data: *[0]'},
     {'verify_key_events: %*', 'verify_key_events: *[0]'},

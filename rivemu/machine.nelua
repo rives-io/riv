@@ -45,6 +45,7 @@ global RIV_MMIOSIZE_REPLAYLOG: uint64< comptime> = 2*1024*1024
 -- Machine.
 global rivemu_machine = @record{
   machine: *cm_machine,
+  in_softyield: boolean,
   mmio_connected: boolean,
   mmio_driver: riv_mmio_driver,
   mmio_device: riv_mmio_device
@@ -192,6 +193,7 @@ end
 -- Copy MMIO state from machine memory to host memory.
 function rivemu_machine:_load_driver_mmio(): void
   assert(self.mmio_connected, 'mmio is not connected')
+  if not self.in_softyield then return end
   local data: span(byte) = {data=(@*[0]byte)(&self.mmio_driver),size=#@riv_mmio_driver}
   self:read_virtual_memory(RIV_VADDR_MMIO_DRIVER, data)
 end
@@ -199,6 +201,7 @@ end
 -- Store MMIO state from host memory to machine memory.
 function rivemu_machine:_store_device_mmio(): void
   assert(self.mmio_connected, 'mmio is not connected')
+  if not self.in_softyield then return end
   local data: span(byte) = {data=(@*[0]byte)(&self.mmio_device),size=#@riv_mmio_device}
   self:write_virtual_memory(RIV_VADDR_MMIO_DEVICE, data)
 end
@@ -249,7 +252,7 @@ end
 -- Run the machine.
 function rivemu_machine:run(mcycle_end: uint64): CM_BREAK_REASON
   -- store MMIO from host device into guest driver
-  if self:is_mmio_ready() then
+  if self.in_softyield then
     self:_store_device_mmio()
   end
   -- run the machine
@@ -257,15 +260,19 @@ function rivemu_machine:run(mcycle_end: uint64): CM_BREAK_REASON
   cm_assert!(cm_machine_run(self.machine, mcycle_end, &break_reason))
   -- load driver MMIO
   if break_reason == CM_BREAK_REASON_YIELDED_SOFTLY then
+    self.in_softyield = true
     if self:_check_mmio() then -- is the MMIO still valid?
       -- load MMIO from guest driver into host device
       self:_load_driver_mmio()
     elseif not self:_setup_mmio() then -- try to initialize it
       error('RIV device: unable to connect driver MMIO')
     end
-  elseif break_reason ~= CM_BREAK_REASON_REACHED_TARGET_MCYCLE then
-    -- for any other reason, MMIO becomes disconnected
-    self:_reset_mmio()
+  else
+    self.in_softyield = false
+    if break_reason ~= CM_BREAK_REASON_REACHED_TARGET_MCYCLE then
+      -- for any other reason, MMIO becomes disconnected
+      self:_reset_mmio()
+    end
   end
   -- return break reason
   return break_reason
