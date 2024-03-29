@@ -396,10 +396,10 @@ typedef enum riv_audio_command_type {
 // Memory mapped sizes
 typedef enum riv_mmio_size {
   RIV_MMIOSIZE_HUGEPAGE     = 2*1024*1024, // 2 MB
-  RIV_MMIOSIZE_MMIO_DRIVER  =     64*1024, // 64 KB
-  RIV_MMIOSIZE_MMIO_DEVICE  =     64*1024, // 64 KB
+  RIV_MMIOSIZE_MMIO_DRIVER  =      4*1024, // 4 KB
+  RIV_MMIOSIZE_MMIO_DEVICE  =      4*1024, // 4 KB
   RIV_MMIOSIZE_INOUTBUFFER  =    256*1024, // 256 KB
-  RIV_MMIOSIZE_AUDIOBUFFER  =    768*1024, // 768 KB
+  RIV_MMIOSIZE_AUDIOBUFFER  =    512*1024, // 512 KB
   RIV_MMIOSIZE_FRAMEBUFFER  =   1024*1024, // 1 MB
 } riv_mmio_size;
 
@@ -420,7 +420,6 @@ typedef enum riv_vaddr_base {
   RIV_VADDR_INOUTBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_INOUTBUFFER,
   RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_AUDIOBUFFER,
   RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_FRAMEBUFFER,
-  RIV_VADDR_RIV_CONTEXT  = 0x20000000,
 } riv_vaddr_base;
 
 // RIV driver magic when initializing
@@ -536,12 +535,12 @@ typedef struct riv_mmio_header {
 typedef struct riv_mmio_driver {
   riv_mmio_header header;
   uint64_t frame;
-  riv_framebuffer_desc framebuffer_desc;
-  riv_audio_command audio_commands[32];
-  uint32_t audio_command_len;
   uint32_t outcard_len;
+  riv_framebuffer_desc framebuffer_desc;
   uint32_t palette[RIV_MAX_COLORS];
   bool tracked_keys[RIV_NUM_KEYCODE];
+  riv_audio_command audio_commands[32];
+  uint32_t audio_command_len;
 } riv_mmio_driver;
 
 // Device memory mapped structure (device writes, driver reads)
@@ -630,34 +629,48 @@ typedef struct riv_draw_state {
 
 // RIV context
 typedef struct riv_context {
-  // Public read-only fields
-  uint64_t frame;                                     // Current frame number
-  int64_t time_ms;                                    // Current time in milliseconds since first frame
-  double time;                                        // Current time in seconds since first frame
-  uint32_t incard_len;                                // Input card length
-  bool valid;                                         // Whether riv is initialized
-  bool verifying;                                     // Whether we are verifying
-  bool yielding;                                      // Whether an audio/video/input devices are connected and yielding
-  uint32_t key_modifiers;                             // NIY
-  uint32_t key_toggle_count;                          // Number of toggled keys in this frame
-  uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];           // Toggled key in this frame (in order)
-  riv_key_state keys[RIV_NUM_KEYCODE];                // Current keyboard state
-  // Public read/write fields
-  uint32_t outcard_len;                               // Output card length
-  bool quit;                                          // When set true, RIV loop will stop
-  riv_framebuffer_desc* framebuffer_desc;             // Screen frame buffer description
-  riv_unbounded_bool tracked_keys;                    // Key codes being tracked
-  riv_unbounded_uint8 inoutbuffer;                    // Input/output card buffer
-  riv_unbounded_uint32 palette;                       // Color palette
-  riv_unbounded_uint8 framebuffer;                    // Screen frame buffer
-  riv_draw_state draw;                                // Draw state
-  riv_image images[RIV_MAX_IMAGES];                   // All loaded images
-  riv_spritesheet spritesheets[RIV_MAX_SPRITESHEETS]; // All loaded sprite sheets
+  // MMIO driver (written by the driver)
+  riv_mmio_header mmio_driver_header;                 // Magic header
+  uint64_t frame;                                     // [R] Current frame number
+  uint32_t outcard_len;                               // [RW] Output card length
+  riv_framebuffer_desc framebuffer_desc;              // [RW] Screen frame buffer description
+  uint32_t palette[RIV_MAX_COLORS];                   // [RW] Color palette
+  bool tracked_keys[RIV_NUM_KEYCODE];                 // [RW] Key codes being tracked
+  riv_audio_command audio_commands[32];
+  uint32_t audio_command_len;
+  uint8_t mmio_driver_padding[744];                   // Align to next 4KB page
+
+  // MMIO device (written by the device)
+  riv_mmio_header mmio_device_header;                 // Magic header
+  uint32_t incard_len;                                // [R] Input card length
+  uint32_t key_toggle_count;                          // [R] Number of toggled keys in this frame
+  uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];           // [R] Toggled key in this frame (in order)
+  uint8_t padding[3976];                              // Align to next 4KB page
+
+  // Buffers
+  uint8_t inoutbuffer[RIV_MMIOSIZE_INOUTBUFFER];      // Input/output card buffer
+  uint8_t audiobuffer[RIV_MMIOSIZE_AUDIOBUFFER];
+  uint8_t framebuffer[RIV_MMIOSIZE_FRAMEBUFFER];      // Screen frame buffer
+
+  // General
+  int64_t time_ms;                                    // [R] Current time in milliseconds since first frame
+  double time;                                        // [R] Current time in seconds since first frame
+  bool valid;                                         // [R] Whether riv is initialized
+  bool verifying;                                     // [R] Whether we are verifying
+  bool yielding;                                      // [R] Whether an audio/video/input devices are connected and yielding
+  bool quit;                                          // [RW] When set true, RIV loop will stop
+
+  // Keyboard
+  uint32_t key_modifiers;                             // [R] NIY
+  riv_key_state keys[RIV_NUM_KEYCODE];                // [R] Current keyboard state
+
+  // Drawing
+  riv_draw_state draw;                                // [RW] Draw state
+  riv_image images[RIV_MAX_IMAGES];                   // [RW] All loaded images
+  riv_spritesheet spritesheets[RIV_MAX_SPRITESHEETS]; // [RW] All loaded sprite sheets
+
   // Private fields
   riv_xoshiro256 prng;                                // Internal PRNG state
-  riv_mmio_driver* mmio_driver;
-  riv_mmio_device* mmio_device;
-  riv_unbounded_uint8 audiobuffer;                    // Audio buffer used by audio commands
   uint64_t entropy[128];
   uint32_t entropy_index;
   uint32_t entropy_size;
@@ -675,7 +688,7 @@ typedef struct riv_context {
 // RIV API
 
 // Global RIV context
-static riv_context *const riv = (riv_context*)RIV_VADDR_RIV_CONTEXT;
+static riv_context *const riv = (riv_context*)RIV_VADDR_BASE;
 
 // Utilities
 

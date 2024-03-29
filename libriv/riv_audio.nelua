@@ -6,15 +6,15 @@ require '.riv_yield'
 
 local function riv_flush_audio_commands(): void
   riv_yield(RIV_CONTROL_FLUSH_AUDIO)
-  riv.mmio_driver.audio_command_len = 0
+  riv.audio_command_len = 0
   riv.audiobuffer_off = 0
 end
 
 local function riv_queue_audio_command(command: riv_audio_command): void
-  local command_idx: uint32 = riv.mmio_driver.audio_command_len
-  riv.mmio_driver.audio_commands[command_idx] = command
-  riv.mmio_driver.audio_command_len = command_idx + 1
-  if riv.mmio_driver.audio_command_len >= #riv.mmio_driver.audio_commands then
+  local command_idx: uint32 = riv.audio_command_len
+  riv.audio_commands[command_idx] = command
+  riv.audio_command_len = command_idx + 1
+  if riv.audio_command_len >= #riv.audio_commands then
     riv_flush_audio_commands()
   end
 end

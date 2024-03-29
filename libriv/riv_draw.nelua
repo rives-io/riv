@@ -31,7 +31,7 @@ global function riv_init_draw(): void
 end
 
 global function riv_clear_screen(col: uint32): void <cexport>
-  C.memset(riv.framebuffer, (@uint8)(col), riv.framebuffer_desc.width * riv.framebuffer_desc.height)
+  C.memset(&riv.framebuffer[0], (@uint8)(col), riv.framebuffer_desc.width * riv.framebuffer_desc.height)
 end
 
 local function riv_get_clip_limits(): (int64, int64, int64, int64, int64) <inline>
@@ -56,7 +56,7 @@ global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: u
   y0 = y0 + riv.draw.origin.y y1 = y1 + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
-  local fb: *[0]uint8 = riv.framebuffer
+  local fb: *[0]uint8 = &riv.framebuffer[0]
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   if y0 == y1 then -- horizontal line
     if y0 >= cy0 and y0 <= cy1 then
@@ -119,7 +119,7 @@ global function riv_draw_rect_fill(x0: int64, y0: int64, w: int64, h: int64, col
   y0 = y0 + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
-  local fb: *[0]uint8 = riv.framebuffer
+  local fb: *[0]uint8 = &riv.framebuffer[0]
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local ix0: int64, iy0: int64 = math.max(x0, cx0), math.max(y0, cy0)
   local ix1: int64, iy1: int64 = math.min(x0+w, cx1+1), math.min(y0+h, cy1+1)
@@ -141,7 +141,7 @@ global function riv_draw_rect_line(x0: int64, y0: int64, w: int64, h: int64, col
   y0 = y0 + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
-  local fb: *[0]uint8 = riv.framebuffer
+  local fb: *[0]uint8 = &riv.framebuffer[0]
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local ix0: int64, iy0: int64 = math.max(x0, cx0), math.max(y0, cy0)
   local ix1: int64, iy1: int64 = math.min(x0+w, cx1+1), math.min(y0+h, cy1+1)
@@ -175,7 +175,7 @@ global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32
   oy = oy + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
-  local fb: *[0]uint8 = riv.framebuffer
+  local fb: *[0]uint8 = &riv.framebuffer[0]
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local sr: int64 = (d + 1) %%% 2
   local r: int64 = d /// 2
@@ -203,7 +203,7 @@ global function riv_draw_circle_line(ox: int64, oy: int64, d: int64, col: uint32
   oy = oy + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
-  local fb: *[0]uint8 = riv.framebuffer
+  local fb: *[0]uint8 = &riv.framebuffer[0]
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local sr: int64 = (d + 1) %%% 2
   local r: int64 = d /// 2
@@ -235,7 +235,7 @@ global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, 
   oy = oy + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
-  local fb: *[0]uint8 = riv.framebuffer
+  local fb: *[0]uint8 = &riv.framebuffer[0]
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local srx: int64 = (w + 1) %%% 2
   local sry: int64 = (h + 1) %%% 2
@@ -267,7 +267,7 @@ global function riv_draw_ellipse_line(ox: int64, oy: int64, w: int64, h: int64, 
   oy = oy + riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
-  local fb: *[0]uint8 = riv.framebuffer
+  local fb: *[0]uint8 = &riv.framebuffer[0]
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local srx: int64 = (w + 1) %%% 2
   local sry: int64 = (h + 1) %%% 2
@@ -308,7 +308,7 @@ global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int6
     y0 = y0 + riv.draw.origin.y  y1 = y1 + riv.draw.origin.y  y2 = y2 + riv.draw.origin.y
     local co: uint8 = (@uint8)(col)
     if riv.draw.pal_enabled then co = riv.draw.pal[co] end
-    local fb: *[0]uint8 = riv.framebuffer
+    local fb: *[0]uint8 = &riv.framebuffer[0]
     local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
     local p0: boolean, p1: boolean, p2: boolean
     -- top point
@@ -468,7 +468,7 @@ end
   local imgcolkey: uint64 = (@uint64)(img.color_key)
   x0 = x0 + riv.draw.origin.x
   y0 = y0 + riv.draw.origin.y
-  local fb: *[0]uint8 = riv.framebuffer
+  local fb: *[0]uint8 = &riv.framebuffer[0]
   local pal: *[0]uint8 = riv.draw.pal_enabled and &riv.draw.pal or nilptr
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local bx0: int64 = math.max(x0, cx0)

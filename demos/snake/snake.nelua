@@ -100,10 +100,10 @@ end
 
 local function save_score()
   local finished_str: string = finished and 'true' or 'false'
-  riv.outcard_len = riv_snprintf(riv.inoutbuffer, RIV_MMIOSIZE_INOUTBUFFER,
+  riv.outcard_len = riv_snprintf(&riv.inoutbuffer[0], RIV_MMIOSIZE_INOUTBUFFER,
     [[JSON{"score":%d,"max_score":%d,"apples":%u,"moves":%u,"frames":%u,"finished":%s}]],
       score, max_score, apples, moves, frames, finished_str)
-  riv_printf("%s\n", (@cstring)(riv.inoutbuffer))
+  riv_printf("%s\n", (@cstring)(&riv.inoutbuffer[0]))
 end
 
 local function init_game()

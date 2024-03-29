@@ -9,7 +9,7 @@ local span_uint8: type = @span(uint8)
 global function riv_init_prng(): void
   local hash: [2]uint64 = {riv.incard_len, riv.incard_len}
   if riv.incard_len > 0 then
-    hash = murmur3_128(span_uint8{data=riv.inoutbuffer, size=riv.incard_len}, hash)
+    hash = murmur3_128(span_uint8{data=&riv.inoutbuffer[0], size=riv.incard_len}, hash)
   end
   local cmdline: string <close> = get_cmdline()
   if #cmdline > 0 then

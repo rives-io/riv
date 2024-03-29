@@ -21,7 +21,7 @@ global function riv_draw_circle_fill2(ox: int64, oy: int64, d: int64, col: uint3
   oy = oy - riv.draw.origin.y
   local co: uint8 = (@uint8)(col)
   if riv.draw.pal_enabled then co = riv.draw.pal[co] end
-  local fb: *[0]uint8 = riv.framebuffer
+  local fb: *[0]uint8 = &riv.framebuffer[0]
   local cx0: int64, cy0: int64, cx1: int64, cy1: int64, fw: int64 = riv_get_clip_limits()
   local sr: int64 = (d + 1) %%% 2
   local r: int64 = d /// 2

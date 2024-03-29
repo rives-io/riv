@@ -5,38 +5,38 @@ require 'spng'
 require '.riv_types'
 
 local function riv_init_default_palette(): void
-  riv.mmio_driver.palette[RIV_COLOR_BLACK] = RIV_RGB_BLACK
-  riv.mmio_driver.palette[RIV_COLOR_WHITE] = RIV_RGB_WHITE
-  riv.mmio_driver.palette[RIV_COLOR_LIGHTGREY] = RIV_RGB_LIGHTGREY
-  riv.mmio_driver.palette[RIV_COLOR_GREY] = RIV_RGB_GREY
-  riv.mmio_driver.palette[RIV_COLOR_DARKSLATE] = RIV_RGB_DARKSLATE
-  riv.mmio_driver.palette[RIV_COLOR_SLATE] = RIV_RGB_SLATE
-  riv.mmio_driver.palette[RIV_COLOR_LIGHTSLATE] = RIV_RGB_LIGHTSLATE
-  riv.mmio_driver.palette[RIV_COLOR_LIGHTTEAL] = RIV_RGB_LIGHTTEAL
-  riv.mmio_driver.palette[RIV_COLOR_LIGHTBLUE] = RIV_RGB_LIGHTBLUE
-  riv.mmio_driver.palette[RIV_COLOR_BLUE] = RIV_RGB_BLUE
-  riv.mmio_driver.palette[RIV_COLOR_DARKERGREEN] = RIV_RGB_DARKERGREEN
-  riv.mmio_driver.palette[RIV_COLOR_DARKGREEN] = RIV_RGB_DARKGREEN
-  riv.mmio_driver.palette[RIV_COLOR_GREEN] = RIV_RGB_GREEN
-  riv.mmio_driver.palette[RIV_COLOR_LIGHTGREEN] = RIV_RGB_LIGHTGREEN
-  riv.mmio_driver.palette[RIV_COLOR_LIGHTYELLOW] = RIV_RGB_LIGHTYELLOW
-  riv.mmio_driver.palette[RIV_COLOR_LIGHTPEACH] = RIV_RGB_LIGHTPEACH
-  riv.mmio_driver.palette[RIV_COLOR_PEACH] = RIV_RGB_PEACH
-  riv.mmio_driver.palette[RIV_COLOR_LIGHTBROWN] = RIV_RGB_LIGHTBROWN
-  riv.mmio_driver.palette[RIV_COLOR_BROWN] = RIV_RGB_BROWN
-  riv.mmio_driver.palette[RIV_COLOR_DARKBROWN] = RIV_RGB_DARKBROWN
-  riv.mmio_driver.palette[RIV_COLOR_DARKERBROWN] = RIV_RGB_DARKERBROWN
-  riv.mmio_driver.palette[RIV_COLOR_DARKRED] = RIV_RGB_DARKRED
-  riv.mmio_driver.palette[RIV_COLOR_RED] = RIV_RGB_RED
-  riv.mmio_driver.palette[RIV_COLOR_LIGHTRED] = RIV_RGB_LIGHTRED
-  riv.mmio_driver.palette[RIV_COLOR_ORANGE] = RIV_RGB_ORANGE
-  riv.mmio_driver.palette[RIV_COLOR_GOLD] = RIV_RGB_GOLD
-  riv.mmio_driver.palette[RIV_COLOR_YELLOW] = RIV_RGB_YELLOW
-  riv.mmio_driver.palette[RIV_COLOR_LIGHTPINK] = RIV_RGB_LIGHTPINK
-  riv.mmio_driver.palette[RIV_COLOR_PINK] = RIV_RGB_PINK
-  riv.mmio_driver.palette[RIV_COLOR_DARKPINK] = RIV_RGB_DARKPINK
-  riv.mmio_driver.palette[RIV_COLOR_PURPLE] = RIV_RGB_PURPLE
-  riv.mmio_driver.palette[RIV_COLOR_DARKPURPLE] = RIV_RGB_DARKPURPLE
+  riv.palette[RIV_COLOR_BLACK] = RIV_RGB_BLACK
+  riv.palette[RIV_COLOR_WHITE] = RIV_RGB_WHITE
+  riv.palette[RIV_COLOR_LIGHTGREY] = RIV_RGB_LIGHTGREY
+  riv.palette[RIV_COLOR_GREY] = RIV_RGB_GREY
+  riv.palette[RIV_COLOR_DARKSLATE] = RIV_RGB_DARKSLATE
+  riv.palette[RIV_COLOR_SLATE] = RIV_RGB_SLATE
+  riv.palette[RIV_COLOR_LIGHTSLATE] = RIV_RGB_LIGHTSLATE
+  riv.palette[RIV_COLOR_LIGHTTEAL] = RIV_RGB_LIGHTTEAL
+  riv.palette[RIV_COLOR_LIGHTBLUE] = RIV_RGB_LIGHTBLUE
+  riv.palette[RIV_COLOR_BLUE] = RIV_RGB_BLUE
+  riv.palette[RIV_COLOR_DARKERGREEN] = RIV_RGB_DARKERGREEN
+  riv.palette[RIV_COLOR_DARKGREEN] = RIV_RGB_DARKGREEN
+  riv.palette[RIV_COLOR_GREEN] = RIV_RGB_GREEN
+  riv.palette[RIV_COLOR_LIGHTGREEN] = RIV_RGB_LIGHTGREEN
+  riv.palette[RIV_COLOR_LIGHTYELLOW] = RIV_RGB_LIGHTYELLOW
+  riv.palette[RIV_COLOR_LIGHTPEACH] = RIV_RGB_LIGHTPEACH
+  riv.palette[RIV_COLOR_PEACH] = RIV_RGB_PEACH
+  riv.palette[RIV_COLOR_LIGHTBROWN] = RIV_RGB_LIGHTBROWN
+  riv.palette[RIV_COLOR_BROWN] = RIV_RGB_BROWN
+  riv.palette[RIV_COLOR_DARKBROWN] = RIV_RGB_DARKBROWN
+  riv.palette[RIV_COLOR_DARKERBROWN] = RIV_RGB_DARKERBROWN
+  riv.palette[RIV_COLOR_DARKRED] = RIV_RGB_DARKRED
+  riv.palette[RIV_COLOR_RED] = RIV_RGB_RED
+  riv.palette[RIV_COLOR_LIGHTRED] = RIV_RGB_LIGHTRED
+  riv.palette[RIV_COLOR_ORANGE] = RIV_RGB_ORANGE
+  riv.palette[RIV_COLOR_GOLD] = RIV_RGB_GOLD
+  riv.palette[RIV_COLOR_YELLOW] = RIV_RGB_YELLOW
+  riv.palette[RIV_COLOR_LIGHTPINK] = RIV_RGB_LIGHTPINK
+  riv.palette[RIV_COLOR_PINK] = RIV_RGB_PINK
+  riv.palette[RIV_COLOR_DARKPINK] = RIV_RGB_DARKPINK
+  riv.palette[RIV_COLOR_PURPLE] = RIV_RGB_PURPLE
+  riv.palette[RIV_COLOR_DARKPURPLE] = RIV_RGB_DARKPURPLE
 end
 
 global function riv_init_video(): void
@@ -87,7 +87,7 @@ local function riv_encode_png_screenshot(): string
 
   -- SPNG_FMT_PNG is a special value that matches the format in ihdr,
   -- SPNG_ENCODE_FINALIZE will finalize the PNG with the end-of-file marker
-  ret = spng_encode_image(enc, riv.framebuffer, num_pixels, SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE)
+  ret = spng_encode_image(enc, &riv.framebuffer[0], num_pixels, SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE)
   if ret ~= 0 then error('spng_encode_image failed: '..spng_strerror(ret)) end
 
   -- PNG is written to an internal buffer by default

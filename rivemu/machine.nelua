@@ -228,8 +228,8 @@ function rivemu_machine:_setup_mmio(): boolean
   for paddr: uint64 = RIV_PADDR_RAM,<RIV_PADDR_RAM+RIV_MMIOSIZE_RAM,RIV_MMIOSIZE_HUGEPAGE do
     self:read_memory(paddr + RIV_MMIOSTART_MMIO_DRIVER, data)
     if header.magic == RIV_DRIVER_MAGIC then -- connected
-      assert(header.version == RIV_VERSION, 'unsupported RIV version')
-      assert(header.features == 0, 'unsupported RIV features')
+      assert(header.version == RIV_VERSION, 'RIV device: unsupported RIV version')
+      assert(header.features == 0, 'RIV device: unsupported RIV features')
       self.mmio_paddr = paddr
       self:_init_mmio()
       return true
@@ -253,7 +253,7 @@ function rivemu_machine:run(mcycle_end: uint64): CM_BREAK_REASON
       -- load MMIO from guest driver into host device
       self:_load_driver_mmio()
     elseif not self:_setup_mmio() then -- try to initialize it
-      error('unable to connect MMIO')
+      error('RIV device: unable to connect driver MMIO')
     end
   elseif break_reason ~= CM_BREAK_REASON_REACHED_TARGET_MCYCLE then
     -- for any other reason, MMIO becomes disconnected

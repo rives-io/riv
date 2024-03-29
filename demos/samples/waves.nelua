@@ -9,7 +9,7 @@ repeat
   riv_clear_screen(RIV_COLOR_DARKSLATE)
   local tau: float32 <comptime> = math.pi*2
   local time: float32 = riv.time
-  local fb: auto = riv.framebuffer
+  local fb: auto = &riv.framebuffer
   local r <comptime> = 64
   for y=-r,r,3 do
     for x=-r,r,2 do

@@ -8,7 +8,7 @@ require '.riv_xoshiro256'
 global function riv_init_input(): void
   -- track only gamepad keys by default
   for i: uint32=RIV_GAMEPAD1_UP,RIV_GAMEPAD4_R3 do
-    riv.mmio_driver.tracked_keys[i] = true
+    riv.tracked_keys[i] = true
   end
 end
 
@@ -29,10 +29,10 @@ global function riv_poll_inputs(): void
     riv.keys[i].press = false
     riv.keys[i].release = false
   end
-  local key_toggle_count: uint32 = riv.mmio_device.key_toggle_count
+  local key_toggle_count: uint32 = riv.key_toggle_count
   if key_toggle_count > 0 then
-    for i: uint32=0,<math.min(key_toggle_count,(@uint32)(#riv.mmio_device.key_toggles)) do
-      local key_code: uint8 = riv.mmio_device.key_toggles[i]
+    for i: uint32=0,<math.min(key_toggle_count,(@uint32)(#riv.key_toggles)) do
+      local key_code: uint8 = riv.key_toggles[i]
       local down: boolean = not riv.keys[key_code].down
       local frame: uint64 = riv.frame
       riv.key_toggles[i] = key_code
@@ -50,7 +50,7 @@ global function riv_poll_inputs(): void
     local entropy: span(uint8) = {data=(@*[0]uint8)(&riv.entropy),size=riv.entropy_size * #@uint64}
     riv.prng:srand_entropy(entropy)
   end
-  for i: uint32=key_toggle_count,<math.min(riv.key_toggle_count,(@uint32)(#riv.mmio_device.key_toggles)) do
+  for i: uint32=key_toggle_count,<math.min(riv.key_toggle_count,(@uint32)(#riv.key_toggles)) do
     riv.key_toggles[i] = 0
   end
   riv.key_toggle_count = key_toggle_count

@@ -1,7 +1,7 @@
 require 'riv'
 
 local function frame()
-  local framebuffer: *[0]uint8 = riv.framebuffer
+  local framebuffer: *[0]uint8 = &riv.framebuffer[0]
   local frame: usize = riv.frame
   for y: usize=0,<256 do
     for x: usize=0,<256 do

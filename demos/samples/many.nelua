@@ -56,7 +56,7 @@ end
 
 local function lines(time: number, frame: int64)
   local frame: int64 = riv.frame
-  local framebuffer: auto = (@*[SCREEN_SIZE][SCREEN_SIZE]uint8)(riv.framebuffer)
+  local framebuffer: auto = (@*[SCREEN_SIZE][SCREEN_SIZE]uint8)(&riv.framebuffer[0])
   for y: usize=0,<SCREEN_SIZE do
     for x: usize=0,<SCREEN_SIZE do
       framebuffer[y][x] = ((frame + x + y) // 8) % RIV_NUM_COLORS

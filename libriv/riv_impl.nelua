@@ -15,43 +15,37 @@ require '.riv_sprite'
 require '.riv_draw'
 
 global function riv_init(): void <cattribute'constructor',cexport>
-  -- map riv
+  -- check addresses
+  assert(#@riv_context <= RIV_MMIOSIZE_HUGEPAGE)
+  assert((@usize)(&riv.mmio_driver_header) == RIV_VADDR_MMIO_DRIVER)
+  assert((@usize)(&riv.mmio_device_header) == RIV_VADDR_MMIO_DEVICE)
+  assert((@usize)(&riv.inoutbuffer) == RIV_VADDR_INOUTBUFFER)
+  assert((@usize)(&riv.audiobuffer) == RIV_VADDR_AUDIOBUFFER)
+  assert((@usize)(&riv.framebuffer) == RIV_VADDR_FRAMEBUFFER)
+  -- map riv memory
+  assert(get_free_hugepages() == 1, 'no free hugepage')
   local prot: cint = PROT_READ | PROT_WRITE
-  local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE
-  assert(mmap(riv, #@riv_context, prot, flags, -1, 0) == riv, 'riv mmap failed')
+  local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE | MAP_HUGETLB
+  assert(mmap(riv, RIV_MMIOSIZE_HUGEPAGE, prot, flags, -1, 0) == riv, 'riv mmap failed')
+  assert(get_free_hugepages() == 0, 'no used hugepage')
   -- initialize all code in top scopes
   local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end
   nelua_main(0, nilptr)
-  -- map shared memory
-  assert(get_free_hugepages() == 1, 'no free hugepage')
-  local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
-  assert(mmap(mmio, RIV_MMIOSIZE_HUGEPAGE, prot, flags | MAP_HUGETLB, -1, 0) == mmio, 'mmio mmap failed')
-  assert(get_free_hugepages() == 0, 'no used hugepage')
   -- open yield device
   riv_yield_open()
-  -- initialize device
-  riv.stop_frame = (@uint64)(-1)
-  riv.mmio_driver = (@*riv_mmio_driver)(RIV_VADDR_MMIO_DRIVER)
-  riv.mmio_device = (@*riv_mmio_device)(RIV_VADDR_MMIO_DEVICE)
-  riv.mmio_driver.header = {
+  -- initialize driver
+  riv.mmio_driver_header = {
     magic = RIV_DRIVER_MAGIC,
     version = RIV_VERSION,
     features = 0,
     uuid = 0
   }
-  riv.mmio_driver.framebuffer_desc = {
+  riv.framebuffer_desc = {
     width = RIV_DEFAULT_WIDTH,
     height = RIV_DEFAULT_HEIGHT,
     target_fps = RIV_DEFAULT_TARGET_FPS,
     pixel_format = RIV_DEFAULT_PIXELFORMAT,
   }
-  riv.inoutbuffer = (@*[RIV_MMIOSIZE_INOUTBUFFER]uint8)(RIV_VADDR_INOUTBUFFER)
-  riv.framebuffer = (@*[RIV_MMIOSIZE_FRAMEBUFFER]uint8)(RIV_VADDR_FRAMEBUFFER)
-  riv.audiobuffer = (@*[RIV_MMIOSIZE_AUDIOBUFFER]uint8)(RIV_VADDR_AUDIOBUFFER)
-  -- aliases
-  riv.framebuffer_desc = &riv.mmio_driver.framebuffer_desc
-  riv.tracked_keys = &riv.mmio_driver.tracked_keys
-  riv.palette = &riv.mmio_driver.palette
   -- init input
   riv_init_input()
   -- init video
@@ -60,6 +54,10 @@ global function riv_init(): void <cattribute'constructor',cexport>
   riv_init_draw()
   -- signal the we are about to start, the host may fill input card
   riv_yield(RIV_CONTROL_OPEN)
+  -- check if device is connected
+  assert(riv.mmio_device_header.magic == RIV_DEVICE_MAGIC, 'RIV driver: unable to connect device MMIO')
+  assert(riv.mmio_device_header.version == RIV_VERSION, 'RIV driver: unsupported RIV version')
+  assert(riv.mmio_device_header.features == 0, 'RIV driver: unsupported features')
   -- retrieve input card from host
   riv_sync_incard()
   -- initialize prng
@@ -79,6 +77,8 @@ global function riv_init(): void <cattribute'constructor',cexport>
   local stop_frame_str: string = getenv('RIV_STOP_FRAME')
   if #stop_frame_str > 0 then
     riv.stop_frame = (@uint64)(tointeger(stop_frame_str))
+  else
+    riv.stop_frame = (@uint64)(-1)
   end
   -- finished successfully
   riv.valid = true
@@ -101,11 +101,8 @@ end
 global function riv_fini(): void <cattribute'destructor',cexport>
   riv_deinit()
   -- unmap shared memory
-  local mmio: pointer = (@pointer)(RIV_VADDR_BASE)
-  assert(munmap(mmio, RIV_MMIOSIZE_HUGEPAGE) == 0, 'mmio munmap failed')
-  assert(get_free_hugepages() == 1, 'no freed hugepage')
-  -- unmap riv context
   assert(munmap(riv, RIV_MMIOSIZE_HUGEPAGE) == 0, 'riv munmap failed')
+  assert(get_free_hugepages() == 1, 'no freed hugepage')
 end
 
 global function riv_present(): boolean <cexport>
@@ -135,12 +132,12 @@ global function riv_present(): boolean <cexport>
       local event: riv_key_toggle_event = riv.verify_key_events[riv.verify_key_event_index]
       if event.frame ~= riv.frame or event.key_code == 0xff then break end
       riv.verify_key_event_index = riv.verify_key_event_index + 1
-      if key_index < (@uint32)(#riv.mmio_device.key_toggles) then
-        riv.mmio_device.key_toggles[key_index] = event.key_code
+      if key_index < (@uint32)(#riv.key_toggles) then
+        riv.key_toggles[key_index] = event.key_code
         key_index = key_index + 1
       end
     end
-    riv.mmio_device.key_toggle_count = key_index
+    riv.key_toggle_count = key_index
   end
   -- advance frame
   local frame: uint64 = riv.frame + 1
@@ -150,9 +147,8 @@ global function riv_present(): boolean <cexport>
   local target_fps: uint64 = riv.framebuffer_desc.target_fps > 0 and riv.framebuffer_desc.target_fps or RIV_DEFAULT_TARGET_FPS
   riv.time = frame / target_fps
   riv.time_ms = (@int64)((frame * 1000) // target_fps)
-  riv.mmio_driver.frame = frame
   -- audio commands was flushed
-  riv.mmio_driver.audio_command_len = 0
+  riv.audio_command_len = 0
   riv.audiobuffer_off = 0
   -- poll keyboard inputs
   riv_poll_inputs()
