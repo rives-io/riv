@@ -1,19 +1,16 @@
 #!/bin/busybox sh
 
-# path
-export PATH=/usr/sbin:/usr/bin:/sbin:/bin
-
 # disable terminal translation from nl to cr nl
 busybox stty -onlcr
 
 # mount
-busybox mkdir -p /proc /sys /dev/pts /dev/shm /run
-[ -f /proc/mounts ] || busybox mount -o nosuid,nodev,noexec -t proc proc /proc
-[ -c /dev/pts/ptmx ] || busybox mount -o nosuid,noexec,mode=620,gid=5 -t devpts devpts /dev/pts
-busybox grep -Fq "/dev/shm " /proc/mounts || busybox mount -o nosuid,nodev,mode=1777 -t tmpfs tmpfs /dev/shm
-[ -d /sys/class ] || busybox mount -o nosuid,nodev,noexec -t sysfs sys /sys
-busybox grep -Fq "/tmp " /proc/mounts || busybox mount -o nosuid,nodev,mode=1777 -t tmpfs tmpfs /tmp
-busybox grep -Fq "/run " /proc/mounts || busybox mount -o nosuid,nodev,mode=0755 -t tmpfs tmpfs /run
+[ -d /dev ] && busybox mkdir -p /dev/pts /dev/shm
+[ -d /proc ] && busybox mount -o nosuid,nodev,noexec -t proc proc /proc
+[ -d /dev/pts ] && busybox mount -o nosuid,noexec,mode=620,gid=5 -t devpts devpts /dev/pts
+[ -d /dev/shm ] && busybox mount -o nosuid,nodev,mode=1777 -t tmpfs tmpfs /dev/shm
+[ -d /sys ] && busybox mount -o nosuid,nodev,noexec -t sysfs sys /sys
+[ -d /tmp ] && busybox mount -o nosuid,nodev,mode=1777 -t tmpfs tmpfs /tmp
+[ -d /run ] && busybox mount -o nosuid,nodev,mode=0755 -t tmpfs tmpfs /run
 
 # system config
 [ -f /etc/sysctl.conf ] && busybox sysctl -pq
