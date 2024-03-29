@@ -662,11 +662,10 @@ typedef struct riv_context {
   uint32_t entropy_index;
   uint32_t entropy_size;
   uint64_t sound_gen;                                 // Counter for generating sound ids
-  uint64_t soundbuffer_gen;                          // Counter for generating sound buffer ids
+  uint64_t soundbuffer_gen;                           // Counter for generating sound buffer ids
   uint64_t image_gen;                                 // Counter for generating image ids
   uint64_t sprite_gen;                                // Counter for generating sprite ids
   uint32_t audiobuffer_off;
-  int32_t yield_fd;
   uint32_t verify_key_event_index;
   riv_key_toggle_event *verify_key_events;
   uint64_t stop_frame;

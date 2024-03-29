@@ -411,9 +411,9 @@ local function machine_frame(): void
       mcycle_end = machine:read_mcycle() + 1024*1024
     end
     switch machine:run(mcycle_end) do
-    case CM_BREAK_REASON_YIELDED_AUTOMATICALLY then
+    case CM_BREAK_REASON_YIELDED_SOFTLY then
       -- execute control event from the yield
-      switch machine:read_yield_data() do
+      switch machine:read_x(RISCV_REG_A0) do
       case RIV_CONTROL_OPEN then
         io.printf('[RIVEMU] Open RIV device\n')
         if #options.incard_filename > 0 then

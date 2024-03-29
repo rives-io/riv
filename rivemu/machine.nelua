@@ -14,6 +14,10 @@ global riv_paddr_base: type <using> = @enum(uint64) {
   RIV_PADDR_REPLAYLOG   = 0xa0000000000000,
 }
 
+global riscv_reg_ids: type <using> = @enum(int64) {
+  RISCV_REG_A0 = 10
+}
+
 global RIV_MMIOSIZE_RAM: uint64 <comptime> = 128*1024*1024
 global RIV_MMIOSIZE_CARTRIDGE: uint64< comptime> = 8*1024*1024
 global RIV_MMIOSIZE_REPLAYLOG: uint64< comptime> = 2*1024*1024
@@ -95,17 +99,19 @@ function rivemu_machine.create(entrypoint: string, cartridge_filename: string, r
     init = "",
     entrypoint = entrypoint
   }
-  config.htif = {
-    yield_automatic = true,
-  }
   config.flash_drive = {
     count = flash_drive_count,
     entry = &flash_drive_entries,
   }
 
+  -- set runtime config
+  local runtime_config: cm_machine_runtime_config = {
+    soft_yield = true,
+  }
+
   -- create the machine
   local self: rivemu_machine
-  cm_assert!(cm_create_machine(config, cm_machine_runtime_config{}, &self.machine))
+  cm_assert!(cm_create_machine(config, runtime_config, &self.machine))
 
   -- write cartridge
   if #cartridge_filename > 0 then
@@ -144,18 +150,11 @@ function rivemu_machine:get_root_hash(): [32]byte
   return hash
 end
 
--- Get machine yield reason.
-function rivemu_machine:read_yield_reason(): uint16
-  local data: uint64
-  cm_assert!(cm_read_htif_tohost_data(self.machine, &data))
-  return (@uint16)((data >> 32) & 0xffff)
-end
-
--- Get machine yield data.
-function rivemu_machine:read_yield_data(): uint32
-  local data: uint64
-  cm_assert!(cm_read_htif_tohost_data(self.machine, &data))
-  return (@uint32)(data & 0xffffffff)
+-- Read machine X register.
+function rivemu_machine:read_x(i: int64): uint64
+  local val: uint64
+  cm_assert!(cm_read_x(self.machine, (@int32)(i), &val))
+  return val
 end
 
 -- Get machine mcycle.
@@ -249,7 +248,7 @@ function rivemu_machine:run(mcycle_end: uint64): CM_BREAK_REASON
   local break_reason: CM_BREAK_REASON
   cm_assert!(cm_machine_run(self.machine, mcycle_end, &break_reason))
   -- load driver MMIO
-  if break_reason == CM_BREAK_REASON_YIELDED_AUTOMATICALLY and self:read_yield_reason() == 0 then
+  if break_reason == CM_BREAK_REASON_YIELDED_SOFTLY then
     if self:_check_mmio() then -- is the MMIO still valid?
       -- load MMIO from guest driver into host device
       self:_load_driver_mmio()
