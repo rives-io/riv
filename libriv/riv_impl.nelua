@@ -25,7 +25,7 @@ global function riv_init(): void <cattribute'constructor',cexport>
   -- map riv memory
   local prot: cint = PROT_READ | PROT_WRITE
   local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE | MAP_HUGETLB
-  assert(mmap(riv, RIV_MMIOSIZE_CONTEXT, prot, flags, -1, 0) == riv, 'riv mmap failed')
+  assert(mmap(riv, RIV_SIZE_CONTEXT, prot, flags, -1, 0) == riv, 'riv mmap failed')
   -- initialize all code in top scopes
   local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end
   nelua_main(0, nilptr)
@@ -99,7 +99,7 @@ end
 global function riv_fini(): void <cattribute'destructor',cexport>
   riv_deinit()
   -- unmap shared memory
-  assert(munmap(riv, RIV_MMIOSIZE_CONTEXT) == 0, 'riv munmap failed')
+  assert(munmap(riv, RIV_SIZE_CONTEXT) == 0, 'riv munmap failed')
 end
 
 global function riv_present(): boolean <cexport>

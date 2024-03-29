@@ -23,9 +23,9 @@ global function riv_make_soundbuffer(desc: *riv_soundbuffer_desc): uint64 <cexpo
   -- silently ignore invalid id field
   if desc.id ~= 0 then return 0 end
   -- TODO: we could send in multiple chunks
-  assert(desc.data.size <= RIV_MMIOSIZE_AUDIOBUFFER, 'sound buffer is too large')
+  assert(desc.data.size <= RIV_SIZE_AUDIOBUFFER, 'sound buffer is too large')
   -- flush previous audio buffer if there is not enough space
-  if riv.audiobuffer_off + desc.data.size > RIV_MMIOSIZE_AUDIOBUFFER then
+  if riv.audiobuffer_off + desc.data.size > RIV_SIZE_AUDIOBUFFER then
     riv_flush_audio_commands()
   end
   -- copy buffer

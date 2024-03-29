@@ -14,8 +14,8 @@ local fb_desc: riv_framebuffer_desc
 local fb_pixel_count: int64
 local fb_image: sg_image
 local fb_pixel_perfect: boolean
-local framebuffer: [RIV_MMIOSIZE_FRAMEBUFFER]byte
-local framebuffer_rgba: [RIV_MMIOSIZE_FRAMEBUFFER]uint32
+local framebuffer: [RIV_SIZE_FRAMEBUFFER]byte
+local framebuffer_rgba: [RIV_SIZE_FRAMEBUFFER]uint32
 local loading: boolean = false
 local loading_start: float64 = 0
 
@@ -32,8 +32,8 @@ function rivemu_video.reset(): void
   destroy_framebuffer_image()
   fb_desc = {}
   fb_pixel_count = 0
-  memory.zero(&framebuffer[0], RIV_MMIOSIZE_FRAMEBUFFER)
-  memory.zero(&framebuffer_rgba[0], RIV_MMIOSIZE_FRAMEBUFFER * 4)
+  memory.zero(&framebuffer[0], RIV_SIZE_FRAMEBUFFER)
+  memory.zero(&framebuffer_rgba[0], RIV_SIZE_FRAMEBUFFER * 4)
   loading = false
 end
 

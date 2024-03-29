@@ -320,16 +320,16 @@ global riv_audio_command_type: type <cimport,nodecl,using> = @enum(uint32){
   RIV_AUDIOCOMMAND_SOUND = 3,
   RIV_AUDIOCOMMAND_WAVEFORM = 4
 }
-global riv_mmio_size: type <cimport,nodecl,using> = @enum(uint64){
-  RIV_MMIOSIZE_CONTEXT = 8388608,
-  RIV_MMIOSIZE_MMIO_DRIVER = 4096,
-  RIV_MMIOSIZE_MMIO_DEVICE = 4096,
-  RIV_MMIOSIZE_INCARD = 2097152,
-  RIV_MMIOSIZE_OUTCARD = 2097152,
-  RIV_MMIOSIZE_FRAMEBUFFER = 2097152,
-  RIV_MMIOSIZE_AUDIOBUFFER = 1048576
+global riv_mem_size: type <cimport,nodecl,using> = @enum(uint32){
+  RIV_SIZE_CONTEXT = 8388608,
+  RIV_SIZE_MMIO_DRIVER = 4096,
+  RIV_SIZE_MMIO_DEVICE = 4096,
+  RIV_SIZE_INCARD = 2097152,
+  RIV_SIZE_OUTCARD = 2097152,
+  RIV_SIZE_FRAMEBUFFER = 2097152,
+  RIV_SIZE_AUDIOBUFFER = 1048576
 }
-global riv_vaddr_base: type <cimport,nodecl,using> = @enum(uint64){
+global riv_mem_addr: type <cimport,nodecl,using> = @enum(uint32){
   RIV_VADDR_CONTEXT = 268435456,
   RIV_VADDR_MMIO_DRIVER = 268435456,
   RIV_VADDR_MMIO_DEVICE = 268439552,

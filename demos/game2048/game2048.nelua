@@ -141,7 +141,7 @@ local function destroy_notify()
 end
 
 local function report_score()
-  riv.outcard_len = riv_snprintf(&riv.outcard[0], RIV_MMIOSIZE_OUTCARD, [[JSON{"score":%d}]], score)
+  riv.outcard_len = riv_snprintf(&riv.outcard[0], RIV_SIZE_OUTCARD, [[JSON{"score":%d}]], score)
 end
 
 local function reset_game()

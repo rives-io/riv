@@ -7,7 +7,7 @@ require '.machine'
 
 global rivemu_iocard: type = @record{}
 
-local outbuffer: [RIV_MMIOSIZE_OUTCARD]byte
+local outbuffer: [RIV_SIZE_OUTCARD]byte
 local outcard_data: span(byte)
 local outhist: stringbuilder
 local outhist_tracking: boolean
@@ -21,7 +21,7 @@ function rivemu_iocard.reset(): void
   outcard_data.size = 0
   outhist_tracking = false
   outhist_tracking_json = false
-  memory.zero(&outbuffer[0], RIV_MMIOSIZE_OUTCARD)
+  memory.zero(&outbuffer[0], RIV_SIZE_OUTCARD)
 end
 
 function rivemu_iocard.shutdown(): void
@@ -29,7 +29,7 @@ function rivemu_iocard.shutdown(): void
 end
 
 function rivemu_iocard.update_outcard(): void
-  outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_MMIOSIZE_OUTCARD)
+  outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_SIZE_OUTCARD)
   machine:read_virtual_memory(RIV_VADDR_OUTCARD, outcard_data)
 
   if outhist_tracking then
@@ -72,7 +72,7 @@ end
 function rivemu_iocard.load_incard(filename: string): void
   local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
   local contents: string <close> = fn_assert!(file:read('a'))
-  local data: span(byte) = {data=contents.data, size=math.min(RIV_MMIOSIZE_INCARD, contents.size)}
+  local data: span(byte) = {data=contents.data, size=math.min(RIV_SIZE_INCARD, contents.size)}
   machine:write_virtual_memory(RIV_VADDR_INCARD, data)
   machine.mmio_device.incard_len = (@uint32)(data.size)
   io.printf("[RIVEMU] Loaded input card '%s'\n", filename)

@@ -18,9 +18,9 @@ global riscv_reg_ids: type <using> = @enum(int64) {
   RISCV_REG_A0 = 10
 }
 
-global RIV_MMIOSIZE_RAM: uint64 <comptime> = 128*1024*1024
-global RIV_MMIOSIZE_CARTRIDGE: uint64< comptime> = 8*1024*1024
-global RIV_MMIOSIZE_REPLAYLOG: uint64< comptime> = 2*1024*1024
+global RIV_SIZE_RAM: uint64 <comptime> = 128*1024*1024
+global RIV_SIZE_CARTRIDGE: uint64< comptime> = 8*1024*1024
+global RIV_SIZE_REPLAYLOG: uint64< comptime> = 2*1024*1024
 
 --------------------------------------------------------------------------------
 
@@ -71,14 +71,14 @@ function rivemu_machine.create(entrypoint: string, cartridge_filename: string, r
   -- cartridge flash drive
   flash_drive_entries[flash_drive_count] = {
     start = RIV_PADDR_CARTRIDGE,
-    length = RIV_MMIOSIZE_CARTRIDGE,
+    length = RIV_SIZE_CARTRIDGE,
   }
   flash_drive_count = flash_drive_count + 1
 
   -- event log flash drive
   flash_drive_entries[flash_drive_count] = {
     start = RIV_PADDR_REPLAYLOG,
-    length = RIV_MMIOSIZE_REPLAYLOG,
+    length = RIV_SIZE_REPLAYLOG,
   }
   flash_drive_count = flash_drive_count + 1
 
@@ -93,7 +93,7 @@ function rivemu_machine.create(entrypoint: string, cartridge_filename: string, r
   local config: cm_machine_config = $defconfig
   config.ram = {
     image_filename = './kernel/linux.bin',
-    length = RIV_MMIOSIZE_RAM
+    length = RIV_SIZE_RAM
   }
   config.dtb = {
     bootargs = bootargs,
