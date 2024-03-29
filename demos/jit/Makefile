@@ -34,7 +34,7 @@ build/%.fs: $(ASSETS_DIR)/*
 
 build/%.hash.txt: build/%.sqfs
 	stat -c "%s %n" $^ > $@
-	sha1sum $^ >> $@
+	sha256sum $^ >> $@
 
 $(ASSETS_DIR)/*:;
 

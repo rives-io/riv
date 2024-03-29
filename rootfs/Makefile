@@ -22,7 +22,7 @@ rootfs.ext2: toolchain-rootfs.Dockerfile $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FI
 
 rootfs.hash.txt: rootfs.ext2
 	stat -c "%s %n" $< > $@
-	sha1sum $< >> $@
+	sha256sum $< >> $@
 
 shell: rootfs.ext2
 	cartesi-machine \
