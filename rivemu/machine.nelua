@@ -45,7 +45,7 @@ global RIV_MMIOSIZE_REPLAYLOG: uint64< comptime> = 2*1024*1024
 -- Machine.
 global rivemu_machine = @record{
   machine: *cm_machine,
-  mmio_paddr: uint64,
+  mmio_connected: boolean,
   mmio_driver: riv_mmio_driver,
   mmio_device: riv_mmio_device
 }
@@ -174,23 +174,33 @@ function rivemu_machine:write_memory(paddr: uint64, dest: span(byte)): void
   cm_assert!(cm_write_memory(self.machine, paddr, dest.data, dest.size))
 end
 
+-- Read machine virtual memory.
+function rivemu_machine:read_virtual_memory(paddr: uint64, dest: span(byte)): void
+  cm_assert!(cm_read_virtual_memory(self.machine, paddr, dest.data, dest.size))
+end
+
+-- Write machine virtual memory.
+function rivemu_machine:write_virtual_memory(paddr: uint64, dest: span(byte)): void
+  cm_assert!(cm_write_virtual_memory(self.machine, paddr, dest.data, dest.size))
+end
+
 -- Returns true if MMIO is ready to exchange data between driver and device.
 function rivemu_machine:is_mmio_ready(): boolean
-  return self.mmio_paddr ~= 0
+  return self.mmio_connected
 end
 
 -- Copy MMIO state from machine memory to host memory.
 function rivemu_machine:_load_driver_mmio(): void
-  assert(self.mmio_paddr ~= 0, 'mmio is not connected')
+  assert(self.mmio_connected, 'mmio is not connected')
   local data: span(byte) = {data=(@*[0]byte)(&self.mmio_driver),size=#@riv_mmio_driver}
-  self:read_memory(self.mmio_paddr + RIV_MMIOSTART_MMIO_DRIVER, data)
+  self:read_virtual_memory(RIV_VADDR_MMIO_DRIVER, data)
 end
 
 -- Store MMIO state from host memory to machine memory.
 function rivemu_machine:_store_device_mmio(): void
-  assert(self.mmio_paddr ~= 0, 'mmio is not connected')
+  assert(self.mmio_connected, 'mmio is not connected')
   local data: span(byte) = {data=(@*[0]byte)(&self.mmio_device),size=#@riv_mmio_device}
-  self:write_memory(self.mmio_paddr + RIV_MMIOSTART_MMIO_DEVICE, data)
+  self:write_virtual_memory(RIV_VADDR_MMIO_DEVICE, data)
 end
 
 -- Init MMIO link.
@@ -204,19 +214,19 @@ end
 
 -- Reset MMIO link.
 function rivemu_machine:_reset_mmio(): void
-  if self.mmio_paddr == 0 then return end
-  self.mmio_paddr = 0
+  if not self.mmio_connected then return end
+  self.mmio_connected = false
   self.mmio_device.header = {}
 end
 
 -- Check if MMIO link still valid.
 function rivemu_machine:_check_mmio(): boolean
-  if self.mmio_paddr == 0 then return false end
+  if not self.mmio_connected then return false end
   local check_header: riv_mmio_header = self.mmio_device.header
   check_header.magic = RIV_DRIVER_MAGIC
   local driver_header: riv_mmio_header
   local data: span(byte) = {data=(@*[0]byte)(&driver_header),size=#@riv_mmio_header}
-  self:read_memory(self.mmio_paddr + RIV_MMIOSTART_MMIO_DRIVER, data)
+  self:read_virtual_memory(RIV_VADDR_MMIO_DRIVER, data)
   return driver_header == check_header
 end
 
@@ -225,15 +235,13 @@ function rivemu_machine:_setup_mmio(): boolean
   self:_reset_mmio()
   local header: riv_mmio_header
   local data: span(byte) = {data=(@*[0]byte)(&header),size=#@riv_mmio_header}
-  for paddr: uint64 = RIV_PADDR_RAM,<RIV_PADDR_RAM+RIV_MMIOSIZE_RAM,RIV_MMIOSIZE_HUGEPAGE do
-    self:read_memory(paddr + RIV_MMIOSTART_MMIO_DRIVER, data)
-    if header.magic == RIV_DRIVER_MAGIC then -- connected
-      assert(header.version == RIV_VERSION, 'RIV device: unsupported RIV version')
-      assert(header.features == 0, 'RIV device: unsupported RIV features')
-      self.mmio_paddr = paddr
-      self:_init_mmio()
-      return true
-    end
+  self:read_virtual_memory(RIV_VADDR_MMIO_DRIVER, data)
+  if header.magic == RIV_DRIVER_MAGIC then -- connected
+    assert(header.version == RIV_VERSION, 'RIV device: unsupported RIV version')
+    assert(header.features == 0, 'RIV device: unsupported RIV features')
+    self.mmio_connected = true
+    self:_init_mmio()
+    return true
   end
   return false
 end

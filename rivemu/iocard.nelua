@@ -30,7 +30,7 @@ end
 
 function rivemu_iocard.update_outcard(): void
   outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_MMIOSIZE_INOUTBUFFER)
-  machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, outcard_data)
+  machine:read_virtual_memory(RIV_VADDR_INOUTBUFFER, outcard_data)
 
   if outhist_tracking then
     local outcard_str: string = {data=outcard_data.data, size=outcard_data.size}
@@ -73,7 +73,7 @@ function rivemu_iocard.load_incard(filename: string): void
   local file: filestream <close> = fn_assert!(io.open(filename, 'rb'))
   local contents: string <close> = fn_assert!(file:read('a'))
   local data: span(byte) = {data=contents.data, size=math.min(RIV_MMIOSIZE_INOUTBUFFER, contents.size)}
-  machine:write_memory(machine.mmio_paddr + RIV_MMIOSTART_INOUTBUFFER, data)
+  machine:write_virtual_memory(RIV_VADDR_INOUTBUFFER, data)
   machine.mmio_device.incard_len = (@uint32)(data.size)
   io.printf("[RIVEMU] Loaded input card '%s'\n", filename)
 end

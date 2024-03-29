@@ -89,7 +89,7 @@ end
 local function update_framebuffer_mem(): void
   if fb_pixel_count == 0 then return end
   local fb_machine_mem: span(byte) = {data=&framebuffer,size=fb_pixel_count}
-  machine:read_memory(machine.mmio_paddr + RIV_MMIOSTART_FRAMEBUFFER, fb_machine_mem)
+  machine:read_virtual_memory(RIV_VADDR_FRAMEBUFFER, fb_machine_mem)
   for i: int64=0,<fb_pixel_count do
     framebuffer_rgba[i] = machine.mmio_driver.palette[framebuffer[i]]
   end
