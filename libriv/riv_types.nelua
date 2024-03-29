@@ -328,13 +328,6 @@ global riv_mmio_size: type <cimport,nodecl,using> = @enum(uint64){
   RIV_MMIOSIZE_AUDIOBUFFER = 524288,
   RIV_MMIOSIZE_FRAMEBUFFER = 1048576
 }
-global riv_mmio_start: type <cimport,nodecl,using> = @enum(uint64){
-  RIV_MMIOSTART_MMIO_DRIVER = 0,
-  RIV_MMIOSTART_MMIO_DEVICE = 4096,
-  RIV_MMIOSTART_INOUTBUFFER = 8192,
-  RIV_MMIOSTART_AUDIOBUFFER = 270336,
-  RIV_MMIOSTART_FRAMEBUFFER = 794624
-}
 global riv_vaddr_base: type <cimport,nodecl,using> = @enum(uint64){
   RIV_VADDR_BASE = 268435456,
   RIV_VADDR_MMIO_DRIVER = 268435456,
@@ -342,6 +335,10 @@ global riv_vaddr_base: type <cimport,nodecl,using> = @enum(uint64){
   RIV_VADDR_INOUTBUFFER = 268443648,
   RIV_VADDR_AUDIOBUFFER = 268705792,
   RIV_VADDR_FRAMEBUFFER = 269230080
+}
+global riv_canary_ids: type <cimport,nodecl,using> = @enum(uint32){
+  RIV_CANARY_DRIVER = 1071593246,
+  RIV_CANARY_DEVICE = 1661680337
 }
 global riv_id: type <cimport,nodecl> = @uint64
 global riv_span_uint8: type <cimport,nodecl> = @record{
@@ -397,14 +394,11 @@ global riv_audio_command: type <cimport,nodecl> = @record{
   type: riv_audio_command_type,
   desc: riv_audio_command_desc
 }
-global riv_magic_buffer: type <cimport,nodecl> = @record{
-  data: [32]uint8
-}
 global riv_mmio_header: type <cimport,nodecl> = @record{
-  magic: riv_magic_buffer,
+  canary: uint32,
   version: uint32,
   features: uint32,
-  uuid: uint64
+  uuid: uint32
 }
 global riv_mmio_driver: type <cimport,nodecl> = @record{
   header: riv_mmio_header,
@@ -484,12 +478,12 @@ global riv_context: type <cimport,nodecl> = @record{
   tracked_keys: [192]boolean,
   audio_commands: [32]riv_audio_command,
   audio_command_len: uint32,
-  mmio_driver_padding: [752]uint8,
+  mmio_driver_padding: [780]uint8,
   mmio_device_header: riv_mmio_header,
   incard_len: uint32,
-  key_toggles: [64]uint8,
   key_toggle_count: uint32,
-  padding: [3976]uint8,
+  key_toggles: [64]uint8,
+  padding: [4008]uint8,
   inoutbuffer: [262144]uint8,
   audiobuffer: [524288]uint8,
   framebuffer: [1048576]uint8,
@@ -521,6 +515,4 @@ global RIV_VERSION_MAJOR: cint <comptime> = 0
 global RIV_VERSION_MINOR: cint <comptime> = 3
 global RIV_VERSION_PATCH: cint <comptime> = 0
 global RIV_VERSION: cint <comptime> = 3000
-global RIV_DRIVER_MAGIC: riv_magic_buffer <cimport,nodecl>
-global RIV_DEVICE_MAGIC: riv_magic_buffer <cimport,nodecl>
 global riv: *riv_context <cimport,nodecl>

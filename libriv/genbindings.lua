@@ -37,8 +37,6 @@ nldecl.generate_bindings_file{
 ## cinclude 'riv.h'
 ]],
   output_foot = [[
-global RIV_DRIVER_MAGIC: riv_magic_buffer <cimport,nodecl>
-global RIV_DEVICE_MAGIC: riv_magic_buffer <cimport,nodecl>
 global riv: *riv_context <cimport,nodecl>
 ]]
 }

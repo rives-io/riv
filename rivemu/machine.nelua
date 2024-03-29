@@ -209,7 +209,7 @@ function rivemu_machine:_init_mmio(): void
   self:_load_driver_mmio()
   -- copy header
   self.mmio_device.header = self.mmio_driver.header
-  self.mmio_device.header.magic = RIV_DEVICE_MAGIC
+  self.mmio_device.header.canary = RIV_CANARY_DEVICE
 end
 
 -- Reset MMIO link.
@@ -223,7 +223,7 @@ end
 function rivemu_machine:_check_mmio(): boolean
   if not self.mmio_connected then return false end
   local check_header: riv_mmio_header = self.mmio_device.header
-  check_header.magic = RIV_DRIVER_MAGIC
+  check_header.canary = RIV_CANARY_DRIVER
   local driver_header: riv_mmio_header
   local data: span(byte) = {data=(@*[0]byte)(&driver_header),size=#@riv_mmio_header}
   self:read_virtual_memory(RIV_VADDR_MMIO_DRIVER, data)
@@ -236,7 +236,7 @@ function rivemu_machine:_setup_mmio(): boolean
   local header: riv_mmio_header
   local data: span(byte) = {data=(@*[0]byte)(&header),size=#@riv_mmio_header}
   self:read_virtual_memory(RIV_VADDR_MMIO_DRIVER, data)
-  if header.magic == RIV_DRIVER_MAGIC then -- connected
+  if header.canary == RIV_CANARY_DRIVER then -- connected
     assert(header.version == RIV_VERSION, 'RIV device: unsupported RIV version')
     assert(header.features == 0, 'RIV device: unsupported RIV features')
     self.mmio_connected = true

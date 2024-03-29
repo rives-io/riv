@@ -403,40 +403,21 @@ typedef enum riv_mmio_size {
   RIV_MMIOSIZE_FRAMEBUFFER  =   1024*1024, // 1 MB
 } riv_mmio_size;
 
-// Memory mapped offsets
-typedef enum riv_mmio_start {
-  RIV_MMIOSTART_MMIO_DRIVER  = 0,
-  RIV_MMIOSTART_MMIO_DEVICE  = RIV_MMIOSTART_MMIO_DRIVER + RIV_MMIOSIZE_MMIO_DRIVER,
-  RIV_MMIOSTART_INOUTBUFFER  = RIV_MMIOSTART_MMIO_DEVICE + RIV_MMIOSIZE_MMIO_DEVICE,
-  RIV_MMIOSTART_AUDIOBUFFER  = RIV_MMIOSTART_INOUTBUFFER + RIV_MMIOSIZE_INOUTBUFFER,
-  RIV_MMIOSTART_FRAMEBUFFER  = RIV_MMIOSTART_AUDIOBUFFER + RIV_MMIOSIZE_AUDIOBUFFER,
-} riv_mmio_start;
-
 // Memory mapped virtual address bases
 typedef enum riv_vaddr_base {
   RIV_VADDR_BASE         = 0x10000000,
-  RIV_VADDR_MMIO_DRIVER  = RIV_VADDR_BASE + RIV_MMIOSTART_MMIO_DRIVER,
-  RIV_VADDR_MMIO_DEVICE  = RIV_VADDR_BASE + RIV_MMIOSTART_MMIO_DEVICE,
-  RIV_VADDR_INOUTBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_INOUTBUFFER,
-  RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_AUDIOBUFFER,
-  RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_BASE + RIV_MMIOSTART_FRAMEBUFFER,
+  RIV_VADDR_MMIO_DRIVER  = RIV_VADDR_BASE,
+  RIV_VADDR_MMIO_DEVICE  = RIV_VADDR_MMIO_DRIVER + RIV_MMIOSIZE_MMIO_DRIVER,
+  RIV_VADDR_INOUTBUFFER  = RIV_VADDR_MMIO_DEVICE + RIV_MMIOSIZE_MMIO_DEVICE,
+  RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_INOUTBUFFER + RIV_MMIOSIZE_INOUTBUFFER,
+  RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_AUDIOBUFFER + RIV_MMIOSIZE_AUDIOBUFFER,
 } riv_vaddr_base;
 
-// RIV driver magic when initializing
-#define RIV_DRIVER_MAGIC (riv_magic_buffer){{ \
-  0x3f, 0xdf, 0x37, 0x1e, 0xc0, 0xfc, 0xd1, 0xba, \
-  0xec, 0xe9, 0x72, 0xa1, 0xf5, 0x89, 0x87, 0xc5, \
-  0x70, 0xfd, 0xbe, 0xc0, 0xce, 0xcc, 0x2d, 0x74, \
-  0x8d, 0x45, 0x39, 0x62, 0x49, 0xb8, 0x15, 0x26, \
-}}
-
-// RIV device magic when initializing
-#define RIV_DEVICE_MAGIC (riv_magic_buffer){{ \
-  0x83, 0x0b, 0x3a, 0xd1, 0xcc, 0x8b, 0xc2, 0xe5, \
-  0x70, 0x5c, 0x83, 0x98, 0x6c, 0xe4, 0x67, 0xc9, \
-  0xc1, 0xc6, 0x0b, 0xc6, 0xb9, 0x80, 0xa4, 0x1c, \
-  0x34, 0x12, 0x8c, 0x2e, 0x05, 0xd8, 0x2c, 0x4e, \
-}}
+// Canaries
+typedef enum riv_canary_ids {
+  RIV_CANARY_DRIVER = 0x3fdf371e,
+  RIV_CANARY_DEVICE = 0x630b3ad1,
+} riv_canary_ids;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Primitive types
@@ -518,17 +499,12 @@ typedef struct riv_audio_command {
   riv_audio_command_desc desc;
 } riv_audio_command;
 
-// Magic buffer
-typedef struct riv_magic_buffer {
-  uint8_t data[32];
-} riv_magic_buffer;
-
 // Memory mapped header
 typedef struct riv_mmio_header {
-  riv_magic_buffer magic;
+  uint32_t canary;
   uint32_t version;
   uint32_t features;
-  uint64_t uuid;
+  uint32_t uuid;
 } riv_mmio_header;
 
 // Driver memory mapped structure (driver writes, device reads)
@@ -630,7 +606,7 @@ typedef struct riv_draw_state {
 // RIV context
 typedef struct riv_context {
   // MMIO driver (written by the driver)
-  riv_mmio_header mmio_driver_header;                 // Magic header
+  riv_mmio_header mmio_driver_header;                 // Header
   uint64_t frame;                                     // [R] Current frame number
   uint32_t outcard_len;                               // [RW] Output card length
   riv_framebuffer_desc framebuffer_desc;              // [RW] Screen frame buffer description
@@ -638,14 +614,14 @@ typedef struct riv_context {
   bool tracked_keys[RIV_NUM_KEYCODE];                 // [RW] Key codes being tracked
   riv_audio_command audio_commands[32];
   uint32_t audio_command_len;
-  uint8_t mmio_driver_padding[744];                   // Align to next 4KB page
+  uint8_t mmio_driver_padding[780];                   // Align to next 4KB page
 
   // MMIO device (written by the device)
-  riv_mmio_header mmio_device_header;                 // Magic header
+  riv_mmio_header mmio_device_header;                 // Header
   uint32_t incard_len;                                // [R] Input card length
   uint32_t key_toggle_count;                          // [R] Number of toggled keys in this frame
   uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];           // [R] Toggled key in this frame (in order)
-  uint8_t padding[3976];                              // Align to next 4KB page
+  uint8_t padding[4008];                              // Align to next 4KB page
 
   // Buffers
   uint8_t inoutbuffer[RIV_MMIOSIZE_INOUTBUFFER];      // Input/output card buffer

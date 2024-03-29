@@ -17,11 +17,11 @@ require '.riv_draw'
 global function riv_init(): void <cattribute'constructor',cexport>
   -- check addresses
   assert(#@riv_context <= RIV_MMIOSIZE_HUGEPAGE)
-  assert((@usize)(&riv.mmio_driver_header) == RIV_VADDR_MMIO_DRIVER)
-  assert((@usize)(&riv.mmio_device_header) == RIV_VADDR_MMIO_DEVICE)
-  assert((@usize)(&riv.inoutbuffer) == RIV_VADDR_INOUTBUFFER)
-  assert((@usize)(&riv.audiobuffer) == RIV_VADDR_AUDIOBUFFER)
-  assert((@usize)(&riv.framebuffer) == RIV_VADDR_FRAMEBUFFER)
+  assert((@usize)(&riv.mmio_driver_header) == RIV_VADDR_MMIO_DRIVER, 'invalid RIV_VADDR_MMIO_DRIVER')
+  assert((@usize)(&riv.mmio_device_header) == RIV_VADDR_MMIO_DEVICE, 'invalid RIV_VADDR_MMIO_DEVICE')
+  assert((@usize)(&riv.inoutbuffer) == RIV_VADDR_INOUTBUFFER, 'invalid RIV_VADDR_INOUTBUFFER')
+  assert((@usize)(&riv.audiobuffer) == RIV_VADDR_AUDIOBUFFER, 'invalid RIV_VADDR_AUDIOBUFFER')
+  assert((@usize)(&riv.framebuffer) == RIV_VADDR_FRAMEBUFFER, 'invalid RIV_VADDR_FRAMEBUFFER')
   -- map riv memory
   assert(get_free_hugepages() == 1, 'no free hugepage')
   local prot: cint = PROT_READ | PROT_WRITE
@@ -35,7 +35,7 @@ global function riv_init(): void <cattribute'constructor',cexport>
   riv_yield_open()
   -- initialize driver
   riv.mmio_driver_header = {
-    magic = RIV_DRIVER_MAGIC,
+    canary = RIV_CANARY_DRIVER,
     version = RIV_VERSION,
     features = 0,
     uuid = 0
@@ -55,7 +55,7 @@ global function riv_init(): void <cattribute'constructor',cexport>
   -- signal the we are about to start, the host may fill input card
   riv_yield(RIV_CONTROL_OPEN)
   -- check if device is connected
-  assert(riv.mmio_device_header.magic == RIV_DEVICE_MAGIC, 'RIV driver: unable to connect device MMIO')
+  assert(riv.mmio_device_header.canary == RIV_CANARY_DEVICE, 'RIV driver: unable to connect device MMIO')
   assert(riv.mmio_device_header.version == RIV_VERSION, 'RIV driver: unsupported RIV version')
   assert(riv.mmio_device_header.features == 0, 'RIV driver: unsupported features')
   -- retrieve input card from host
