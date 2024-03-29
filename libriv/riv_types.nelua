@@ -321,20 +321,20 @@ global riv_audio_command_type: type <cimport,nodecl,using> = @enum(uint32){
   RIV_AUDIOCOMMAND_WAVEFORM = 4
 }
 global riv_mmio_size: type <cimport,nodecl,using> = @enum(uint64){
-  RIV_MMIOSIZE_HUGEPAGE = 2097152,
+  RIV_MMIOSIZE_CONTEXT = 8388608,
   RIV_MMIOSIZE_MMIO_DRIVER = 4096,
   RIV_MMIOSIZE_MMIO_DEVICE = 4096,
-  RIV_MMIOSIZE_INOUTBUFFER = 262144,
-  RIV_MMIOSIZE_AUDIOBUFFER = 524288,
-  RIV_MMIOSIZE_FRAMEBUFFER = 1048576
+  RIV_MMIOSIZE_INOUTBUFFER = 1048576,
+  RIV_MMIOSIZE_AUDIOBUFFER = 1048576,
+  RIV_MMIOSIZE_FRAMEBUFFER = 2097152
 }
 global riv_vaddr_base: type <cimport,nodecl,using> = @enum(uint64){
-  RIV_VADDR_BASE = 268435456,
+  RIV_VADDR_CONTEXT = 268435456,
   RIV_VADDR_MMIO_DRIVER = 268435456,
   RIV_VADDR_MMIO_DEVICE = 268439552,
   RIV_VADDR_INOUTBUFFER = 268443648,
-  RIV_VADDR_AUDIOBUFFER = 268705792,
-  RIV_VADDR_FRAMEBUFFER = 269230080
+  RIV_VADDR_AUDIOBUFFER = 269492224,
+  RIV_VADDR_FRAMEBUFFER = 270540800
 }
 global riv_canary_ids: type <cimport,nodecl,using> = @enum(uint32){
   RIV_CANARY_DRIVER = 1071593246,
@@ -484,9 +484,9 @@ global riv_context: type <cimport,nodecl> = @record{
   key_toggle_count: uint32,
   key_toggles: [64]uint8,
   padding: [4008]uint8,
-  inoutbuffer: [262144]uint8,
-  audiobuffer: [524288]uint8,
-  framebuffer: [1048576]uint8,
+  inoutbuffer: [1048576]uint8,
+  audiobuffer: [1048576]uint8,
+  framebuffer: [2097152]uint8,
   time_ms: int64,
   time: float64,
   valid: boolean,

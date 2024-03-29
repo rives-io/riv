@@ -16,18 +16,15 @@ require '.riv_draw'
 
 global function riv_init(): void <cattribute'constructor',cexport>
   -- check addresses
-  assert(#@riv_context <= RIV_MMIOSIZE_HUGEPAGE)
   assert((@usize)(&riv.mmio_driver_header) == RIV_VADDR_MMIO_DRIVER, 'invalid RIV_VADDR_MMIO_DRIVER')
   assert((@usize)(&riv.mmio_device_header) == RIV_VADDR_MMIO_DEVICE, 'invalid RIV_VADDR_MMIO_DEVICE')
   assert((@usize)(&riv.inoutbuffer) == RIV_VADDR_INOUTBUFFER, 'invalid RIV_VADDR_INOUTBUFFER')
   assert((@usize)(&riv.audiobuffer) == RIV_VADDR_AUDIOBUFFER, 'invalid RIV_VADDR_AUDIOBUFFER')
   assert((@usize)(&riv.framebuffer) == RIV_VADDR_FRAMEBUFFER, 'invalid RIV_VADDR_FRAMEBUFFER')
   -- map riv memory
-  assert(get_free_hugepages() == 1, 'no free hugepage')
   local prot: cint = PROT_READ | PROT_WRITE
   local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE | MAP_HUGETLB
-  assert(mmap(riv, RIV_MMIOSIZE_HUGEPAGE, prot, flags, -1, 0) == riv, 'riv mmap failed')
-  assert(get_free_hugepages() == 0, 'no used hugepage')
+  assert(mmap(riv, RIV_MMIOSIZE_CONTEXT, prot, flags, -1, 0) == riv, 'riv mmap failed')
   -- initialize all code in top scopes
   local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end
   nelua_main(0, nilptr)
@@ -101,8 +98,7 @@ end
 global function riv_fini(): void <cattribute'destructor',cexport>
   riv_deinit()
   -- unmap shared memory
-  assert(munmap(riv, RIV_MMIOSIZE_HUGEPAGE) == 0, 'riv munmap failed')
-  assert(get_free_hugepages() == 1, 'no freed hugepage')
+  assert(munmap(riv, RIV_MMIOSIZE_CONTEXT) == 0, 'riv munmap failed')
 end
 
 global function riv_present(): boolean <cexport>

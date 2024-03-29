@@ -32,18 +32,6 @@ global function exit(status: cint): void <cimport,cinclude'<stdlib.h>'> end
 -- Utilities
 
 require 'stringbuilder'
-local strconv: type = require 'detail.strconv'
-
-global function get_free_hugepages(): integer
-  local fd: cint = open('/sys/kernel/mm/hugepages/hugepages-2048kB/free_hugepages')
-  if fd < 0 then return 0 end
-  defer close(fd) end
-  local buf: [32]byte
-  local nread: isize = read(fd, &buf, #buf)
-  if nread <= 0 then return 0 end
-  local ok: boolean, res: integer = strconv.str2int((@cstring)(&buf[0]), 10)
-  return res
-end
 
 global function get_cmdline(): string
   local fd: cint = open('/proc/self/cmdline')
