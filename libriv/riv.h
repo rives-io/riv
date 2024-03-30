@@ -353,6 +353,7 @@ typedef enum riv_constants {
   RIV_MAX_IMAGES = 1024,
   RIV_MAX_SPRITESHEETS = 1024,
   RIV_MAX_KEY_TOGGLES = 64,
+  RIV_MAX_AUDIO_COMMANDS = 32,
   RIV_NUM_GAMEPADS = 4,
   RIV_NUM_GAMEPAD_BUTTONS = 16,
   RIV_INVALID_ID = 0,
@@ -395,28 +396,30 @@ typedef enum riv_audio_command_type {
 
 // Memory mapped sizes
 typedef enum riv_mem_size {
-  RIV_SIZE_CONTEXT      = 8*1024*1024, // 8 MB
-  RIV_SIZE_MMIO_DRIVER  =      4*1024, // 4 KB
-  RIV_SIZE_MMIO_DEVICE  =      4*1024, // 4 KB
-  RIV_SIZE_PUB_DRIVER   =    508*1024, // 508 KB
-  RIV_SIZE_PRV_DRIVER   =    508*1024, // 508 KB
-  RIV_SIZE_INCARD       = 2*1024*1024, // 2 MB
-  RIV_SIZE_OUTCARD      = 2*1024*1024, // 2 MB
-  RIV_SIZE_FRAMEBUFFER  = 2*1024*1024, // 2 MB
-  RIV_SIZE_AUDIOBUFFER  = 1*1024*1024, // 1 MB
+  RIV_SIZE_CONTEXT      = 12*1024*1024, // 12 MB
+  RIV_SIZE_MMIO_DRIVER  =       4*1024, // 4 KB
+  RIV_SIZE_MMIO_DEVICE  =       4*1024, // 4 KB
+  RIV_SIZE_PUB_DRIVER   =    1016*1024, // 1016 KB
+  RIV_SIZE_PRV_DRIVER   =    1024*1024, // 1MB
+  RIV_SIZE_INCARD       =  2*1024*1024, // 2 MB
+  RIV_SIZE_OUTCARD      =  2*1024*1024, // 2 MB
+  RIV_SIZE_STATECARD    =  2*1024*1024, // 2 MB
+  RIV_SIZE_FRAMEBUFFER  =  2*1024*1024, // 2 MB
+  RIV_SIZE_TXBUFFER     =  2*1024*1024, // 2 MB
 } riv_mem_size;
 
 // Memory mapped virtual address bases
 typedef enum riv_mem_addr {
   RIV_VADDR_CONTEXT      = 0x10000000,
-  RIV_VADDR_MMIO_DRIVER  = RIV_VADDR_CONTEXT,
-  RIV_VADDR_MMIO_DEVICE  = RIV_VADDR_MMIO_DRIVER + RIV_SIZE_MMIO_DRIVER,
-  RIV_VADDR_PUB_DRIVER   = RIV_VADDR_MMIO_DEVICE + RIV_SIZE_MMIO_DEVICE,
-  RIV_VADDR_PRV_DRIVER   = RIV_VADDR_PUB_DRIVER  + RIV_SIZE_PUB_DRIVER,
-  RIV_VADDR_INCARD       = RIV_VADDR_PRV_DRIVER  + RIV_SIZE_PRV_DRIVER,
-  RIV_VADDR_OUTCARD      = RIV_VADDR_INCARD      + RIV_SIZE_INCARD,
-  RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_OUTCARD     + RIV_SIZE_OUTCARD,
-  RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_FRAMEBUFFER + RIV_SIZE_FRAMEBUFFER,
+  RIV_VADDR_MMIO_DRIVER  = 0x10000000,
+  RIV_VADDR_MMIO_DEVICE  = 0x10001000,
+  RIV_VADDR_PUB_DRIVER   = 0x10002000,
+  RIV_VADDR_PRV_DRIVER   = 0x10100000,
+  RIV_VADDR_INCARD       = 0x10200000,
+  RIV_VADDR_OUTCARD      = 0x10400000,
+  RIV_VADDR_STATECARD    = 0x10600000,
+  RIV_VADDR_FRAMEBUFFER  = 0x10800000,
+  RIV_VADDR_TXBUFFER     = 0x10a00000,
 } riv_mem_addr;
 
 // Canaries
@@ -518,10 +521,11 @@ typedef struct riv_mmio_driver {
   riv_mmio_header header;
   uint64_t frame;
   uint32_t outcard_len;
+  uint32_t statecard_len;
   riv_framebuffer_desc framebuffer_desc;
   uint32_t palette[RIV_MAX_COLORS];
   bool tracked_keys[RIV_NUM_KEYCODE];
-  riv_audio_command audio_commands[32];
+  riv_audio_command audio_commands[RIV_MAX_AUDIO_COMMANDS];
   uint32_t audio_command_len;
 } riv_mmio_driver;
 
@@ -529,6 +533,7 @@ typedef struct riv_mmio_driver {
 typedef struct riv_mmio_device {
   riv_mmio_header header;
   uint32_t incard_len;
+  uint32_t initial_statecard_len;
   uint32_t key_toggle_count;
   uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];
 } riv_mmio_device;
@@ -617,10 +622,11 @@ typedef struct riv_context {
   riv_mmio_header mmio_driver_header;                 // MMIO driver header
   uint64_t frame;                                     // [R] Current frame number
   uint32_t outcard_len;                               // [RW] Output card length
+  uint32_t statecard_len;                             // [RW] State card length
   riv_framebuffer_desc framebuffer_desc;              // [RW] Screen frame buffer description
   uint32_t palette[RIV_MAX_COLORS];                   // [RW] Color palette
   bool tracked_keys[RIV_NUM_KEYCODE];                 // [RW] Key codes being tracked
-  riv_audio_command audio_commands[32];
+  riv_audio_command audio_commands[RIV_MAX_AUDIO_COMMANDS];
   uint32_t audio_command_len;
   uint8_t mmio_driver_padding[780];                   // Reserved
 
@@ -629,9 +635,10 @@ typedef struct riv_context {
   //------------------------------------
   riv_mmio_header mmio_device_header;                 // MMIO device header
   uint32_t incard_len;                                // [R] Input card length
+  uint32_t initial_statecard_len;                     // [R] Initial state card length
   uint32_t key_toggle_count;                          // [R] Number of toggled keys in this frame
   uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];           // [R] Toggled key in this frame (in order)
-  uint8_t mmio_device_padding[4008];                  // Reserved
+  uint8_t mmio_device_padding[4004];                  // Reserved
 
   //------------------------------------
   // Driver public state
@@ -647,7 +654,7 @@ typedef struct riv_context {
   riv_draw_state draw;                                // [RW] Draw state
   riv_image images[RIV_MAX_IMAGES];                   // [RW] Loaded images
   riv_spritesheet spritesheets[RIV_MAX_SPRITESHEETS]; // [RW] Loaded sprite sheets
-  uint8_t pub_driver_padding[482480];                 // Reserved
+  uint8_t pub_driver_padding[1002672];                // Reserved
 
   //------------------------------------
   // Driver private state
@@ -660,19 +667,20 @@ typedef struct riv_context {
   uint64_t soundbuffer_gen;                           // Counter for generating sound buffer ids
   uint64_t image_gen;                                 // Counter for generating image ids
   uint64_t sprite_gen;                                // Counter for generating sprite ids
-  uint32_t audiobuffer_off;
+  uint32_t txbuffer_off;
   uint32_t verify_key_event_index;
   riv_key_toggle_event *verify_key_events;
   uint64_t stop_frame;
-  uint8_t prv_driver_padding[519072];                 // Reserved
+  uint8_t prv_driver_padding[1047456];                // Reserved
 
   //------------------------------------
   // Buffers
   //------------------------------------
-  uint8_t incard[RIV_SIZE_INCARD];                    // [RW] Input/output card buffer
-  uint8_t outcard[RIV_SIZE_OUTCARD];                  // [RW] Input/output card buffer
+  uint8_t incard[RIV_SIZE_INCARD];                    // [R] Input card buffer
+  uint8_t outcard[RIV_SIZE_OUTCARD];                  // [RW] Output card buffer
+  uint8_t statecard[RIV_SIZE_STATECARD];              // [RW] State card buffer
   uint8_t framebuffer[RIV_SIZE_FRAMEBUFFER];          // [RW] Screen frame buffer
-  uint8_t audiobuffer[RIV_SIZE_AUDIOBUFFER];
+  uint8_t txbuffer[RIV_SIZE_TXBUFFER];                // Used by internal commands
 } riv_context;
 
 ////////////////////////////////////////////////////////////////////////////////

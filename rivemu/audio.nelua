@@ -304,7 +304,7 @@ local function handle_make_soundbuffer(desc: riv_soundbuffer_desc): void
   assert(not buffers:has(desc.id), 'sound buffer id is already taken')
   local off: usize = (@usize)(desc.data.data)
   local data: span(byte) = new(@byte, desc.data.size)
-  machine:read_virtual_memory(RIV_VADDR_AUDIOBUFFER + off, data)
+  machine:read_virtual_memory(RIV_VADDR_TXBUFFER + off, data)
   desc.data.data = data.data
   buffers[desc.id] = desc
 end

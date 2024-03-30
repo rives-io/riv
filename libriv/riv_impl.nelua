@@ -22,8 +22,9 @@ global function riv_init(): void <cattribute'constructor',cexport>
   assert((@usize)(&riv.prng) == RIV_VADDR_PRV_DRIVER, 'invalid RIV_VADDR_PRV_DRIVER')
   assert((@usize)(&riv.incard) == RIV_VADDR_INCARD, 'invalid RIV_VADDR_INCARD')
   assert((@usize)(&riv.outcard) == RIV_VADDR_OUTCARD, 'invalid RIV_VADDR_OUTCARD')
-  assert((@usize)(&riv.audiobuffer) == RIV_VADDR_AUDIOBUFFER, 'invalid RIV_VADDR_AUDIOBUFFER')
+  assert((@usize)(&riv.statecard) == RIV_VADDR_STATECARD, 'invalid RIV_VADDR_STATECARD')
   assert((@usize)(&riv.framebuffer) == RIV_VADDR_FRAMEBUFFER, 'invalid RIV_VADDR_FRAMEBUFFER')
+  assert((@usize)(&riv.txbuffer) == RIV_VADDR_TXBUFFER, 'invalid RIV_VADDR_TXBUFFER')
   assert(#@riv_context <= RIV_SIZE_CONTEXT, 'invalid RIV_SIZE_CONTEXT')
   -- map riv memory
   local prot: cint = PROT_READ | PROT_WRITE
@@ -148,8 +149,7 @@ global function riv_present(): boolean <cexport>
   riv.time = frame / target_fps
   riv.time_ms = (@int64)((frame * 1000) // target_fps)
   -- audio commands was flushed
-  riv.audio_command_len = 0
-  riv.audiobuffer_off = 0
+  riv.audio_commands[0].type = RIV_AUDIOCOMMAND_NONE
   -- poll keyboard inputs
   riv_poll_inputs()
   return not riv.quit

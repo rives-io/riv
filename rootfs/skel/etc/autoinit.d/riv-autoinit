@@ -5,7 +5,7 @@
 [ -d /sys/fs/cgroup ] && echo "+cpu +pids +memory" > /sys/fs/cgroup/cgroup.subtree_control
 
 # allocate a 2MB hugepage for memory mapped devices
-busybox grep -Fq hugetlbfs /proc/filesystems && echo 4 > /proc/sys/vm/nr_hugepages
+busybox grep -Fq hugetlbfs /proc/filesystems && echo 6 > /proc/sys/vm/nr_hugepages
 
 # security
 busybox mount -o noatime,nosuid,remount /

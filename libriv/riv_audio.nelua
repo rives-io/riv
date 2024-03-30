@@ -7,7 +7,7 @@ require '.riv_yield'
 local function riv_flush_audio_commands(): void
   riv_yield(RIV_CONTROL_FLUSH_AUDIO)
   riv.audio_command_len = 0
-  riv.audiobuffer_off = 0
+  riv.txbuffer_off = 0
 end
 
 local function riv_queue_audio_command(command: riv_audio_command): void
@@ -23,15 +23,15 @@ global function riv_make_soundbuffer(desc: *riv_soundbuffer_desc): uint64 <cexpo
   -- silently ignore invalid id field
   if desc.id ~= 0 then return 0 end
   -- TODO: we could send in multiple chunks
-  assert(desc.data.size <= RIV_SIZE_AUDIOBUFFER, 'sound buffer is too large')
+  assert(desc.data.size <= RIV_SIZE_TXBUFFER, 'sound buffer is too large')
   -- flush previous audio buffer if there is not enough space
-  if riv.audiobuffer_off + desc.data.size > RIV_SIZE_AUDIOBUFFER then
+  if riv.txbuffer_off + desc.data.size > RIV_SIZE_TXBUFFER then
     riv_flush_audio_commands()
   end
   -- copy buffer
-  memory.copy(&riv.audiobuffer[riv.audiobuffer_off], desc.data.data, desc.data.size)
-  desc.data.data = (@*uint8)((@usize)(riv.audiobuffer_off))
-  riv.audiobuffer_off = riv.audiobuffer_off + (@uint32)(desc.data.size)
+  memory.copy(&riv.txbuffer[riv.txbuffer_off], desc.data.data, desc.data.size)
+  desc.data.data = (@*uint8)((@usize)(riv.txbuffer_off))
+  riv.txbuffer_off = riv.txbuffer_off + (@uint32)(desc.data.size)
   -- choose sound buffer id
   desc.id = riv.soundbuffer_gen + 1
   riv.soundbuffer_gen = desc.id

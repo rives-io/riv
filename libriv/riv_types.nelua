@@ -292,6 +292,7 @@ global riv_constants: type <cimport,nodecl,using> = @enum(uint32){
   RIV_MAX_IMAGES = 1024,
   RIV_MAX_SPRITESHEETS = 1024,
   RIV_MAX_KEY_TOGGLES = 64,
+  RIV_MAX_AUDIO_COMMANDS = 32,
   RIV_NUM_GAMEPADS = 4,
   RIV_NUM_GAMEPAD_BUTTONS = 16,
   RIV_INVALID_ID = 0
@@ -321,26 +322,28 @@ global riv_audio_command_type: type <cimport,nodecl,using> = @enum(uint32){
   RIV_AUDIOCOMMAND_WAVEFORM = 4
 }
 global riv_mem_size: type <cimport,nodecl,using> = @enum(uint32){
-  RIV_SIZE_CONTEXT = 8388608,
+  RIV_SIZE_CONTEXT = 12582912,
   RIV_SIZE_MMIO_DRIVER = 4096,
   RIV_SIZE_MMIO_DEVICE = 4096,
-  RIV_SIZE_PUB_DRIVER = 520192,
-  RIV_SIZE_PRV_DRIVER = 520192,
+  RIV_SIZE_PUB_DRIVER = 1040384,
+  RIV_SIZE_PRV_DRIVER = 1048576,
   RIV_SIZE_INCARD = 2097152,
   RIV_SIZE_OUTCARD = 2097152,
+  RIV_SIZE_STATECARD = 2097152,
   RIV_SIZE_FRAMEBUFFER = 2097152,
-  RIV_SIZE_AUDIOBUFFER = 1048576
+  RIV_SIZE_TXBUFFER = 2097152
 }
 global riv_mem_addr: type <cimport,nodecl,using> = @enum(uint32){
   RIV_VADDR_CONTEXT = 268435456,
   RIV_VADDR_MMIO_DRIVER = 268435456,
   RIV_VADDR_MMIO_DEVICE = 268439552,
   RIV_VADDR_PUB_DRIVER = 268443648,
-  RIV_VADDR_PRV_DRIVER = 268963840,
-  RIV_VADDR_INCARD = 269484032,
-  RIV_VADDR_OUTCARD = 271581184,
-  RIV_VADDR_FRAMEBUFFER = 273678336,
-  RIV_VADDR_AUDIOBUFFER = 275775488
+  RIV_VADDR_PRV_DRIVER = 269484032,
+  RIV_VADDR_INCARD = 270532608,
+  RIV_VADDR_OUTCARD = 272629760,
+  RIV_VADDR_STATECARD = 274726912,
+  RIV_VADDR_FRAMEBUFFER = 276824064,
+  RIV_VADDR_TXBUFFER = 278921216
 }
 global riv_canary_ids: type <cimport,nodecl,using> = @enum(uint32){
   RIV_CANARY_DRIVER = 1071593246,
@@ -410,6 +413,7 @@ global riv_mmio_driver: type <cimport,nodecl> = @record{
   header: riv_mmio_header,
   frame: uint64,
   outcard_len: uint32,
+  statecard_len: uint32,
   framebuffer_desc: riv_framebuffer_desc,
   palette: [256]uint32,
   tracked_keys: [192]boolean,
@@ -419,6 +423,7 @@ global riv_mmio_driver: type <cimport,nodecl> = @record{
 global riv_mmio_device: type <cimport,nodecl> = @record{
   header: riv_mmio_header,
   incard_len: uint32,
+  initial_statecard_len: uint32,
   key_toggle_count: uint32,
   key_toggles: [64]uint8
 }
@@ -479,6 +484,7 @@ global riv_context: type <cimport,nodecl> = @record{
   mmio_driver_header: riv_mmio_header,
   frame: uint64,
   outcard_len: uint32,
+  statecard_len: uint32,
   framebuffer_desc: riv_framebuffer_desc,
   palette: [256]uint32,
   tracked_keys: [192]boolean,
@@ -487,9 +493,10 @@ global riv_context: type <cimport,nodecl> = @record{
   mmio_driver_padding: [780]uint8,
   mmio_device_header: riv_mmio_header,
   incard_len: uint32,
+  initial_statecard_len: uint32,
   key_toggle_count: uint32,
   key_toggles: [64]uint8,
-  mmio_device_padding: [4008]uint8,
+  mmio_device_padding: [4004]uint8,
   time_ms: int64,
   time: float64,
   valid: boolean,
@@ -501,7 +508,7 @@ global riv_context: type <cimport,nodecl> = @record{
   draw: riv_draw_state,
   images: [1024]riv_image,
   spritesheets: [1024]riv_spritesheet,
-  pub_driver_padding: [482480]uint8,
+  pub_driver_padding: [1002672]uint8,
   prng: riv_xoshiro256,
   entropy: [128]uint64,
   entropy_index: uint32,
@@ -510,15 +517,16 @@ global riv_context: type <cimport,nodecl> = @record{
   soundbuffer_gen: uint64,
   image_gen: uint64,
   sprite_gen: uint64,
-  audiobuffer_off: uint32,
+  txbuffer_off: uint32,
   verify_key_event_index: uint32,
   verify_key_events: *[0]riv_key_toggle_event,
   stop_frame: uint64,
-  prv_driver_padding: [519072]uint8,
+  prv_driver_padding: [1047456]uint8,
   incard: [2097152]uint8,
   outcard: [2097152]uint8,
+  statecard: [2097152]uint8,
   framebuffer: [2097152]uint8,
-  audiobuffer: [1048576]uint8
+  txbuffer: [2097152]uint8
 }
 global RIV_VERSION_MAJOR: cint <comptime> = 0
 global RIV_VERSION_MINOR: cint <comptime> = 3
