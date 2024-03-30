@@ -292,7 +292,7 @@ global riv_constants: type <cimport,nodecl,using> = @enum(uint32){
   RIV_MAX_IMAGES = 1024,
   RIV_MAX_SPRITESHEETS = 1024,
   RIV_MAX_KEY_TOGGLES = 64,
-  RIV_MAX_AUDIO_COMMANDS = 32,
+  RIV_MAX_COMMANDS = 32,
   RIV_NUM_GAMEPADS = 4,
   RIV_NUM_GAMEPAD_BUTTONS = 16,
   RIV_INVALID_ID = 0
@@ -312,14 +312,14 @@ global riv_control_command: type <cimport,nodecl,using> = @enum(uint32){
   RIV_CONTROL_OPEN = 1,
   RIV_CONTROL_CLOSE = 2,
   RIV_CONTROL_PRESENT = 3,
-  RIV_CONTROL_FLUSH_AUDIO = 4
+  RIV_CONTROL_FLUSH_COMMAND = 4
 }
-global riv_audio_command_type: type <cimport,nodecl,using> = @enum(uint32){
-  RIV_AUDIOCOMMAND_NONE = 0,
-  RIV_AUDIOCOMMAND_MAKE_SOUNDBUFFER = 1,
-  RIV_AUDIOCOMMAND_DESTROY_SOUNDBUFFER = 2,
-  RIV_AUDIOCOMMAND_SOUND = 3,
-  RIV_AUDIOCOMMAND_WAVEFORM = 4
+global riv_command_type: type <cimport,nodecl,using> = @enum(uint32){
+  RIV_COMMAND_NONE = 0,
+  RIV_COMMAND_MAKE_SOUNDBUFFER = 1,
+  RIV_COMMAND_DESTROY_SOUNDBUFFER = 2,
+  RIV_COMMAND_SOUND = 3,
+  RIV_COMMAND_WAVEFORM = 4
 }
 global riv_mem_size: type <cimport,nodecl,using> = @enum(uint32){
   RIV_SIZE_CONTEXT = 12582912,
@@ -394,14 +394,14 @@ global riv_waveform_desc: type <cimport,nodecl> = @record{
   duty_cycle: float32,
   pan: float32
 }
-global riv_audio_command_desc: type <cimport,nodecl> = @union{
+global riv_command_desc: type <cimport,nodecl> = @union{
   soundbuffer: riv_soundbuffer_desc,
   sound: riv_sound_desc,
   waveform: riv_waveform_desc
 }
-global riv_audio_command: type <cimport,nodecl> = @record{
-  type: riv_audio_command_type,
-  desc: riv_audio_command_desc
+global riv_command: type <cimport,nodecl> = @record{
+  type: riv_command_type,
+  desc: riv_command_desc
 }
 global riv_mmio_header: type <cimport,nodecl> = @record{
   canary: uint32,
@@ -417,8 +417,8 @@ global riv_mmio_driver: type <cimport,nodecl> = @record{
   framebuffer_desc: riv_framebuffer_desc,
   palette: [256]uint32,
   tracked_keys: [192]boolean,
-  audio_commands: [32]riv_audio_command,
-  audio_command_len: uint32
+  commands: [32]riv_command,
+  command_len: uint32
 }
 global riv_mmio_device: type <cimport,nodecl> = @record{
   header: riv_mmio_header,
@@ -488,8 +488,8 @@ global riv_context: type <cimport,nodecl> = @record{
   framebuffer_desc: riv_framebuffer_desc,
   palette: [256]uint32,
   tracked_keys: [192]boolean,
-  audio_commands: [32]riv_audio_command,
-  audio_command_len: uint32,
+  commands: [32]riv_command,
+  command_len: uint32,
   mmio_driver_padding: [780]uint8,
   mmio_device_header: riv_mmio_header,
   incard_len: uint32,

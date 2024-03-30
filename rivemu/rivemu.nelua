@@ -448,7 +448,7 @@ local function machine_frame(): void
         end
         -- must break the loop so we can present the video
         return
-      case RIV_CONTROL_FLUSH_AUDIO then
+      case RIV_CONTROL_FLUSH_COMMAND then
         -- poll audio
         if not options.no_audio then
           rivemu_audio.poll_commands()

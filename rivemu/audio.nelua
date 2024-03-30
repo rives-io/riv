@@ -458,19 +458,19 @@ end
 -- Control audio subsystem.
 function rivemu_audio.poll_commands(): void
   global_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine)
-  for i: usize=0,<machine.mmio_driver.audio_command_len do
-    local command: riv_audio_command = machine.mmio_driver.audio_commands[i]
+  for i: usize=0,<machine.mmio_driver.command_len do
+    local command: riv_command = machine.mmio_driver.commands[i]
     switch command.type do
-    case RIV_AUDIOCOMMAND_MAKE_SOUNDBUFFER then
+    case RIV_COMMAND_MAKE_SOUNDBUFFER then
       handle_make_soundbuffer(command.desc.soundbuffer)
-    case RIV_AUDIOCOMMAND_DESTROY_SOUNDBUFFER then
+    case RIV_COMMAND_DESTROY_SOUNDBUFFER then
       -- handle_destroy_soundbuffer(command.desc.soundbuffer.id)
-    case RIV_AUDIOCOMMAND_SOUND then
+    case RIV_COMMAND_SOUND then
       handle_sound(command.desc.sound)
-    case RIV_AUDIOCOMMAND_WAVEFORM then
+    case RIV_COMMAND_WAVEFORM then
       handle_waveform(command.desc.waveform)
     else
-      error 'unknown audio command'
+      -- ignore
     end
   end
 end

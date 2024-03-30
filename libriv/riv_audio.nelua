@@ -4,18 +4,18 @@ require 'memory'
 require '.riv_types'
 require '.riv_yield'
 
-local function riv_flush_audio_commands(): void
-  riv_yield(RIV_CONTROL_FLUSH_AUDIO)
-  riv.audio_command_len = 0
+local function riv_flush_commands(): void
+  riv_yield(RIV_CONTROL_FLUSH_COMMAND)
+  riv.command_len = 0
   riv.txbuffer_off = 0
 end
 
-local function riv_queue_audio_command(command: riv_audio_command): void
-  local command_idx: uint32 = riv.audio_command_len
-  riv.audio_commands[command_idx] = command
-  riv.audio_command_len = command_idx + 1
-  if riv.audio_command_len >= #riv.audio_commands then
-    riv_flush_audio_commands()
+local function riv_queue_command(command: riv_command): void
+  local command_idx: uint32 = riv.command_len
+  riv.commands[command_idx] = command
+  riv.command_len = command_idx + 1
+  if riv.command_len >= #riv.commands then
+    riv_flush_commands()
   end
 end
 
@@ -26,7 +26,7 @@ global function riv_make_soundbuffer(desc: *riv_soundbuffer_desc): uint64 <cexpo
   assert(desc.data.size <= RIV_SIZE_TXBUFFER, 'sound buffer is too large')
   -- flush previous audio buffer if there is not enough space
   if riv.txbuffer_off + desc.data.size > RIV_SIZE_TXBUFFER then
-    riv_flush_audio_commands()
+    riv_flush_commands()
   end
   -- copy buffer
   memory.copy(&riv.txbuffer[riv.txbuffer_off], desc.data.data, desc.data.size)
@@ -36,8 +36,8 @@ global function riv_make_soundbuffer(desc: *riv_soundbuffer_desc): uint64 <cexpo
   desc.id = riv.soundbuffer_gen + 1
   riv.soundbuffer_gen = desc.id
   -- queue command
-  riv_queue_audio_command{
-    type = RIV_AUDIOCOMMAND_MAKE_SOUNDBUFFER,
+  riv_queue_command{
+    type = RIV_COMMAND_MAKE_SOUNDBUFFER,
     desc = {soundbuffer = $desc},
   }
   return desc.id
@@ -45,8 +45,8 @@ end
 
 global function riv_destroy_soundbuffer(id: uint64): void <cexport>
   -- queue command
-  riv_queue_audio_command{
-    type = RIV_AUDIOCOMMAND_DESTROY_SOUNDBUFFER,
+  riv_queue_command{
+    type = RIV_COMMAND_DESTROY_SOUNDBUFFER,
     desc = {soundbuffer = {id = id}},
   }
 end
@@ -59,8 +59,8 @@ global function riv_sound(desc: *riv_sound_desc): uint64 <cexport>
     riv.sound_gen = desc.id
   end
   -- queue command
-  riv_queue_audio_command{
-    type = RIV_AUDIOCOMMAND_SOUND,
+  riv_queue_command{
+    type = RIV_COMMAND_SOUND,
     desc = {sound = $desc}
   }
   return desc.id
@@ -71,8 +71,8 @@ global function riv_waveform(desc: *riv_waveform_desc): uint64 <cexport>
   desc.id = riv.sound_gen + 1
   riv.sound_gen = desc.id
   -- queue command
-  riv_queue_audio_command{
-    type = RIV_AUDIOCOMMAND_WAVEFORM,
+  riv_queue_command{
+    type = RIV_COMMAND_WAVEFORM,
     desc = {waveform = $desc}
   }
   return desc.id

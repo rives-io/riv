@@ -353,7 +353,7 @@ typedef enum riv_constants {
   RIV_MAX_IMAGES = 1024,
   RIV_MAX_SPRITESHEETS = 1024,
   RIV_MAX_KEY_TOGGLES = 64,
-  RIV_MAX_AUDIO_COMMANDS = 32,
+  RIV_MAX_COMMANDS = 32,
   RIV_NUM_GAMEPADS = 4,
   RIV_NUM_GAMEPAD_BUTTONS = 16,
   RIV_INVALID_ID = 0,
@@ -382,17 +382,17 @@ typedef enum riv_control_command {
   RIV_CONTROL_OPEN,
   RIV_CONTROL_CLOSE,
   RIV_CONTROL_PRESENT,
-  RIV_CONTROL_FLUSH_AUDIO,
+  RIV_CONTROL_FLUSH_COMMAND,
 } riv_control_command;
 
 // Device audio commands
-typedef enum riv_audio_command_type {
-  RIV_AUDIOCOMMAND_NONE = 0,
-  RIV_AUDIOCOMMAND_MAKE_SOUNDBUFFER,
-  RIV_AUDIOCOMMAND_DESTROY_SOUNDBUFFER,
-  RIV_AUDIOCOMMAND_SOUND,
-  RIV_AUDIOCOMMAND_WAVEFORM,
-} riv_audio_command_type;
+typedef enum riv_command_type {
+  RIV_COMMAND_NONE = 0,
+  RIV_COMMAND_MAKE_SOUNDBUFFER,
+  RIV_COMMAND_DESTROY_SOUNDBUFFER,
+  RIV_COMMAND_SOUND,
+  RIV_COMMAND_WAVEFORM,
+} riv_command_type;
 
 // Memory mapped sizes
 typedef enum riv_mem_size {
@@ -496,17 +496,17 @@ typedef struct riv_waveform_desc {
 // Structures used for device and driver communication
 
 // Device audio command description
-typedef union riv_audio_command_desc {
+typedef union riv_command_desc {
   riv_soundbuffer_desc soundbuffer;
   riv_sound_desc sound;
   riv_waveform_desc waveform;
-} riv_audio_command_desc;
+} riv_command_desc;
 
 // Device audio command
-typedef struct riv_audio_command {
-  riv_audio_command_type type;
-  riv_audio_command_desc desc;
-} riv_audio_command;
+typedef struct riv_command {
+  riv_command_type type;
+  riv_command_desc desc;
+} riv_command;
 
 // Memory mapped header
 typedef struct riv_mmio_header {
@@ -525,8 +525,8 @@ typedef struct riv_mmio_driver {
   riv_framebuffer_desc framebuffer_desc;
   uint32_t palette[RIV_MAX_COLORS];
   bool tracked_keys[RIV_NUM_KEYCODE];
-  riv_audio_command audio_commands[RIV_MAX_AUDIO_COMMANDS];
-  uint32_t audio_command_len;
+  riv_command commands[RIV_MAX_COMMANDS];
+  uint32_t command_len;
 } riv_mmio_driver;
 
 // Device memory mapped structure (device writes, driver reads)
@@ -626,8 +626,8 @@ typedef struct riv_context {
   riv_framebuffer_desc framebuffer_desc;              // [RW] Screen frame buffer description
   uint32_t palette[RIV_MAX_COLORS];                   // [RW] Color palette
   bool tracked_keys[RIV_NUM_KEYCODE];                 // [RW] Key codes being tracked
-  riv_audio_command audio_commands[RIV_MAX_AUDIO_COMMANDS];
-  uint32_t audio_command_len;
+  riv_command commands[RIV_MAX_COMMANDS];
+  uint32_t command_len;
   uint8_t mmio_driver_padding[780];                   // Reserved
 
   //------------------------------------
@@ -649,7 +649,7 @@ typedef struct riv_context {
   bool verifying;                                     // [R] Whether we are verifying
   bool yielding;                                      // [R] Whether an audio/video/input devices are connected and yielding
   bool quit;                                          // [RW] When set true, RIV loop will stop
-  uint32_t key_modifiers;                             // [R] NIY
+  uint32_t key_modifiers;                             // [R] Current keyboard modifiers (CTRL/ALT/SHIFT)
   riv_key_state keys[RIV_NUM_KEYCODE];                // [R] Current keyboard state
   riv_draw_state draw;                                // [RW] Draw state
   riv_image images[RIV_MAX_IMAGES];                   // [RW] Loaded images
