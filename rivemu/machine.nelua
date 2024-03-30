@@ -240,7 +240,7 @@ function rivemu_machine:_setup_mmio(): boolean
   local data: span(byte) = {data=(@*[0]byte)(&header),size=#@riv_mmio_header}
   self:read_virtual_memory(RIV_VADDR_MMIO_DRIVER, data)
   if header.canary == RIV_CANARY_DRIVER then -- connected
-    assert(header.version == RIV_VERSION, 'RIV device: unsupported RIV version')
+    assert((header.version // 1000) == (RIV_VERSION // 1000), 'RIV device: unsupported RIV version')
     assert(header.features == 0, 'RIV device: unsupported RIV features')
     self.mmio_connected = true
     self:_init_mmio()

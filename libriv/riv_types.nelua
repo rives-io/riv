@@ -354,6 +354,44 @@ global riv_span_uint8: type <cimport,nodecl> = @record{
   data: *[0]uint8,
   size: uint64
 }
+global riv_vec2i: type <cimport,nodecl> = @record{
+  x: int64,
+  y: int64
+}
+global riv_vec2f: type <cimport,nodecl> = @record{
+  x: float32,
+  y: float32
+}
+global riv_recti: type <cimport,nodecl> = @record{
+  x: int64,
+  y: int64,
+  width: int64,
+  height: int64
+}
+global riv_rectf: type <cimport,nodecl> = @record{
+  x: int64,
+  y: int64,
+  width: int64,
+  height: int64
+}
+global riv_image: type <cimport,nodecl> = @record{
+  pixels: *[0]uint8,
+  width: uint16,
+  height: uint16,
+  color_key: int16,
+  owned: boolean
+}
+global riv_spritesheet: type <cimport,nodecl> = @record{
+  image_id: riv_id,
+  cell_width: uint32,
+  cell_height: uint32
+}
+global riv_draw_state: type <cimport,nodecl> = @record{
+  origin: riv_vec2i,
+  clip: riv_recti,
+  pal: [256]uint8,
+  pal_enabled: boolean
+}
 global riv_framebuffer_desc: type <cimport,nodecl> = @record{
   height: uint32,
   width: uint32,
@@ -394,6 +432,21 @@ global riv_waveform_desc: type <cimport,nodecl> = @record{
   duty_cycle: float32,
   pan: float32
 }
+global riv_key_state: type <cimport,nodecl> = @record{
+  down_frame: uint64,
+  up_frame: uint64,
+  down: boolean,
+  up: boolean,
+  press: boolean,
+  release: boolean
+}
+global riv_key_toggle_event: type <cimport,nodecl> = @record{
+  key_code: uint8,
+  frame: uint64
+}
+global riv_xoshiro256: type <cimport,nodecl> = @record{
+  state: [4]uint64
+}
 global riv_command_desc: type <cimport,nodecl> = @union{
   soundbuffer: riv_soundbuffer_desc,
   sound: riv_sound_desc,
@@ -426,59 +479,6 @@ global riv_mmio_device: type <cimport,nodecl> = @record{
   initial_statecard_len: uint32,
   key_toggle_count: uint32,
   key_toggles: [64]uint8
-}
-global riv_xoshiro256: type <cimport,nodecl> = @record{
-  state: [4]uint64
-}
-global riv_key_state: type <cimport,nodecl> = @record{
-  down_frame: uint64,
-  up_frame: uint64,
-  down: boolean,
-  up: boolean,
-  press: boolean,
-  release: boolean
-}
-global riv_key_toggle_event: type <cimport,nodecl> = @record{
-  key_code: uint8,
-  frame: uint64
-}
-global riv_vec2i: type <cimport,nodecl> = @record{
-  x: int64,
-  y: int64
-}
-global riv_vec2f: type <cimport,nodecl> = @record{
-  x: float32,
-  y: float32
-}
-global riv_recti: type <cimport,nodecl> = @record{
-  x: int64,
-  y: int64,
-  width: int64,
-  height: int64
-}
-global riv_rectf: type <cimport,nodecl> = @record{
-  x: int64,
-  y: int64,
-  width: int64,
-  height: int64
-}
-global riv_image: type <cimport,nodecl> = @record{
-  pixels: *[0]uint8,
-  width: uint16,
-  height: uint16,
-  color_key: int16,
-  owned: boolean
-}
-global riv_spritesheet: type <cimport,nodecl> = @record{
-  image_id: riv_id,
-  cell_width: uint32,
-  cell_height: uint32
-}
-global riv_draw_state: type <cimport,nodecl> = @record{
-  origin: riv_vec2i,
-  clip: riv_recti,
-  pal_enabled: boolean,
-  pal: [256]uint8
 }
 global riv_context: type <cimport,nodecl> = @record{
   mmio_driver_header: riv_mmio_header,

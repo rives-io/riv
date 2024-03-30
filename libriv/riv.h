@@ -400,7 +400,7 @@ typedef enum riv_mem_size {
   RIV_SIZE_MMIO_DRIVER  =       4*1024, // 4 KB
   RIV_SIZE_MMIO_DEVICE  =       4*1024, // 4 KB
   RIV_SIZE_PUB_DRIVER   =    1016*1024, // 1016 KB
-  RIV_SIZE_PRV_DRIVER   =    1024*1024, // 1MB
+  RIV_SIZE_PRV_DRIVER   =    1024*1024, // 1 MB
   RIV_SIZE_INCARD       =  2*1024*1024, // 2 MB
   RIV_SIZE_OUTCARD      =  2*1024*1024, // 2 MB
   RIV_SIZE_STATECARD    =  2*1024*1024, // 2 MB
@@ -436,131 +436,13 @@ typedef uint32_t* riv_unbounded_uint32;
 typedef bool* riv_unbounded_bool;
 typedef uint64_t riv_id;
 
+////////////////////////////////////////////////////////////////////////////////
+// Structures
+
 typedef struct riv_span_uint8 {
   riv_unbounded_uint8 data;
   uint64_t size;
 } riv_span_uint8;
-
-////////////////////////////////////////////////////////////////////////////////
-// Structures used by RIV commands
-
-// Frame buffer description
-typedef struct riv_framebuffer_desc {
-  uint32_t height;               // Screen height
-  uint32_t width;                // Screen width
-  uint32_t target_fps;           // Screen target refresh rate
-  riv_pixel_format pixel_format; // Screen pixel format
-} riv_framebuffer_desc;
-
-// Sound buffer description
-typedef struct riv_soundbuffer_desc {
-  riv_id id;                // Sound buffer id (filled automatically)
-  riv_sound_format format;  // Sound format
-  uint32_t channels;        // Sound channels (0 = auto detect)
-  uint32_t sample_rate;     // Sound sample rate (0 = auto detect)
-  riv_span_uint8 data;      // Sound data
-} riv_soundbuffer_desc;
-
-// Sound description
-typedef struct riv_sound_desc {
-  riv_id id;          // Sound id (filled automatically, or used when updating a sound)
-  riv_id buffer_id;   // Sound buffer id (must be 0 when updating a sound)
-  float delay;        // Start delay time in seconds (0 = no delay)
-  float duration;     // Duration in seconds (0 = let id end, -1 = loop)
-  float fade_in;      // Fade in time in seconds (0 = no fade in)
-  float fade_out;     // Fade out time in seconds (0 = no fade out)
-  float seek;         // Seek in time in seconds (0 = no seek, -1 = stop)
-  float volume;       // Volume gain in range [0.0, 1.0]
-  float pan;          // Pan in range [-1.0, 1.0]
-  float pitch;        // Pitch (0.0 = no pitch change)
-} riv_sound_desc;
-
-// Waveform sound description
-typedef struct riv_waveform_desc {
-  riv_id id;              // Sound id (filled automatically)
-  riv_waveform_type type; // Waveform type
-  float delay;            // Start delay in seconds
-  float attack;           // Attack duration in seconds
-  float decay;            // Decay duration in seconds
-  float sustain;          // Sustain duration in seconds
-  float release;          // Release duration in seconds
-  float start_frequency;  // Starting frequency in Hz
-  float end_frequency;    // Starting frequency in Hz
-  float amplitude;        // Maximum amplitude in range [0.0, 1.0]
-  float sustain_level;    // Sustain level in range [0.0, 1.0]
-  float duty_cycle;       // Duty cycle in range [0.0, 1.0]
-  float pan;              // Pan in range [-1.0, 1.0]
-} riv_waveform_desc;
-
-////////////////////////////////////////////////////////////////////////////////
-// Structures used for device and driver communication
-
-// Device audio command description
-typedef union riv_command_desc {
-  riv_soundbuffer_desc soundbuffer;
-  riv_sound_desc sound;
-  riv_waveform_desc waveform;
-} riv_command_desc;
-
-// Device audio command
-typedef struct riv_command {
-  riv_command_type type;
-  riv_command_desc desc;
-} riv_command;
-
-// Memory mapped header
-typedef struct riv_mmio_header {
-  uint32_t canary;
-  uint32_t version;
-  uint32_t features;
-  uint32_t uuid;
-} riv_mmio_header;
-
-// Driver memory mapped structure (driver writes, device reads)
-typedef struct riv_mmio_driver {
-  riv_mmio_header header;
-  uint64_t frame;
-  uint32_t outcard_len;
-  uint32_t statecard_len;
-  riv_framebuffer_desc framebuffer_desc;
-  uint32_t palette[RIV_MAX_COLORS];
-  bool tracked_keys[RIV_NUM_KEYCODE];
-  riv_command commands[RIV_MAX_COMMANDS];
-  uint32_t command_len;
-} riv_mmio_driver;
-
-// Device memory mapped structure (device writes, driver reads)
-typedef struct riv_mmio_device {
-  riv_mmio_header header;
-  uint32_t incard_len;
-  uint32_t initial_statecard_len;
-  uint32_t key_toggle_count;
-  uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];
-} riv_mmio_device;
-
-////////////////////////////////////////////////////////////////////////////////
-// Structures used only in the driver
-
-// Pseudo random number generator based on xoshiro256
-typedef struct riv_xoshiro256 {
-  uint64_t state[4];
-} riv_xoshiro256;
-
-// Key state
-typedef struct riv_key_state {
-  uint64_t down_frame;  // Last frame the key was pressed
-  uint64_t up_frame;    // Last frame the key was released
-  bool down;            // Becomes trues when the key is pressed, becomes false only when it is released
-  bool up;              // Becomes trues when the key is released, becomes false only when it is pressed
-  bool press;           // True only in the frame the key is pressed
-  bool release;         // True only in the frame the key is released
-} riv_key_state;
-
-// Key toggle event
-typedef struct riv_key_toggle_event {
-  uint8_t key_code;
-  uint64_t frame;
-} riv_key_toggle_event;
 
 // Vector2 (integer)
 typedef struct riv_vec2i {
@@ -610,15 +492,131 @@ typedef struct riv_spritesheet {
 typedef struct riv_draw_state {
   riv_vec2i origin;                 // Draw origin
   riv_recti clip;                   // Draw clipping bounding box
-  bool pal_enabled;                 // Draw swap palette enabled
   uint8_t pal[RIV_MAX_COLORS];      // Draw swap palette
+  bool pal_enabled;                 // Draw swap palette enabled
 } riv_draw_state;
 
-// RIV context
+// Frame buffer description
+typedef struct riv_framebuffer_desc {
+  uint32_t height;               // Screen height
+  uint32_t width;                // Screen width
+  uint32_t target_fps;           // Screen target refresh rate
+  riv_pixel_format pixel_format; // Screen pixel format
+} riv_framebuffer_desc;
+
+// Sound buffer description
+typedef struct riv_soundbuffer_desc {
+  riv_id id;                // Sound buffer id (filled automatically)
+  riv_sound_format format;  // Sound format
+  uint32_t channels;        // Sound channels (0 = auto detect)
+  uint32_t sample_rate;     // Sound sample rate (0 = auto detect)
+  riv_span_uint8 data;      // Sound data
+} riv_soundbuffer_desc;
+
+// Sound description
+typedef struct riv_sound_desc {
+  riv_id id;          // Sound id (filled automatically, or used when updating a sound)
+  riv_id buffer_id;   // Sound buffer id (must be 0 when updating a sound)
+  float delay;        // Start delay time in seconds (0 = no delay)
+  float duration;     // Duration in seconds (0 = let id end, -1 = loop)
+  float fade_in;      // Fade in time in seconds (0 = no fade in)
+  float fade_out;     // Fade out time in seconds (0 = no fade out)
+  float seek;         // Seek in time in seconds (0 = no seek, -1 = stop)
+  float volume;       // Volume gain in range [0.0, 1.0]
+  float pan;          // Pan in range [-1.0, 1.0]
+  float pitch;        // Pitch (0.0 = no pitch change)
+} riv_sound_desc;
+
+// Waveform sound description
+typedef struct riv_waveform_desc {
+  riv_id id;              // Sound id (filled automatically)
+  riv_waveform_type type; // Waveform type
+  float delay;            // Start delay in seconds
+  float attack;           // Attack duration in seconds
+  float decay;            // Decay duration in seconds
+  float sustain;          // Sustain duration in seconds
+  float release;          // Release duration in seconds
+  float start_frequency;  // Starting frequency in Hz
+  float end_frequency;    // Starting frequency in Hz
+  float amplitude;        // Maximum amplitude in range [0.0, 1.0]
+  float sustain_level;    // Sustain level in range [0.0, 1.0]
+  float duty_cycle;       // Duty cycle in range [0.0, 1.0]
+  float pan;              // Pan in range [-1.0, 1.0]
+} riv_waveform_desc;
+
+// Key state
+typedef struct riv_key_state {
+  uint64_t down_frame;  // Last frame the key was pressed
+  uint64_t up_frame;    // Last frame the key was released
+  bool down;            // Becomes trues when the key is pressed, becomes false only when it is released
+  bool up;              // Becomes trues when the key is released, becomes false only when it is pressed
+  bool press;           // True only in the frame the key is pressed
+  bool release;         // True only in the frame the key is released
+} riv_key_state;
+
+// Key toggle event
+typedef struct riv_key_toggle_event {
+  uint8_t key_code;
+  uint64_t frame;
+} riv_key_toggle_event;
+
+// Pseudo random number generator based on xoshiro256
+typedef struct riv_xoshiro256 {
+  uint64_t state[4];
+} riv_xoshiro256;
+
+////////////////////////////////////////////////////////////////////////////////
+// Structures used for device and driver communication
+
+// Device audio command description
+typedef union riv_command_desc {
+  riv_soundbuffer_desc soundbuffer;
+  riv_sound_desc sound;
+  riv_waveform_desc waveform;
+} riv_command_desc;
+
+// Device audio command
+typedef struct riv_command {
+  riv_command_type type;
+  riv_command_desc desc;
+} riv_command;
+
+// Memory mapped header
+typedef struct riv_mmio_header {
+  uint32_t canary;
+  uint32_t version;
+  uint32_t features;
+  uint32_t uuid;
+} riv_mmio_header;
+
+// Driver memory mapped structure (driver writes, device reads)
+typedef struct riv_mmio_driver {
+  riv_mmio_header header;
+  uint64_t frame;
+  uint32_t outcard_len;
+  uint32_t statecard_len;
+  riv_framebuffer_desc framebuffer_desc;
+  uint32_t palette[RIV_MAX_COLORS];
+  bool tracked_keys[RIV_NUM_KEYCODE];
+  riv_command commands[RIV_MAX_COMMANDS];
+  uint32_t command_len;
+} riv_mmio_driver;
+
+// Device memory mapped structure (device writes, driver reads)
+typedef struct riv_mmio_device {
+  riv_mmio_header header;
+  uint32_t incard_len;
+  uint32_t initial_statecard_len;
+  uint32_t key_toggle_count;
+  uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];
+} riv_mmio_device;
+
+////////////////////////////////////////////////////////////////////////////////
+// Main RIV structure
+
 typedef struct riv_context {
-  //------------------------------------
+  //////////////////////////////////////
   // MMIO driver (driver writes/device reads)
-  //------------------------------------
   riv_mmio_header mmio_driver_header;                 // MMIO driver header
   uint64_t frame;                                     // [R] Current frame number
   uint32_t outcard_len;                               // [RW] Output card length
@@ -626,13 +624,12 @@ typedef struct riv_context {
   riv_framebuffer_desc framebuffer_desc;              // [RW] Screen frame buffer description
   uint32_t palette[RIV_MAX_COLORS];                   // [RW] Color palette
   bool tracked_keys[RIV_NUM_KEYCODE];                 // [RW] Key codes being tracked
-  riv_command commands[RIV_MAX_COMMANDS];
-  uint32_t command_len;
+  riv_command commands[RIV_MAX_COMMANDS];             // Command queue to be executed by the device
+  uint32_t command_len;                               // Command queue length
   uint8_t mmio_driver_padding[780];                   // Reserved
 
-  //------------------------------------
+  //////////////////////////////////////
   // MMIO device (device writes/driver reads)
-  //------------------------------------
   riv_mmio_header mmio_device_header;                 // MMIO device header
   uint32_t incard_len;                                // [R] Input card length
   uint32_t initial_statecard_len;                     // [R] Initial state card length
@@ -640,42 +637,39 @@ typedef struct riv_context {
   uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];           // [R] Toggled key in this frame (in order)
   uint8_t mmio_device_padding[4004];                  // Reserved
 
-  //------------------------------------
-  // Driver public state
-  //------------------------------------
+  //////////////////////////////////////
+  // Public state
   int64_t time_ms;                                    // [R] Current time in milliseconds since first frame
   double time;                                        // [R] Current time in seconds since first frame
-  bool valid;                                         // [R] Whether riv is initialized
+  bool valid;                                         // [R] Whether we are initialized
   bool verifying;                                     // [R] Whether we are verifying
   bool yielding;                                      // [R] Whether an audio/video/input devices are connected and yielding
-  bool quit;                                          // [RW] When set true, RIV loop will stop
-  uint32_t key_modifiers;                             // [R] Current keyboard modifiers (CTRL/ALT/SHIFT)
+  bool quit;                                          // [RW] When set true, main loop will stop
+  uint32_t key_modifiers;                             // [R] Current keyboard modifiers (e.g CTRL/ALT/SHIFT)
   riv_key_state keys[RIV_NUM_KEYCODE];                // [R] Current keyboard state
   riv_draw_state draw;                                // [RW] Draw state
   riv_image images[RIV_MAX_IMAGES];                   // [RW] Loaded images
   riv_spritesheet spritesheets[RIV_MAX_SPRITESHEETS]; // [RW] Loaded sprite sheets
   uint8_t pub_driver_padding[1002672];                // Reserved
 
-  //------------------------------------
-  // Driver private state
-  //------------------------------------
-  riv_xoshiro256 prng;                                // Internal PRNG state
-  uint64_t entropy[128];
-  uint32_t entropy_index;
-  uint32_t entropy_size;
+  //////////////////////////////////////
+  // Internal state
+  riv_xoshiro256 prng;                                // PRNG state
+  uint64_t entropy[128];                              // Entropy accumulated from inputs
+  uint32_t entropy_index;                             // Entropy index
+  uint32_t entropy_size;                              // Entropy size
   uint64_t sound_gen;                                 // Counter for generating sound ids
   uint64_t soundbuffer_gen;                           // Counter for generating sound buffer ids
   uint64_t image_gen;                                 // Counter for generating image ids
   uint64_t sprite_gen;                                // Counter for generating sprite ids
-  uint32_t txbuffer_off;
+  uint32_t txbuffer_off;                              // Current tx buffer offset
   uint32_t verify_key_event_index;
   riv_key_toggle_event *verify_key_events;
   uint64_t stop_frame;
   uint8_t prv_driver_padding[1047456];                // Reserved
 
-  //------------------------------------
+  //////////////////////////////////////
   // Buffers
-  //------------------------------------
   uint8_t incard[RIV_SIZE_INCARD];                    // [R] Input card buffer
   uint8_t outcard[RIV_SIZE_OUTCARD];                  // [RW] Output card buffer
   uint8_t statecard[RIV_SIZE_STATECARD];              // [RW] State card buffer
@@ -733,17 +727,17 @@ RIV_API riv_vec2i riv_draw_text(const char* text, riv_id sps_id, int64_t x0, int
 
 // Audio
 
-RIV_API uint64_t riv_make_soundbuffer(riv_soundbuffer_desc* desc);   // Create a new sound buffer
-RIV_API void riv_destroy_soundbuffer(riv_id sndbuf_id);              // Destroy a sound buffer
-RIV_API uint64_t riv_sound(riv_sound_desc* desc);                    // Play a sound buffer or update a sound
-RIV_API uint64_t riv_waveform(riv_waveform_desc* desc);              // Play a waveform sound
+RIV_API riv_id riv_make_soundbuffer(riv_soundbuffer_desc* desc);   // Create a new sound buffer
+RIV_API void riv_destroy_soundbuffer(riv_id sndbuf_id);            // Destroy a sound buffer
+RIV_API riv_id riv_sound(riv_sound_desc* desc);                    // Play a sound buffer or update a sound
+RIV_API riv_id riv_waveform(riv_waveform_desc* desc);              // Play a waveform sound
 
 // Pseudo random number generator (PRNG)
 
 RIV_API void riv_srand(uint64_t a, uint64_t b);          // Seed PRNG
 RIV_API uint64_t riv_rand();                             // Returns a random uint64 in range [0, MAX_UINT64]
 RIV_API uint64_t riv_rand_uint(uint64_t high);           // Returns a random uint64 in range [0, high]
-RIV_API int64_t riv_rand_int(int64_t low, int64_t high); // Returns a random  int64 in range [low, high]
+RIV_API int64_t riv_rand_int(int64_t low, int64_t high); // Returns a random int64 in range [low, high]
 RIV_API double riv_rand_float();                         // Returns a random float64 in range [0.0, 1.0)
 
 #endif
