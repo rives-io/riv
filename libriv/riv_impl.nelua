@@ -18,10 +18,13 @@ global function riv_init(): void <cattribute'constructor',cexport>
   -- check addresses
   assert((@usize)(&riv.mmio_driver_header) == RIV_VADDR_MMIO_DRIVER, 'invalid RIV_VADDR_MMIO_DRIVER')
   assert((@usize)(&riv.mmio_device_header) == RIV_VADDR_MMIO_DEVICE, 'invalid RIV_VADDR_MMIO_DEVICE')
+  assert((@usize)(&riv.time_ms) == RIV_VADDR_PUB_DRIVER, 'invalid RIV_VADDR_PUB_DRIVER')
+  assert((@usize)(&riv.prng) == RIV_VADDR_PRV_DRIVER, 'invalid RIV_VADDR_PRV_DRIVER')
   assert((@usize)(&riv.incard) == RIV_VADDR_INCARD, 'invalid RIV_VADDR_INCARD')
   assert((@usize)(&riv.outcard) == RIV_VADDR_OUTCARD, 'invalid RIV_VADDR_OUTCARD')
   assert((@usize)(&riv.audiobuffer) == RIV_VADDR_AUDIOBUFFER, 'invalid RIV_VADDR_AUDIOBUFFER')
   assert((@usize)(&riv.framebuffer) == RIV_VADDR_FRAMEBUFFER, 'invalid RIV_VADDR_FRAMEBUFFER')
+  assert(#@riv_context <= RIV_SIZE_CONTEXT, 'invalid RIV_SIZE_CONTEXT')
   -- map riv memory
   local prot: cint = PROT_READ | PROT_WRITE
   local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE | MAP_HUGETLB

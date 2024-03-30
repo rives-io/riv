@@ -289,8 +289,8 @@ global riv_constants: type <cimport,nodecl,using> = @enum(uint32){
   RIV_DEFAULT_TARGET_FPS = 60,
   RIV_DEFAULT_PIXELFORMAT = 0,
   RIV_MAX_COLORS = 256,
-  RIV_MAX_IMAGES = 256,
-  RIV_MAX_SPRITESHEETS = 256,
+  RIV_MAX_IMAGES = 1024,
+  RIV_MAX_SPRITESHEETS = 1024,
   RIV_MAX_KEY_TOGGLES = 64,
   RIV_NUM_GAMEPADS = 4,
   RIV_NUM_GAMEPAD_BUTTONS = 16,
@@ -298,13 +298,13 @@ global riv_constants: type <cimport,nodecl,using> = @enum(uint32){
 }
 global riv_image_id: type <cimport,nodecl,using> = @enum(uint32){
   RIV_IMAGE_NONE = 0,
-  RIV_IMAGE_FONT_5X7 = 255,
-  RIV_IMAGE_FONT_3X5 = 254
+  RIV_IMAGE_FONT_5X7 = 1023,
+  RIV_IMAGE_FONT_3X5 = 1022
 }
 global riv_spritesheet_id: type <cimport,nodecl,using> = @enum(uint32){
   RIV_SPRITESHEET_NONE = 0,
-  RIV_SPRITESHEET_FONT_5X7 = 255,
-  RIV_SPRITESHEET_FONT_3X5 = 254
+  RIV_SPRITESHEET_FONT_5X7 = 1023,
+  RIV_SPRITESHEET_FONT_3X5 = 1022
 }
 global riv_control_command: type <cimport,nodecl,using> = @enum(uint32){
   RIV_CONTROL_NONE = 0,
@@ -324,6 +324,8 @@ global riv_mem_size: type <cimport,nodecl,using> = @enum(uint32){
   RIV_SIZE_CONTEXT = 8388608,
   RIV_SIZE_MMIO_DRIVER = 4096,
   RIV_SIZE_MMIO_DEVICE = 4096,
+  RIV_SIZE_PUB_DRIVER = 520192,
+  RIV_SIZE_PRV_DRIVER = 520192,
   RIV_SIZE_INCARD = 2097152,
   RIV_SIZE_OUTCARD = 2097152,
   RIV_SIZE_FRAMEBUFFER = 2097152,
@@ -333,10 +335,12 @@ global riv_mem_addr: type <cimport,nodecl,using> = @enum(uint32){
   RIV_VADDR_CONTEXT = 268435456,
   RIV_VADDR_MMIO_DRIVER = 268435456,
   RIV_VADDR_MMIO_DEVICE = 268439552,
-  RIV_VADDR_INCARD = 268443648,
-  RIV_VADDR_OUTCARD = 270540800,
-  RIV_VADDR_FRAMEBUFFER = 272637952,
-  RIV_VADDR_AUDIOBUFFER = 274735104
+  RIV_VADDR_PUB_DRIVER = 268443648,
+  RIV_VADDR_PRV_DRIVER = 268963840,
+  RIV_VADDR_INCARD = 269484032,
+  RIV_VADDR_OUTCARD = 271581184,
+  RIV_VADDR_FRAMEBUFFER = 273678336,
+  RIV_VADDR_AUDIOBUFFER = 275775488
 }
 global riv_canary_ids: type <cimport,nodecl,using> = @enum(uint32){
   RIV_CANARY_DRIVER = 1071593246,
@@ -485,11 +489,7 @@ global riv_context: type <cimport,nodecl> = @record{
   incard_len: uint32,
   key_toggle_count: uint32,
   key_toggles: [64]uint8,
-  padding: [4008]uint8,
-  incard: [2097152]uint8,
-  outcard: [2097152]uint8,
-  framebuffer: [2097152]uint8,
-  audiobuffer: [1048576]uint8,
+  mmio_device_padding: [4008]uint8,
   time_ms: int64,
   time: float64,
   valid: boolean,
@@ -499,8 +499,9 @@ global riv_context: type <cimport,nodecl> = @record{
   key_modifiers: uint32,
   keys: [192]riv_key_state,
   draw: riv_draw_state,
-  images: [256]riv_image,
-  spritesheets: [256]riv_spritesheet,
+  images: [1024]riv_image,
+  spritesheets: [1024]riv_spritesheet,
+  pub_driver_padding: [482480]uint8,
   prng: riv_xoshiro256,
   entropy: [128]uint64,
   entropy_index: uint32,
@@ -512,7 +513,12 @@ global riv_context: type <cimport,nodecl> = @record{
   audiobuffer_off: uint32,
   verify_key_event_index: uint32,
   verify_key_events: *[0]riv_key_toggle_event,
-  stop_frame: uint64
+  stop_frame: uint64,
+  prv_driver_padding: [519072]uint8,
+  incard: [2097152]uint8,
+  outcard: [2097152]uint8,
+  framebuffer: [2097152]uint8,
+  audiobuffer: [1048576]uint8
 }
 global RIV_VERSION_MAJOR: cint <comptime> = 0
 global RIV_VERSION_MINOR: cint <comptime> = 3

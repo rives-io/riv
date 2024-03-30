@@ -350,8 +350,8 @@ typedef enum riv_constants {
   RIV_DEFAULT_TARGET_FPS = 60,
   RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PLT256,
   RIV_MAX_COLORS = 256,
-  RIV_MAX_IMAGES = 256,
-  RIV_MAX_SPRITESHEETS = 256,
+  RIV_MAX_IMAGES = 1024,
+  RIV_MAX_SPRITESHEETS = 1024,
   RIV_MAX_KEY_TOGGLES = 64,
   RIV_NUM_GAMEPADS = 4,
   RIV_NUM_GAMEPAD_BUTTONS = 16,
@@ -398,6 +398,8 @@ typedef enum riv_mem_size {
   RIV_SIZE_CONTEXT      = 8*1024*1024, // 8 MB
   RIV_SIZE_MMIO_DRIVER  =      4*1024, // 4 KB
   RIV_SIZE_MMIO_DEVICE  =      4*1024, // 4 KB
+  RIV_SIZE_PUB_DRIVER   =    508*1024, // 508 KB
+  RIV_SIZE_PRV_DRIVER   =    508*1024, // 508 KB
   RIV_SIZE_INCARD       = 2*1024*1024, // 2 MB
   RIV_SIZE_OUTCARD      = 2*1024*1024, // 2 MB
   RIV_SIZE_FRAMEBUFFER  = 2*1024*1024, // 2 MB
@@ -409,7 +411,9 @@ typedef enum riv_mem_addr {
   RIV_VADDR_CONTEXT      = 0x10000000,
   RIV_VADDR_MMIO_DRIVER  = RIV_VADDR_CONTEXT,
   RIV_VADDR_MMIO_DEVICE  = RIV_VADDR_MMIO_DRIVER + RIV_SIZE_MMIO_DRIVER,
-  RIV_VADDR_INCARD       = RIV_VADDR_MMIO_DEVICE + RIV_SIZE_MMIO_DEVICE,
+  RIV_VADDR_PUB_DRIVER   = RIV_VADDR_MMIO_DEVICE + RIV_SIZE_MMIO_DEVICE,
+  RIV_VADDR_PRV_DRIVER   = RIV_VADDR_PUB_DRIVER  + RIV_SIZE_PUB_DRIVER,
+  RIV_VADDR_INCARD       = RIV_VADDR_PRV_DRIVER  + RIV_SIZE_PRV_DRIVER,
   RIV_VADDR_OUTCARD      = RIV_VADDR_INCARD      + RIV_SIZE_INCARD,
   RIV_VADDR_FRAMEBUFFER  = RIV_VADDR_OUTCARD     + RIV_SIZE_OUTCARD,
   RIV_VADDR_AUDIOBUFFER  = RIV_VADDR_FRAMEBUFFER + RIV_SIZE_FRAMEBUFFER,
@@ -607,8 +611,10 @@ typedef struct riv_draw_state {
 
 // RIV context
 typedef struct riv_context {
-  // MMIO driver (written by the driver)
-  riv_mmio_header mmio_driver_header;                 // Header
+  //------------------------------------
+  // MMIO driver (driver writes/device reads)
+  //------------------------------------
+  riv_mmio_header mmio_driver_header;                 // MMIO driver header
   uint64_t frame;                                     // [R] Current frame number
   uint32_t outcard_len;                               // [RW] Output card length
   riv_framebuffer_desc framebuffer_desc;              // [RW] Screen frame buffer description
@@ -616,39 +622,36 @@ typedef struct riv_context {
   bool tracked_keys[RIV_NUM_KEYCODE];                 // [RW] Key codes being tracked
   riv_audio_command audio_commands[32];
   uint32_t audio_command_len;
-  uint8_t mmio_driver_padding[780];                   // Align to next 4KB page
+  uint8_t mmio_driver_padding[780];                   // Reserved
 
-  // MMIO device (written by the device)
-  riv_mmio_header mmio_device_header;                 // Header
+  //------------------------------------
+  // MMIO device (device writes/driver reads)
+  //------------------------------------
+  riv_mmio_header mmio_device_header;                 // MMIO device header
   uint32_t incard_len;                                // [R] Input card length
   uint32_t key_toggle_count;                          // [R] Number of toggled keys in this frame
   uint8_t key_toggles[RIV_MAX_KEY_TOGGLES];           // [R] Toggled key in this frame (in order)
-  uint8_t padding[4008];                              // Align to next 4KB page
+  uint8_t mmio_device_padding[4008];                  // Reserved
 
-  // Buffers
-  uint8_t incard[RIV_SIZE_INCARD];                    // [RW] Input/output card buffer
-  uint8_t outcard[RIV_SIZE_OUTCARD];                  // [RW] Input/output card buffer
-  uint8_t framebuffer[RIV_SIZE_FRAMEBUFFER];          // [RW] Screen frame buffer
-  uint8_t audiobuffer[RIV_SIZE_AUDIOBUFFER];
-
-  // General
+  //------------------------------------
+  // Driver public state
+  //------------------------------------
   int64_t time_ms;                                    // [R] Current time in milliseconds since first frame
   double time;                                        // [R] Current time in seconds since first frame
   bool valid;                                         // [R] Whether riv is initialized
   bool verifying;                                     // [R] Whether we are verifying
   bool yielding;                                      // [R] Whether an audio/video/input devices are connected and yielding
   bool quit;                                          // [RW] When set true, RIV loop will stop
-
-  // Keyboard
   uint32_t key_modifiers;                             // [R] NIY
   riv_key_state keys[RIV_NUM_KEYCODE];                // [R] Current keyboard state
-
-  // Drawing
   riv_draw_state draw;                                // [RW] Draw state
-  riv_image images[RIV_MAX_IMAGES];                   // [RW] All loaded images
-  riv_spritesheet spritesheets[RIV_MAX_SPRITESHEETS]; // [RW] All loaded sprite sheets
+  riv_image images[RIV_MAX_IMAGES];                   // [RW] Loaded images
+  riv_spritesheet spritesheets[RIV_MAX_SPRITESHEETS]; // [RW] Loaded sprite sheets
+  uint8_t pub_driver_padding[482480];                 // Reserved
 
-  // Private fields
+  //------------------------------------
+  // Driver private state
+  //------------------------------------
   riv_xoshiro256 prng;                                // Internal PRNG state
   uint64_t entropy[128];
   uint32_t entropy_index;
@@ -661,6 +664,15 @@ typedef struct riv_context {
   uint32_t verify_key_event_index;
   riv_key_toggle_event *verify_key_events;
   uint64_t stop_frame;
+  uint8_t prv_driver_padding[519072];                 // Reserved
+
+  //------------------------------------
+  // Buffers
+  //------------------------------------
+  uint8_t incard[RIV_SIZE_INCARD];                    // [RW] Input/output card buffer
+  uint8_t outcard[RIV_SIZE_OUTCARD];                  // [RW] Input/output card buffer
+  uint8_t framebuffer[RIV_SIZE_FRAMEBUFFER];          // [RW] Screen frame buffer
+  uint8_t audiobuffer[RIV_SIZE_AUDIOBUFFER];
 } riv_context;
 
 ////////////////////////////////////////////////////////////////////////////////
