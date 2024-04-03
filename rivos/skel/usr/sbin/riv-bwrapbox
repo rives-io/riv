@@ -33,13 +33,14 @@ exec bwrapbox \
   --dev /dev \
   --proc /proc \
   --ro-bind /usr /usr \
+  --ro-bind /lib /lib \
+  --ro-bind /bin /bin \
+  --ro-bind /sbin /sbin \
   --ro-bind /etc /etc \
   --ro-bind /sys /sys \
   --ro-bind "$BWRAPBOX_HOME" "$BWRAPBOX_HOME" \
   --perms 1777 --size $BWRAPBOX_TMP_SIZE --tmpfs /tmp \
   --dir /run \
-  --symlink /usr/lib /lib \
-  --symlink /usr/bin /bin \
   --symlink /run /var/run \
   --remount-ro / \
   --unshare-ipc \

@@ -49,6 +49,9 @@ if [ -n "$ENTRYPOINT" ]; then
     [ -c /dev/yield ] &&
         busybox chown :$(busybox id -g $USER) /dev/yield && \
         busybox chmod g+rw /dev/yield
+    [ -c /dev/cmio ] &&
+        busybox chown :$(busybox id -g $USER) /dev/cmio && \
+        busybox chmod g+rw /dev/cmio
 
     # execute entrypoint
     (cd $WORKDIR &&

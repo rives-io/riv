@@ -29,6 +29,8 @@ require '.iocard'
 
 local rivemu_options: type = @record{
   entrypoint_args: string,
+  kernel_filename: string,
+  rootfs_filename: string,
   cartridge_filename: string,
   replay_filename: string,
   record_filename: string,
@@ -42,6 +44,7 @@ local rivemu_options: type = @record{
   recording: boolean,
   replaying: boolean,
   verifying: boolean,
+  interactive: boolean,
   tracking_outhist: boolean,
   print_stats: boolean,
   print_hash: boolean,
@@ -61,6 +64,8 @@ local function parse_options(): rivemu_options
   local opts: rivemu_options = {
     speed = 1.0,
     stop_frame = -1,
+    kernel_filename = "./kernel/linux.bin",
+    rootfs_filename = "./rivos/rivos.ext2",
   }
   for i: int32=0,<sargs_num_args() do
     local a: string = sargs_key_at(i)
@@ -126,6 +131,9 @@ local function parse_options(): rivemu_options
       opts.print_final_hash = true
     elseif a == '-pixel-perfect' then
       opts.pixel_perfect = true
+    elseif a == '-interactive' then
+      opts.interactive = true
+      opts.rootfs_filename = "./rivos/rivos-devel.ext2"
     elseif a == '-args' then
       opts.entrypoint_args = sargs_value_at(i)
     elseif a == '-help' or a == '--help' or a == '-h' then
@@ -216,7 +224,11 @@ function rivemu_options:entrypoint(): string
     if self.no_yield then
       entrypoint_sb:write('RIV_NO_YIELD=y ')
     end
-    entrypoint_sb:write('riv-run')
+    if self.interactive then
+      entrypoint_sb:write("exec /bin/ash")
+    else
+      entrypoint_sb:write('riv-run')
+    end
   end
   if #self.entrypoint_args > 0 then
     if #entrypoint_sb > 0 then
@@ -246,7 +258,7 @@ local got_initial_canvas_width: boolean
 local function begin(): void
   -- initialize the machine
   local entrypoint: string <close> = options:entrypoint()
-  machine = rivemu_machine.create(entrypoint, options.cartridge_filename, options.verify_filename)
+  machine = rivemu_machine.create(entrypoint, options.interactive, options.kernel_filename, options.rootfs_filename, options.cartridge_filename, options.verify_filename)
   running = true
 
   if options.recording then -- start recording
@@ -505,7 +517,7 @@ local function advance_frame(): void
   -- local root_hash: string <close> = hexhash(machine:get_root_hash())
   -- print(root_hash)
 
-  if running then
+  if not loading and running then
     framelimiter.target_fps = target_fps * options.speed
     if framelimiter:update_stats(now, time_elapsed, mcycle_elapsed) and options.print_stats then
       framelimiter:print_stats()
@@ -758,9 +770,8 @@ local export_runtime_functions = {
 cflags('-sEXPORTED_RUNTIME_METHODS='..table.concat(export_runtime_functions,','))
 
 -- Embed files
-cflags('--embed-file '..projdir..'/rootfs/rootfs.ext2@rootfs/rootfs.ext2')
+cflags('--embed-file '..projdir..'/rivos/rivos.ext2@rivos/rivos.ext2')
 cflags('--embed-file '..projdir..'/kernel/linux.bin@kernel/linux.bin')
-cflags('--embed-file '..projdir..'/kernel/rom.bin@kernel/rom.bin')
 ]]
 
 ## end

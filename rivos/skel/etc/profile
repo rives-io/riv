@@ -1,0 +1,11 @@
+# /etc/profile
+
+case ${TERM} in
+  Eterm*|alacritty*|aterm*|foot*|gnome*|konsole*|kterm*|putty*|rxvt*|tmux*|xterm*)
+    if [ "$USER" = "root" ]; then
+      PS1='\[\e[1;31m\]\h\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]# '
+    else
+      PS1='\[\e[1;32m\]\u@\h\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '
+    fi
+    ;;
+esac

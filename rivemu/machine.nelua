@@ -52,19 +52,19 @@ global rivemu_machine = @record{
 }
 
 -- Creates a new machine.
-function rivemu_machine.create(entrypoint: string, cartridge_filename: string, replaylog_filename: string): rivemu_machine
+function rivemu_machine.create(entrypoint: string, interactive: boolean, kernel_filename: string, rootfs_filename: string, cartridge_filename: string, replaylog_filename: string): rivemu_machine
   -- get default config
   local defconfig: *cm_machine_config
   cm_assert!(cm_get_default_config(&defconfig))
   defer cm_delete_machine_config(defconfig) end
 
-  -- rootfs flash drive
+  -- rivos flash drive
   local flash_drive_entries: [8]cm_memory_range_config
   local flash_drive_count: cint = 0
   flash_drive_entries[0] = {
     start = RIV_PADDR_ROOTFS,
     length = (@uint64)(-1),
-    image_filename = "./rootfs/rootfs.ext2",
+    image_filename = rootfs_filename,
   }
   flash_drive_count = flash_drive_count + 1
 
@@ -92,13 +92,16 @@ function rivemu_machine.create(entrypoint: string, cartridge_filename: string, r
   -- set config
   local config: cm_machine_config = $defconfig
   config.ram = {
-    image_filename = './kernel/linux.bin',
+    image_filename = kernel_filename,
     length = RIV_SIZE_RAM
   }
   config.dtb = {
     bootargs = bootargs,
     init = "",
     entrypoint = entrypoint
+  }
+  config.htif = {
+    console_getchar = interactive
   }
   config.flash_drive = {
     count = flash_drive_count,
