@@ -29,12 +29,12 @@ FROM --platform=linux/riscv64 riv-toolchain-stage AS elfkickers-stage
 RUN wget -O BR903-ELFkickers.tar.gz https://github.com/BR903/ELFkickers/tarball/e7fba942df51e756897224cff5aa853de8fafd90 && \
     tar -xzf BR903-ELFkickers.tar.gz && \
     mv BR903-ELFkickers-* BR903-ELFkickers && cd BR903-ELFkickers && \
-    make prefix=/pkg && \
-    mkdir -p /pkg && \
-    make install prefix=/pkg && \
-    rm -rf /pkg/share && \
-    strip /pkg/bin/* && \
-    tree /pkg && cp -a /pkg/* /usr/
+    make prefix=/pkg/usr && \
+    mkdir -p /pkg/usr && \
+    make install prefix=/pkg/usr && \
+    rm -rf /pkg/usr/share && \
+    strip /pkg/usr/bin/* && \
+    tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
 ################################
 # Build mir jit
@@ -43,13 +43,13 @@ RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/5dcba9
     tar -xzf vnmakarov-mir.tar.gz && \
     mv vnmakarov-mir-* vnmakarov-mir && cd vnmakarov-mir && \
     echo "echo fail" > check-threads.sh && \
-    mkdir -p /pkg && \
-    make PREFIX=/pkg && \
-    make install PREFIX=/pkg && \
-    rm -f /pkg/lib/*.a && \
-    strip /pkg/bin/* && \
-    strip -S -x /pkg/lib/*.so.* && \
-    tree /pkg && cp -a /pkg/* /usr/
+    mkdir -p /pkg/usr && \
+    make PREFIX=/pkg/usr && \
+    make install PREFIX=/pkg/usr && \
+    rm -f /pkg/usr/lib/*.a && \
+    strip /pkg/usr/bin/* && \
+    strip -S -x /pkg/usr/lib/*.so.* && \
+    tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
 ################################
 # Build nelua
@@ -57,12 +57,25 @@ FROM --platform=linux/riscv64 riv-toolchain-stage AS nelua-stage
 RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarball/05a2633a18dfdde7389394b9289da582c10e79bc && \
     tar -xzf edubart-nelua-lang.tar.gz && \
     mv edubart-nelua-lang-* edubart-nelua-lang && cd edubart-nelua-lang && \
-    mkdir -p /pkg && \
-    make PREFIX=/pkg && \
-    make install PREFIX=/pkg && \
-    strip /pkg/bin/nelua-lua && \
-    ln -s nelua-lua /pkg/bin/lua && \
-    tree /pkg && cp -a /pkg/* /usr/
+    mkdir -p /pkg/usr && \
+    make PREFIX=/pkg/usr && \
+    make install PREFIX=/pkg/usr && \
+    strip /pkg/usr/bin/nelua-lua && \
+    tree /pkg/usr && cp -a /pkg/usr/* /usr/
+
+################################
+# Build luajit
+FROM --platform=linux/riscv64 riv-toolchain-stage AS luajit-stage
+RUN wget -O infiWang-LJRV.tar.gz https://github.com/infiWang/LJRV/tarball/af9c41c38a285abde6d40ba575392609221bbc0f && \
+    tar -xzf infiWang-LJRV.tar.gz && \
+    mv infiWang-LJRV-* infiWang-LJRV && cd infiWang-LJRV && \
+    mkdir -p /pkg/usr && \
+    make amalg PREFIX=/usr && \
+    make install PREFIX=/usr DESTDIR=/pkg && \
+    rm -rf /pkg/usr/share/man && \
+    strip /pkg/usr/bin/luajit-* && \
+    strip -S -x /pkg/usr/lib/*.so.* && \
+    tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
 ################################
 # Build bubblewrap
@@ -72,13 +85,13 @@ RUN wget -O containers-bubblewrap.tar.gz https://github.com/containers/bubblewra
     tar -xzf containers-bubblewrap.tar.gz && \
     mv containers-bubblewrap-* containers-bubblewrap && cd containers-bubblewrap && \
     ./autogen.sh && \
-    ./configure --prefix=/pkg --enable-require-userns LDFLAGS=-static && \
-    mkdir -p /pkg && \
-    make PREFIX=/pkg && \
-    make install PREFIX=/pkg && \
-    rm -rf /pkg/share && \
-    strip /pkg/bin/* && \
-    tree /pkg && cp -a /pkg/* /usr/
+    ./configure --prefix=/pkg/usr --enable-require-userns LDFLAGS=-static && \
+    mkdir -p /pkg/usr && \
+    make PREFIX=/pkg/usr && \
+    make install PREFIX=/pkg/usr && \
+    rm -rf /pkg/usr/share && \
+    strip /pkg/usr/bin/* && \
+    tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
 ################################
 # Build bwrapbox
@@ -87,11 +100,11 @@ RUN apk add libseccomp-dev
 RUN wget -O edubart-bwrapbox.tar.gz https://github.com/edubart/bwrapbox/tarball/236cca9a29b551335444a1e902012e8b0e55293f && \
     tar -xzf edubart-bwrapbox.tar.gz && \
     mv edubart-bwrapbox-* edubart-bwrapbox && cd edubart-bwrapbox && \
-    mkdir -p /pkg && \
-    make PREFIX=/pkg && \
-    make install PREFIX=/pkg && \
-    strip /pkg/bin/* && \
-    tree /pkg && cp -a /pkg/* /usr/
+    mkdir -p /pkg/usr && \
+    make PREFIX=/pkg/usr && \
+    make install PREFIX=/pkg/usr && \
+    strip /pkg/usr/bin/* && \
+    tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
 ################################
 # Build riv
@@ -124,11 +137,12 @@ RUN tar -xf linux-headers.tar.xz && \
 
 # Overwrite busybox
 COPY --from=busybox-stage /bin/busybox /bin/busybox
-COPY --from=elfkickers-stage /pkg /usr
-COPY --from=mirjit-stage /pkg /usr
-COPY --from=nelua-stage /pkg /usr
-COPY --from=bwrapbox-stage /pkg /usr
-COPY --from=bubblewrap-stage /pkg /usr
+COPY --from=elfkickers-stage /pkg/usr /usr
+COPY --from=mirjit-stage /pkg/usr /usr
+COPY --from=nelua-stage /pkg/usr /usr
+COPY --from=bwrapbox-stage /pkg/usr /usr
+COPY --from=bubblewrap-stage /pkg/usr /usr
+COPY --from=luajit-stage /pkg/usr /usr
 
 COPY --from=riv-stage /root/riv riv
 RUN make -C /root/riv/libriv install install-dev PREFIX=/usr && \
@@ -176,10 +190,14 @@ RUN cp -a /usr/bin/bwrap usr/bin/bwrap && \
     cp -a /usr/bin/bwrapbox usr/bin/bwrapbox && \
     cp -a /usr/lib/bwrapbox usr/lib/bwrapbox
 
-# Install mir
+# Install c2m
 RUN cp -a /usr/bin/c2m usr/bin/c2m && \
     cp -a /usr/include/c2mir.h usr/include/ && \
     cp -a /usr/include/mir* usr/include/
+
+# Install luajit
+RUN cp -a /usr/bin/luajit* usr/bin/ && \
+    cp -a /usr/lib/libluajit-5.1.so* usr/lib/
 
 # # Install system configs
 COPY rivos/skel/etc etc
