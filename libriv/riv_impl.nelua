@@ -14,6 +14,8 @@ require '.riv_image'
 require '.riv_sprite'
 require '.riv_draw'
 
+local riv_ctx: *riv_context <cexport>
+
 global function riv_init(): void <cattribute'constructor',cexport>
   -- check addresses
   assert((@usize)(&riv.mmio_driver_header) == RIV_VADDR_MMIO_DRIVER, 'invalid RIV_VADDR_MMIO_DRIVER')
@@ -30,6 +32,7 @@ global function riv_init(): void <cattribute'constructor',cexport>
   local prot: cint = PROT_READ | PROT_WRITE
   local flags: cint = MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED_NOREPLACE | MAP_POPULATE | MAP_HUGETLB
   assert(mmap(riv, RIV_SIZE_CONTEXT, prot, flags, -1, 0) == riv, 'riv mmap failed')
+  riv_ctx = riv
   -- initialize all code in top scopes
   local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end
   nelua_main(0, nilptr)
@@ -98,6 +101,7 @@ global function riv_deinit(): void
   -- close yield device
   riv_yield_close()
   riv.valid = false
+  riv_ctx = nilptr
 end
 
 global function riv_fini(): void <cattribute'destructor',cexport>

@@ -1,8 +1,10 @@
 #ifndef RIV_H
 #define RIV_H
 
+#ifndef RIV_NO_INCLUDES
 #include <stdint.h>
 #include <stdbool.h>
+#endif
 
 #define RIV_VERSION_MAJOR 0
 #define RIV_VERSION_MINOR 3
@@ -434,7 +436,7 @@ typedef enum riv_canary_ids {
 typedef uint8_t* riv_unbounded_uint8;
 typedef uint32_t* riv_unbounded_uint32;
 typedef bool* riv_unbounded_bool;
-typedef uint64_t riv_id;
+typedef uint64_t uint64_t;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Structures
@@ -483,7 +485,7 @@ typedef struct riv_image {
 
 // Draw sprite
 typedef struct riv_spritesheet {
-  riv_id image_id;
+  uint64_t image_id;
   uint32_t cell_width;
   uint32_t cell_height;
 } riv_spritesheet;
@@ -506,7 +508,7 @@ typedef struct riv_framebuffer_desc {
 
 // Sound buffer description
 typedef struct riv_soundbuffer_desc {
-  riv_id id;                // Sound buffer id (filled automatically)
+  uint64_t id;                // Sound buffer id (filled automatically)
   riv_sound_format format;  // Sound format
   uint32_t channels;        // Sound channels (0 = auto detect)
   uint32_t sample_rate;     // Sound sample rate (0 = auto detect)
@@ -515,8 +517,8 @@ typedef struct riv_soundbuffer_desc {
 
 // Sound description
 typedef struct riv_sound_desc {
-  riv_id id;          // Sound id (filled automatically, or used when updating a sound)
-  riv_id buffer_id;   // Sound buffer id (must be 0 when updating a sound)
+  uint64_t id;          // Sound id (filled automatically, or used when updating a sound)
+  uint64_t buffer_id;   // Sound buffer id (must be 0 when updating a sound)
   float delay;        // Start delay time in seconds (0 = no delay)
   float duration;     // Duration in seconds (0 = let id end, -1 = loop)
   float fade_in;      // Fade in time in seconds (0 = no fade in)
@@ -529,7 +531,7 @@ typedef struct riv_sound_desc {
 
 // Waveform sound description
 typedef struct riv_waveform_desc {
-  riv_id id;              // Sound id (filled automatically)
+  uint64_t id;              // Sound id (filled automatically)
   riv_waveform_type type; // Waveform type
   float delay;            // Start delay in seconds
   float attack;           // Attack duration in seconds
@@ -681,7 +683,11 @@ typedef struct riv_context {
 // RIV API
 
 // Global RIV context
+#ifdef RIV_IMPORT_CONTEXT
+RIV_API riv_context *riv;
+#else
 static riv_context *const riv = (riv_context*)RIV_VADDR_CONTEXT;
+#endif
 
 // Utilities
 
@@ -696,13 +702,13 @@ RIV_API bool riv_present();  // Present current frame, returns true until quit i
 
 // Images
 
-RIV_API riv_id riv_make_image(const char* filename, int64_t color_key);
-RIV_API void riv_destroy_image(riv_id img);
+RIV_API uint64_t riv_make_image(const char* filename, int64_t color_key);
+RIV_API void riv_destroy_image(uint64_t img_id);
 
 // Sprites
 
-RIV_API riv_id riv_make_spritesheet(riv_id img_id, uint32_t w, uint32_t h);
-RIV_API void riv_destroy_spritesheet(riv_id sps_id);
+RIV_API uint64_t riv_make_spritesheet(uint64_t img_id, uint32_t w, uint32_t h);
+RIV_API void riv_destroy_spritesheet(uint64_t sps_id);
 
 // Drawing
 
@@ -721,16 +727,16 @@ RIV_API void riv_draw_ellipse_fill(int64_t ox, int64_t oy, int64_t w, int64_t h,
 RIV_API void riv_draw_ellipse_line(int64_t ox, int64_t oy, int64_t w, int64_t h, uint32_t col);
 RIV_API void riv_draw_triangle_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
 RIV_API void riv_draw_triangle_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
-RIV_API void riv_draw_image_rect(riv_id img_id, int64_t x0, int64_t y0, int64_t w, int64_t h, int64_t sx0, int64_t sy0, int64_t mw, int64_t mh);
-RIV_API void riv_draw_sprite(uint32_t n, riv_id sps_id, int64_t x0, int64_t y0, int64_t nw, int64_t nh, int64_t mw, int64_t mh);
-RIV_API riv_vec2i riv_draw_text(const char* text, riv_id sps_id, int64_t x0, int64_t y0, int64_t col, int64_t mw, int64_t mh, int64_t sx, int64_t sy);
+RIV_API void riv_draw_image_rect(uint64_t img_id, int64_t x0, int64_t y0, int64_t w, int64_t h, int64_t sx0, int64_t sy0, int64_t mw, int64_t mh);
+RIV_API void riv_draw_sprite(uint32_t n, uint64_t sps_id, int64_t x0, int64_t y0, int64_t nw, int64_t nh, int64_t mw, int64_t mh);
+RIV_API riv_vec2i riv_draw_text(const char* text, uint64_t sps_id, int64_t x0, int64_t y0, int64_t col, int64_t mw, int64_t mh, int64_t sx, int64_t sy);
 
 // Audio
 
-RIV_API riv_id riv_make_soundbuffer(riv_soundbuffer_desc* desc);   // Create a new sound buffer
-RIV_API void riv_destroy_soundbuffer(riv_id sndbuf_id);            // Destroy a sound buffer
-RIV_API riv_id riv_sound(riv_sound_desc* desc);                    // Play a sound buffer or update a sound
-RIV_API riv_id riv_waveform(riv_waveform_desc* desc);              // Play a waveform sound
+RIV_API uint64_t riv_make_soundbuffer(riv_soundbuffer_desc* desc);   // Create a new sound buffer
+RIV_API void riv_destroy_soundbuffer(uint64_t sndbuf_id);            // Destroy a sound buffer
+RIV_API uint64_t riv_sound(riv_sound_desc* desc);                    // Play a sound buffer or update a sound
+RIV_API uint64_t riv_waveform(riv_waveform_desc* desc);              // Play a waveform sound
 
 // Pseudo random number generator (PRNG)
 

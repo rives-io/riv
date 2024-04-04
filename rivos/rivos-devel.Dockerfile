@@ -61,6 +61,7 @@ RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarb
     make PREFIX=/pkg/usr && \
     make install PREFIX=/pkg/usr && \
     strip /pkg/usr/bin/nelua-lua && \
+    ln -s nelua-lua /pkg/usr/bin/lua5.4 && \
     tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
 ################################
@@ -72,8 +73,9 @@ RUN wget -O infiWang-LJRV.tar.gz https://github.com/infiWang/LJRV/tarball/af9c41
     mkdir -p /pkg/usr && \
     make amalg PREFIX=/usr && \
     make install PREFIX=/usr DESTDIR=/pkg && \
-    rm -rf /pkg/usr/share/man && \
-    strip /pkg/usr/bin/luajit-* && \
+    rm -rf /pkg/usr/share/man /pkg/usr/bin/luajit && \
+    mv /pkg/usr/bin/luajit-* /pkg/usr/bin/luajit && \
+    strip /pkg/usr/bin/luajit && \
     strip -S -x /pkg/usr/lib/*.so.* && \
     tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
@@ -196,8 +198,9 @@ RUN cp -a /usr/bin/c2m usr/bin/c2m && \
     cp -a /usr/include/mir* usr/include/
 
 # Install luajit
-RUN cp -a /usr/bin/luajit* usr/bin/ && \
-    cp -a /usr/lib/libluajit-5.1.so* usr/lib/
+RUN cp -a /usr/bin/luajit usr/bin/ && \
+    cp -a /usr/lib/libluajit-5.1.so* usr/lib/ && \
+    cp -a /usr/include/luajit-2.1 usr/include/
 
 # # Install system configs
 COPY rivos/skel/etc etc

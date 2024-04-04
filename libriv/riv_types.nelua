@@ -349,7 +349,6 @@ global riv_canary_ids: type <cimport,nodecl,using> = @enum(uint32){
   RIV_CANARY_DRIVER = 1071593246,
   RIV_CANARY_DEVICE = 1661680337
 }
-global riv_id: type <cimport,nodecl> = @uint64
 global riv_span_uint8: type <cimport,nodecl> = @record{
   data: *[0]uint8,
   size: uint64
@@ -382,7 +381,7 @@ global riv_image: type <cimport,nodecl> = @record{
   owned: boolean
 }
 global riv_spritesheet: type <cimport,nodecl> = @record{
-  image_id: riv_id,
+  image_id: uint64,
   cell_width: uint32,
   cell_height: uint32
 }
@@ -399,15 +398,15 @@ global riv_framebuffer_desc: type <cimport,nodecl> = @record{
   pixel_format: riv_pixel_format
 }
 global riv_soundbuffer_desc: type <cimport,nodecl> = @record{
-  id: riv_id,
+  id: uint64,
   format: riv_sound_format,
   channels: uint32,
   sample_rate: uint32,
   data: riv_span_uint8
 }
 global riv_sound_desc: type <cimport,nodecl> = @record{
-  id: riv_id,
-  buffer_id: riv_id,
+  id: uint64,
+  buffer_id: uint64,
   delay: float32,
   duration: float32,
   fade_in: float32,
@@ -418,7 +417,7 @@ global riv_sound_desc: type <cimport,nodecl> = @record{
   pitch: float32
 }
 global riv_waveform_desc: type <cimport,nodecl> = @record{
-  id: riv_id,
+  id: uint64,
   type: riv_waveform_type,
   delay: float32,
   attack: float32,

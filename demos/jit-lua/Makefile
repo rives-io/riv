@@ -1,4 +1,4 @@
-NAME=jit
+NAME=jit-lua
 
 COMP?=xz
 ASSETS_DIR?=assets

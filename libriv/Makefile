@@ -14,7 +14,7 @@ endif
 CFLAGS+=-Wall
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
 LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
-LDFLAGS+=-z relro -z now -rdynamic
+LDFLAGS+=-z relro -z now -rdynamic -Wl,--defsym=riv=riv_ctx
 NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
 
 ifeq ($(debug), yes)
