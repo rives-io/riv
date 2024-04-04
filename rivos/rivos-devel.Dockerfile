@@ -150,8 +150,7 @@ RUN cp -a /etc/apk etc/apk && \
 RUN ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
     ln -s ../../lib/ld-musl-riscv64.so.1 usr/lib/libc.so && \
     cp -a /usr/bin/ldd usr/bin/ldd && \
-    apk info -L musl-dev | grep usr/include | while read file; do install -Dm644 /$file $file; done && \
-    apk info -L musl-dev | grep usr/lib | grep crt | while read file; do install -Dm644 /$file $file; done
+    apk info -L musl-dev | grep usr/include | while read file; do install -Dm644 /$file $file; done
 
 # # Install bwrapbox
 RUN cp -a /usr/bin/bwrapbox usr/bin/bwrapbox && \
@@ -159,9 +158,6 @@ RUN cp -a /usr/bin/bwrapbox usr/bin/bwrapbox && \
 
 # Install mir
 RUN cp -a /usr/bin/c2m usr/bin/c2m && \
-    cp -a /usr/bin/m2b usr/bin/m2b && \
-    cp -a /usr/lib/libmir.so.0.1.0 usr/lib/libmir.so.0.1.0 && \
-    ln -s libmir.so.0.1.0 usr/lib/libmir.so.0 && \
     cp -a /usr/include/c2mir.h usr/include/ && \
     cp -a /usr/include/mir* usr/include/
 
