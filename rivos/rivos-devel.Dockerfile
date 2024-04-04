@@ -199,24 +199,19 @@ RUN rm -rf /root/apks /root/riv /var/cache/apk /rivos/linuxrc /linuxrc
 # Generate rivos.ext2
 FROM host-tools-stage AS generate-rivos-stage
 COPY --from=rivos-devel-stage / /rivos-devel
-RUN mksquashfs /rivos-devel/rivos /rivos.ext2 \
-        -quiet \
-        -comp lzo \
-        -mkfs-time 0 \
-        -all-time 0 \
-        -noappend \
-        -no-fragments \
-        -no-exports \
-        -no-progress && \
+RUN xgenext2fs \
+        --faketime \
+        --allow-holes \
+        --block-size 4096 \
+        --bytes-per-inode 4096 \
+        --volume-label rivos --root /rivos-devel/rivos /rivos.ext2 && \
     xgenext2fs \
         --faketime \
         --allow-holes \
         --readjustment +$((128*1024*1024/4096)) \
         --block-size 4096 \
         --bytes-per-inode 4096 \
-        --volume-label rivos \
-        --root /rivos-devel \
-        /rivos-devel.ext2
+        --volume-label rivos-devel --root /rivos-devel /rivos-devel.ext2
 
 ################################
 FROM --platform=linux/riscv64 rivos-devel-stage AS toolchain-rivos-final-stage
