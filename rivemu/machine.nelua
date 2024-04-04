@@ -18,7 +18,7 @@ global riscv_reg_ids: type <using> = @enum(int64) {
   RISCV_REG_A0 = 10
 }
 
-global RIV_SIZE_RAM: uint64 <comptime> = 128*1024*1024
+global RIV_SIZE_RAM: uint64 <comptime> = 256*1024*1024
 global RIV_SIZE_CARTRIDGE: uint64< comptime> = 8*1024*1024
 global RIV_SIZE_REPLAYLOG: uint64< comptime> = 2*1024*1024
 

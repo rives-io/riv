@@ -34,6 +34,7 @@ shell: rivos.ext2
 		--append-init=USER=root \
 		--flash-drive=label:root,filename:$< \
 		--ram-image=../kernel/linux.bin \
+		--ram-length=256Mi \
 		-it exec /bin/ash -l
 
 shell-devel: rivos-devel.ext2
@@ -41,6 +42,7 @@ shell-devel: rivos-devel.ext2
 		--append-init=USER=root \
 		--flash-drive=label:root,filename:$< \
 		--ram-image=../kernel/linux.bin \
+		--ram-length=256Mi \
 		-n \
 		-it exec /bin/ash -l
 
