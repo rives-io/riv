@@ -86,7 +86,7 @@ function rivemu_machine.create(entrypoint: string, interactive: boolean, kernel_
   local bootargs: string = "\z
     no4lvl quiet \z
     earlycon=sbi console=hvc0 \z
-    rootfstype=ext2 root=/dev/pmem0 rw \z
+    rootfstype=squashfs,ext2 root=/dev/pmem0 rw \z
     init=/usr/sbin/cartesi-init"
 
   -- set config

@@ -1,3 +1,9 @@
+## Host toolchain stage
+FROM cartesi/toolchain:0.16.0 AS host-tools-stage
+RUN apt-get update && \
+    apt-get install -y squashfs-tools && \
+    rm -rf /var/lib/apt
+
 ################################
 # Busybox stage
 FROM --platform=linux/riscv64 riscv64/busybox:1.36.1-musl AS busybox-stage
@@ -59,6 +65,22 @@ RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarb
     tree /pkg && cp -a /pkg/* /usr/
 
 ################################
+# Build bubblewrap
+FROM --platform=linux/riscv64 riv-toolchain-stage AS bubblewrap-stage
+RUN apk add autoconf automake libcap-dev libcap-static
+RUN wget -O containers-bubblewrap.tar.gz https://github.com/containers/bubblewrap/tarball/8e51677abd7e3338e4952370bf7d902e37d8cbb6 && \
+    tar -xzf containers-bubblewrap.tar.gz && \
+    mv containers-bubblewrap-* containers-bubblewrap && cd containers-bubblewrap && \
+    ./autogen.sh && \
+    ./configure --prefix=/pkg --enable-require-userns LDFLAGS=-static && \
+    mkdir -p /pkg && \
+    make PREFIX=/pkg && \
+    make install PREFIX=/pkg && \
+    rm -rf /pkg/share && \
+    strip /pkg/bin/* && \
+    tree /pkg && cp -a /pkg/* /usr/
+
+################################
 # Build bwrapbox
 FROM --platform=linux/riscv64 riv-toolchain-stage AS bwrapbox-stage
 RUN apk add libseccomp-dev
@@ -84,16 +106,13 @@ RUN make -C riv/libriv && \
 # Download packages
 FROM --platform=linux/riscv64 riv-toolchain-stage AS rivos-devel-stage
 
-# Install dependencies
-RUN apk add bubblewrap
-
 # Install development utilities
-RUN apk add bash neovim neovim-doc htop tmux gdb strace squashfs-tools
+RUN apk add bash neovim neovim-doc htop tmux gdb strace squashfs-tools ncdu
 
 # Download apks to be installed in rivos
 RUN mkdir -p apks && \
     cd apks && \
-    apk fetch musl libgcc libstdc++ bubblewrap libcap2
+    apk fetch musl libgcc libstdc++
 
 # Install linux-headers
 WORKDIR /root
@@ -109,6 +128,7 @@ COPY --from=elfkickers-stage /pkg /usr
 COPY --from=mirjit-stage /pkg /usr
 COPY --from=nelua-stage /pkg /usr
 COPY --from=bwrapbox-stage /pkg /usr
+COPY --from=bubblewrap-stage /pkg /usr
 
 COPY --from=riv-stage /root/riv riv
 RUN make -C /root/riv/libriv install install-dev PREFIX=/usr && \
@@ -149,11 +169,11 @@ RUN cp -a /etc/apk etc/apk && \
 # Install musl utilities
 RUN ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
     ln -s ../../lib/ld-musl-riscv64.so.1 usr/lib/libc.so && \
-    cp -a /usr/bin/ldd usr/bin/ldd && \
     apk info -L musl-dev | grep usr/include | while read file; do install -Dm644 /$file $file; done
 
-# # Install bwrapbox
-RUN cp -a /usr/bin/bwrapbox usr/bin/bwrapbox && \
+# Install bubblewrap and bwrapbox
+RUN cp -a /usr/bin/bwrap usr/bin/bwrap && \
+    cp -a /usr/bin/bwrapbox usr/bin/bwrapbox && \
     cp -a /usr/lib/bwrapbox usr/lib/bwrapbox
 
 # Install mir
@@ -172,27 +192,26 @@ RUN ln -s ../proc/mounts etc/mtab && \
 RUN make -C /root/riv/libriv install install-c-dev PREFIX=/usr DESTDIR=/rivos && \
     make -C /root/riv/tools install PREFIX=/usr DESTDIR=/rivos
 
-# Remove unneeded files
+# Remove temporary files
 RUN rm -rf /root/apks /root/riv /var/cache/apk /rivos/linuxrc /linuxrc
 
 ################################
 # Generate rivos.ext2
-FROM cartesi/toolchain:0.16.0 AS generate-rivos-stage
-
+FROM host-tools-stage AS generate-rivos-stage
 COPY --from=rivos-devel-stage / /rivos-devel
-RUN xgenext2fs \
-        --faketime \
-        --allow-holes \
-        --block-size 4096 \
-        --bytes-per-inode 4096 \
-        --volume-label rivos-devel \
-        --root /rivos-devel/rivos \
-        /rivos.ext2 && \
-    rm -rf /rivos-devel/rivos && \
+RUN mksquashfs /rivos-devel/rivos /rivos.ext2 \
+        -quiet \
+        -comp lzo \
+        -mkfs-time 0 \
+        -all-time 0 \
+        -noappend \
+        -no-fragments \
+        -no-exports \
+        -no-progress && \
     xgenext2fs \
         --faketime \
         --allow-holes \
-        --size-in-blocks 98304 \
+        --readjustment +$((128*1024*1024/4096)) \
         --block-size 4096 \
         --bytes-per-inode 4096 \
         --volume-label rivos \

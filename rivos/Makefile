@@ -35,6 +35,7 @@ shell: rivos.ext2
 		--flash-drive=label:root,filename:$< \
 		--ram-image=../kernel/linux.bin \
 		--ram-length=256Mi \
+		--append-bootargs=rootfstype=squashfs,ext2 \
 		-it exec /bin/ash -l
 
 shell-devel: rivos-devel.ext2
@@ -43,6 +44,7 @@ shell-devel: rivos-devel.ext2
 		--flash-drive=label:root,filename:$< \
 		--ram-image=../kernel/linux.bin \
 		--ram-length=256Mi \
+		--append-bootargs=rootfstype=squashfs,ext2 \
 		-n \
 		-it exec /bin/ash -l
 
