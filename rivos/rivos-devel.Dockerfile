@@ -1,10 +1,10 @@
 ################################
 # Busybox stage
-FROM --platform=linux/riscv64 riscv64/busybox:1.36.1 AS busybox-stage
+FROM --platform=linux/riscv64 riscv64/busybox:1.36.1-musl AS busybox-stage
 
 ################################
 # Toolchain stage
-FROM --platform=linux/riscv64 riscv64/alpine:20240315 AS riv-toolchain-stage
+FROM --platform=linux/riscv64 riscv64/alpine:20240329 AS riv-toolchain-stage
 
 RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
 
@@ -12,7 +12,7 @@ RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/a
 RUN apk update && apk upgrade
 
 # Add development packages
-RUN apk add gcc g++ libc-dev make pkgconfig
+RUN apk add build-base pkgconf git
 
 # Build other packages inside /root
 WORKDIR /root
@@ -33,7 +33,6 @@ RUN wget -O BR903-ELFkickers.tar.gz https://github.com/BR903/ELFkickers/tarball/
 ################################
 # Build mir jit
 FROM --platform=linux/riscv64 riv-toolchain-stage AS mirjit-stage
-RUN apk add git
 RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/5dcba9a5e500f821dafbbf1db729742038bc5a80 && \
     tar -xzf vnmakarov-mir.tar.gz && \
     mv vnmakarov-mir-* vnmakarov-mir && cd vnmakarov-mir && \
@@ -89,7 +88,7 @@ FROM --platform=linux/riscv64 riv-toolchain-stage AS rivos-devel-stage
 RUN apk add bubblewrap
 
 # Install development utilities
-RUN apk add bash bash-completion neovim neovim-doc su-exec wget git htop gdb strace squashfs-tools
+RUN apk add bash neovim neovim-doc htop tmux gdb strace squashfs-tools
 
 # Download apks to be installed in rivos
 RUN mkdir -p apks && \
@@ -120,6 +119,7 @@ COPY rivos/skel/etc /etc
 COPY rivos/skel/usr /usr
 RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
     mkdir -p /cartridge && chown 500:500 /cartridge && \
+    chown root:root /root && \
     rm -rf /media && \
     echo rivos-devel > /etc/hostname
 
@@ -144,7 +144,7 @@ RUN cp /bin/busybox bin/busybox && \
 RUN cp -a /etc/apk etc/apk && \
     rm etc/apk/world && \
     apk add --no-network --root /rivos --initdb /root/apks/*.apk && \
-    rm -rf etc/apk lib/apk var/cache dev/* /root/apks
+    rm -rf etc/apk lib/apk var/cache dev/*
 
 # Install musl utilities
 RUN ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
@@ -153,10 +153,7 @@ RUN ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
     apk info -L musl-dev | grep usr/include | while read file; do install -Dm644 /$file $file; done && \
     apk info -L musl-dev | grep usr/lib | grep crt | while read file; do install -Dm644 /$file $file; done
 
-# Clear apk cache
-RUN rm -rf /var/cache/apk
-
-# Install bwrapbox
+# # Install bwrapbox
 RUN cp -a /usr/bin/bwrapbox usr/bin/bwrapbox && \
     cp -a /usr/lib/bwrapbox usr/lib/bwrapbox
 
@@ -168,17 +165,19 @@ RUN cp -a /usr/bin/c2m usr/bin/c2m && \
     cp -a /usr/include/c2mir.h usr/include/ && \
     cp -a /usr/include/mir* usr/include/
 
-# Install system configs
+# # Install system configs
 COPY rivos/skel/etc etc
 COPY rivos/skel/usr usr
 RUN ln -s ../proc/mounts etc/mtab && \
     chmod 600 etc/shadow && \
     sed -i '/^ *# /d' etc/sysctl.conf
 
-# Install riv stuff
+# # Install riv stuff
 RUN make -C /root/riv/libriv install install-c-dev PREFIX=/usr DESTDIR=/rivos && \
-    make -C /root/riv/tools install PREFIX=/usr DESTDIR=/rivos && \
-    rm -rf /root/riv
+    make -C /root/riv/tools install PREFIX=/usr DESTDIR=/rivos
+
+# Remove unneeded files
+RUN rm -rf /root/apks /root/riv /var/cache/apk /rivos/linuxrc /linuxrc
 
 ################################
 # Generate rivos.ext2

@@ -29,5 +29,5 @@ else
     chown $UID:$GID $(/usr/bin/tty)
   fi
   echo Running as $USERNAME
-  exec su-exec $USERNAME "$@"
+  exec su -p $USERNAME -c "$@"
 fi
