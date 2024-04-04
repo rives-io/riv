@@ -12,10 +12,10 @@ DOCKER_USER_RUN_FLAGS=\
 	--env UID=$$(id -u) --env GID=$$(id -g) \
 	$(DOCKER_RUN_FLAGS)
 
-all: rivos
+all: rivos rivos-devel
 
 rivos: rivos.ext2 rivos.hash.txt
-rivos-devel: rivos-devel.ext2
+rivos-devel: rivos-devel.ext2 rivos-devel.hash.txt
 
 rivos.ext2 rivos-devel.ext2: rivos-devel.Dockerfile $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
 	$(MAKE) toolchain
@@ -25,7 +25,7 @@ rivos.ext2 rivos-devel.ext2: rivos-devel.Dockerfile $(SKEL_FILES) $(TOOL_FILES) 
 	docker rm riv-copy-rivos
 	touch rivos.ext2 rivos-devel.ext2
 
-rivos.hash.txt: rivos.ext2
+%.hash.txt: %.ext2
 	stat -c "%s %n" $< > $@
 	sha256sum $< >> $@
 
