@@ -22,8 +22,8 @@ busybox stty -onlcr
 # source environment
 [ -f /etc/environment ] && . /etc/environment
 
-# execute scripts in autoinit.d
-[ -d /etc/autoinit.d ] && for f in /etc/autoinit.d/*; do [ -x $f ] && . $f; done
+# execute scripts in cartesi-init.d
+[ -d /etc/cartesi-init.d ] && for f in /etc/cartesi-init.d/*; do [ -x $f ] && . $f; done
 
 # execute init from device tree when available
 [ -f /proc/device-tree/cartesi-machine/init ] && . /proc/device-tree/cartesi-machine/init
