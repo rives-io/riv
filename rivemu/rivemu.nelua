@@ -532,6 +532,7 @@ local function advance_frame(): void
       local target_fps: int32 <nodce> = (@int32)(target_fps)
       local num_frames: int32 <nodce> = rivemu_input.get_replay_frames()
       local canvas_width: int32 <nodce> = (default_canvas_width // width) * width
+      if canvas_width == 0 then canvas_width = width end
       local canvas_height: int32 <nodce> = math.ifloor((height / width) * canvas_width)
       cinclude![[
 static void _sapp_emsc_resize(int width, int height) {
