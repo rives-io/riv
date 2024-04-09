@@ -21,7 +21,6 @@ busybox stty -onlcr
 
 # source environment
 [ -f /etc/environment ] && . /etc/environment
-export PATH="$PATH:/opt/cartesi/bin"
 
 # execute scripts in autoinit.d
 [ -d /etc/autoinit.d ] && for f in /etc/autoinit.d/*; do [ -x $f ] && . $f; done
