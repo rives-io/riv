@@ -1,7 +1,8 @@
 #!/bin/sh
 ROOT=$1
+[ -x $ROOT/usr/bin/bwrap ] && BWRAP=$ROOT/usr/bin/bwrap || BWRAP=bwrap
 shift
-exec bwrap \
+exec $BWRAP \
     --bind $ROOT / \
     --dev-bind /dev /dev \
     --bind /proc /proc \

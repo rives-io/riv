@@ -9,14 +9,9 @@ nldecl.generate_bindings_file{
   output_head = [==[
 ##[[
 cinclude 'cartesi.h'
-linklib '{{CARTESI_LINKLIB}}'
+linklib 'cartesi'
 ]]
-]==],
-  output_postprocess = function(neluacode, ccode)
-    local major = ccode:match('CM_VERSION_MAJOR ([0-9]+)')
-    local minor = ccode:match('CM_VERSION_MINOR ([0-9]+)')
-    return neluacode:gsub('{{CARTESI_LINKLIB}}', 'cartesi-'..major..'.'..minor)
-  end
+]==]
 }
 
 -- miniaudio
