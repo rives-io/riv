@@ -9,7 +9,7 @@ ifeq ($(CC), tcc)
 else ifeq ($(CC), emcc)
 	CFLAGS+=-sNO_DISABLE_EXCEPTION_CATCHING
 else # gcc based
-	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none -z relro -z now
+	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none -z relro -z now -static-libgcc
 endif
 
 ifeq ($(CC), emcc)
@@ -51,3 +51,8 @@ clean:
 install: rivemu
 	mkdir -p $(DESTDIR)$(PREFIX)/rivemu
 	install -m755 rivemu $(DESTDIR)$(PREFIX)/bin/rivemu
+
+build: $(RIVEMU)
+
+build-portable-linux:
+	docker build --tag riv-host-toolchain-ubuntu .

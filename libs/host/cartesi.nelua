@@ -1,6 +1,7 @@
 ##[[
 cinclude 'cartesi.h'
-linklib 'cartesi'
+linklib 'libcartesi.a'
+linklib 'libstdc++.a'
 ]]
 global cm_hash: type <cimport,nodecl> = @[32]uint8
 global cm_hash_array: type <cimport,nodecl> = @record{

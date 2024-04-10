@@ -164,7 +164,7 @@ RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
 
 # Create Linux filesystem hierarchy
 WORKDIR /rivos
-RUN mkdir -p usr/bin usr/sbin usr/lib var/tmp proc sys dev root cartridge tmp run etc bin sbin lib && \
+RUN mkdir -p usr/bin usr/sbin usr/lib var/tmp proc sys dev root cartridge cartridges tmp run etc bin sbin lib && \
     chmod 555 proc sys && \
     chown 500:500 cartridge && \
     chmod 1777 tmp var/tmp && \
