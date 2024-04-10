@@ -9,7 +9,10 @@ nldecl.generate_bindings_file{
   output_head = [==[
 ##[[
 cinclude 'cartesi.h'
-linklib 'cartesi'
+linklib 'libcartesi.a'
+if not ccinfo.is_wasm then
+  linklib 'libstdc++.a'
+end
 ]]
 ]==]
 }
