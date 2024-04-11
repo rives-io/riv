@@ -9,10 +9,6 @@ local projdir = fs.scriptdir(2)
 libpath(fs.join(projdir, 'libriv', '?.nelua'))
 libpath(fs.join(projdir, 'libs', 'host', '?.nelua'))
 libpath(fs.join(projdir, 'libs', 'guest-host', '?.nelua'))
-if ccinfo.is_emscripten then
-  cflags('-I'..projdir..'/cartesi-machine-v0.16.1_wasm/include')
-  ldflags('-L'..projdir..'/cartesi-machine-v0.16.1_wasm/lib')
-end
 ]]
 
 require 'string'

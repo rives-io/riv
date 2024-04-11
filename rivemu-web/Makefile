@@ -1,5 +1,5 @@
 all:
-	$(MAKE) -C ../rivemu rivemu.js CC=emcc
+	$(MAKE) -C ../rivemu rivemu-wasm
 	cp ../rivemu/rivemu.{js,wasm} .
 	mkdir -p cartridges
 	find ../demos -name '*.sqfs' -exec cp {} cartridges/ \;

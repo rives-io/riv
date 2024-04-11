@@ -17,7 +17,7 @@ all: rivos rivos-devel
 rivos: rivos.ext2.zz rivos.ext2 rivos.hash.txt
 rivos-devel: rivos-devel.ext2 rivos-devel.hash.txt
 
-rivos.ext2 rivos-devel.ext2: rivos-devel.Dockerfile $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
+rivos.ext2 rivos-devel.ext2: rivos-devel.Dockerfile ../kernel/linux-headers.tar.xz $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
 	$(MAKE) toolchain
 	docker create --platform=linux/riscv64 --name riv-copy-rivos riv/toolchain:devel
 	docker cp riv-copy-rivos:/rivos.ext2 .
@@ -62,4 +62,8 @@ toolchain-env-asroot:
 	docker run $(DOCKER_RUN_FLAGS)
 
 clean:
-	rm -f rivos.ext2 rivos.hash.txt
+	rm -f *.zz *.ext2 *.hash.txt
+
+# External deps
+../kernel/linux.bin ../kernel/linux-headers.tar.xz:
+	$(MAKE) -C ../kernel

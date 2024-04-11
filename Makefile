@@ -67,8 +67,14 @@ demo-clean:
 demo-run:
 	$(MAKE) -C demos/$(DEMO) run
 
-release:
-	make clean
-	make all
-	make -C rivemu distro
-	make -C rivemu-web
+.PHONY: dist
+dist:
+# 	$(MAKE) -C rivos clean
+	$(MAKE) -C kernel
+	$(MAKE) -C rivos
+	$(MAKE) -C rivemu package
+	rm -rf dist
+	mkdir -p dist
+	cp rivos/rivos.ext2 rivos/rivos-devel.ext2 dist/
+	cp rivemu/rivemu-linux-* dist/
+	cp rivemu/rivemu.js rivemu/rivemu.wasm dist/

@@ -22,10 +22,11 @@
 *.js
 *.wasm
 *.deb
-build
+dist
 
 # ignore generated binaries
 /rivemu/rivemu
+/rivemu/rivemu-linux-*
 /tools/bwrapbox/bwrapbox
 /tools/riv-unpacklog/riv-unpacklog
 /tools/bwrapbox/seccomp-filter

@@ -9,6 +9,8 @@ ifeq ($(CC), tcc)
 	CFLAGS+=-w
 else ifeq ($(CC), emcc)
 	CFLAGS+=-sNO_DISABLE_EXCEPTION_CATCHING
+	CFLAGS+=-I/usr/local/emscripten-wasm32/include
+	LDFLAGS+=-L/usr/local/emscripten-wasm32/lib
 else # gcc based
 	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none -z relro -z now -static-libgcc
 endif
@@ -54,10 +56,12 @@ install: rivemu
 	mkdir -p $(DESTDIR)$(PREFIX)/rivemu
 	install -m755 rivemu $(DESTDIR)$(PREFIX)/bin/rivemu
 
-build: $(RIVEMU)
+build: $(RIVEMU) rivemu.wasm
 
-distro: rivemu-linux-amd64 rivemu-linux-arm64
+# Packages
+package: rivemu-linux-amd64 rivemu-linux-arm64 rivemu-wasm
 
+# Packaging for Linux
 rivemu-linux-%:
 	docker build \
 		--platform linux/$* \
@@ -69,4 +73,23 @@ rivemu-linux-%:
 		--workdir /mnt \
 		--hostname rivemu-build-linux-$* \
 		--rm -it rivemu-toolchain-linux-$* \
-		bash -c "make -C /mnt/rivemu RIVEMU=rivemu-linux-$* NELUA_CACHEDIR=/tmp/nelua rivemu-linux-$* && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
+		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
+
+# Packaging for WASM
+rivemu-wasm:
+	docker build \
+		--tag rivemu-toolchain-wasm \
+		--file rivemu-toolchain-wasm.Dockerfile .
+	docker run \
+		--volume "$(shell pwd)/..":/mnt \
+		--workdir /mnt \
+		--hostname rivemu-build-wasm \
+		--rm -it rivemu-toolchain-wasm \
+		bash -c "source /etc/profile.d/emscripten.sh && make -C /mnt/rivemu rivemu.js CC=emcc NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu.js /mnt/rivemu/rivemu.wasm"
+
+# External deps
+../kernel/linux.bin.zz:
+	$(MAKE) -C ../kernel
+
+../rivos/rivos.ext2.zz:
+	$(MAKE) -C ../rivos
