@@ -12,18 +12,18 @@ DOCKER_USER_RUN_FLAGS=\
 	--env UID=$$(id -u) --env GID=$$(id -g) \
 	$(DOCKER_RUN_FLAGS)
 
-all: rivos rivos-devel
+all: rivos rivos-sdk
 
 rivos: rivos.ext2.zz rivos.ext2 rivos.hash.txt
-rivos-devel: rivos-devel.ext2 rivos-devel.hash.txt
+rivos-sdk: rivos-sdk.ext2 rivos-sdk.hash.txt
 
-rivos.ext2 rivos-devel.ext2: rivos-devel.Dockerfile ../kernel/linux-headers.tar.xz $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
+rivos.ext2 rivos-sdk.ext2: rivos-sdk.Dockerfile ../kernel/linux-headers.tar.xz $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
 	$(MAKE) toolchain
 	docker create --platform=linux/riscv64 --name riv-copy-rivos riv/toolchain:devel
 	docker cp riv-copy-rivos:/rivos.ext2 .
-	docker cp riv-copy-rivos:/rivos-devel.ext2  .
+	docker cp riv-copy-rivos:/rivos-sdk.ext2  .
 	docker rm riv-copy-rivos
-	touch rivos.ext2 rivos-devel.ext2
+	touch rivos.ext2 rivos-sdk.ext2
 
 %.ext2.zz: %.ext2
 	cat $< | pigz -cz -11 > $@
@@ -40,7 +40,7 @@ shell: rivos.ext2
 		--ram-length=256Mi \
 		-it exec /bin/ash -l
 
-shell-devel: rivos-devel.ext2
+shell-devel: rivos-sdk.ext2
 	cartesi-machine \
 		--append-init=USER=root \
 		--flash-drive=label:root,filename:$< \
@@ -50,7 +50,7 @@ shell-devel: rivos-devel.ext2
 		-it exec /bin/ash -l
 
 toolchain:
-	docker build --tag riv/toolchain:devel --file rivos-devel.Dockerfile --progress plain ..
+	docker build --tag riv/toolchain:devel --file rivos-sdk.Dockerfile --progress plain ..
 
 toolchain-exec:
 	docker run $(DOCKER_USER_RUN_FLAGS) /bin/bash -c "$(COMMAND)"

@@ -20,6 +20,7 @@ busybox stty -onlcr
 [ -z "$noloopback" ] && busybox ifconfig lo up
 
 # source environment
+export PATH
 [ -f /etc/environment ] && . /etc/environment
 
 # execute scripts in cartesi-init.d

@@ -119,7 +119,7 @@ RUN make -C riv/libriv && \
 
 ################################
 # Download packages
-FROM --platform=linux/riscv64 riv-toolchain-stage AS rivos-devel-stage
+FROM --platform=linux/riscv64 riv-toolchain-stage AS rivos-sdk-stage
 
 # Install development utilities
 RUN apk add bash neovim neovim-doc htop tmux gdb strace squashfs-tools ncdu
@@ -157,7 +157,7 @@ RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
     mkdir -p /cartridge && chown 500:500 /cartridge && \
     chown root:root /root && \
     rm -rf /media && \
-    echo rivos-devel > /etc/hostname
+    echo rivos-sdk > /etc/hostname
 
 ################################
 # Rootfs stage
@@ -202,16 +202,17 @@ RUN cp -a /usr/bin/luajit usr/bin/ && \
     cp -a /usr/lib/libluajit-5.1.so* usr/lib/ && \
     cp -a /usr/include/luajit-2.1 usr/include/
 
-# # Install system configs
+# Install system configs
 COPY rivos/skel/etc etc
 COPY rivos/skel/usr usr
 RUN ln -s ../proc/mounts etc/mtab && \
     chmod 600 etc/shadow && \
     sed -i '/^ *# /d' etc/sysctl.conf
 
-# # Install riv stuff
+# Install riv stuff
 RUN make -C /root/riv/libriv install install-c-dev PREFIX=/usr DESTDIR=/rivos && \
-    make -C /root/riv/tools install PREFIX=/usr DESTDIR=/rivos
+    make -C /root/riv/tools install PREFIX=/usr DESTDIR=/rivos && \
+    make --no-print-directory -C /root/riv/libriv version > /rivos/etc/riv-version
 
 # Remove temporary files
 RUN rm -rf /root/apks /root/riv /var/cache/apk /rivos/linuxrc /linuxrc
@@ -219,25 +220,25 @@ RUN rm -rf /root/apks /root/riv /var/cache/apk /rivos/linuxrc /linuxrc
 ################################
 # Generate rivos.ext2
 FROM host-tools-stage AS generate-rivos-stage
-COPY --from=rivos-devel-stage / /rivos-devel
+COPY --from=rivos-sdk-stage / /rivos-sdk
 RUN xgenext2fs \
         --faketime \
         --allow-holes \
         --block-size 4096 \
         --bytes-per-inode 4096 \
-        --volume-label rivos --root /rivos-devel/rivos /rivos.ext2 && \
+        --volume-label rivos --root /rivos-sdk/rivos /rivos.ext2 && \
     xgenext2fs \
         --faketime \
         --allow-holes \
         --readjustment +$((128*1024*1024/4096)) \
         --block-size 4096 \
         --bytes-per-inode 4096 \
-        --volume-label rivos-devel --root /rivos-devel /rivos-devel.ext2
+        --volume-label rivos-sdk --root /rivos-sdk /rivos-sdk.ext2
 
 ################################
-FROM --platform=linux/riscv64 rivos-devel-stage AS toolchain-rivos-final-stage
+FROM --platform=linux/riscv64 rivos-sdk-stage AS toolchain-rivos-final-stage
 COPY --from=generate-rivos-stage /rivos.ext2 /rivos.ext2
-COPY --from=generate-rivos-stage /rivos-devel.ext2 /rivos-devel.ext2
+COPY --from=generate-rivos-stage /rivos-sdk.ext2 /rivos-sdk.ext2
 
 # Install workaround to run env as current user
 COPY --chmod=755 rivos/docker-entrypoint.sh /usr/sbin/docker-entrypoint.sh

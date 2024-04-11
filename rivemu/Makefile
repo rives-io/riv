@@ -12,7 +12,7 @@ else ifeq ($(CC), emcc)
 	CFLAGS+=-I/usr/local/emscripten-wasm32/include
 	LDFLAGS+=-L/usr/local/emscripten-wasm32/lib
 else # gcc based
-	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none -z relro -z now -static-libgcc
+	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--as-needed -z relro -z now -static-libgcc
 endif
 
 ifeq ($(CC), emcc)

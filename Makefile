@@ -30,7 +30,7 @@ demos-cross:
 libriv tools demos:
 	$(MAKE) -C rivos toolchain-exec COMMAND="make -C $@"
 
-toolchain toolchain-exec toolchain-env toolchain-env-asroot shell shell-devel:
+toolchain toolchain-exec toolchain-env toolchain-env-asroot shell shell-sdk:
 	$(MAKE) -C rivos $@
 
 update-libs:
@@ -48,6 +48,7 @@ clean:
 	$(MAKE) -C demos clean
 	$(MAKE) -C tools clean
 	$(MAKE) -C libs clean
+	rm -rf dist
 
 distclean: clean
 	$(MAKE) -C kernel distclean
@@ -69,12 +70,11 @@ demo-run:
 
 .PHONY: dist
 dist:
-# 	$(MAKE) -C rivos clean
 	$(MAKE) -C kernel
 	$(MAKE) -C rivos
 	$(MAKE) -C rivemu package
 	rm -rf dist
 	mkdir -p dist
-	cp rivos/rivos.ext2 rivos/rivos-devel.ext2 dist/
+	cp rivos/rivos.ext2 rivos/rivos-sdk.ext2 dist/
 	cp rivemu/rivemu-linux-* dist/
 	cp rivemu/rivemu.js rivemu/rivemu.wasm dist/
