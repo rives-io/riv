@@ -110,12 +110,10 @@ RUN wget -O edubart-bwrapbox.tar.gz https://github.com/edubart/bwrapbox/tarball/
 
 ################################
 # Build riv
-FROM --platform=linux/riscv64 nelua-stage AS riv-stage
+FROM --platform=linux/riscv64 nelua-stage AS libriv-stage
 COPY libs/guest-host riv/libs/guest-host
 COPY libriv riv/libriv
-COPY tools riv/tools
-RUN make -C riv/libriv && \
-    make -C riv/tools
+RUN make -C riv/libriv
 
 ################################
 # Download packages
@@ -145,10 +143,6 @@ COPY --from=nelua-stage /pkg/usr /usr
 COPY --from=bwrapbox-stage /pkg/usr /usr
 COPY --from=bubblewrap-stage /pkg/usr /usr
 COPY --from=luajit-stage /pkg/usr /usr
-
-COPY --from=riv-stage /root/riv riv
-RUN make -C /root/riv/libriv install install-dev PREFIX=/usr && \
-    make -C /root/riv/tools install PREFIX=/usr
 
 # Install skel
 COPY rivos/skel/etc /etc
@@ -209,13 +203,14 @@ RUN ln -s ../proc/mounts etc/mtab && \
     chmod 600 etc/shadow && \
     sed -i '/^ *# /d' etc/sysctl.conf
 
-# Install riv stuff
-RUN make -C /root/riv/libriv install install-c-dev PREFIX=/usr DESTDIR=/rivos && \
-    make -C /root/riv/tools install PREFIX=/usr DESTDIR=/rivos && \
-    make --no-print-directory -C /root/riv/libriv version > /rivos/etc/riv-version
-
 # Remove temporary files
 RUN rm -rf /root/apks /root/riv /var/cache/apk /rivos/linuxrc /linuxrc
+
+################################
+# Install libriv
+COPY --from=libriv-stage /root/riv/libriv /root/riv/libriv
+RUN make -C /root/riv/libriv install install-dev PREFIX=/usr && \
+    make -C /root/riv/libriv install install-c-dev PREFIX=/usr DESTDIR=/rivos
 
 ################################
 # Generate rivos.ext2

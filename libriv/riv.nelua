@@ -58,7 +58,7 @@ global function riv_rand_float(): float64 <cimport,nodecl> end
 
 -- Macro for generating tiny binaries.
 ## function nostartfiles() cflags '-nostartfiles'
-  local function _start() <entrypoint,noreturn,cattribute'externally_visible,naked'>
+  local function _start(): void <entrypoint,noreturn,cattribute'externally_visible,naked'>
     ##[=[ cemit[[
   asm volatile(
     ".weak __global_pointer$;\n"
@@ -73,12 +73,12 @@ global function riv_rand_float(): float64 <cimport,nodecl> end
     ".option pop;\n"
   );
 ]] ]=]
-    local argc: cint <register'a1',nodce,noinit>
+    local sp: pointer <register'a0',nodce,noinit>
+    local argc: int64 <register'a1',nodce,noinit>
     local argv: *[0]cstring <register'a2',nodce,noinit>
     local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl,noinline> end
     local main_callback: type = @function(cint, *cstring): cint
     local function __libc_start_main(main: main_callback, argc: cint, argv: pointer, init: pointer, fini: pointer, rtld_fini: pointer, stack_end: pointer) <cimport,noreturn> end
-    local sp: pointer <register'a0',nodce,noinit>
     __libc_start_main(nelua_main, (@cint)(argc), argv, nilptr, nilptr, nilptr, sp)
   end
 ## end

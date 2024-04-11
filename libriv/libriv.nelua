@@ -8,3 +8,38 @@ libpath(fs.join(fs.scriptdir(2), 'libs', 'guest-host', '?.nelua'))
 
 -- Implement the riv library
 require '.riv_impl'
+require '.riv_tool'
+
+require 'C.stdio'
+
+local function exec_riv_tool_main(argc: int64, argv: *[0]cstring): void <noinline>
+  local function nelua_main(argc: cint, argv: *cstring): cint <cimport,nodecl> end
+  -- Initialize nelua stuff
+  nelua_main((@cint)(argc), argv)
+  -- Call RIV tool main
+  C.exit(riv_tool_main((@cint)(argc), argv))
+end
+
+-- Make libriv.so library also an executable
+local function _start(): void <cexport'_start',cattribute'externally_visible,naked,noreturn'>
+  ##[=[
+  cemitdecl [[const char interp_section[] __attribute__((section(".interp"))) = "/lib/ld-musl-riscv64.so.1";]]
+  cemit[[
+asm volatile(
+  ".weak __global_pointer$;\n"
+  ".hidden __global_pointer$;\n" // don't export symbol
+  ".option push;\n"
+  ".option norelax;\n"
+  "la gp, __global_pointer$;\n"
+  "mv a0, sp;\n" // stack pointer
+  "lw a1, 0(sp);\n" // argc
+  "addi a2, sp, 8;\n" // argv
+  "andi sp, sp, -16;\n" // make stack 16-byte aligned
+  ".option pop;\n"
+);
+]]
+]=]
+  local argc: int64 <register'a1',nodce,noinit>
+  local argv: *[0]cstring <register'a2',nodce,noinit>
+  exec_riv_tool_main(argc, argv)
+end

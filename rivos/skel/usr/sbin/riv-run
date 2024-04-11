@@ -78,7 +78,7 @@ if [ ! -n "$RIV_REPLAYLOG" ]; then  # play
 else # verify replay
   RIV_REPLAYLOG_FILE=$(busybox mktemp --tmpdir=/run replaylog.XXXXXXXXXXX)
   # prepare event log
-  if ! riv-unpacklog <"$RIV_REPLAYLOG" >"$RIV_REPLAYLOG_FILE"; then
+  if ! riv-tool unpacklog <"$RIV_REPLAYLOG" >"$RIV_REPLAYLOG_FILE"; then
     >&2 echo "[RIV-OS] Unable to unpack rivlog."
     busybox rm -f "$RIV_REPLAYLOG_FILE" "$RIV_IOCARD_FILE" "$RIV_OUTHIST_FILE" "$RIV_SCREENSHOT_FILE"
     busybox umount /cartridge

@@ -1,0 +1,40 @@
+## pragmas.unitname = ''
+
+require 'io'
+require 'riv_log'
+
+local function riv_unpack_log(): void
+  local key_events: vector(riv_key_toggle_event), last_frame: uint64 = riv_log.load_from_filestream(io.stdin)
+  local last_event: riv_key_toggle_event = {key_code = 0xff, last_frame}
+  key_events:push(last_event)
+  local data: span(byte) = {
+    data=(@*[0]byte)(key_events.data.data),
+    size=key_events.data.size * #@riv_key_toggle_event
+  }
+  assert(io.stdout:write(data))
+  assert(io.stdout:flush())
+end
+
+global function riv_tool_main(argc: cint, argv: *[0]cstring): cint
+  if argc <= 1 then
+    io.stdout:printf([[
+USAGE
+  %s <command>
+
+COMMANDS
+  unpacklog      Unpack a RIV log
+  version        Show RIV version
+]], argv[0])
+    return 0
+  end
+  if argc == 2 and argv[1] == 'unpacklog' then
+    riv_unpack_log()
+    return 0
+  elseif argc == 2 and argv[1] == 'version' then
+    io.stdout:printf("%d.%d.%d\n", RIV_VERSION_MAJOR, RIV_VERSION_MINOR, RIV_VERSION_PATCH)
+    return 0
+  else
+    io.stderr:printf('unknown command "%s"\n', argv[0])
+    return 1
+  end
+end

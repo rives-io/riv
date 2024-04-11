@@ -22,29 +22,20 @@
 *.js
 *.wasm
 *.deb
-dist
+
+/dist
 
 # ignore generated binaries
 /rivemu/rivemu
 /rivemu/rivemu-linux-*
-/tools/bwrapbox/bwrapbox
-/tools/riv-unpacklog/riv-unpacklog
-/tools/bwrapbox/seccomp-filter
-/tools/bwrapbox/seccomp-filter.bpf
 
 # ignore generated C sources
 /rivemu/rivemu.c
 /libriv/libriv.c
-/tools/bwrapbox/bwrapbox.c
-/tools/riv-unpacklog/riv-unpacklog.c
 /demos/*/*.c
-/files
 
-# ignore kernel stuff
-kernel/image-kernel-*
-
+# demos
 demos/freedoom
 demos/antcopter
 demos/monky
 demos/tetrix
-cartesi-machine-*_wasm

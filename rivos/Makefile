@@ -1,5 +1,4 @@
 SKEL_FILES=$(shell find skel -type f)
-TOOL_FILES=$(shell find ../tools -type f)
 LIBRIV_FILES=../libriv/*.nelua ../libriv/*.h
 BWRAPBOX_FILES=../bwrapbox/*.nelua ../bwrapbox/seccomp-filter-rules.h
 DOCKER_RUN_FLAGS=--platform=linux/riscv64 \
@@ -17,7 +16,7 @@ all: rivos rivos-sdk
 rivos: rivos.ext2.zz rivos.ext2 rivos.hash.txt
 rivos-sdk: rivos-sdk.ext2 rivos-sdk.hash.txt
 
-rivos.ext2 rivos-sdk.ext2: rivos-sdk.Dockerfile ../kernel/linux-headers.tar.xz $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
+rivos.ext2 rivos-sdk.ext2: rivos-sdk.Dockerfile ../kernel/linux-headers.tar.xz $(SKEL_FILES) $(LIBRIV_FILES)
 	$(MAKE) toolchain
 	docker create --platform=linux/riscv64 --name riv-copy-rivos riv/toolchain:devel
 	docker cp riv-copy-rivos:/rivos.ext2 .
@@ -40,7 +39,7 @@ shell: rivos.ext2
 		--ram-length=256Mi \
 		-it exec /bin/ash -l
 
-shell-devel: rivos-sdk.ext2
+shell-sdk: rivos-sdk.ext2
 	cartesi-machine \
 		--append-init=USER=root \
 		--flash-drive=label:root,filename:$< \

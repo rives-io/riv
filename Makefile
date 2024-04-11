@@ -17,17 +17,14 @@ libs kernel rivos rivemu rivemu-web:
 libriv-cross:
 	$(MAKE) -C libriv
 
-tools-cross:
-	$(MAKE) -C tools
-
-rivos-cross: libriv-cross tools-cross
+rivos-cross: libriv-cross
 	$(MAKE) -C rivos
 
 demos-cross:
 	$(MAKE) -C demos
 
 # Targets that uses RISC-V toolchain
-libriv tools demos:
+libriv demos:
 	$(MAKE) -C rivos toolchain-exec COMMAND="make -C $@"
 
 toolchain toolchain-exec toolchain-env toolchain-env-asroot shell shell-sdk:
@@ -46,14 +43,13 @@ clean:
 	$(MAKE) -C rivemu clean
 	$(MAKE) -C rivemu-web clean
 	$(MAKE) -C demos clean
-	$(MAKE) -C tools clean
 	$(MAKE) -C libs clean
 	rm -rf dist
 
 distclean: clean
 	$(MAKE) -C kernel distclean
 
-.PHONY: kernel rivos demos rivemu libs libriv tools rivemu-web
+.PHONY: kernel rivos demos rivemu libs libriv rivemu-web
 
 ##################
 # Demo testing

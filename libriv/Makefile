@@ -46,10 +46,12 @@ clean:
 	rm -f libriv.so libriv.c
 
 install: libriv.so
-	mkdir -p $(DESTDIR)$(PREFIX)/lib
+	mkdir -p $(DESTDIR)$(PREFIX)/lib $(DESTDIR)$(PREFIX)/share/riv
 	install -m755 libriv.so $(DESTDIR)$(PREFIX)/lib/libriv.so.$(RIV_VERSION)
 	ln -sf libriv.so.$(RIV_VERSION) $(DESTDIR)$(PREFIX)/lib/libriv.so.0
 	ln -sf libriv.so.0 $(DESTDIR)$(PREFIX)/lib/libriv.so
+	ln -sf ../lib/libriv.so $(DESTDIR)$(PREFIX)/bin/riv-tool
+	echo $(RIV_VERSION) > $(DESTDIR)$(PREFIX)/share/riv/version
 
 install-c-dev:
 	mkdir -p $(DESTDIR)$(PREFIX)/include
