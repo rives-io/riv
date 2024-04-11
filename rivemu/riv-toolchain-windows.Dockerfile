@@ -1,11 +1,8 @@
 FROM archlinux:base-devel
 
 # Install build tools
-RUN <<EOF
-set -e
-pacman -Syyu --noconfirm
-pacman -S --noconfirm emscripten git wget
-EOF
+RUN pacman -Syyu --noconfirm && \
+    pacman -S --noconfirm emscripten git wget
 
 # Install cartesi machine
 RUN <<EOF
@@ -25,6 +22,7 @@ EOF
 
 # Install nelua
 RUN <<EOF
+set -e
 git clone --depth 1 https://github.com/edubart/nelua-lang.git
 cd nelua-lang
 make

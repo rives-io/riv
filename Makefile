@@ -48,6 +48,8 @@ clean:
 
 distclean: clean
 	$(MAKE) -C kernel distclean
+	$(MAKE) -C rivemu distclean
+	$(MAKE) -C rivos distclean
 
 .PHONY: kernel rivos demos rivemu libs libriv rivemu-web
 
@@ -56,7 +58,7 @@ distclean: clean
 DEMO=snake
 
 demo:
-	$(MAKE) -C rivos toolchain-exec COMMAND="make -C demos/$(DEMO) -j4"
+	$(MAKE) -C rivos toolchain-exec COMMAND="make -C demos/$(DEMO)"
 
 demo-clean:
 	$(MAKE) -C rivos toolchain-exec COMMAND="make -C demos/$(DEMO) clean"

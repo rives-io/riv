@@ -12,13 +12,11 @@ FROM --platform=linux/riscv64 riscv64/busybox:1.36.1-musl AS busybox-stage
 # Toolchain stage
 FROM --platform=linux/riscv64 riscv64/alpine:20240329 AS riv-toolchain-stage
 
-RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
-
-# Update packages
-RUN apk update && apk upgrade
-
-# Add development packages
-RUN apk add build-base pkgconf git
+# Update and install development packages
+RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
+    apk update && \
+    apk upgrade && \
+    apk add build-base pkgconf git
 
 # Build other packages inside /root
 WORKDIR /root
@@ -156,30 +154,30 @@ RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
 ################################
 # Rootfs stage
 
-# Create Linux filesystem hierarchy
 WORKDIR /rivos
+
+# Create base filesystem hierarchy
 RUN mkdir -p usr/bin usr/sbin usr/lib var/tmp proc sys dev root cartridge cartridges tmp run etc bin sbin lib && \
     chmod 555 proc sys && \
     chown 500:500 cartridge && \
     chmod 1777 tmp var/tmp && \
-    ln -s /run var/run
-
-# Install busybox
-RUN cp /bin/busybox bin/busybox && \
-    for i in $(bin/busybox --list-long | grep -v sbin/init | grep -v linuxrc); \
-        do ln -s /bin/busybox "/rivos/$i"; \
-    done
+    ln -s /run var/run && \
+    ln -s ../proc/mounts etc/mtab && \
+    ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
+    ln -s ../../lib/ld-musl-riscv64.so.1 usr/lib/libc.so
 
 # Install apks
 RUN cp -a /etc/apk etc/apk && \
-    rm etc/apk/world && \
     apk add --no-network --root /rivos --initdb /root/apks/*.apk && \
-    rm -rf etc/apk lib/apk var/cache dev/*
+    apk info -L musl-dev | grep usr/include | while read file; do install -Dm644 /$file $file; done && \
+    rm -rf /root/apks /var/cache/apk etc/apk lib/apk var/cache dev/* etc/apk etc/apk/world
 
-# Install musl utilities
-RUN ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
-    ln -s ../../lib/ld-musl-riscv64.so.1 usr/lib/libc.so && \
-    apk info -L musl-dev | grep usr/include | while read file; do install -Dm644 /$file $file; done
+# Install busybox
+RUN cp /bin/busybox bin/busybox && \
+    for i in $(bin/busybox --list-long | grep -v sbin/init | grep -v linuxrc); do \
+        ln -s /bin/busybox "/rivos/$i"; \
+    done && \
+    rm -rf /rivos/linuxrc /linuxrc
 
 # Install bubblewrap and bwrapbox
 RUN cp -a /usr/bin/bwrap usr/bin/bwrap && \
@@ -199,29 +197,25 @@ RUN cp -a /usr/bin/luajit usr/bin/ && \
 # Install system configs
 COPY rivos/skel/etc etc
 COPY rivos/skel/usr usr
-RUN ln -s ../proc/mounts etc/mtab && \
-    chmod 600 etc/shadow && \
-    sed -i '/^ *# /d' etc/sysctl.conf
-
-# Remove temporary files
-RUN rm -rf /root/apks /root/riv /var/cache/apk /rivos/linuxrc /linuxrc
+RUN chmod 600 etc/shadow
 
 ################################
 # Install libriv
 COPY --from=libriv-stage /root/riv/libriv /root/riv/libriv
 RUN make -C /root/riv/libriv install install-dev PREFIX=/usr && \
-    make -C /root/riv/libriv install install-c-dev PREFIX=/usr DESTDIR=/rivos
+    make -C /root/riv/libriv install install-c-dev PREFIX=/usr DESTDIR=/rivos && \
+    rm -rf /root/riv
 
 ################################
 # Generate rivos.ext2
 FROM host-tools-stage AS generate-rivos-stage
 COPY --from=rivos-sdk-stage / /rivos-sdk
 RUN xgenext2fs \
-        --faketime \
-        --allow-holes \
-        --block-size 4096 \
-        --bytes-per-inode 4096 \
-        --volume-label rivos --root /rivos-sdk/rivos /rivos.ext2 && \
+    --faketime \
+    --allow-holes \
+    --block-size 4096 \
+    --bytes-per-inode 4096 \
+    --volume-label rivos --root /rivos-sdk/rivos /rivos.ext2 && \
     xgenext2fs \
         --faketime \
         --allow-holes \

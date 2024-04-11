@@ -45,12 +45,15 @@ $(RIVEMU): rivemu.nelua $(DEPS)
 		--cc=$(CC) \
 		--cflags="$(CFLAGS) $(INCS)" \
 		--ldflags="$(LDFLAGS) $(LIBS)" \
-		--cache-dir $(NELUA_CACHEDIR) \
+		--cache-dir="$(NELUA_CACHEDIR)" \
 		--output $@ $<
 	touch $@
 
 clean:
 	rm -f rivemu rivemu.c rivemu.js rivemu.exe rivemu.wasm rivemu-linux-*
+
+distclean: clean
+	docker rmi riv/toolchain-wasm riv/toolchain-linux-amd64 riv/toolchain-linux-arm64
 
 install: rivemu
 	mkdir -p $(DESTDIR)$(PREFIX)/rivemu
@@ -59,32 +62,32 @@ install: rivemu
 build: $(RIVEMU) rivemu.wasm
 
 # Packages
-package: rivemu-linux-amd64 rivemu-linux-arm64 rivemu-wasm
+package: rivemu-linux-amd64 rivemu-linux-arm64 rivemu.wasm
 
 # Packaging for Linux
-rivemu-linux-%:
+rivemu-linux-%: rivemu.nelua $(DEPS)
 	docker build \
 		--platform linux/$* \
-		--tag rivemu-toolchain-linux-$* \
-		--file rivemu-toolchain-linux.Dockerfile .
+		--tag riv/toolchain-linux-$* \
+		--file riv-toolchain-linux.Dockerfile .
 	docker run \
 		--platform linux/$* \
 		--volume "$(shell pwd)/..":/mnt \
 		--workdir /mnt \
-		--hostname rivemu-build-linux-$* \
-		--rm -it rivemu-toolchain-linux-$* \
+		--hostname riv-toolchain-linux-$* \
+		--rm -it riv/toolchain-linux-$* \
 		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
 
 # Packaging for WASM
-rivemu-wasm:
+rivemu.wasm: rivemu.nelua $(DEPS)
 	docker build \
-		--tag rivemu-toolchain-wasm \
-		--file rivemu-toolchain-wasm.Dockerfile .
+		--tag riv/toolchain-wasm \
+		--file riv-toolchain-wasm.Dockerfile .
 	docker run \
 		--volume "$(shell pwd)/..":/mnt \
 		--workdir /mnt \
-		--hostname rivemu-build-wasm \
-		--rm -it rivemu-toolchain-wasm \
+		--hostname riv-toolchain-wasm \
+		--rm -it riv/toolchain-wasm \
 		bash -c "source /etc/profile.d/emscripten.sh && make -C /mnt/rivemu rivemu.js CC=emcc NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu.js /mnt/rivemu/rivemu.wasm"
 
 # External deps
