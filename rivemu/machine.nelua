@@ -6,6 +6,7 @@ require 'keccak'
 
 require 'riv_types'
 require 'macros'
+require 'miniz'
 
 global riv_paddr_base: type <using> = @enum(uint64) {
   RIV_PADDR_RAM        = 0x80000000,
@@ -51,6 +52,20 @@ global rivemu_machine = @record{
   mmio_device: riv_mmio_device
 }
 
+-- Uncompress a buffer compressed with gzip directly into machine memory.
+function rivemu_machine:uncompress_memory(paddr: uint64, compressed_bytes: string): void
+  local UncompressEnv: type = @record{machine: *cm_machine, offset: uint64}
+  local function uncompress_cb(buf: *[0]byte, len: cint, env: *UncompressEnv): cint
+    cm_assert!(cm_write_memory(env.machine, env.offset, buf, len))
+    env.offset = env.offset + len
+    return 1
+  end
+  local env: UncompressEnv = {self.machine, paddr}
+  local buf: pointer = &compressed_bytes.data[0]
+  local buf_size: csize = compressed_bytes.size
+  assert(tinfl_decompress_mem_to_callback(buf, &buf_size, (@tinfl_put_buf_func_ptr)(uncompress_cb), &env, TINFL_FLAG_PARSE_ZLIB_HEADER) == 1, 'failed to uncompress')
+end
+
 -- Creates a new machine.
 function rivemu_machine.create(entrypoint: string, interactive: boolean, kernel_filename: string, rootfs_filename: string, cartridge_filename: string, replaylog_filename: string): rivemu_machine
   -- get default config
@@ -63,9 +78,12 @@ function rivemu_machine.create(entrypoint: string, interactive: boolean, kernel_
   local flash_drive_count: cint = 0
   flash_drive_entries[0] = {
     start = RIV_PADDR_ROOTFS,
-    length = (@uint64)(-1),
-    image_filename = rootfs_filename,
+    length = 16*1024*1024,
   }
+  if #rootfs_filename > 0 then
+    flash_drive_entries[0].image_filename = rootfs_filename
+    flash_drive_entries[0].length = (@uint64)(-1)
+  end
   flash_drive_count = flash_drive_count + 1
 
   -- cartridge flash drive
@@ -129,6 +147,16 @@ function rivemu_machine.create(entrypoint: string, interactive: boolean, kernel_
     local file: filestream <close> = fn_assert!(io.open(replaylog_filename, 'rb'))
     local contents: string <close> = fn_assert!(file:read('a'))
     cm_assert!(cm_write_memory(self.machine, RIV_PADDR_REPLAYLOG, contents.data, contents.size))
+  end
+
+  -- write default kernel
+  if #kernel_filename == 0 then
+    self:uncompress_memory(RIV_PADDR_RAM, #[require'nelua.utils.fs'.readfile("../kernel/linux.bin.zz")]#)
+  end
+
+  -- write default os
+  if #rootfs_filename == 0 then
+    self:uncompress_memory(RIV_PADDR_ROOTFS, #[require'nelua.utils.fs'.readfile("../rivos/rivos.ext2.zz")]#)
   end
 
   return self

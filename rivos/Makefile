@@ -14,7 +14,7 @@ DOCKER_USER_RUN_FLAGS=\
 
 all: rivos rivos-devel
 
-rivos: rivos.ext2 rivos.hash.txt
+rivos: rivos.ext2.zz rivos.ext2 rivos.hash.txt
 rivos-devel: rivos-devel.ext2 rivos-devel.hash.txt
 
 rivos.ext2 rivos-devel.ext2: rivos-devel.Dockerfile $(SKEL_FILES) $(TOOL_FILES) $(LIBRIV_FILES)
@@ -24,6 +24,9 @@ rivos.ext2 rivos-devel.ext2: rivos-devel.Dockerfile $(SKEL_FILES) $(TOOL_FILES) 
 	docker cp riv-copy-rivos:/rivos-devel.ext2  .
 	docker rm riv-copy-rivos
 	touch rivos.ext2 rivos-devel.ext2
+
+%.ext2.zz: %.ext2
+	cat $< | pigz -cz -11 > $@
 
 %.hash.txt: %.ext2
 	stat -c "%s %n" $< > $@

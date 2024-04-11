@@ -34,7 +34,9 @@ DEPS=*.nelua \
 	$(wildcard ../libs/host/*.{h,c,nelua}) \
 	../libriv/riv_types.nelua \
 	../libriv/riv_log.nelua \
-	../libriv/riv.h
+	../libriv/riv.h \
+	../kernel/linux.bin.zz \
+	../rivos/rivos.ext2.zz
 
 $(RIVEMU): rivemu.nelua $(DEPS)
 	nelua $(NELUA_FLAGS) $(NELUA_MYFLAGS) \

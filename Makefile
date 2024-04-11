@@ -70,5 +70,5 @@ demo-run:
 release:
 	make clean
 	make all
-	make -C rivemu-web
 	make -C rivemu distro
+	make -C rivemu-web

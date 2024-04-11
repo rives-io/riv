@@ -64,8 +64,6 @@ local function parse_options(): rivemu_options
   local opts: rivemu_options = {
     speed = 1.0,
     stop_frame = -1,
-    kernel_filename = "./kernel/linux.bin",
-    rootfs_filename = "./rivos/rivos.ext2",
   }
   for i: int32=0,<sargs_num_args() do
     local a: string = sargs_key_at(i)
@@ -769,10 +767,6 @@ local export_runtime_functions = {
   'cwrap',
 }
 cflags('-sEXPORTED_RUNTIME_METHODS='..table.concat(export_runtime_functions,','))
-
--- Embed files
-cflags('--embed-file '..projdir..'/rivos/rivos.ext2@rivos/rivos.ext2')
-cflags('--embed-file '..projdir..'/kernel/linux.bin@kernel/linux.bin')
 ]]
 
 ## end

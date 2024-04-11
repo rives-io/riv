@@ -4,6 +4,7 @@
 *.xz
 *.tar
 *.gz
+*.zz
 *.txt
 *.elf
 *.exe
@@ -44,4 +45,5 @@ kernel/image-kernel-*
 demos/freedoom
 demos/antcopter
 demos/monky
+demos/tetrix
 cartesi-machine-*_wasm
