@@ -1,4 +1,4 @@
-//usr/bin/riv-jit-c "$0" "$@"
+//usr/bin/riv-jit-c "$0" "$@"; exit $?
 
 #include <riv.h>
 
