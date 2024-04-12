@@ -8,17 +8,17 @@ NELUA_CACHEDIR=.
 ifeq ($(CC), tcc)
 	CFLAGS+=-w
 else ifeq ($(CC), emcc)
+	RIVEMU=rivemu.js
 	CFLAGS+=-sNO_DISABLE_EXCEPTION_CATCHING
 	CFLAGS+=-I/usr/local/emscripten-wasm32/include
 	LDFLAGS+=-L/usr/local/emscripten-wasm32/lib
-else # gcc based
-	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--as-needed -z relro -z now -static-libgcc
-endif
-
-ifeq ($(CC), emcc)
-	RIVEMU=rivemu.js
-else
+else ifeq ($(CC), x86_64-w64-mingw32-gcc)
+	RIVEMU=rivemu.exe
+	CFLAGS+=-Wno-unknown-pragmas
+	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--as-needed -static
+else # probably GCC on Linux
 	RIVEMU=rivemu
+	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--as-needed -z relro -z now -static-libgcc
 endif
 
 ifeq ($(debug), yes)
@@ -50,7 +50,7 @@ $(RIVEMU): rivemu.nelua $(DEPS)
 	touch $@
 
 clean:
-	rm -f rivemu rivemu.c rivemu.js rivemu.exe rivemu.wasm rivemu-linux-*
+	rm -f rivemu rivemu.c rivemu.js rivemu.exe rivemu.wasm rivemu-linux-amd64 rivemu-linux-arm64 rivemu-windows-amd64.exe
 
 distclean: clean
 	docker rmi riv/toolchain-wasm riv/toolchain-linux-amd64 riv/toolchain-linux-arm64
@@ -62,7 +62,7 @@ install: rivemu
 build: $(RIVEMU) rivemu.wasm
 
 # Packages
-package: rivemu-linux-amd64 rivemu-linux-arm64 rivemu.wasm
+package: rivemu-linux-amd64 rivemu-linux-arm64 rivemu-windows-amd64.exe rivemu.wasm
 
 # Packaging for Linux
 rivemu-linux-%: rivemu.nelua $(DEPS)
@@ -77,6 +77,18 @@ rivemu-linux-%: rivemu.nelua $(DEPS)
 		--hostname riv-toolchain-linux-$* \
 		--rm -it riv/toolchain-linux-$* \
 		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
+
+# Packaging for Windows
+rivemu-windows-%.exe: rivemu.nelua $(DEPS)
+	docker build \
+		--tag riv/toolchain-windows-amd64 \
+		--file riv-toolchain-windows.Dockerfile .
+	docker run \
+		--volume "$(shell pwd)/..":/mnt \
+		--workdir /mnt \
+		--hostname riv-toolchain-windows-amd64 \
+		--rm -it riv/toolchain-windows-amd64 \
+		bash -c "make -C /mnt/rivemu rivemu-windows-amd64.exe RIVEMU=rivemu-windows-amd64.exe CC=x86_64-w64-mingw32-gcc NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-windows-amd64.exe"
 
 # Packaging for WASM
 rivemu.wasm: rivemu.nelua $(DEPS)

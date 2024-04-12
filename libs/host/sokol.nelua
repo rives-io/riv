@@ -4,19 +4,17 @@ if ccinfo.is_emscripten then
   cdefine 'SOKOL_GLES3'
 elseif ccinfo.is_windows then
   cdefine 'SOKOL_D3D11'
+  linklib 'gdi32'
+  linklib 'dxgi'
+  linklib 'd3d11'
 else
   cdefine 'SOKOL_GLCORE33'
+  linklib 'GL'
 end
 -- sokol_gfx
 cdefine 'SOKOL_GFX_API_DECL static'
 cdefine 'SOKOL_GFX_IMPL'
 cinclude 'sokol_gfx.h'
-if ccinfo.is_windows then
-  linklib 'gdi32'
-  linklib 'opengl32'
-elseif not ccinfo.is_emscripten then
-  linklib 'GL'
-end
 -- sokol_gp
 cdefine 'SOKOL_GP_API_DECL static'
 cdefine 'SOKOL_GP_IMPL'

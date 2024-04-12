@@ -2,7 +2,7 @@ FROM archlinux:base-devel
 
 # Install build tools
 RUN pacman -Syyu --noconfirm && \
-    pacman -S --noconfirm emscripten git wget
+    pacman -S --noconfirm git wget emscripten
 
 # Install cartesi machine
 RUN <<EOF

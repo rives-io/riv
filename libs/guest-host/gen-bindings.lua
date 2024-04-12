@@ -51,6 +51,7 @@ nldecl.generate_bindings_file{
 ##[[
 cdefine 'SPNG_USE_MINIZ'
 cdefine 'SPNG_DISABLE_OPT'
+cdefine 'SPNG_STATIC'
 cinclude 'spng.h'
 cinclude 'spng.c'
 ]]
