@@ -79,6 +79,7 @@ rivemu-linux-%: rivemu.nelua $(DEPS)
 		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
 
 # Packaging for Windows
+rivemu-windows-amd64: rivemu-windows-amd64.exe
 rivemu-windows-%.exe: rivemu.nelua $(DEPS)
 	docker build \
 		--tag riv/toolchain-windows-amd64 \
