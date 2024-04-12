@@ -194,9 +194,10 @@ RUN cp -a /usr/bin/luajit usr/bin/ && \
     cp -a /usr/lib/libluajit-5.1.so* usr/lib/ && \
     cp -a /usr/include/luajit-2.1 usr/include/
 
-# Install system configs
+# Install skel files
 COPY rivos/skel/etc etc
 COPY rivos/skel/usr usr
+COPY rivos/skel-sdk /
 RUN chmod 600 etc/shadow
 
 ################################

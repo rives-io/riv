@@ -1,4 +1,4 @@
-//usr/bin/sh-exec c2m -L/usr/lib -lriv -w -O3 "$0" -eb "$@"
+//usr/bin/riv-jit-c "$0" "$@"
 
 #include <riv.h>
 

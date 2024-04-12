@@ -1,0 +1,8 @@
+#!/bin/sh
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 <.c file> [args...]"
+  exit 0
+fi
+CFILE=$1
+shift 1
+exec c2m -L/usr/lib -lriv -O3 $CFILE -eb "$@"

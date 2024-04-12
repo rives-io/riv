@@ -64,7 +64,6 @@ build/%.sqfs: build/%.fs
 	    -all-time 0 \
 	    -all-root \
 	    -noappend \
-	    -no-fragments \
 	    -no-exports \
 	    -no-progress
 # 	genext2fs $@ --root $< \

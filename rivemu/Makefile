@@ -75,7 +75,7 @@ rivemu-linux-%: rivemu.nelua $(DEPS)
 		--volume "$(shell pwd)/..":/mnt \
 		--workdir /mnt \
 		--hostname riv-toolchain-linux-$* \
-		--rm -it riv/toolchain-linux-$* \
+		--rm riv/toolchain-linux-$* \
 		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
 
 # Packaging for Windows
@@ -87,7 +87,7 @@ rivemu-windows-%.exe: rivemu.nelua $(DEPS)
 		--volume "$(shell pwd)/..":/mnt \
 		--workdir /mnt \
 		--hostname riv-toolchain-windows-amd64 \
-		--rm -it riv/toolchain-windows-amd64 \
+		--rm riv/toolchain-windows-amd64 \
 		bash -c "make -C /mnt/rivemu rivemu-windows-amd64.exe RIVEMU=rivemu-windows-amd64.exe CC=x86_64-w64-mingw32-gcc NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-windows-amd64.exe"
 
 # Packaging for WASM
@@ -99,7 +99,7 @@ rivemu.wasm: rivemu.nelua $(DEPS)
 		--volume "$(shell pwd)/..":/mnt \
 		--workdir /mnt \
 		--hostname riv-toolchain-wasm \
-		--rm -it riv/toolchain-wasm \
+		--rm riv/toolchain-wasm \
 		bash -c "source /etc/profile.d/emscripten.sh && make -C /mnt/rivemu rivemu.js CC=emcc NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu.js /mnt/rivemu/rivemu.wasm"
 
 # External deps

@@ -74,5 +74,4 @@ dist:
 	rm -rf dist
 	mkdir -p dist
 	cp rivos/rivos.ext2 rivos/rivos-sdk.ext2 dist/
-	cp rivemu/rivemu-linux-* dist/
-	cp rivemu/rivemu.js rivemu/rivemu.wasm dist/
+	cp rivemu/rivemu.js rivemu/rivemu.wasm rivemu/rivemu-linux-amd64 rivemu/rivemu-linux-arm64 rivemu/rivemu-windows-amd64.exe dist/

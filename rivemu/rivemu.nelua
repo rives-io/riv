@@ -37,6 +37,7 @@ local rivemu_options: type = @record{
   outhist_filename: string,
   outhash_filename: string,
   screenshot_filename: string,
+  entrypoint: string,
   recording: boolean,
   replaying: boolean,
   verifying: boolean,
@@ -95,6 +96,12 @@ local function parse_options(): rivemu_options
       opts.outhash_filename = sargs_value_at(i)
     elseif a == '-save-screenshot' then
       opts.screenshot_filename = sargs_value_at(i)
+    elseif a == '-entrypoint' then
+      opts.entrypoint = sargs_value_at(i)
+    elseif a == '-rootfs' then
+      opts.rootfs_filename = sargs_value_at(i)
+    elseif a == '-kernel' then
+      opts.kernel_filename = sargs_value_at(i)
     elseif a == '-speed' then
       local numstr: string = sargs_value_at(i)
       assert(numstr:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
@@ -127,7 +134,10 @@ local function parse_options(): rivemu_options
       opts.pixel_perfect = true
     elseif a == '-interactive' then
       opts.interactive = true
-      opts.rootfs_filename = "./rivos/rivos-sdk.ext2"
+    elseif a == '-sdk' then
+      opts.interactive = true
+      opts.entrypoint = "exec ash"
+      opts.rootfs_filename = "rivos-sdk.ext2"
     elseif a == '-args' then
       opts.entrypoint_args = sargs_value_at(i)
     elseif a == '-help' or a == '--help' or a == '-h' then
@@ -204,23 +214,20 @@ local function parse_options(): rivemu_options
   return opts
 end
 
-function rivemu_options:entrypoint(): string
+function rivemu_options:get_entrypoint(): string
   local entrypoint_sb: stringbuilder <close>
-  if #self.cartridge_filename > 0 then
-    if self.verifying then
-      entrypoint_sb:write('RIV_CARTRIDGE=/dev/pmem1 RIV_REPLAYLOG=/dev/pmem2 RIV_OUTCARD=/run/outcard RIV_OUTHASH=/run/outhash ')
-    else
-      entrypoint_sb:write('RIV_CARTRIDGE=/dev/pmem1 ')
-    end
-    if self.stop_frame >= 0 then
-      entrypoint_sb:write('RIV_STOP_FRAME=', self.stop_frame, ' ')
-    end
-    if self.no_yield then
-      entrypoint_sb:write('RIV_NO_YIELD=y ')
-    end
-    if self.interactive then
-      entrypoint_sb:write("exec /bin/ash")
-    else
+  if #self.entrypoint > 0 then
+    entrypoint_sb:write(self.entrypoint)
+  else
+    if #self.cartridge_filename > 0 then
+      if self.verifying then
+        entrypoint_sb:write('RIV_CARTRIDGE=/dev/pmem1 RIV_REPLAYLOG=/dev/pmem2 RIV_OUTCARD=/run/outcard RIV_OUTHASH=/run/outhash ')
+      else
+        entrypoint_sb:write('RIV_CARTRIDGE=/dev/pmem1 ')
+      end
+      if self.stop_frame >= 0 then
+        entrypoint_sb:write('RIV_STOP_FRAME=', self.stop_frame, ' ')
+      end
       entrypoint_sb:write('riv-run')
     end
   end
@@ -251,7 +258,7 @@ local got_initial_canvas_width: boolean
 -- Begin the machine entrypoint.
 local function begin(): void
   -- initialize the machine
-  local entrypoint: string <close> = options:entrypoint()
+  local entrypoint: string <close> = options:get_entrypoint()
   machine = rivemu_machine.create(entrypoint, options.interactive, options.kernel_filename, options.rootfs_filename, options.cartridge_filename, options.verify_filename)
   running = true
 

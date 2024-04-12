@@ -8,6 +8,16 @@ trap handle_interrupt SIGTERM
 
 BWRAPBOX_FLAGS=""
 
+# get RIV_CARTRIDGE from first argument if unset
+if [ ! -n "${RIV_CARTRIDGE+set}" ]; then
+  if [ $# -lt 1 ]; then
+    echo "Usage: $0 <.sqfs file> [args..]"
+    return 1
+  fi
+  RIV_CARTRIDGE="$1"
+  shift 1
+fi
+
 # mount cartridge
 if ! busybox mount -o ro,noatime,nosuid,nodev,exec "$RIV_CARTRIDGE" /cartridge; then
   >&2 echo "[RIV-OS] Failed to mount cartridge filesystem."
