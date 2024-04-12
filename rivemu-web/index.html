@@ -68,6 +68,11 @@
         <button id="download_outcard" class="small-font" disabled="true" onclick="rivemuDownloadOutcard()">Download</button>
       </div>
       <div>
+        <b>Entropy: </b><span id="entropysize">N/A</span> - <span id="entropyhash">N/A</span>
+        <br/>
+        <input type="text" class="small-font" id="entropy" style="width: 100%"/>
+      </div>
+      <div>
         <b>Args: </b><span id="argssize">N/A</span> - <span id="argshash">N/A</span>
         <br/>
         <input type="text" class="small-font" id="args" style="width: 100%"/>
@@ -99,6 +104,7 @@
       </div>
     </div>
     <script>
+      var lastEntropy = '';
       var lastArgs = '';
       var lastIncard = new Uint8Array([]);
       var lastOutcard;
@@ -111,6 +117,7 @@
 
       let statusElem = document.getElementById("status");
       let argsElem = document.getElementById("args");
+      let entropyElem = document.getElementById("entropy");
       let timeElem = document.getElementById("time");
       let scoreElem = document.getElementById("score");
       let finishedElem = document.getElementById("finished");
@@ -124,6 +131,8 @@
       let canvasElem = document.getElementById("canvas");
       let logsizeElem = document.getElementById("logsize");
       let loghashElem = document.getElementById("loghash");
+      let entropyhashElem = document.getElementById("entropyhash");
+      let entropysizeElem = document.getElementById("entropysize");
       let argshashElem = document.getElementById("argshash");
       let argssizeElem = document.getElementById("argssize");
       let inhashElem = document.getElementById("inhash");
@@ -232,7 +241,7 @@
       }
 
       // Called before record/replaying.
-      async function rivemuBeforeStart(log, cartridge, incard, args) {
+      async function rivemuBeforeStart(log, cartridge, incard, entropy, args) {
         // Update statistics
         statusElem.textContent = "Loading...";
         scoreElem.textContent = "N/A";
@@ -249,6 +258,8 @@
         carthashElem.textContent = await sha256sum(cartridge);
         inhashElem.textContent = await sha256sum(incard);
         insizeElem.textContent = incard.length + " bytes";
+        entropyhashElem.textContent = await sha256sum(textEncode.encode(entropy));
+        entropysizeElem.textContent = entropy.length + " bytes";
         argshashElem.textContent = await sha256sum(textEncode.encode(args));
         argssizeElem.textContent = args.length + " bytes";
         if (log) {
@@ -313,17 +324,19 @@
       }
 
       // Start recording a log.
-      async function rivemuRecord(cartridge, incard, args) {
+      async function rivemuRecord(cartridge, incard, entropy, args) {
         // Wait previous run to finish
         await rivemuStop();
         // Set default arguments
         cartridge = cartridge || lastCartridge;
         incard = incard || lastIncard;
+        entropy = entropy || entropyElem.value;
         args = args || argsElem.value;
         lastCartridge = cartridge;
         lastIncard = incard;
+        lastEntropy = entropy;
         lastArgs = args;
-        await rivemuBeforeStart(null, cartridge, incard, args);
+        await rivemuBeforeStart(null, cartridge, incard, entropy, args);
         await waitRuntimeInitialize();
         // Move cartridge into WASM memory
         const cartridgeBuf = Module._malloc(cartridge.length);
@@ -333,26 +346,28 @@
         Module.ccall('rivemu_start_record', null, ['number', 'number', 'number', 'number', 'string'], [
           cartridgeBuf, cartridge.length,
           incardBuf, incard.length,
-          args
+          entropy, args
         ]);
         Module._free(cartridgeBuf);
         Module._free(incardBuf);
       }
 
       // Start replaying a log.
-      async function rivemuReplay(log, cartridge, incard, args) {
+      async function rivemuReplay(log, cartridge, incard, entropy, args) {
         // Wait previous run to finish
         await rivemuStop();
         // Set default arguments
         log = log || lastLog;
         cartridge = cartridge || lastCartridge;
         incard = incard || lastIncard;
+        entropy = entropy || entropyElem.value;
         args = args || argsElem.value;
         lastLog = log;
         lastCartridge = cartridge;
         lastIncard = incard;
+        lastEntropy = entropy;
         lastArgs = args;
-        await rivemuBeforeStart(log, cartridge, incard, args);
+        await rivemuBeforeStart(log, cartridge, incard, entropy, args);
         await waitRuntimeInitialize();
         // Move cartridge into WASM memory
         const cartridgeBuf = Module._malloc(cartridge.length);
@@ -364,7 +379,7 @@
         Module.ccall('rivemu_start_replay', null, ['number', 'number', 'number', 'number', 'string', 'number', 'number'], [
           cartridgeBuf, cartridge.length,
           incardBuf, incard.length,
-          args,
+          entropy, args,
           logBuf, log.length
         ]);
         Module._free(cartridgeBuf);

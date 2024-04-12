@@ -26,7 +26,7 @@ require '.framelimiter'
 require '.iocard'
 
 local rivemu_options: type = @record{
-  entrypoint_args: string,
+  args: string,
   kernel_filename: string,
   rootfs_filename: string,
   cartridge_filename: string,
@@ -171,7 +171,7 @@ local function parse_options(): rivemu_options
       opts.entrypoint = "exec ash"
       opts.rootfs_filename = "rivos-sdk.ext2"
     elseif argk == '-args' then
-      opts.entrypoint_args = argv
+      opts.args = argv
     elseif argk == '-help' or argk == '--help' or argk == '-h' then
       io.printf("Usage: rivemu [options]\n")
       io.write[[
@@ -274,11 +274,11 @@ function rivemu_options:get_entrypoint(): string
     end
     entrypoint_sb:write('riv-run')
   end
-  if #self.entrypoint_args > 0 then
+  if #self.args > 0 then
     if #entrypoint_sb > 0 then
       entrypoint_sb:write(' ')
     end
-    entrypoint_sb:write(self.entrypoint_args)
+    entrypoint_sb:write(self.args)
   end
   if #self.entrypoint == 0 and self.verifying and #self.verify_outhash > 0 then
     entrypoint_sb:write(' && \z
@@ -732,7 +732,9 @@ run()
 
 ## else
 
-local function rivemu_start_record(cartridge_ptr: *uint8, cartridge_len: int32, incard_ptr: *uint8, incard_len: int32, args: cstring): void <cexport>
+local function rivemu_start_record(cartridge_ptr: *uint8, cartridge_len: int32,
+                                  incard_ptr: *uint8, incard_len: int32,
+                                  entropy: cstring, args: cstring): void <cexport>
   assert(not running and not started, 'rivemu is running, please stop it first')
   options = parse_options()
   do
@@ -750,13 +752,17 @@ local function rivemu_start_record(cartridge_ptr: *uint8, cartridge_len: int32, 
   options.incard_filename = '/replay.incard'
   options.outcard_filename = '/replay.outcard'
   options.outhash_filename = '/replay.outhash'
-  options.entrypoint_args = args
+  options.entropy = entropy
+  options.args = args
   options.recording = true
   options.no_quit = true
   run()
 end
 
-local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32, incard_ptr: *uint8, incard_len: int32, args: cstring, rivlog_ptr: *uint8, rivlog_len: int32): void <cexport>
+local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32,
+                                   incard_ptr: *uint8, incard_len: int32,
+                                   entropy: cstring, args: cstring,
+                                   rivlog_ptr: *uint8, rivlog_len: int32): void <cexport>
   assert(not running and not started, 'rivemu is running, please stop it first')
   options = parse_options()
   do
@@ -779,7 +785,8 @@ local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32, 
   options.incard_filename = '/replay.incard'
   options.outcard_filename = '/replay.outcard'
   options.outhash_filename = '/replay.outhash'
-  options.entrypoint_args = args
+  options.entropy = entropy
+  options.args = args
   options.replaying = true
   run()
 end

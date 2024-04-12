@@ -49,6 +49,8 @@ toolchain-exec:
 		--volume "`pwd`/..":/mnt \
 		--workdir /mnt \
 		--hostname riv-toolchain-riscv64 \
+		--env USER=$(shell id -u -n) --env GROUP=$(shell id -g -n) \
+		--env UID=$(shell id -u) --env GID=$(shell id -g) \
 		--rm riv/toolchain-riscv64 /bin/bash -c "$(COMMAND)"
 
 toolchain-env:
