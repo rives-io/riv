@@ -17,6 +17,17 @@ require 'os'
 require 'sokol'
 require 'arg'
 
+global restart_requested: boolean
+global quit_requested: boolean
+global running_sapp: boolean
+
+global function rivemu_quit(): void
+  quit_requested = true
+  if running_sapp then
+    sapp_quit()
+  end
+end
+
 require '.printer'
 require '.machine'
 require '.audio'
@@ -46,15 +57,16 @@ local rivemu_options: type = @record{
   verifying: boolean,
   interactive: boolean,
   tracking_outhist: boolean,
-  print_stats: boolean,
+  print_fps: boolean,
   print_hash: boolean,
   pixel_perfect: boolean,
+  no_window: boolean,
   no_audio: boolean,
   no_video: boolean,
-  no_yield: boolean,
   no_loading: boolean,
   no_quit: boolean,
   wait_halt: boolean,
+  print_frame_hash: boolean,
   print_final_hash: boolean,
   print_outcard: boolean,
   print_outhash: boolean,
@@ -105,7 +117,6 @@ local function parse_options(): rivemu_options
       opts.verifying = true
       opts.wait_halt = true
     elseif argk == '-verify-outhash' then
-      assert(opts.verifying, 'not verifying')
       opts.verify_outhash = argv
     elseif argk == '-cartridge' then
       opts.cartridge_filename = argv
@@ -139,21 +150,23 @@ local function parse_options(): rivemu_options
       opts.stop_frame = tointeger(numstr)
     elseif argk == '-no-audio' then
       opts.no_audio = true
+    elseif argk == '-no-window' or argk == '-no-yield' then
+      opts.no_loading = true
+      opts.no_window = true
+      opts.no_video = true
+      opts.no_audio = true
     elseif argk == '-no-video' then
       opts.no_video = true
     elseif argk == '-no-loading' then
       opts.no_loading = true
-    elseif argk == '-no-yield' then
-      opts.no_yield = true
-      opts.no_loading = true
-      opts.no_video = true
-      opts.no_audio = true
     elseif argk == '-no-quit' then
       opts.no_quit = true
     elseif argk == '-wait-halt' then
       opts.wait_halt = true
-    elseif argk == '-print-stats' then
-      opts.print_stats = true
+    elseif argk == '-print-fps' then
+      opts.print_fps = true
+    elseif argk == '-print-frame-hash' then
+      opts.print_frame_hash = true
     elseif argk == '-print-final-hash' then
       opts.print_final_hash = true
     elseif argk == '-print-outhash' then
@@ -166,8 +179,10 @@ local function parse_options(): rivemu_options
       opts.pixel_perfect = true
     elseif argk == '-interactive' then
       opts.interactive = true
+      opts.no_quit = true
     elseif argk == '-sdk' then
       opts.interactive = true
+      opts.no_quit = true
       opts.entrypoint = "exec ash"
       opts.rootfs_filename = "rivos-sdk.ext2"
     elseif argk == '-args' then
@@ -226,11 +241,14 @@ local function parse_options(): rivemu_options
 -wait-halt
   Don't quit when RIV device is closed, wait for the machine to halt.
 
--print-stats
+-print-fps
   Print frame rate statistics every second.
 
 -print-final-hash
   Print final machine root hash.
+
+-print-frame-hash
+  Print machine root hash for every frame.
 
 -print-outcard
   Print outcard final hash.
@@ -279,13 +297,6 @@ function rivemu_options:get_entrypoint(): string
       entrypoint_sb:write(' ')
     end
     entrypoint_sb:write(self.args)
-  end
-  if #self.entrypoint == 0 and self.verifying and #self.verify_outhash > 0 then
-    entrypoint_sb:write(' && \z
-      echo "', self.verify_outhash, ' /run/outcard" > /run/outcard.sha256sum && \z
-      busybox sha256sum -cs /run/outcard.sha256sum && \z
-      echo [RIVEMU] Outcard hash verification OK!!'
-    )
   end
   return entrypoint_sb:promote()
 end
@@ -364,22 +375,23 @@ local function finish(): void
     rivemu_iocard.stop_tracking_outhist()
   end
 
-  if not options.no_yield then
-    if #options.outhash_filename > 0 then
-      rivemu_iocard.save_outhash(options.outhash_filename)
-    end
-    if #options.outcard_filename > 0 then
-      rivemu_iocard.save_outcard(options.outcard_filename)
-    end
-    if #options.outhist_filename > 0 then
-      rivemu_iocard.save_outhist(options.outhist_filename)
-    end
-    if options.print_outcard then
-      rivemu_iocard.print_outcard()
-    end
-    if options.print_outcard then
-      rivemu_iocard.print_outcard_checksum()
-    end
+  if #options.outhash_filename > 0 then
+    rivemu_iocard.save_outhash(options.outhash_filename)
+  end
+  if #options.outcard_filename > 0 then
+    rivemu_iocard.save_outcard(options.outcard_filename)
+  end
+  if #options.outhist_filename > 0 then
+    rivemu_iocard.save_outhist(options.outhist_filename)
+  end
+  if options.print_outcard then
+    rivemu_iocard.print_outcard()
+  end
+  if options.print_outhash then
+    rivemu_iocard.print_outcard_checksum()
+  end
+  if #options.verify_outhash > 0 then
+    rivemu_iocard.verify_outcard_checksum(options.verify_outhash)
   end
 
   if options.recording then
@@ -429,7 +441,7 @@ local function finish(): void
   ## end
 
   if not options.no_quit then
-    sapp_quit()
+    rivemu_quit()
   end
 end
 
@@ -556,7 +568,8 @@ local function advance_frame(): void
   local mcycle_elapsed: uint64 = last_mcycle - mcycle_start
   local target_fps: uint32 = machine.mmio_driver.framebuffer_desc.target_fps
 
-  if not loading and target_fps > 0 and time_elapsed > 1.0/target_fps then
+  -- warn about slow frames
+  if not loading and not options.no_window and target_fps > 0 and time_elapsed > 1.0/target_fps then
     io.printf('[RIVEMU] SLOW FRAME: frame=%d elapsed_time=%.2fms elapsed_cycles=%.2fM cpu_speed=%.2fMIPS\n',
       machine.mmio_driver.frame,
       time_elapsed * 1000.0,
@@ -564,13 +577,16 @@ local function advance_frame(): void
       mcycle_elapsed / (time_elapsed * 1000000.0))
   end
 
-  -- local root_hash: string <close> = hexhash(machine:get_root_hash())
-  -- print(root_hash)
+  if not loading and options.print_frame_hash then
+    local root_hash: string <close> = hexhash(machine:get_root_hash())
+    io.printf('[RIVEMU] frame=%d hash=%s\n', machine.mmio_driver.frame, root_hash)
+  end
 
+  -- print fps
   if not loading and running then
     framelimiter.target_fps = target_fps * options.speed
-    if framelimiter:update_stats(now, time_elapsed, mcycle_elapsed) and options.print_stats then
-      framelimiter:print_stats()
+    if framelimiter:update_stats(now, time_elapsed, mcycle_elapsed) and options.print_fps then
+      framelimiter:print_fps()
     end
   end
 
@@ -651,10 +667,12 @@ local function frame(): void
   if running then
     -- TODO: get display refresh rate
     local refresh_rate: float64 = 60
-    if not machine:is_mmio_ready() then -- first frame
+    if not machine:is_mmio_ready() then -- process immediately the first frame
       advance_frame()
       framelimiter.last_frame_time = os.now()
-    elseif framelimiter.target_fps <= refresh_rate then
+    elseif options.no_window then -- process immediately when there is no window
+      advance_frame()
+    elseif framelimiter.target_fps <= refresh_rate then -- wait time between frames
       if framelimiter:should_process_next_frame(os.now()) then
         advance_frame()
       end
@@ -679,8 +697,8 @@ local function frame(): void
     rivemu_video.present()
   end
   -- restart when requested
-  if sapp_restart then
-    sapp_restart = false
+  if restart_requested then
+    restart_requested = false
     local no_quit: boolean = options.no_quit
     options.no_quit = true
     rivemu_printer.debugf('[RIVEMU] Restarting...\n')
@@ -709,19 +727,28 @@ local function run()
       got_initial_canvas_width = true
     end
   ## end
-  sapp_run(sapp_desc{
-    init_cb = startup,
-    frame_cb = frame,
-    cleanup_cb = shutdown,
-    event_cb = rivemu_input.append_event,
-    width = default_canvas_width,
-    height = default_canvas_width,
-    html5_canvas_name = "canvas",
-    html5_preserve_drawing_buffer = true,
-    html5_canvas_resize = true,
-    window_title = "RIVEMU",
-    logger = {func = slog_func}
-  })
+  if options.no_window then
+    -- run a console application (no video or video)
+    running_sapp = false
+    startup()
+    while not quit_requested do frame() end
+    shutdown()
+  else
+    running_sapp = true
+    sapp_run(sapp_desc{
+      init_cb = startup,
+      frame_cb = frame,
+      cleanup_cb = shutdown,
+      event_cb = rivemu_input.append_event,
+      width = default_canvas_width,
+      height = default_canvas_width,
+      html5_canvas_name = "canvas",
+      html5_preserve_drawing_buffer = true,
+      html5_canvas_resize = true,
+      window_title = "RIVEMU",
+      logger = {func = slog_func}
+    })
+  end
 end
 
 ## if not ccinfo.is_emscripten then
@@ -794,7 +821,7 @@ end
 local function rivemu_stop(url: cstring): boolean <cexport>
   if not started then return false end
   rivemu_printer.debugf('[RIVEMU] Stop requested!\n')
-  sapp_quit()
+  rivemu_quit()
   return true
 end
 

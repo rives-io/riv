@@ -18,7 +18,6 @@ local replay_log_index: usize
 local recording: boolean
 local replaying: boolean
 local key_pressed_state: [RIV_NUM_KEYCODE]boolean
-global sapp_restart: boolean
 
 --------------------------------------------------------------------------------
 
@@ -299,11 +298,11 @@ local function poll_gamepads(): void
     end
     -- use home button to quit
     if gamepad.digitalButton[GAMEPAD_HOME] == EM_TRUE then
-      sapp_quit()
+      rivemu_quit()
     end
     -- use capture button to restart
     if gamepad.digitalButton[GAMEPAD_CAPTURE] == EM_TRUE then
-      sapp_restart = true
+      restart_requested = true
     end
   end
 end
