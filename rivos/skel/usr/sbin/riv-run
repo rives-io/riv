@@ -42,9 +42,14 @@ if [ -n "$RIV_NO_YIELD" ]; then
   BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_NO_YIELD y"
 fi
 
-# stop frame flags
+# forward stop frame flags
 if [ -n "$RIV_STOP_FRAME" ]; then
   BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_STOP_FRAME $RIV_STOP_FRAME"
+fi
+
+# forward entropy flags
+if [ -n "$RIV_ENTROPY" ]; then
+  BWRAPBOX_FLAGS="$BWRAPBOX_FLAGS --setenv RIV_ENTROPY $RIV_ENTROPY"
 fi
 
 # setup screenshot fd

@@ -16,6 +16,11 @@ global function riv_init_prng(): void
     hash = murmur3_128(span_uint8{data=cmdline.data, size=cmdline.size}, hash)
   end
   riv.prng:srand(hash[0], hash[1])
+
+  local entropy: string = getenv('RIV_ENTROPY')
+  if #entropy > 0 then
+    riv.prng:srand_entropy(entropy:span())
+  end
 end
 
 -- Generates a random unsigned integer in interval [0, UINT64_MAX].

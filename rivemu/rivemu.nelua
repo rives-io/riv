@@ -40,6 +40,7 @@ local rivemu_options: type = @record{
   outhash_filename: string,
   screenshot_filename: string,
   entrypoint: string,
+  entropy: string,
   recording: boolean,
   replaying: boolean,
   verifying: boolean,
@@ -120,6 +121,8 @@ local function parse_options(): rivemu_options
       opts.screenshot_filename = argv
     elseif argk == '-entrypoint' then
       opts.entrypoint = argv
+    elseif argk == '-entropy' then
+      opts.entropy = argv
     elseif argk == '-rootfs' then
       opts.rootfs_filename = argv
     elseif argk == '-kernel' then
@@ -259,6 +262,9 @@ function rivemu_options:get_entrypoint(): string
     end
     if self.stop_frame >= 0 then
       entrypoint_sb:write('RIV_STOP_FRAME=', self.stop_frame, ' ')
+    end
+    if #self.entropy > 0 then
+      entrypoint_sb:write('RIV_ENTROPY=', self.entropy, ' ')
     end
     entrypoint_sb:write('riv-run')
   end
