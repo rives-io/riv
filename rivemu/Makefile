@@ -41,10 +41,10 @@ DEPS=*.nelua \
 	../rivos/rivos.ext2.zz
 
 $(RIVEMU): rivemu.nelua $(DEPS)
-	nelua $(NELUA_FLAGS) $(NELUA_MYFLAGS) \
+	nelua $(NELUA_FLAGS) $(EXTRA_NELUA_FLAGS) \
 		--cc=$(CC) \
-		--cflags="$(CFLAGS) $(INCS)" \
-		--ldflags="$(LDFLAGS) $(LIBS)" \
+		--cflags="$(CFLAGS) $(INCS) $(EXTRA_CFLAGS)" \
+		--ldflags="$(LDFLAGS) $(LIBS) $(EXTRA_LDFLAGS)" \
 		--cache-dir="$(NELUA_CACHEDIR)" \
 		--output $@ $<
 	touch $@
@@ -65,6 +65,15 @@ build: $(RIVEMU) rivemu.wasm
 package: rivemu-linux-amd64 rivemu-linux-arm64 rivemu-windows-amd64.exe rivemu.wasm
 
 # Packaging for Linux
+LINUX_SO_WRAPPERS=\
+	/usr/include/X11GL-wrappers/libGL.so.init.c \
+	/usr/include/X11GL-wrappers/libGL.so.tramp.S \
+	/usr/include/X11GL-wrappers/libX11.so.init.c \
+	/usr/include/X11GL-wrappers/libX11.so.tramp.S \
+	/usr/include/X11GL-wrappers/libXcursor.so.init.c \
+	/usr/include/X11GL-wrappers/libXcursor.so.tramp.S \
+	/usr/include/X11GL-wrappers/libXi.so.init.c \
+	/usr/include/X11GL-wrappers/libXi.so.tramp.S
 rivemu-linux-%: rivemu.nelua $(DEPS)
 	docker build \
 		--platform linux/$* \
@@ -76,7 +85,7 @@ rivemu-linux-%: rivemu.nelua $(DEPS)
 		--workdir /mnt \
 		--hostname riv-toolchain-linux-$* \
 		--rm riv/toolchain-linux-$* \
-		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
+		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* EXTRA_CFLAGS='$(LINUX_SO_WRAPPERS)' NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
 
 # Packaging for Windows
 rivemu-windows-amd64: rivemu-windows-amd64.exe

@@ -30,3 +30,19 @@ make install PREFIX=/usr/local
 cd ..
 rm -rf nelua-lang
 EOF
+
+# Install graphical library wrappers
+RUN apt-get install -y python3 libgl1-mesa-dev
+RUN <<EOF
+set -e
+git clone --depth 1 https://github.com/yugr/Implib.so.git
+cd Implib.so
+./implib-gen.py /usr/lib/$(uname -m)-linux-gnu/libGL.so
+./implib-gen.py /usr/lib/$(uname -m)-linux-gnu/libX11.so
+./implib-gen.py /usr/lib/$(uname -m)-linux-gnu/libXi.so
+./implib-gen.py /usr/lib/$(uname -m)-linux-gnu/libXcursor.so
+mkdir -p /usr/include/X11GL-wrappers
+cp *.c *.S /usr/include/X11GL-wrappers/
+cd ..
+rm -rf Implib.so
+EOF
