@@ -1,0 +1,15 @@
+require 'io'
+
+global rivemu_printer: type = @record{}
+
+local quiet: boolean = false
+
+function rivemu_printer.set_quiet(on: boolean): void
+  quiet = on
+end
+
+function rivemu_printer.debugf(...: varargs): void
+  if not quiet then
+    io.stderr:printf(...)
+  end
+end

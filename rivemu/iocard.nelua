@@ -97,7 +97,7 @@ function rivemu_iocard.save_outhist(filename: string): void
   io.printf("[RIVEMU] Saved output card history '%s'\n", filename)
 end
 
-function rivemu_iocard.print_outcard(): void
+function rivemu_iocard.print_outcard_checksum(): void
   local contents: string = {data=outcard_data.data, size=outcard_data.size}
   local hash: string <close> = hexhash(sha256hash(outcard_data))
   io.printf("[RIVEMU] Outcard sha256sum: %s\n", hash, contents)

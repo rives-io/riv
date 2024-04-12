@@ -9,7 +9,7 @@ nldecl.generate_bindings_file{
   output_head = [==[
 ##[[
 cinclude 'sha256.h'
-cfile 'sha256.c'
+cinclude 'sha256.c'
 ]]
 ]==]
 }

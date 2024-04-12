@@ -15,7 +15,9 @@ require 'string'
 require 'io'
 require 'os'
 require 'sokol'
+require 'arg'
 
+require '.printer'
 require '.machine'
 require '.audio'
 require '.video'
@@ -53,6 +55,8 @@ local rivemu_options: type = @record{
   no_quit: boolean,
   wait_halt: boolean,
   print_final_hash: boolean,
+  print_outcard_hash: boolean,
+  quiet: boolean,
   speed: float64,
   stop_frame: int64,
 }
@@ -62,85 +66,107 @@ local function parse_options(): rivemu_options
     speed = 1.0,
     stop_frame = -1,
   }
-  for i: int32=0,<sargs_num_args() do
-    local a: string = sargs_key_at(i)
-    if a == '-record' then
+  ## if ccinfo.is_emscripten then
+  local argc: integer = sargs_num_args()
+  local argi: integer = 0
+  ## else
+  local argc: integer = #arg + 1
+  local argi: integer = 1
+  ## end
+  while argi < argc do
+    ## if ccinfo.is_emscripten then
+    local argk: string = sargs_key_at(argi)
+    local argv: string = sargs_value_at(argi)
+    ## else
+    local argk: string = arg[argi]
+    local argv: string
+    local match_argkv: boolean, argkv: sequence(string) <close> = argk:matchview('^(-[a-z%-]+)%=(.*)$')
+    if match_argkv then
+      argk = argkv[1]
+      argv = argkv[2]
+    end
+    ## end
+    if argk == '-record' then
       assert(not opts.replaying, 'already replaying')
       assert(not opts.verifying, 'already verifying')
-      opts.record_filename = sargs_value_at(i)
+      opts.record_filename = argv
       opts.recording = true
-    elseif a == '-replay' then
+    elseif argk == '-replay' then
       assert(not opts.recording, 'already recording')
       assert(not opts.verifying, 'already verifying')
-      opts.replay_filename = sargs_value_at(i)
+      opts.replay_filename = argv
       opts.replaying = true
-    elseif a == '-verify' then
+    elseif argk == '-verify' then
       assert(not opts.replaying, 'already replaying')
       assert(not opts.recording, 'already recording')
-      opts.verify_filename = sargs_value_at(i)
+      opts.verify_filename = argv
       opts.verifying = true
       opts.wait_halt = true
-    elseif a == '-verify-outhash' then
+    elseif argk == '-verify-outhash' then
       assert(opts.verifying, 'not verifying')
-      opts.verify_outhash = sargs_value_at(i)
-    elseif a == '-cartridge' then
-      opts.cartridge_filename = sargs_value_at(i)
-    elseif a == '-load-incard' then
-      opts.incard_filename = sargs_value_at(i)
-    elseif a == '-save-outcard' then
-      opts.outcard_filename = sargs_value_at(i)
-    elseif a == '-save-outhist' then
-      opts.outhist_filename = sargs_value_at(i)
+      opts.verify_outhash = argv
+    elseif argk == '-cartridge' then
+      opts.cartridge_filename = argv
+    elseif argk == '-load-incard' then
+      opts.incard_filename = argv
+    elseif argk == '-save-outcard' then
+      opts.outcard_filename = argv
+    elseif argk == '-save-outhist' then
+      opts.outhist_filename = argv
       opts.tracking_outhist = true
-    elseif a == '-save-outhash' then
-      opts.outhash_filename = sargs_value_at(i)
-    elseif a == '-save-screenshot' then
-      opts.screenshot_filename = sargs_value_at(i)
-    elseif a == '-entrypoint' then
-      opts.entrypoint = sargs_value_at(i)
-    elseif a == '-rootfs' then
-      opts.rootfs_filename = sargs_value_at(i)
-    elseif a == '-kernel' then
-      opts.kernel_filename = sargs_value_at(i)
-    elseif a == '-speed' then
-      local numstr: string = sargs_value_at(i)
+    elseif argk == '-save-outhash' then
+      opts.outhash_filename = argv
+    elseif argk == '-save-screenshot' then
+      opts.screenshot_filename = argv
+    elseif argk == '-entrypoint' then
+      opts.entrypoint = argv
+    elseif argk == '-rootfs' then
+      opts.rootfs_filename = argv
+    elseif argk == '-kernel' then
+      opts.kernel_filename = argv
+    elseif argk == '-speed' then
+      local numstr: string = argv
       assert(numstr:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
       opts.speed = tonumber(numstr)
       assert(opts.speed > 0.0, 'speed must be positive')
-    elseif a == '-stop-frame' then
-      local numstr: string = sargs_value_at(i)
+    elseif argk == '-stop-frame' then
+      local numstr: string = argv
       assert(numstr:find('^[0-9]+$') > 0, 'malformed frame number')
       opts.stop_frame = tointeger(numstr)
-    elseif a == '-no-audio' then
+    elseif argk == '-no-audio' then
       opts.no_audio = true
-    elseif a == '-no-video' then
+    elseif argk == '-no-video' then
       opts.no_video = true
-    elseif a == '-no-loading' then
+    elseif argk == '-no-loading' then
       opts.no_loading = true
-    elseif a == '-no-yield' then
+    elseif argk == '-no-yield' then
       opts.no_yield = true
       opts.no_loading = true
       opts.no_video = true
       opts.no_audio = true
-    elseif a == '-no-quit' then
+    elseif argk == '-no-quit' then
       opts.no_quit = true
-    elseif a == '-wait-halt' then
+    elseif argk == '-wait-halt' then
       opts.wait_halt = true
-    elseif a == '-print-stats' then
+    elseif argk == '-print-stats' then
       opts.print_stats = true
-    elseif a == '-print-final-hash' then
+    elseif argk == '-print-final-hash' then
       opts.print_final_hash = true
-    elseif a == '-pixel-perfect' then
+    elseif argk == '-print-outcard-hash' then
+      opts.print_outcard_hash = true
+    elseif argk == '-quiet' then
+      opts.quiet = true
+    elseif argk == '-pixel-perfect' then
       opts.pixel_perfect = true
-    elseif a == '-interactive' then
+    elseif argk == '-interactive' then
       opts.interactive = true
-    elseif a == '-sdk' then
+    elseif argk == '-sdk' then
       opts.interactive = true
       opts.entrypoint = "exec ash"
       opts.rootfs_filename = "rivos-sdk.ext2"
-    elseif a == '-args' then
-      opts.entrypoint_args = sargs_value_at(i)
-    elseif a == '-help' or a == '--help' or a == '-h' then
+    elseif argk == '-args' then
+      opts.entrypoint_args = argv
+    elseif argk == '-help' or argk == '--help' or argk == '-h' then
       io.printf("Usage: rivemu [options]\n")
       io.write[[
 -cartridge=<filename>
@@ -200,16 +226,23 @@ local function parse_options(): rivemu_options
 -print-final-hash
   Print final machine root hash.
 
+-print-outcard-hash
+  Print outcard final hash.
+
 -pixel-perfect
   Resize screen while maintaining pixel perfect sizes.
 
 -args=<args>
   Append arguments when running the cartridge.
+
+-quiet
+  Don't print emulatoe debug messages.
 ]]
       os.exit(0)
     else
-      error(string.format("unknown command line option '%s'", a))
+      error(string.format("unknown command line option '%s'", argk))
     end
+    argi = argi + 1
   end
   return opts
 end
@@ -218,18 +251,16 @@ function rivemu_options:get_entrypoint(): string
   local entrypoint_sb: stringbuilder <close>
   if #self.entrypoint > 0 then
     entrypoint_sb:write(self.entrypoint)
-  else
-    if #self.cartridge_filename > 0 then
-      if self.verifying then
-        entrypoint_sb:write('RIV_CARTRIDGE=/dev/pmem1 RIV_REPLAYLOG=/dev/pmem2 RIV_OUTCARD=/run/outcard RIV_OUTHASH=/run/outhash ')
-      else
-        entrypoint_sb:write('RIV_CARTRIDGE=/dev/pmem1 ')
-      end
-      if self.stop_frame >= 0 then
-        entrypoint_sb:write('RIV_STOP_FRAME=', self.stop_frame, ' ')
-      end
-      entrypoint_sb:write('riv-run')
+  elseif #self.cartridge_filename > 0 then
+    if self.verifying then
+      entrypoint_sb:write('RIV_CARTRIDGE=/dev/pmem1 RIV_REPLAYLOG=/dev/pmem2 RIV_OUTCARD=/run/outcard RIV_OUTHASH=/run/outhash ')
+    else
+      entrypoint_sb:write('RIV_CARTRIDGE=/dev/pmem1 ')
     end
+    if self.stop_frame >= 0 then
+      entrypoint_sb:write('RIV_STOP_FRAME=', self.stop_frame, ' ')
+    end
+    entrypoint_sb:write('riv-run')
   end
   if #self.entrypoint_args > 0 then
     if #entrypoint_sb > 0 then
@@ -237,7 +268,7 @@ function rivemu_options:get_entrypoint(): string
     end
     entrypoint_sb:write(self.entrypoint_args)
   end
-  if self.verifying and #self.verify_outhash > 0 then
+  if #self.entrypoint == 0 and self.verifying and #self.verify_outhash > 0 then
     entrypoint_sb:write(' && \z
       echo "', self.verify_outhash, ' /run/outcard" > /run/outcard.sha256sum && \z
       busybox sha256sum -cs /run/outcard.sha256sum && \z
@@ -263,13 +294,13 @@ local function begin(): void
   running = true
 
   if options.recording then -- start recording
-    io.printf('[RIVEMU] Recording...\n')
+    rivemu_printer.debugf('[RIVEMU] Recording...\n')
     rivemu_input.start_recording()
   elseif options.replaying then -- start replaying
-    io.printf('[RIVEMU] Replaying...\n')
+    rivemu_printer.debugf('[RIVEMU] Replaying...\n')
     rivemu_input.load_replay_from_file(options.replay_filename)
   elseif options.verifying then
-    io.printf('[RIVEMU] Verifying...\n')
+    rivemu_printer.debugf('[RIVEMU] Verifying...\n')
   end
   if options.tracking_outhist then
     rivemu_iocard.start_tracking_outhist()
@@ -278,7 +309,8 @@ end
 
 -- Initialize application.
 local function startup(): void
-  io.printf('[RIVEMU] Setup\n')
+  rivemu_printer.set_quiet(options.quiet)
+  rivemu_printer.debugf('[RIVEMU] Starting up...\n')
 
   started = true
   loading = true
@@ -330,7 +362,9 @@ local function finish(): void
     if #options.outhist_filename > 0 then
       rivemu_iocard.save_outhist(options.outhist_filename)
     end
-    rivemu_iocard.print_outcard()
+    if options.print_outcard_hash then
+      rivemu_iocard.print_outcard_checksum()
+    end
   end
 
   if options.recording then
@@ -342,7 +376,7 @@ local function finish(): void
   end
 
   if options.wait_halt then
-    io.printf('[RIVEMU] Waiting halt...\n')
+    rivemu_printer.debugf('[RIVEMU] Waiting halt...\n')
     repeat until machine:run((@uint64)(-1)) == CM_BREAK_REASON_HALTED
   end
 
@@ -350,7 +384,7 @@ local function finish(): void
     local root_hash: string <close> = hexhash(machine:get_root_hash())
     io.printf('[RIVEMU] Cycles %d: %s\n', machine:read_mcycle(), root_hash)
   else
-    io.printf('[RIVEMU] Cycles %d\n', machine:read_mcycle())
+    rivemu_printer.debugf('[RIVEMU] Cycles %d\n', machine:read_mcycle())
   end
 
   ## if ccinfo.is_emscripten then
@@ -387,7 +421,7 @@ end
 -- Terminate application.
 local function shutdown(): void
   if not started then return end
-  io.printf('[RIVEMU] Shutdown\n')
+  rivemu_printer.debugf('[RIVEMU] Shutdown\n')
 
   finish()
 
@@ -428,14 +462,14 @@ local function machine_frame(): void
       -- execute control event from the yield
       switch machine:read_x(RISCV_REG_A0) do
       case RIV_CONTROL_OPEN then
-        io.printf('[RIVEMU] Open RIV device\n')
+        rivemu_printer.debugf('[RIVEMU] Open RIV device\n')
         if #options.incard_filename > 0 then
           rivemu_iocard.load_incard(options.incard_filename)
         end
         -- reset input state
         rivemu_input.reset_keys_state()
       case RIV_CONTROL_CLOSE then
-        io.printf('[RIVEMU] Close RIV device\n')
+        rivemu_printer.debugf('[RIVEMU] Close RIV device\n')
         -- copy output card from guest memory into host memory
         rivemu_iocard.update_outcard()
         -- copy frame buffer from guest memory into host memory
@@ -470,7 +504,7 @@ local function machine_frame(): void
         error 'unknown yield reason'
       end
     case CM_BREAK_REASON_HALTED then
-      io.printf('[RIVEMU] Halted\n')
+      rivemu_printer.debugf('[RIVEMU] Halted\n')
       finish()
       return
     case CM_BREAK_REASON_REACHED_TARGET_MCYCLE then
@@ -508,7 +542,7 @@ local function advance_frame(): void
   local target_fps: uint32 = machine.mmio_driver.framebuffer_desc.target_fps
 
   if not loading and target_fps > 0 and time_elapsed > 1.0/target_fps then
-    io.stderr:printf('[RIVEMU] SLOW FRAME: frame=%d elapsed_time=%.2fms elapsed_cycles=%.2fM cpu_speed=%.2fMIPS\n',
+    io.printf('[RIVEMU] SLOW FRAME: frame=%d elapsed_time=%.2fms elapsed_cycles=%.2fM cpu_speed=%.2fMIPS\n',
       machine.mmio_driver.frame,
       time_elapsed * 1000.0,
       mcycle_elapsed / 1000000.0,
@@ -587,7 +621,7 @@ static void _sapp_emsc_resize(int width, int height) {
 
   -- force finish when replay ends
   if running and replay_finished then
-    io.printf('[RIVEMU] Finish replay\n')
+    rivemu_printer.debugf('[RIVEMU] Finish replay\n')
     finish()
   end
 end
@@ -634,7 +668,7 @@ local function frame(): void
     sapp_restart = false
     local no_quit: boolean = options.no_quit
     options.no_quit = true
-    io.printf('[RIVEMU] Restarting...\n')
+    rivemu_printer.debugf('[RIVEMU] Restarting...\n')
     shutdown()
     options.no_quit = no_quit
     startup()
@@ -737,7 +771,7 @@ end
 
 local function rivemu_stop(url: cstring): boolean <cexport>
   if not started then return false end
-  io.printf('[RIVEMU] Stop requested!\n')
+  rivemu_printer.debugf('[RIVEMU] Stop requested!\n')
   sapp_quit()
   return true
 end
