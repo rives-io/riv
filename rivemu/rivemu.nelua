@@ -83,6 +83,7 @@ local function parse_options(): rivemu_options
     speed = 1.0,
     stop_frame = -1,
   }
+  local entrypoint_sb: stringbuilder <static>
   ## if ccinfo.is_emscripten then
   local argc: integer = sargs_num_args()
   local argi: integer = 0
@@ -149,6 +150,11 @@ local function parse_options(): rivemu_options
       opts.init = argv
     elseif argk == '-entrypoint' then
       opts.entrypoint = argv
+    elseif argk == '-entrypoint-script' then
+      local file: filestream <close> = fn_assert!(io.open(argv, 'rb'))
+      local contents: string <close> = fn_assert!(file:read('a'))
+      entrypoint_sb:write(contents)
+      opts.entrypoint = entrypoint_sb:view()
     elseif argk == '-args' then
       opts.args = argv
     elseif argk == '-entropy' then
@@ -197,7 +203,6 @@ local function parse_options(): rivemu_options
       opts.entrypoint = "exec ash -l"
     elseif argk == '-exec' then
       argi = argi + 1
-      local entrypoint_sb: stringbuilder <static>
       entrypoint_sb:clear()
       local first_argi: integer = argi
       while argi < argc do
@@ -257,6 +262,9 @@ local function parse_options(): rivemu_options
   Override the entrypoint command.
   When a cartridge is set, the default entrypoint is "exec riv-run".
   When in interactive mode, the default entrypoint is "exec ash -l".
+
+-entrypoint-script=<filename>
+  Override the entrypoint to run a shell script.
 
 -args=<args>
   Append arguments to the entrypoint.
