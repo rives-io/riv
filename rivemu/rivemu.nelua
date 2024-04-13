@@ -88,6 +88,7 @@ local function parse_options(): rivemu_options
     stop_frame = -1,
   }
   local entrypoint_sb: stringbuilder <static>
+  entrypoint_sb:clear()
   ## if ccinfo.is_emscripten then
   local argc: integer = sargs_num_args()
   local argi: integer = 0
@@ -110,7 +111,9 @@ local function parse_options(): rivemu_options
     ## end
     if argk == '-cartridge' then
       opts.cartridge_filename = argv
-      opts.entrypoint = "exec riv-run"
+      if #opts.entrypoint == 0 then
+        opts.entrypoint = "exec riv-run"
+      end
     elseif argk == '-record' then
       assert(not opts.replaying, 'already replaying')
       assert(not opts.verifying, 'already verifying')
@@ -158,12 +161,7 @@ local function parse_options(): rivemu_options
     elseif argk == '-workspace' then
       opts.workspace_directory = argv
       if #argv == 0 then
-        local workspace: string = C.getenv('RIVEMU_WORKSPACE')
-        if #workspace > 0 then
-          opts.workspace_directory = workspace
-        else
-          opts.workspace_directory = "."
-        end
+        opts.workspace_directory = "."
       end
     elseif argk == '-init' then
       opts.init = argv
@@ -221,7 +219,9 @@ local function parse_options(): rivemu_options
     elseif argk == '-it' then
       opts.interactive = true
       opts.no_loading = true
-      opts.entrypoint = "exec ash -l"
+      if #opts.entrypoint == 0 then
+        opts.entrypoint = "exec ash -l"
+      end
     elseif argk == '-exec' or argk == '--' then
       argi = argi + 1
       entrypoint_sb:clear()
@@ -229,6 +229,16 @@ local function parse_options(): rivemu_options
       while argi < argc do
         if argi ~= first_argi then entrypoint_sb:write(' ') end
         entrypoint_sb:write(arg[argi])
+        argi = argi + 1
+      end
+      opts.entrypoint = entrypoint_sb:view()
+    elseif argk:find('^[^%-].*%.sqfs$') > 0 then
+      opts.cartridge_filename = argk
+      entrypoint_sb:clear()
+      entrypoint_sb:write("exec riv-run")
+      local first_argi: integer = argi
+      while argi < argc do
+        entrypoint_sb:write(' ', arg[argi])
         argi = argi + 1
       end
       opts.entrypoint = entrypoint_sb:view()
@@ -254,135 +264,139 @@ local function parse_options(): rivemu_options
       io.stdout:printf("build date: %s GMT\n", os.date('!%Y-%m-%d %H:%M:%S'))
       os.exit(0)
     elseif argk == '-help' or argk == '--help' or argk == '-h' then
-      io.printf("Usage: rivemu [options]\n")
       io.write[[
--cartridge=<filename>
-  Cartridge to run.
+USAGE
+  rivemu [options] [.sqfs] [args]
 
--record=<filename>
-  Record game to an input log.
+OPTIONS
+  -cartridge=<filename>
+    Cartridge to load.
+    If no entrypoint is set, then it's set to "exec riv-run".
 
--replay=<filename>
-  Replay game from an input log.
+  -record=<filename>
+    Record game to an input log.
 
--verify=<filename>
-  Verify a game from an input log.
+  -replay=<filename>
+    Replay game from an input log.
 
--verify-outhash=<hash>
-  Verify a game output card hash.
+  -verify=<filename>
+    Verify a game from an input log.
 
--load-incard=<filename>
-  Load input card from a file.
+  -verify-outhash=<hash>
+    Verify a game output card hash.
 
--save-outcard=<filename>
-  Save output card to a file.
+  -load-incard=<filename>
+    Load input card from a file.
 
--save-outhash=<filename>
-  Save output card SHA256 hash to a file as a hexadecimal string.
+  -save-outcard=<filename>
+    Save output card to a file.
 
--save-screenshot=<filename>
-  Save screenshot of last frame to a PNG image file.
+  -save-outhash=<filename>
+    Save output card SHA256 hash to a file as a hexadecimal string.
 
--kernel=<filename>
-  Override the default Linux kernel image.
+  -save-screenshot=<filename>
+    Save screenshot of last frame to a PNG image file.
 
--bootargs=<args>
-  Append kernel bootargs when initializing the machine.
+  -kernel=<filename>
+    Override the default Linux kernel image.
 
--sdk
-  Load the RIV SDK operating system instead of the minimal RIV OS.
-  The image filename from "RIVEMU_SDK" environment variable is used when present,
-  otherwise it tries to load "rivos-sdk.ext2" from current directory.
+  -bootargs=<args>
+    Append kernel bootargs when initializing the machine.
 
--workspace
-  Mount current working directory into /workspace directory in the machine.
+  -sdk
+    Load the RIV SDK operating system instead of the minimal RIV OS.
+    The image filename from "RIVEMU_SDK" environment variable is used when present,
+    otherwise it tries to load "rivos-sdk.ext2" from current directory.
 
--workspace=<directory>
-  Mount target directory into /workspace directory in the machine.
+  -workspace
+    Mount current working directory into /workspace directory in the machine.
 
--init=<commands>
-  Execute commands when initializing the machine.
+  -workspace=<directory>
+    Mount target directory into /workspace directory in the machine.
 
--entrypoint=<command>
-  Override the entrypoint command.
-  When a cartridge is set, the default entrypoint is "exec riv-run".
-  When in interactive mode, the default entrypoint is "exec ash -l".
+  -init=<commands>
+    Execute commands when initializing the machine.
 
--entrypoint-script=<filename>
-  Override the entrypoint to run a shell script.
+  -entrypoint=<command>
+    Override the entrypoint command.
+    When a cartridge is set, the default entrypoint is "exec riv-run".
+    When in interactive mode, the default entrypoint is "exec ash -l".
 
--args=<args>
-  Append arguments to the entrypoint.
+  -entrypoint-script=<filename>
+    Override the entrypoint to run a shell script.
 
--entropy=<hash>
-  Use hash as random entropy, affecting the pseudo random number generator of cartridges.
+  -args=<args>
+    Append arguments to the entrypoint.
 
--speed=<speed>
-  Set replay speed.
+  -entropy=<hash>
+    Use hash as random entropy, affecting the pseudo random number generator of cartridges.
 
--stop-frame=<frame>
-  Set frame to stop.
+  -speed=<speed>
+    Set replay speed.
 
--pixel-perfect
-  Resize screen while maintaining pixel perfect sizes.
+  -stop-frame=<frame>
+    Set frame to stop.
 
--no-audio
-  Disable audio.
+  -pixel-perfect
+    Resize screen while maintaining pixel perfect sizes.
 
--no-video
-  Disable video.
+  -no-audio
+    Disable audio.
 
--no-loading
-  Disable the loading screen.
+  -no-video
+    Disable video.
 
--no-window or -term
-  Disable the graphical window.
-  Implies "-no-loading -no-video -no-audio".
+  -no-loading
+    Disable the loading screen.
 
--no-quit
-  Don't quit when cartridge finishes.
+  -no-window or -term
+    Disable the graphical window.
+    Implies "-no-loading -no-video -no-audio".
 
--wait-halt
-  Don't quit when RIV device is closed, wait for the machine to halt.
+  -no-quit
+    Don't quit when cartridge finishes.
 
--print-fps
-  Print frame rate statistics every second.
+  -wait-halt
+    Don't quit when RIV device is closed, wait for the machine to halt.
 
--print-frame-hash
-  Print the machine root hash for every frame.
+  -print-fps
+    Print frame rate statistics every second.
 
--print-final-hash
-  Print final machine root hash.
+  -print-frame-hash
+    Print the machine root hash for every frame.
 
--print-frame-hash
-  Print machine root hash for every frame.
+  -print-final-hash
+    Print final machine root hash.
 
--print-outhash
-  Print outcard final hash.
+  -print-frame-hash
+    Print machine root hash for every frame.
 
--print-outcard
-  Print outcard final hash.
+  -print-outhash
+    Print outcard final hash.
 
--quiet
-  Don't print emulator debug messages.
+  -print-outcard
+    Print outcard final hash.
 
--net
-  Enable networking support in the machine.
+  -quiet
+    Don't print emulator debug messages.
 
--it
-  Run in interactive terminal mode.
-  The entrypoint is set to "exec ash -l".
+  -net
+    Enable networking support in the machine.
 
--- [...]
--exec [...]
-  Overwrites the entrypoint to executes a shell command.
-  All subsequent arguments are propagate to the command.
+  -it
+    Run in interactive terminal mode.
+    If no entrypoint is set, then it's set to "exec ash -l".
 
--version
-  Show version and quit.
+  -- [...]
+  -exec [...]
+    Overwrites the entrypoint to executes a shell command.
+    All subsequent arguments are propagate to the command.
 
--help
-  Print this help.
+  -version
+    Show version and quit.
+
+  -help
+    Print this help.
 ]]
       os.exit(0)
     else
