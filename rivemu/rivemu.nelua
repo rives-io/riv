@@ -251,6 +251,7 @@ local function parse_options(): rivemu_options
       opts.cartridge_filename = argk
       entrypoint_sb:clear()
       entrypoint_sb:write("exec riv-run")
+      argi = argi + 1
       local first_argi: integer = argi
       while argi < argc do
         entrypoint_sb:write(' ', arg[argi])
