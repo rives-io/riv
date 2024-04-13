@@ -441,6 +441,9 @@ end
 function rivemu_options:get_init_entrypoint(): (string, string)
   -- build init
   local init_sb: stringbuilder <close>
+  if self.quiet then
+    init_sb:write('export RIV_QUIET=y\n')
+  end
   if #self.entropy > 0 then
     init_sb:writef('export RIV_ENTROPY=%s\n', self.entropy)
   end

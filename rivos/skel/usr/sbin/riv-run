@@ -83,7 +83,7 @@ if [ -n "$RIV_OUTHIST" ]; then
 fi
 
 # run
-echo "[RIV-OS] Running cartridge executable:" "$EXE" "$@"
+[ -z "$RIV_QUIET" ] && echo "[RIV-OS] Running cartridge executable:" "$EXE" "$@"
 if [ ! -n "$RIV_REPLAYLOG" ]; then  # play
   riv-bwrapbox $BWRAPBOX_FLAGS -- /usr/bin/sh-exec "$EXE" "$@" \
       4<>"$RIV_IOCARD_FILE" \
@@ -112,7 +112,6 @@ fi
 
 # copy outhash
 OUTHASH=$(busybox sha256sum "$RIV_IOCARD_FILE" | busybox cut -d' ' -f1)
-echo "[RIV-OS] Outcard sha256sum: $OUTHASH"
 if [ -n "$RIV_OUTHASH" ]; then
   if ! echo -n "$OUTHASH" > "$RIV_OUTHASH"; then
     >&2 echo "[RIV-OS] Unable to write outhash."
@@ -150,6 +149,6 @@ fi
 busybox rm -f "$RIV_SCREENSHOT_FILE"
 
 # finished
-echo "[RIV-OS] Cartridge finished with status $STATUS"
+[ -z "$RIV_QUIET" ] && echo "[RIV-OS] Cartridge finished with status $STATUS"
 busybox umount /cartridge
 return $STATUS

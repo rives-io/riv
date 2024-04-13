@@ -105,7 +105,7 @@ end
 function rivemu_iocard.print_outcard_checksum(): void
   local contents: string = {data=outcard_data.data, size=outcard_data.size}
   local hash: string <close> = hexhash(sha256hash(outcard_data))
-  io.printf("[RIVEMU] Outcard sha256sum: %s\n", hash, contents)
+  io.printf("[RIVEMU] Outcard sha256sum:\n%s\n", hash, contents)
 end
 
 function rivemu_iocard.verify_outcard_checksum(checksum: string): void
@@ -115,5 +115,6 @@ function rivemu_iocard.verify_outcard_checksum(checksum: string): void
     io.printf("[RIVEMU] Outcard sha256sum verification SUCCEEDED!\n")
   else
     io.printf("[RIVEMU] Outcard sha256sum verification FAILED!\nExpected: %s\n But got: %s\n", checksum, hash)
+    os.exit(1)
   end
 end
