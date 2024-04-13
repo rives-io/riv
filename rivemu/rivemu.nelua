@@ -881,6 +881,7 @@ local function rivemu_start_record(cartridge_ptr: *uint8, cartridge_len: int32,
   options.incard_filename = '/replay.incard'
   options.outcard_filename = '/replay.outcard'
   options.outhash_filename = '/replay.outhash'
+  options.entrypoint = "exec riv-run"
   options.entropy = entropy
   options.args = args
   options.recording = true
@@ -914,6 +915,7 @@ local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32,
   options.incard_filename = '/replay.incard'
   options.outcard_filename = '/replay.outcard'
   options.outhash_filename = '/replay.outhash'
+  options.entrypoint = "exec riv-run"
   options.entropy = entropy
   options.args = args
   options.replaying = true
