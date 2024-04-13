@@ -40,7 +40,6 @@ require '.framelimiter'
 require '.iocard'
 
 local rivemu_options: type = @record{
-  args: string,
   kernel_filename: string,
   rootfs_filename: string,
   workspace_directory: string,
@@ -56,6 +55,11 @@ local rivemu_options: type = @record{
   screenshot_filename: string,
   init: string,
   entrypoint: string,
+  args: string,
+  user: string,
+  workdir: string,
+  env: string,
+  hostname: string,
   bootargs: string,
   entropy: string,
   recording: boolean,
@@ -163,6 +167,9 @@ local function parse_options(): rivemu_options
       if #argv == 0 then
         opts.workspace_directory = "."
       end
+      if #opts.workdir == 0 then
+        opts.workdir = '/workspace'
+      end
     elseif argk == '-init' then
       opts.init = argv
     elseif argk == '-entrypoint' then
@@ -174,6 +181,14 @@ local function parse_options(): rivemu_options
       opts.entrypoint = entrypoint_sb:view()
     elseif argk == '-args' then
       opts.args = argv
+    elseif argk == '-user' then
+      opts.user = argv
+    elseif argk == '-workdir' then
+      opts.workdir = argv
+    elseif argk == '-env' then
+      opts.env = argv
+    elseif argk == '-hostname' then
+      opts.hostname = argv
     elseif argk == '-entropy' then
       opts.entropy = argv
     elseif argk == '-speed' then
@@ -310,9 +325,11 @@ OPTIONS
 
   -workspace
     Mount current working directory into /workspace directory in the machine.
+    If workdir is not set, then it's set to /workspace.
 
   -workspace=<directory>
     Mount target directory into /workspace directory in the machine.
+    If workdir is not set, then it's set to /workspace.
 
   -init=<commands>
     Execute commands when initializing the machine.
@@ -327,6 +344,19 @@ OPTIONS
 
   -args=<args>
     Append arguments to the entrypoint.
+
+  -user=<name>
+    Set the user to run the entrypoint.
+
+  -workdir=<name>
+    Set the working directory of the entrypoint.
+
+  -env=<VAR=VAL>
+    Export environment variables before running the entrypoint.
+    Multiple variables can be set seprated by spaces.
+
+  -hostname=<name>
+    Set the machine hostname.
 
   -entropy=<hash>
     Use hash as random entropy, affecting the pseudo random number generator of cartridges.
@@ -411,7 +441,7 @@ function rivemu_options:get_init_entrypoint(): (string, string)
   -- build init
   local init_sb: stringbuilder <close>
   if #self.entropy > 0 then
-    init_sb:write('export RIV_ENTROPY=', self.entropy, '\n')
+    init_sb:writef('export RIV_ENTROPY=%s\n', self.entropy)
   end
   if self.verifying then
     init_sb:write('export RIV_OUTCARD=/run/outcard RIV_OUTHASH=/run/outhash\n')
@@ -423,17 +453,15 @@ function rivemu_options:get_init_entrypoint(): (string, string)
     init_sb:write('export RIV_CARTRIDGE=/dev/pmem1\n')
   end
   if self.stop_frame >= 0 then
-    init_sb:write('export RIV_STOP_FRAME=', self.stop_frame, '\n')
+    init_sb:writef('export RIV_STOP_FRAME=%s\n', self.stop_frame)
   end
   if self.interactive or self.network or #self.workspace_directory > 0 then
-    init_sb:writef([[
-busybox date -s @%d >> /dev/null
-]], os.time() + 1)
+    init_sb:writef('busybox date -s @%d >> /dev/null\n', os.time() + 1)
   end
   if self.interactive then
     local term: string = C.getenv('TERM')
     if #term > 0 then
-      init_sb:write('export TERM=', term, '\n')
+      init_sb:writef('export TERM=%s\n', term)
     end
     local lang: string = C.getenv('LANG')
     if #lang > 0 and lang:find('[uU][tT][fF]%-?8') > 0 then
@@ -449,10 +477,19 @@ busybox ip route add default via 10.0.2.2 dev eth0
 ]])
   end
   if #self.workspace_directory > 0 then
-    init_sb:write([[
-busybox mount -t 9p workspace /workspace
-WORKDIR=/workspace
-]])
+    init_sb:write("busybox mount -t 9p workspace /workspace\n")
+  end
+  if #self.workdir > 0 then
+    init_sb:writef("WORKDIR=%s\n", self.workdir)
+  end
+  if #self.user > 0 then
+    init_sb:writef("USER=%s\n", self.user)
+  end
+  if #self.hostname > 0 then
+    init_sb:writef("busybox hostname %s\n", self.hostname)
+  end
+  if #self.env > 0 then
+    init_sb:writef("export %s\n", self.env)
   end
   init_sb:write(self.init)
 
