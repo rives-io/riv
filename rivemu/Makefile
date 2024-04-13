@@ -62,7 +62,7 @@ install: rivemu
 build: $(RIVEMU) rivemu.wasm
 
 # Packages
-package: rivemu-linux-amd64 rivemu-linux-arm64 rivemu-windows-amd64.exe rivemu.wasm
+package: rivemu.wasm rivemu-linux-amd64 rivemu-windows-amd64.exe rivemu-linux-arm64
 
 # Packaging for Linux
 LINUX_SO_WRAPPERS=\
@@ -75,7 +75,7 @@ LINUX_SO_WRAPPERS=\
 	/usr/include/X11GL-wrappers/libXi.so.init.c \
 	/usr/include/X11GL-wrappers/libXi.so.tramp.S
 rivemu-linux-%: rivemu.nelua $(DEPS)
-	docker build \
+	docker build --progress plain \
 		--platform linux/$* \
 		--tag riv/toolchain-linux-$* \
 		--file riv-toolchain-linux.Dockerfile .
@@ -85,12 +85,12 @@ rivemu-linux-%: rivemu.nelua $(DEPS)
 		--workdir /mnt \
 		--hostname riv-toolchain-linux-$* \
 		--rm riv/toolchain-linux-$* \
-		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* EXTRA_CFLAGS='$(LINUX_SO_WRAPPERS)' NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
+		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* EXTRA_CFLAGS='$(LINUX_SO_WRAPPERS)' EXTRA_NELUA_FLAGS=-DCARTESI_STATIC NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
 
 # Packaging for Windows
 rivemu-windows-amd64: rivemu-windows-amd64.exe
 rivemu-windows-%.exe: rivemu.nelua $(DEPS)
-	docker build \
+	docker build --progress plain \
 		--tag riv/toolchain-windows-amd64 \
 		--file riv-toolchain-windows.Dockerfile .
 	docker run \
@@ -98,11 +98,11 @@ rivemu-windows-%.exe: rivemu.nelua $(DEPS)
 		--workdir /mnt \
 		--hostname riv-toolchain-windows-amd64 \
 		--rm riv/toolchain-windows-amd64 \
-		bash -c "make -C /mnt/rivemu rivemu-windows-amd64.exe RIVEMU=rivemu-windows-amd64.exe CC=x86_64-w64-mingw32-gcc NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-windows-amd64.exe"
+		bash -c "make -C /mnt/rivemu rivemu-windows-amd64.exe RIVEMU=rivemu-windows-amd64.exe CC=x86_64-w64-mingw32-gcc EXTRA_NELUA_FLAGS=-DCARTESI_STATIC NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-windows-amd64.exe"
 
 # Packaging for WASM
 rivemu.wasm: rivemu.nelua $(DEPS)
-	docker build \
+	docker build --progress plain \
 		--tag riv/toolchain-wasm \
 		--file riv-toolchain-wasm.Dockerfile .
 	docker run \
@@ -110,7 +110,7 @@ rivemu.wasm: rivemu.nelua $(DEPS)
 		--workdir /mnt \
 		--hostname riv-toolchain-wasm \
 		--rm riv/toolchain-wasm \
-		bash -c "source /etc/profile.d/emscripten.sh && make -C /mnt/rivemu rivemu.js CC=emcc NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu.js /mnt/rivemu/rivemu.wasm"
+		bash -c "source /etc/profile.d/emscripten.sh && make -C /mnt/rivemu rivemu.js CC=emcc EXTRA_NELUA_FLAGS=-DCARTESI_STATIC NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu.js /mnt/rivemu/rivemu.wasm"
 
 # External deps
 ../kernel/linux.bin.zz:

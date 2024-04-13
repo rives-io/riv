@@ -1,8 +1,19 @@
 ##[[
-cinclude 'cartesi.h'
-linklib 'libcartesi.a'
-if not ccinfo.is_wasm then
-  linklib 'libstdc++.a'
+cinclude 'machine-c-api.h'
+if CARTESI_STATIC then
+  linklib 'libcartesi.a'
+  if not ccinfo.is_wasm then
+    linklib 'libstdc++.a'
+  end
+  -- libslirp related
+  if ccinfo.is_windows then
+    linklib 'ws2_32'
+  elseif not ccinfo.is_wasm then
+    linklib 'libslirp.a'
+    linklib 'libglib-2.0.a'
+  end
+else
+  linklib 'cartesi'
 end
 ]]
 global cm_hash: type <cimport,nodecl> = @[32]uint8
@@ -83,16 +94,19 @@ global CM_PROC_CSR: type <cimport,nodecl,using> = @enum(cint){
   CM_PROC_SENVCFG = 27,
   CM_PROC_ILRSC = 28,
   CM_PROC_IFLAGS = 29,
-  CM_PROC_CLINT_MTIMECMP = 30,
-  CM_PROC_HTIF_TOHOST = 31,
-  CM_PROC_HTIF_FROMHOST = 32,
-  CM_PROC_HTIF_IHALT = 33,
-  CM_PROC_HTIF_ICONSOLE = 34,
-  CM_PROC_HTIF_IYIELD = 35,
-  CM_PROC_UARCH_PC = 36,
-  CM_PROC_UARCH_CYCLE = 37,
-  CM_PROC_UARCH_HALT_FLAG = 38,
-  CM_PROC_UNKNOWN = 39
+  CM_PROC_IUNREP = 30,
+  CM_PROC_CLINT_MTIMECMP = 31,
+  CM_PROC_PLIC_GIRQPEND = 32,
+  CM_PROC_PLIC_GIRQSRVD = 33,
+  CM_PROC_HTIF_TOHOST = 34,
+  CM_PROC_HTIF_FROMHOST = 35,
+  CM_PROC_HTIF_IHALT = 36,
+  CM_PROC_HTIF_ICONSOLE = 37,
+  CM_PROC_HTIF_IYIELD = 38,
+  CM_PROC_UARCH_PC = 39,
+  CM_PROC_UARCH_CYCLE = 40,
+  CM_PROC_UARCH_HALT_FLAG = 41,
+  CM_PROC_UNKNOWN = 42
 }
 global CM_UARCH_BREAK_REASON: type <cimport,nodecl,using> = @enum(cint){
   CM_UARCH_BREAK_REASON_REACHED_TARGET_CYCLE = 0,
@@ -130,7 +144,8 @@ global cm_processor_config: type <cimport,nodecl> = @record{
   scounteren: uint64,
   senvcfg: uint64,
   ilrsc: uint64,
-  iflags: uint64
+  iflags: uint64,
+  iunrep: uint64
 }
 global cm_ram_config: type <cimport,nodecl> = @record{
   length: uint64,
@@ -158,12 +173,56 @@ global cm_tlb_config: type <cimport,nodecl> = @record{
 global cm_clint_config: type <cimport,nodecl> = @record{
   mtimecmp: uint64
 }
+global cm_plic_config: type <cimport,nodecl> = @record{
+  girqpend: uint64,
+  girqsrvd: uint64
+}
 global cm_htif_config: type <cimport,nodecl> = @record{
   fromhost: uint64,
   tohost: uint64,
   console_getchar: boolean,
   yield_manual: boolean,
   yield_automatic: boolean
+}
+global CM_VIRTIO_DEVICE_TYPE: type <cimport,nodecl,using> = @enum(cint){
+  CM_VIRTIO_DEVICE_CONSOLE = 0,
+  CM_VIRTIO_DEVICE_P9FS = 1,
+  CM_VIRTIO_DEVICE_NET_USER = 2,
+  CM_VIRTIO_DEVICE_NET_TUNTAP = 3
+}
+global cm_virtio_p9fs_config: type <cimport,nodecl> = @record{
+  tag: cstring,
+  host_directory: cstring
+}
+global cm_virtio_hostfwd_config: type <cimport,nodecl> = @record{
+  is_udp: boolean,
+  host_ip: uint64,
+  guest_ip: uint64,
+  host_port: uint16,
+  guest_port: uint16
+}
+global cm_virtio_hostfwd_config_array: type <cimport,nodecl> = @record{
+  entry: *cm_virtio_hostfwd_config,
+  count: csize
+}
+global cm_virtio_net_user_config: type <cimport,nodecl> = @record{
+  hostfwd: cm_virtio_hostfwd_config_array
+}
+global cm_virtio_net_tuntap_config: type <cimport,nodecl> = @record{
+  iface: cstring
+}
+global cm_virtio_device_config_union: type <cimport,nodecl> = @union{
+  p9fs: cm_virtio_p9fs_config,
+  net_user: cm_virtio_net_user_config,
+  net_tuntap: cm_virtio_net_tuntap_config
+}
+global cm_virtio_device_config: type <cimport,nodecl> = @record{
+  type: CM_VIRTIO_DEVICE_TYPE,
+  device: cm_virtio_device_config_union
+}
+global cm_virtio_config_array: type <cimport,nodecl> = @record{
+  entry: *cm_virtio_device_config,
+  count: csize
 }
 global cm_rollup_config: type <cimport,nodecl> = @record{
   has_value: boolean,
@@ -193,7 +252,9 @@ global cm_machine_config: type <cimport,nodecl> = @record{
   flash_drive: cm_memory_range_config_array,
   tlb: cm_tlb_config,
   clint: cm_clint_config,
+  plic: cm_plic_config,
   htif: cm_htif_config,
+  virtio: cm_virtio_config_array,
   rollup: cm_rollup_config,
   uarch: cm_uarch_config
 }
@@ -263,6 +324,7 @@ global cm_machine_runtime_config: type <cimport,nodecl> = @record{
   concurrency: cm_concurrency_runtime_config,
   htif: cm_htif_runtime_config,
   skip_root_hash_check: boolean,
+  skip_root_hash_store: boolean,
   skip_version_check: boolean,
   soft_yield: boolean
 }
@@ -308,6 +370,7 @@ global function cm_read_memory(m: *cm_machine, address: uint64, data: *cuchar, l
 global function cm_write_memory(m: *cm_machine, address: uint64, data: *cuchar, length: csize, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_read_virtual_memory(m: *cm_machine, address: uint64, data: *cuchar, length: uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_write_virtual_memory(m: *cm_machine, address: uint64, data: *cuchar, length: csize, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_translate_virtual_address(m: *cm_machine, vaddr: uint64, paddr: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_read_x(m: *cm_machine, i: cint, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_write_x(m: *cm_machine, i: cint, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_get_x_address(i: cint): uint64 <cimport,nodecl> end
@@ -373,6 +436,8 @@ global function cm_write_ilrsc(m: *cm_machine, val: uint64, err_msg: *cstring): 
 global function cm_read_iflags(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_packed_iflags(PRV: cint, X: cint, Y: cint, H: cint): uint64 <cimport,nodecl> end
 global function cm_write_iflags(m: *cm_machine, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_read_iunrep(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_write_iunrep(m: *cm_machine, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_read_htif_tohost(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_read_htif_tohost_dev(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_read_htif_tohost_cmd(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
@@ -389,6 +454,10 @@ global function cm_read_htif_iyield(m: *cm_machine, val: *uint64, err_msg: *cstr
 global function cm_write_htif_iyield(m: *cm_machine, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_read_clint_mtimecmp(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_write_clint_mtimecmp(m: *cm_machine, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_read_plic_girqpend(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_write_plic_girqpend(m: *cm_machine, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_read_plic_girqsrvd(m: *cm_machine, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_write_plic_girqsrvd(m: *cm_machine, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_read_iflags_X(m: *cm_machine, val: *boolean, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_reset_iflags_X(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_set_iflags_X(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
@@ -423,12 +492,6 @@ global function cm_log_uarch_reset(m: *cm_machine, log_type: cm_access_log_type,
 global function cm_machine_run_uarch(m: *cm_machine, uarch_cycle_end: uint64, status_result: *CM_UARCH_BREAK_REASON, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_get_memory_ranges(m: *cm_machine, mrda: **cm_memory_range_descr_array, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_delete_memory_range_descr_array(mrda: *cm_memory_range_descr_array): void <cimport,nodecl> end
-global CM_MARCHID: cint <comptime> = 16
-global CM_VERSION_MAJOR: cint <comptime> = 0
-global CM_VERSION_MINOR: cint <comptime> = 16
-global CM_VERSION_PATCH: cint <comptime> = 1
-global CM_VERSION_LABEL: cstring <comptime> = ""
-global CM_MIMPID: cint <comptime> = 16
 global CM_MACHINE_HASH_BYTE_SIZE: cint <comptime> = 32
 global CM_MACHINE_X_REG_COUNT: cint <comptime> = 32
 global CM_MACHINE_F_REG_COUNT: cint <comptime> = 32
@@ -437,3 +500,6 @@ global CM_TREE_LOG2_WORD_SIZE: cint <comptime> = 3
 global CM_TREE_LOG2_PAGE_SIZE: cint <comptime> = 12
 global CM_TREE_LOG2_ROOT_SIZE: cint <comptime> = 64
 global CM_FLASH_DRIVE_CONFIGS_MAX_SIZE: cint <comptime> = 8
+global CM_VIRTIO_CONFIGS_MAX_SIZE: cint <comptime> = 16
+global CM_VIRTIO_HOSTFWD_CONFIGS_MAX_SIZE: cint <comptime> = 16
+global CM_VERSION_LABEL: cstring <comptime> = "EMULATOR_VERSION_LABEL"

@@ -3,15 +3,26 @@ local nldecl = require 'nelua.plugins.nldecl'
 -- cartesi
 nldecl.generate_bindings_file{
   output_file = 'cartesi.nelua',
-  includes = {'cartesi.h'},
+  includes = {'machine-c-api.h'},
   include_dirs = {'.'},
   include_names = {'^cm', '^CM'},
   output_head = [==[
 ##[[
-cinclude 'cartesi.h'
-linklib 'libcartesi.a'
-if not ccinfo.is_wasm then
-  linklib 'libstdc++.a'
+cinclude 'machine-c-api.h'
+if CARTESI_STATIC then
+  linklib 'libcartesi.a'
+  if not ccinfo.is_wasm then
+    linklib 'libstdc++.a'
+  end
+  -- libslirp related
+  if ccinfo.is_windows then
+    linklib 'ws2_32'
+  elseif not ccinfo.is_wasm then
+    linklib 'libslirp.a'
+    linklib 'libglib-2.0.a'
+  end
+else
+  linklib 'cartesi'
 end
 ]]
 ]==]

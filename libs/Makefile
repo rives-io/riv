@@ -1,5 +1,5 @@
 MINIZ_VERSION=3.0.2
-CARTESI_VERSION=0.16.1
+CARTESI_VERSION=feature/optim-fetch
 SOKOL_TAG=master
 SHA3_BRANCH=master
 MINIAUDIO_BRANCH=master
@@ -39,13 +39,10 @@ update-miniaudio:
 	wget -O host/miniaudio.h https://raw.githubusercontent.com/mackron/miniaudio/$(MINIAUDIO_BRANCH)/miniaudio.h
 
 update-cartesi:
-	wget -O cartesi-machine-v$(CARTESI_VERSION)_amd64.deb https://github.com/cartesi/machine-emulator/releases/download/v$(CARTESI_VERSION)/cartesi-machine-v$(CARTESI_VERSION)_amd64.deb
-	dpkg-deb -x cartesi-machine-v$(CARTESI_VERSION)_amd64.deb cartesi-machine-pkg
-	cat cartesi-machine-pkg/usr/include/cartesi-machine/machine-c-version.h > host/cartesi.h
-	cat cartesi-machine-pkg/usr/include/cartesi-machine/machine-c-defines.h >> host/cartesi.h
-	cat cartesi-machine-pkg/usr/include/cartesi-machine/machine-c-api.h >> host/cartesi.h
-	sed -i '/#include "/d' host/cartesi.h
-	rm -rf cartesi-machine-pkg cartesi-machine-v$(CARTESI_VERSION)_amd64.deb
+	wget -O host/machine-c-api.h https://raw.githubusercontent.com/cartesi/machine-emulator/$(CARTESI_VERSION)/src/machine-c-api.h
+	wget -O host/machine-c-defines.h https://raw.githubusercontent.com/cartesi/machine-emulator/$(CARTESI_VERSION)/src/machine-c-defines.h
+	wget -O host/machine-c-version.h https://raw.githubusercontent.com/cartesi/machine-emulator/$(CARTESI_VERSION)/tools/template/machine-c-version.h.template
+# 	sed -i 's/EMULATOR_VERSION_MAJOR/0/g;s/EMULATOR_VERSION_MINOR/0/g;s/EMULATOR_VERSION_MINOR/17/g;s/EMULATOR_VERSION_MINOR/17/g;s/EMULATOR_VERSION_LABEL/"-riv"/g' host/machine-c-version.h
 
 clean:
 	rm -rf cartesi-machine-pkg cartesi-machine-v$(CARTESI_VERSION)_amd64.deb miniz-$(MINIZ_VERSION).zip
