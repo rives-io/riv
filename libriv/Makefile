@@ -1,6 +1,6 @@
 PREFIX=/usr/local
 
-RIV_VERSION=0.3
+RIV_VERSION_MAJMIN=0.3
 
 # Auto detect toolchain to use
 HOST_ARCH=$(shell uname -m)
@@ -48,11 +48,11 @@ clean:
 
 install: libriv.so
 	mkdir -p $(DESTDIR)$(PREFIX)/lib $(DESTDIR)$(PREFIX)/share/riv
-	install -m755 libriv.so $(DESTDIR)$(PREFIX)/lib/libriv.so.$(RIV_VERSION)
-	ln -sf libriv.so.$(RIV_VERSION) $(DESTDIR)$(PREFIX)/lib/libriv.so.0
+	install -m755 libriv.so $(DESTDIR)$(PREFIX)/lib/libriv.so.$(RIV_VERSION_MAJMIN)
+	ln -sf libriv.so.$(RIV_VERSION_MAJMIN) $(DESTDIR)$(PREFIX)/lib/libriv.so.0
 	ln -sf libriv.so.0 $(DESTDIR)$(PREFIX)/lib/libriv.so
 	ln -sf ../lib/libriv.so $(DESTDIR)$(PREFIX)/bin/riv-tool
-	echo $(RIV_VERSION) > $(DESTDIR)$(PREFIX)/share/riv/version
+	echo $(RIV_VERSION_MAJMIN) > $(DESTDIR)$(PREFIX)/share/riv/version
 
 install-c-dev:
 	mkdir -p $(DESTDIR)$(PREFIX)/include
@@ -67,4 +67,4 @@ install-nelua-dev:
 install-dev: install-c-dev install-nelua-dev
 
 version:
-	@echo $(RIV_VERSION)
+	@echo $(RIV_VERSION_MAJMIN)

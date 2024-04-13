@@ -11,6 +11,8 @@ libpath(fs.join(projdir, 'libs', 'host', '?.nelua'))
 libpath(fs.join(projdir, 'libs', 'guest-host', '?.nelua'))
 ]]
 
+global RIVEMU_VERSION_PATCH: int64 <const> = 0
+
 require 'string'
 require 'io'
 require 'os'
@@ -220,7 +222,7 @@ local function parse_options(): rivemu_options
       opts.interactive = true
       opts.no_loading = true
       opts.entrypoint = "exec ash -l"
-    elseif argk == '-exec' then
+    elseif argk == '-exec' or argk == '--' then
       argi = argi + 1
       entrypoint_sb:clear()
       local first_argi: integer = argi
@@ -230,6 +232,27 @@ local function parse_options(): rivemu_options
         argi = argi + 1
       end
       opts.entrypoint = entrypoint_sb:view()
+    elseif argk == '-version' or argk == '--version' or argk == '-v' then
+      io.stdout:printf("rivemu %d.%d.%d\n", RIV_VERSION_MAJOR, RIV_VERSION_MINOR, RIVEMU_VERSION_PATCH)
+      io.stdout:printf("libriv %d.%d.%d\n", RIV_VERSION_MAJOR, RIV_VERSION_MINOR, RIV_VERSION_PATCH)
+      ## if ccinfo.is_windows then
+        io.stdout:printf("platform: windows\n")
+      ## elseif ccinfo.is_linux then
+        io.stdout:printf("platform: linux\n")
+      ## elseif ccinfo.is_macos then
+        io.stdout:printf("platform: macos\n")
+      ## end
+      ## if ccinfo.is_arm64 then
+        io.stdout:printf("architecture: arm64\n")
+      ## elseif ccinfo.is_x86_64 then
+        io.stdout:printf("architecture: amd64\n")
+      ## elseif ccinfo.is_wasm then
+        io.stdout:printf("architecture: wasm\n")
+      ## elseif ccinfo.is_riscv and ccinfo.sizeof_pointer == 8 then
+        io.stdout:printf("architecture: riscv64\n")
+      ## end
+      io.stdout:printf("build date: %s GMT\n", os.date('!%Y-%m-%d %H:%M:%S'))
+      os.exit(0)
     elseif argk == '-help' or argk == '--help' or argk == '-h' then
       io.printf("Usage: rivemu [options]\n")
       io.write[[
@@ -271,8 +294,11 @@ local function parse_options(): rivemu_options
   The image filename from "RIVEMU_SDK" environment variable is used when present,
   otherwise it tries to load "rivos-sdk.ext2" from current directory.
 
--workspace or -workspace=<directory>
-  Mount host directory into /workspace directory in the machine.
+-workspace
+  Mount current working directory into /workspace directory in the machine.
+
+-workspace=<directory>
+  Mount target directory into /workspace directory in the machine.
 
 -init=<commands>
   Execute commands when initializing the machine.
@@ -347,9 +373,13 @@ local function parse_options(): rivemu_options
   Run in interactive terminal mode.
   The entrypoint is set to "exec ash -l".
 
+-- [...]
 -exec [...]
   Overwrites the entrypoint to executes a shell command.
   All subsequent arguments are propagate to the command.
+
+-version
+  Show version and quit.
 
 -help
   Print this help.
