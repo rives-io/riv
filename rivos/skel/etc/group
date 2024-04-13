@@ -1,3 +1,4 @@
 root:x:0:
 cartridge:x:500:
+user:x:1000:
 nobody:!*:65534:

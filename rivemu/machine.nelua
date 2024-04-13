@@ -70,7 +70,7 @@ end
 function rivemu_machine.create(init: string, entrypoint: string, append_bootargs: string,
                                kernel_filename: string, rootfs_filename: string,
                                cartridge_filename: string, replaylog_filename: string,
-                               interactive: boolean): rivemu_machine
+                               interactive: boolean, network: boolean, workspace: string): rivemu_machine
   -- get default config
   local defconfig: *cm_machine_config
   cm_assert!(cm_get_default_config(&defconfig))
@@ -79,39 +79,77 @@ function rivemu_machine.create(init: string, entrypoint: string, append_bootargs
   -- rivos flash drive
   local flash_drive_entries: [8]cm_memory_range_config
   local flash_drive_count: cint = 0
-  flash_drive_entries[0] = {
-    start = RIV_PADDR_ROOTFS,
-    length = 16*1024*1024,
-  }
-  if #rootfs_filename > 0 then
-    flash_drive_entries[0].image_filename = rootfs_filename
-    flash_drive_entries[0].length = (@uint64)(-1)
+  do
+    flash_drive_entries[0] = {
+      start = RIV_PADDR_ROOTFS,
+      length = 16*1024*1024,
+    }
+    if #rootfs_filename > 0 then
+      flash_drive_entries[0].image_filename = rootfs_filename
+      flash_drive_entries[0].length = (@uint64)(-1)
+    end
+    flash_drive_count = flash_drive_count + 1
+
+    -- cartridge flash drive
+    flash_drive_entries[flash_drive_count] = {
+      start = RIV_PADDR_CARTRIDGE,
+      length = RIV_SIZE_CARTRIDGE,
+    }
+    flash_drive_count = flash_drive_count + 1
+
+    -- event log flash drive
+    flash_drive_entries[flash_drive_count] = {
+      start = RIV_PADDR_REPLAYLOG,
+      length = RIV_SIZE_REPLAYLOG,
+    }
+    flash_drive_count = flash_drive_count + 1
   end
-  flash_drive_count = flash_drive_count + 1
 
-  -- cartridge flash drive
-  flash_drive_entries[flash_drive_count] = {
-    start = RIV_PADDR_CARTRIDGE,
-    length = RIV_SIZE_CARTRIDGE,
-  }
-  flash_drive_count = flash_drive_count + 1
-
-  -- event log flash drive
-  flash_drive_entries[flash_drive_count] = {
-    start = RIV_PADDR_REPLAYLOG,
-    length = RIV_SIZE_REPLAYLOG,
-  }
-  flash_drive_count = flash_drive_count + 1
+  -- virtio devices
+  local virtio_entries: [8]cm_virtio_device_config
+  local virtio_count: cint = 0
+  local console_hvc: cint = 0
+  do
+    -- console
+    if interactive then
+      virtio_entries[virtio_count] = {
+        type = CM_VIRTIO_DEVICE_CONSOLE
+      }
+      virtio_count = virtio_count + 1
+      console_hvc = 1
+    end
+    -- network
+    if network then
+      virtio_entries[virtio_count] = {
+        type = CM_VIRTIO_DEVICE_NET_USER
+      }
+      virtio_count = virtio_count + 1
+    end
+    -- workspace
+    if #workspace > 0 then
+      virtio_entries[virtio_count] = {
+        type = CM_VIRTIO_DEVICE_P9FS,
+        device = {
+          p9fs = {
+            tag = "workspace",
+            host_directory = workspace,
+          }
+        }
+      }
+      virtio_count = virtio_count + 1
+    end
+  end
 
   -- bootargs
-  local bootargs: string <close> = "\z
+  local bootargs: string <close> = string.format("\z
     no4lvl quiet \z
-    earlycon=sbi console=hvc0 \z
+    earlycon=sbi console=hvc%d \z
     rootfstype=ext2 root=/dev/pmem0 rw \z
-    init=/usr/sbin/cartesi-init "..append_bootargs
+    init=/usr/sbin/cartesi-init %s", console_hvc, append_bootargs)
 
   -- set config
   local config: cm_machine_config = $defconfig
+  config.processor.iunrep = (virtio_count > 0) and 1 or 0
   config.ram = {
     image_filename = kernel_filename,
     length = RIV_SIZE_RAM
@@ -121,8 +159,9 @@ function rivemu_machine.create(init: string, entrypoint: string, append_bootargs
     init = init,
     entrypoint = entrypoint
   }
-  config.htif = {
-    console_getchar = interactive
+  config.virtio = {
+    count = virtio_count,
+    entry = &virtio_entries,
   }
   config.flash_drive = {
     count = flash_drive_count,

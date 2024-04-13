@@ -146,10 +146,9 @@ COPY --from=luajit-stage /pkg/usr /usr
 COPY rivos/skel/etc /etc
 COPY rivos/skel/usr /usr
 RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
-    mkdir -p /cartridge && chown 500:500 /cartridge && \
+    mkdir -p /cartridge /cartridges /workspace && chown 500:500 /cartridge && \
     chown root:root /root && \
-    rm -rf /media && \
-    echo rivos-sdk > /etc/hostname
+    rm -rf /media
 
 ################################
 # Rootfs stage
@@ -157,7 +156,7 @@ RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
 WORKDIR /rivos
 
 # Create base filesystem hierarchy
-RUN mkdir -p usr/bin usr/sbin usr/lib var/tmp proc sys dev root cartridge cartridges tmp run etc bin sbin lib && \
+RUN mkdir -p usr/bin usr/sbin usr/lib var/tmp proc sys dev root cartridge cartridges tmp run etc bin sbin lib workspace && \
     chmod 555 proc sys && \
     chown 500:500 cartridge && \
     chmod 1777 tmp var/tmp && \

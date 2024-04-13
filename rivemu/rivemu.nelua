@@ -41,6 +41,7 @@ local rivemu_options: type = @record{
   args: string,
   kernel_filename: string,
   rootfs_filename: string,
+  workspace_directory: string,
   cartridge_filename: string,
   replay_filename: string,
   record_filename: string,
@@ -59,6 +60,7 @@ local rivemu_options: type = @record{
   replaying: boolean,
   verifying: boolean,
   interactive: boolean,
+  network: boolean,
   tracking_outhist: boolean,
   print_fps: boolean,
   print_hash: boolean,
@@ -140,12 +142,27 @@ local function parse_options(): rivemu_options
       opts.kernel_filename = argv
     elseif argk == '-bootargs' then
       opts.bootargs = argv
-    elseif argk == '-sdk' then
-      local rivemu_sdk_env: string = C.getenv('RIVOS_SDK')
-      -- TODO: search relative to install path
-      opts.rootfs_filename = #rivemu_sdk_env > 0 and rivemu_sdk_env or "rivos-sdk.ext2"
-    elseif argk == '-rootfs' then
+    elseif argk == '-sdk' or argk == '-rootfs' then
       opts.rootfs_filename = argv
+      if #argv == 0 then
+        local rivemu_sdk_env: string = C.getenv('RIVEMU_SDK')
+        -- TODO: search relative to install path
+        if #rivemu_sdk_env > 0 then
+          opts.rootfs_filename = rivemu_sdk_env
+        else
+          opts.rootfs_filename = "rivos-sdk.ext2"
+        end
+      end
+    elseif argk == '-workspace' then
+      opts.workspace_directory = argv
+      if #argv == 0 then
+        local workspace: string = C.getenv('RIVEMU_WORKSPACE')
+        if #workspace > 0 then
+          opts.workspace_directory = workspace
+        else
+          opts.workspace_directory = "."
+        end
+      end
     elseif argk == '-init' then
       opts.init = argv
     elseif argk == '-entrypoint' then
@@ -197,6 +214,8 @@ local function parse_options(): rivemu_options
       opts.print_outcard = true
     elseif argk == '-quiet' then
       opts.quiet = true
+    elseif argk == '-net' then
+      opts.network = true
     elseif argk == '-it' then
       opts.interactive = true
       opts.no_loading = true
@@ -249,11 +268,11 @@ local function parse_options(): rivemu_options
 
 -sdk
   Load the RIV SDK operating system instead of the minimal RIV OS.
-  The image filename from "RIVOS_SDK" environment variable is used when present,
+  The image filename from "RIVEMU_SDK" environment variable is used when present,
   otherwise it tries to load "rivos-sdk.ext2" from current directory.
 
--rootfs=<filename>
-  Override the default Linux OS image.
+-workspace or -workspace=<directory>
+  Mount host directory into /workspace directory in the machine.
 
 -init=<commands>
   Execute commands when initializing the machine.
@@ -321,6 +340,9 @@ local function parse_options(): rivemu_options
 -quiet
   Don't print emulator debug messages.
 
+-net
+  Enable networking support in the machine.
+
 -it
   Run in interactive terminal mode.
   The entrypoint is set to "exec ash -l".
@@ -359,6 +381,11 @@ function rivemu_options:get_init_entrypoint(): (string, string)
   if self.stop_frame >= 0 then
     init_sb:write('export RIV_STOP_FRAME=', self.stop_frame, '\n')
   end
+  if self.interactive or self.network or #self.workspace_directory > 0 then
+    init_sb:writef([[
+busybox date -s @%d >> /dev/null
+]], os.time() + 1)
+  end
   if self.interactive then
     local term: string = C.getenv('TERM')
     if #term > 0 then
@@ -368,6 +395,20 @@ function rivemu_options:get_init_entrypoint(): (string, string)
     if #lang > 0 and lang:find('[uU][tT][fF]%-?8') > 0 then
       init_sb:write('export LANG=C.UTF-8\n')
     end
+  end
+  if self.network then
+    init_sb:write([[
+busybox ip link set dev eth0 up
+busybox ip addr add 10.0.2.15/24 dev eth0
+busybox ip route add default via 10.0.2.2 dev eth0
+[ -w /etc/resolv.conf ] && echo 'nameserver 10.0.2.3' > /etc/resolv.conf
+]])
+  end
+  if #self.workspace_directory > 0 then
+    init_sb:write([[
+busybox mount -t 9p workspace /workspace
+WORKDIR=/workspace
+]])
   end
   init_sb:write(self.init)
 
@@ -399,7 +440,7 @@ local function begin(): void
   machine = rivemu_machine.create(init, entrypoint, options.bootargs,
                                   options.kernel_filename, options.rootfs_filename,
                                   options.cartridge_filename, options.verify_filename,
-                                  options.interactive)
+                                  options.interactive, options.network, options.workspace_directory)
   running = true
 
   if options.recording then -- start recording
