@@ -440,7 +440,7 @@
         fpsElem.textContent = fps.toFixed(2) + " fps";
         cpuSpeedElem.textContent = mips.toFixed(2) + " MIPS";
         cpuUsageElem.textContent = cpu_usage.toFixed(2) + " %";
-        cpuCyclesElem.textContent = (cycles / 1000000).toFixed(3) + " M (" + ((100*cycles)/(600*128000000)).toFixed(2) + "% quota)";
+        cpuCyclesElem.textContent = (cycles / 1000000).toFixed(3) + " M (" + ((100*cycles)/(750*128000000)).toFixed(2) + "% quota)";
         frameElem.textContent = frame;
         if (lastTotalFrames > 0) {
           progressElem.textContent = (frame*100/lastTotalFrames).toFixed(2) + "%";

@@ -10,3 +10,5 @@ busybox grep -Fq hugetlbfs /proc/filesystems && echo 6 > /proc/sys/vm/nr_hugepag
 # security
 busybox mount -o noatime,nosuid,remount /
 busybox mount -o nosuid,remount /dev
+
+export PATH="/usr/local/usr/sbin:/usr/local/usr/bin:$PATH"

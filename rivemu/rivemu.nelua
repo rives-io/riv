@@ -208,7 +208,7 @@ local function parse_options(): rivemu_options
       opts.no_video = true
     elseif argk == '-no-loading' then
       opts.no_loading = true
-    elseif argk == '-no-window' or argk == '-term' or argk == '-no-yield' then
+    elseif argk == '-no-window' or argk == '-no-yield' then
       opts.no_window = true
       opts.no_audio = true
       opts.no_video = true
@@ -286,7 +286,7 @@ USAGE
 
 OPTIONS
   -cartridge=<filename>
-    Cartridge to load.
+    Cartridge to load at /dev/pmem1 drive.
     If no entrypoint is set, then it's set to "exec riv-run".
 
   -record=<filename>
@@ -380,7 +380,7 @@ OPTIONS
   -no-loading
     Disable the loading screen.
 
-  -no-window or -term
+  -no-window
     Disable the graphical window.
     Implies "-no-loading -no-video -no-audio".
 

@@ -118,7 +118,10 @@ RUN make -C riv/libriv
 FROM --platform=linux/riscv64 riv-toolchain-stage AS rivos-sdk-stage
 
 # Install development utilities
-RUN apk add bash neovim neovim-doc htop tmux gdb strace squashfs-tools ncdu
+RUN apk add bash neovim neovim-doc htop tmux gdb strace squashfs-tools ncdu jq
+
+# Make vim an alias to nvim
+RUN ln -s /usr/bin/nvim /usr/bin/vim
 
 # Download apks to be installed in rivos
 RUN mkdir -p apks && \
