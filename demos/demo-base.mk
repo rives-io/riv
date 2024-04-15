@@ -28,18 +28,18 @@ COMP?=xz
 ASSETS_DIR?=assets
 
 # All of the following flags are known to help generating the small RISC-V ELF binaries
-CFLAGS+=-Os -march=rv64g -ffast-math -DNDEBUG
+CFLAGS+=-O2 -march=rv64g -DNDEBUG
+CFLAGS+=-fno-strict-overflow -fno-strict-aliasing
+CFLAGS+=-ffast-math -fallow-store-data-races
 CFLAGS+=-ffunction-sections -fdata-sections
-CFLAGS+=-fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables
-CFLAGS+=-mstrict-align -mshorten-memrefs -mno-riscv-attribute
+CFLAGS+=-fno-stack-protector
 CFLAGS+=-Wall
 STRIPFLAGS+=--strip-all --strip-unneeded
-STRIPFLAGS+=--remove-section=.note --remove-section=.comment
-STRIPFLAGS+=--remove-section=.riscv.attributes --remove-section=.eh_frame
-LDFLAGS+=-Wl,-O1,--gc-sections,--as-needed,--no-eh-frame-hdr,--build-id=none,--hash-style=gnu
-LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
-LDFLAGS+=-Wl,--dynamic-linker=/lib/ld-musl.so
-LDFLAGS+=-z norelro -z noseparate-code -z lazy
+STRIPFLAGS+=--remove-section=.comment --remove-section=.riscv.attributes
+LDFLAGS+=-Wl,-O1,--gc-sections,--as-needed,--build-id=none,--hash-style=gnu
+LDFLAGS+=-Wl,--sort-common
+LDFLAGS+=-Wl,--dynamic-linker=/lib/ld-musl-riscv64.so.1
+LDFLAGS+=-Wl,-z,relro,-z,lazy
 
 # Add RIV library (required when cross compiling)
 CFLAGS+=-I../../libriv

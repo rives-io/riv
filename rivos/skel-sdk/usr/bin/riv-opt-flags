@@ -64,7 +64,7 @@ LDFLAGS="-Wl,--build-id=none -Wl,--sort-common"
 [ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,-O1"
 
 # architecture
-[ "$mode" = "speed" ] && CFLAGS="$CFLAGS -march=rv64g"
+[ "$mode" != "size" ] && CFLAGS="$CFLAGS -march=rv64g"
 
 # fast floating point
 [ "$mode" != "debug" ] && CFLAGS="$CFLAGS -ffast-math -fallow-store-data-races"

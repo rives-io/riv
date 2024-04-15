@@ -1,5 +1,5 @@
 ## Host toolchain stage
-FROM cartesi/toolchain:0.16.0 AS host-tools-stage
+FROM cartesi/toolchain:0.17.0 AS host-tools-stage
 RUN apt-get update && \
     apt-get install -y squashfs-tools && \
     rm -rf /var/lib/apt

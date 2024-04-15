@@ -1,5 +1,5 @@
 #!/bin/sh
-exec strip --strip-all \
+exec strip --strip-all --strip-unneeded \
     --remove-section=.comment \
     --remove-section=.riscv.attributes \
     "$@"
