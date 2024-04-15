@@ -6,8 +6,8 @@ development workflow and how to create your first cartridge.
 If you not have installed RIVEMU yet, please read getting started page first.
 
 This tutorial will begin quickly by running your first graphical application inside RIV,
-and then expand slowly about all development tools RIV offers to create cartridges,
-while you will learn about some RIVEMU options on the go.
+and then expand slowly about all the tools RIV offers to develop cartridges,
+you will learn some new cool RIVEMU options on the go.
 
 ## Creating your first application in C
 
@@ -65,7 +65,7 @@ rivemu -workspace -it
 ```
 
 The `-it` options standards for interactive terminal,
-it gives ability to type commands inside a terminal running inside RIV OS.
+it gives ability to type commands inside a terminal running inside running RIV machine.
 You can type really almost any Linux command, for example:
 
 ```sh
@@ -108,7 +108,7 @@ With the SDK you can do this, because it's writable and customizable,
 while the builtin standard minimal RIV OS is read-only.
 
 Bear in mind the standard SDK is very large (about 500MB),
-because it contains compilers, debuggers, editors, and many other Linux tools.
+because it contains compilers, debuggers, editors, and many other tools for development only.
 
 Let's download the SDK and try it:
 
@@ -117,11 +117,6 @@ wget -O rivos-sdk.ext2 https://github.com/rives-io/riv/releases/latest/download/
 rivemu -sdk=rivos-sdk.ext2 -exec gcc --version
 ```
 
-The `-sdk=rivos-sdk.ext2` overrides the standard operating system
-to use the SDK operating system,
-the command `-exec gcc --version` should show the GCC C compiler version
-that is included in the SDK, which was not included in the minimal RIV OS.
-
 You probably got an output like:
 ```
 gcc (Alpine 13.2.1_git20240309) 13.2.1 20240309
@@ -129,6 +124,11 @@ Copyright (C) 2023 Free Software Foundation, Inc.
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
+
+The `-sdk=rivos-sdk.ext2` overrides the standard operating system
+to use the SDK operating system,
+the command `-exec gcc --version` should show the GCC C compiler version
+that is included in the SDK, which was not included in the minimal RIV OS.
 
 Let now install this SDK globally, to make available in any terminal in your system:
 ```sh
@@ -244,7 +244,7 @@ like [this link](https://hardwaretester.com/gamepad).
 
 ## Compiling cartridges
 
-For out first `hello.sqfs` we used `riv-jit-c` to run `hello.c`,
+In our first cartridge `hello.sqfs`, we used `riv-jit-c` to run `hello.c`,
 although this was very easy we can actually compile a `hello` RISC-V ELF binary:
 
 ```sh
@@ -272,8 +272,8 @@ Again, like before you should see hello world screen,
 but this cartridge is different from the first one using that used JIT,
 it uses ahead of time compilation,
 which makes your cartridge faster to run, and perhaps smaller.
-We recommend to use JIT just for  prototyping,
-ideally your final product should use compiled cartridges.
+We recommend to use JIT just for prototyping,
+when possible your final release cartridge should be statically compiled.
 
 ## Compiling optimized cartridges
 
@@ -647,4 +647,10 @@ but if you are adventurous,
 you could use other languages as long you provide the bindings.
 
 ## Porting other games
-TODO
+
+You can port existing games to RIV, as long you have to code for it,
+have all the tools you need in the SDK
+and the game work under all the constrains presented so far.
+Porting a game basically is a matter of changing the graphics, audio and input APIs
+to use `libriv` C API.
+In the next chapter we will learn more details about the API.

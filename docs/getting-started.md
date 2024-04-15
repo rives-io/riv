@@ -14,7 +14,7 @@ I recommend setting it up first, for Windows you could check out MSYS2.
 
 RIVEMU is all you need to install in your system for both playing and developing cartridges.
 To install RIVEMU you just need to download its binary for your system
-at [https://github.com/rives-io/riv/releases/latest](GitHub releases page).
+at [GitHub releases page](https://github.com/rives-io/riv/releases/latest).
 
 For example, if you are on a system with Linux x86_64, you can download with:
 
