@@ -73,6 +73,7 @@ local rivemu_options: type = @record{
   print_hash: boolean,
   pixel_perfect: boolean,
   no_window: boolean,
+  no_yield: boolean,
   no_audio: boolean,
   no_video: boolean,
   no_loading: boolean,
@@ -209,11 +210,13 @@ local function parse_options(): rivemu_options
       opts.no_video = true
     elseif argk == '-no-loading' then
       opts.no_loading = true
-    elseif argk == '-no-window' or argk == '-no-yield' then
+    elseif argk == '-no-window' then
       opts.no_window = true
       opts.no_audio = true
       opts.no_video = true
       opts.no_loading = true
+    elseif argk == '-no-yield' then
+      opts.no_yield = true
     elseif argk == '-no-quit' then
       opts.no_quit = true
     elseif argk == '-wait-halt' then
@@ -387,6 +390,10 @@ OPTIONS
     Disable the graphical window.
     Implies "-no-loading -no-video -no-audio".
 
+  -no-yield
+    Signs to the running cartridge that it doesn't need to
+    yield graphics and audio to the host.
+
   -no-quit
     Don't quit when cartridge finishes.
 
@@ -466,6 +473,9 @@ function rivemu_options:get_init_entrypoint(): (string, string)
   end
   if self.stop_frame >= 0 then
     init_sb:writef('export RIV_STOP_FRAME=%s\n', self.stop_frame)
+  end
+  if self.no_yield then
+    init_sb:write('export RIV_NO_YIELD=y\n')
   end
   if self.interactive or self.network or #self.workspace_directory > 0 then
     init_sb:writef('busybox date -s @%d >> /dev/null\n', os.time() + 1)

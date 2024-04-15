@@ -327,14 +327,14 @@ but how can you debug? Well you can just use the GDB debugger.
 Lets compile again our minimal `hello.c` program and debug it with GDB:
 
 ```sh
-rivemu -quiet -no-window -sdk -workspace -exec gcc hello.c -o hello-debug '$(riv-opt-flags -Odebug)' -ggdb
+rivemu -quiet -no-window -sdk -workspace -exec gcc hello.c -o hello-debug '$(riv-opt-flags -Odebug)'
 rivemu -quiet -sdk -workspace -it -exec gdb -silent ./hello-debug
 ```
 
 This should open `gdb` so you can debug the cartridge,
 and here is a session demonstrating how to step over each function:
 
-```sh
+```c
 $ rivemu -quiet -sdk -workspace -it -exec gdb -silent ./hello-debug
 Reading symbols from ./hello-debug...
 (gdb) break main
@@ -559,7 +559,7 @@ while true:
         break
 ```
 
-Did you notice this code looks similar to python?
+Did you notice this code looks similar to Python?
 That is because Nim syntax is inspired by Python syntax,
 but don't be fooled, this is a statically compiled programming language.
 
@@ -629,7 +629,7 @@ rivemu -workspace -exec luajit hello.lua
 And again, you will see the "hello world!" screen!
 
 As mentioned before `luajit` is contained the official RIV OS,
-but interpreter for programming languages are not.
+but interpreter for other programming languages are not.
 If you would like to use Python or JavaScript for example,
 you will have to embed their interpreter inside the cartridge which could make it very big,
 this is why I recommend using just official supported interpreted languages,
@@ -640,7 +640,7 @@ If you have read this entire page, you have by now:
 - run `hello.c` compiled with GCC compiler
 - run `hello.c` compiled with GCC compiler with optimizations
 - run `hello.nim` compiled with Nim compiler
-- run `hello.lua` compiled with Lua
+- run `hello.lua` interpreted with LuaJIT
 
 It's recommended to use C for now,
 but if you are adventurous,
