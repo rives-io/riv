@@ -3,7 +3,7 @@
 This tutorial will guide step by step on how to install RIVEMU,
 play cartridges, record tapes, replay tapes and verify tapes.
 
-It's mandatory for those trying to grasp what RIV is about,
+It's mandatory for those trying to grasp what RIV is,
 before actually developing games for it.
 
 This tutorial will assume you are running commands in a POSIX compatible terminal emulator, such as the ones found natively on Linux and MacOS.
@@ -14,7 +14,7 @@ I recommend setting it up first, for Windows you could check out MSYS2.
 
 RIVEMU is all you need to install in your system for both playing and developing cartridges.
 To install RIVEMU you just need to download its binary for your system
-at [https://github.com/rives-io/riv/releases/latest].
+at [https://github.com/rives-io/riv/releases/latest](GitHub releases page).
 
 For example, if you are on a system with Linux x86_64, you can download with:
 

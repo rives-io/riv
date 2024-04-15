@@ -303,9 +303,9 @@ A lot happened above, let's break it:
 Lets compare the final with old one we created:
 
 ```sh
-$ unsquashfs -stat hello-compiled.sqfs | grep "Filesystem size"
+$ rivemu-exec 'unsquashfs -stat hello-compiled.sqfs | grep bytes'
 Filesystem size 3195 bytes (3.12 Kbytes / 0.00 Mbytes)
-$ unsquashfs -stat hello-optimized.sqfs | grep "Filesystem size"
+$ rivemu-exec 'unsquashfs -stat hello-optimized.sqfs | grep bytes'
 Filesystem size 1573 bytes (1.54 Kbytes / 0.00 Mbytes)
 ```
 

@@ -68,7 +68,7 @@ local rivemu_options: type = @record{
   interactive: boolean,
   network: boolean,
   tracking_outhist: boolean,
-  print_fps: boolean,
+  benchmarking: boolean,
   print_hash: boolean,
   pixel_perfect: boolean,
   no_window: boolean,
@@ -217,8 +217,8 @@ local function parse_options(): rivemu_options
       opts.no_quit = true
     elseif argk == '-wait-halt' then
       opts.wait_halt = true
-    elseif argk == '-print-fps' then
-      opts.print_fps = true
+    elseif argk == '-bench' then
+      opts.benchmarking = true
     elseif argk == '-print-frame-hash' then
       opts.print_frame_hash = true
     elseif argk == '-print-final-hash' then
@@ -390,8 +390,9 @@ OPTIONS
   -wait-halt
     Don't quit when RIV device is closed, wait for the machine to halt.
 
-  -print-fps
-    Print frame rate statistics every second.
+  -bench
+    Print benchmark statistics every second.
+    Such as frames per second, CPU cost, CPU speed, CPU usage and CPU quota.
 
   -print-frame-hash
     Print the machine root hash for every frame.
@@ -784,8 +785,8 @@ local function advance_frame(): void
   machine_frame()
   local now: float64 = os.now()
   local time_elapsed: float64 = now - time_start
-  local last_mcycle: uint64 = machine:read_mcycle()
-  local mcycle_elapsed: uint64 = last_mcycle - mcycle_start
+  local mcycle: uint64 = machine:read_mcycle()
+  local mcycle_elapsed: uint64 = mcycle - mcycle_start
   local target_fps: uint32 = machine.mmio_driver.framebuffer_desc.target_fps
   local frame: uint64 = machine.mmio_driver.frame
 
@@ -805,9 +806,9 @@ local function advance_frame(): void
 
   -- print fps
   if not loading and running then
-    framelimiter.target_fps = target_fps * options.speed
-    if framelimiter:update_stats(now, time_elapsed, mcycle_elapsed) and options.print_fps then
-      framelimiter:print_fps()
+    framelimiter.target_update_fps = target_fps * options.speed
+    if framelimiter:update_stats(now, time_elapsed, mcycle, mcycle_elapsed, target_fps) and options.benchmarking then
+      framelimiter:print_stats(frame)
     end
   end
 
@@ -857,16 +858,18 @@ static void _sapp_emsc_resize(int width, int height) {
       local outcard_data: span(byte) = rivemu_iocard.get_outcard_data()
       local ptr: *uint8 <nodce> = (@*uint8)(outcard_data.data)
       local len: int32 <nodce> = (@int32)(outcard_data.size)
-      local frame: int32 <nodce> = (@int32)(machine.mmio_driver.frame)
+      local frame_num: float64 <nodce> = frame
+      local cycles: float64 <nodce> = mcycle
       local fps: float64 <nodce> = framelimiter.fps
-      local mips: float64 <nodce> = framelimiter.mips
+      local cpu_cost: float64 <nodce> = framelimiter.cpu_cost
+      local cpu_speed: float64 <nodce> = framelimiter.cpu_speed
       local cpu_usage: float64 <nodce> = framelimiter.cpu_usage
-      local cycles: float64 <nodce> = last_mcycle
+      local cpu_quota: float64 <nodce> = framelimiter.cpu_quota
       cemit![[
         EM_ASM({
           let outcard = HEAPU8.subarray($0, $0 + $1);
-          rivemu_on_frame(outcard, $2, $3, $4, $5, $6);
-        }, ptr, len, frame, fps, mips, cpu_usage, cycles);
+          rivemu_on_frame(outcard, $2, $3, $4, $5, $6, $7, $8);
+        }, ptr, len, frame_num, cycles, fps, cpu_cost, cpu_speed, cpu_usage, cpu_quota);
       ]]
     ## end
   end
@@ -900,7 +903,7 @@ local function frame(): void
       framelimiter.last_frame_time = os.now()
     elseif options.no_window then -- process immediately when there is no window
       advance_frame()
-    elseif framelimiter.target_fps <= refresh_rate then -- wait time between frames
+    elseif framelimiter.target_update_fps <= refresh_rate then -- wait time between frames
       if framelimiter:should_process_next_frame(os.now()) then
         advance_frame()
       end

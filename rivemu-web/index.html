@@ -41,6 +41,7 @@
       <div><b>Frame: </b><span id="frame">N/A</span></div>
       <div><b>Score: </b><span id="score">N/A</span></div>
       <div><b>FPS: </b><span id="fps">N/A</span></div>
+      <div><b>CPU Cost: </b><span id="cpuCost">N/A</span></div>
       <div><b>CPU Speed: </b><span id="cpuSpeed">N/A</span></div>
       <div><b>CPU Usage: </b><span id="cpuUsage">N/A</span></div>
       <div><b>CPU Cycles: </b><span id="cpuCycles">N/A</span></div>
@@ -124,6 +125,7 @@
       let progressElem = document.getElementById("progress");
       let frameElem = document.getElementById("frame");
       let fpsElem = document.getElementById("fps");
+      let cpuCostElem = document.getElementById("cpuCost");
       let cpuSpeedElem = document.getElementById("cpuSpeed");
       let cpuUsageElem = document.getElementById("cpuUsage");
       let cpuCyclesElem = document.getElementById("cpuCycles");
@@ -250,6 +252,7 @@
         progressElem.textContent = "N/A";
         frameElem.textContent = "N/A";
         fpsElem.textContent = "N/A";
+        cpuCostElem.textContent = "N/A";
         cpuSpeedElem.textContent = "N/A";
         cpuUsageElem.textContent = "N/A";
         cpuCyclesElem.textContent= "N/A";
@@ -433,15 +436,16 @@
       }
 
       // Called by RIVEMU on every frame.
-      function rivemu_on_frame(outcard, frame, fps, mips, cpu_usage, cycles) {
+      function rivemu_on_frame(outcard, frame, cycles, fps, cpu_cost, cpu_speed, cpu_usage, cpu_quota) {
         const mins = Math.floor(frame / (60 * lastTargetFps));
         const secs = (frame / lastTargetFps) - (60 * mins);
         timeElem.textContent = mins + " mins " + secs.toFixed(3) + " secs";
         fpsElem.textContent = fps.toFixed(2) + " fps";
-        cpuSpeedElem.textContent = mips.toFixed(2) + " MIPS";
+        cpuCostElem.textContent = cpu_cost.toFixed(2) + " MIPS";
+        cpuSpeedElem.textContent = cpu_speed.toFixed(2) + " MIPS";
         cpuUsageElem.textContent = cpu_usage.toFixed(2) + " %";
-        cpuCyclesElem.textContent = (cycles / 1000000).toFixed(3) + " M (" + ((100*cycles)/(750*128000000)).toFixed(2) + "% quota)";
-        frameElem.textContent = frame;
+        cpuCyclesElem.textContent = (cycles / 1000000).toFixed(3) + " M (" + cpu_quota.toFixed(2) + "% quota)";
+        frameElem.textContent = frame.toFixed(0);
         if (lastTotalFrames > 0) {
           progressElem.textContent = (frame*100/lastTotalFrames).toFixed(2) + "%";
         }
