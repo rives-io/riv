@@ -1,0 +1,103 @@
+#!/bin/sh
+
+usage() {
+ echo "Usage: $0 -Ospeed|-Osize|-Odebug [--cflags] [--ldflags]"
+ echo "Options:"
+ echo "  -Ospeed      Optimize for performance, while retaining good code size."
+ echo "  -Osize       Optimize for code size, while retaining good performance."
+ echo "  -Odebug      Optimize for debug, while retaining fair performance and large code size."
+ echo "  --cflags     Show C flags"
+ echo "  --ldflags    Show linker flags"
+ echo ""
+ echo "If neither --cflags or --ldflags is supplied, then both are shown."
+}
+
+handle_options() {
+  while [ $# -gt 0 ]; do
+    case $1 in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      -Ospeed)
+        mode=speed
+        ;;
+      -Osize)
+        mode=size
+        ;;
+      -Odebug)
+        mode=debug
+        ;;
+      --cflags)
+        show_cflags=y
+        ;;
+      --ldflags)
+        show_ldflags=y
+        ;;
+      *)
+        echo "Invalid option: $1" >&2
+        usage
+        exit 1
+        ;;
+    esac
+    shift
+  done
+}
+
+handle_options "$@"
+
+if [ -z "$mode" ]; then
+    usage
+    exit 1
+fi
+
+[ $1 = "-Ospeed" ] && mode=speed
+[ $1 = "-Osize" ] && mode=size
+[ $1 = "-Odebug" ] && mode=debug
+
+# make build more reproducible
+LDFLAGS="-Wl,--build-id=none -Wl,--sort-common"
+
+[ "$mode" = "speed" ] && CFLAGS="-O2 -DNDEBUG"
+[ "$mode" = "size" ] && CFLAGS="-Os -DNDEBUG"
+[ "$mode" = "debug" ] && CFLAGS="-Og -g -fno-omit-frame-pointer"
+[ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,-O1"
+
+# architecture
+[ "$mode" = "speed" ] && CFLAGS="$CFLAGS -march=rv64g"
+
+# fast floating point
+[ "$mode" != "debug" ] && CFLAGS="$CFLAGS -ffast-math -fallow-store-data-races"
+
+# minimize undefined behavior
+CFLAGS="$CFLAGS -fno-strict-overflow -fno-strict-aliasing"
+
+# remove stack guards
+[ "$mode" != "debug" ] && CFLAGS="$CFLAGS -fno-stack-protector"
+
+# discard unused functions and data
+[ "$mode" != "debug" ] && CFLAGS="$CFLAGS -ffunction-sections -fdata-sections"
+[ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,--gc-sections"
+
+# make final binary smaller
+[ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,--as-needed -Wl,--hash-style=gnu"
+
+# link optimization
+[ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,-z,relro"
+[ "$mode" = "size" ] && LDFLAGS="$LDFLAGS -Wl,-z,lazy"
+[ "$mode" = "speed" ] && LDFLAGS="$LDFLAGS -Wl,-z,now"
+
+# force exporting symbols for backtraces
+[ "$mode" == "debug" ] && LDFLAGS="$LDFLAGS -rdynamic"
+
+# link libraries
+LDFLAGS="$LDFLAGS -lriv"
+
+# print
+if [ "$show_cflags$show_ldflags" = "yy" ] || [ "$show_cflags$show_ldflags" = "" ]; then
+    echo "$CFLAGS $LDFLAGS"
+elif [ "$show_cflags" = "y" ]; then
+    echo "$CFLAGS"
+elif [ "$show_ldflags" = "y" ]; then
+    echo "$LDFLAGS"
+fi

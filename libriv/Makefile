@@ -15,15 +15,14 @@ endif
 # basic flags
 CFLAGS+=-Wall
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
-LDFLAGS+=-Wl,--relax,--sort-common,--sort-section=name
-LDFLAGS+=-z relro -z now -rdynamic -Wl,--defsym=riv=riv_ctx
+LDFLAGS+=-Wl,-z,relro,-z,now -rdynamic -Wl,--defsym=riv=riv_ctx
 NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
 NELUA_CACHEDIR=.
 
 ifeq ($(debug), yes)
 	CFLAGS+=-Og -march=rv64g
 else # release flags
-	CFLAGS+=-O2 -march=rv64g -DNDEBUG -fno-stack-protector -ffast-math
+	CFLAGS+=-O2 -march=rv64g -DNDEBUG -fno-stack-protector -ffast-math -fallow-store-data-races
 	STRIPFLAGS+=--strip-unneeded --remove-section=.comment
 	NELUA_FLAGS+=--strip-bin --stripflags="$(STRIPFLAGS)"
 endif

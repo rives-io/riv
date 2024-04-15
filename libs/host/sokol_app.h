@@ -9637,7 +9637,7 @@ _SOKOL_PRIVATE void _sapp_x11_query_system_dpi(void) {
     // fallback if querying DPI had failed: assume the standard DPI 96.0f
     if (!dpi_ok) {
         _sapp.x11.dpi = 96.0f;
-        _SAPP_WARN(LINUX_X11_QUERY_SYSTEM_DPI_FAILED);
+        // _SAPP_WARN(LINUX_X11_QUERY_SYSTEM_DPI_FAILED);
     }
 }
 
