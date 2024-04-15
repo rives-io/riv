@@ -70,7 +70,8 @@ end
 function rivemu_machine.create(init: string, entrypoint: string, append_bootargs: string,
                                kernel_filename: string, rootfs_filename: string,
                                cartridge_filename: string, replaylog_filename: string,
-                               interactive: boolean, network: boolean, workspace: string): rivemu_machine
+                               interactive: boolean, network: boolean, persist: boolean,
+                               workspace: string): rivemu_machine
   -- get default config
   local defconfig: *cm_machine_config
   cm_assert!(cm_get_default_config(&defconfig))
@@ -87,6 +88,7 @@ function rivemu_machine.create(init: string, entrypoint: string, append_bootargs
     if #rootfs_filename > 0 then
       flash_drive_entries[0].image_filename = rootfs_filename
       flash_drive_entries[0].length = (@uint64)(-1)
+      flash_drive_entries[0].shared = persist
     end
     flash_drive_count = flash_drive_count + 1
 

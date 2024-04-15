@@ -66,6 +66,7 @@ local rivemu_options: type = @record{
   replaying: boolean,
   verifying: boolean,
   interactive: boolean,
+  persist: boolean,
   network: boolean,
   tracking_outhist: boolean,
   benchmarking: boolean,
@@ -227,10 +228,12 @@ local function parse_options(): rivemu_options
       opts.print_outhash = true
     elseif argk == '-print-outcard' then
       opts.print_outcard = true
-    elseif argk == '-quiet' then
-      opts.quiet = true
     elseif argk == '-net' then
       opts.network = true
+    elseif argk == '-persist' then
+      opts.persist = true
+    elseif argk == '-quiet' then
+      opts.quiet = true
     elseif argk == '-it' then
       opts.interactive = true
       opts.no_loading = true
@@ -409,11 +412,15 @@ OPTIONS
   -print-outcard
     Print outcard final hash.
 
-  -quiet
-    Don't print emulator debug messages.
-
   -net
     Enable networking support in the machine.
+
+  -persist
+    Persist changes in the machine root filesystem.
+    This option only take effect with -sdk option.
+
+  -quiet
+    Don't print emulator debug messages.
 
   -it
     Run in interactive terminal mode.
@@ -526,7 +533,8 @@ local function begin(): void
   machine = rivemu_machine.create(init, entrypoint, options.bootargs,
                                   options.kernel_filename, options.rootfs_filename,
                                   options.cartridge_filename, options.verify_filename,
-                                  options.interactive, options.network, options.workspace_directory)
+                                  options.interactive, options.network, options.persist,
+                                  options.workspace_directory)
   running = true
 
   if options.recording then -- start recording
@@ -805,9 +813,9 @@ local function advance_frame(): void
   end
 
   -- print fps
-  if not loading and running then
+  if running then
     framelimiter.target_update_fps = target_fps * options.speed
-    if framelimiter:update_stats(now, time_elapsed, mcycle, mcycle_elapsed, target_fps) and options.benchmarking then
+    if framelimiter:update_stats(frame, now, time_elapsed, mcycle, mcycle_elapsed, target_fps) and options.benchmarking then
       framelimiter:print_stats(frame)
     end
   end

@@ -39,21 +39,18 @@ function rivemu_framelimiter:should_process_next_frame(now: float64): boolean
 end
 
 -- Update statistics.
-function rivemu_framelimiter:update_stats(now: float64, time_elapsed: float64, mcycle: uint64, mcycle_elapsed: uint64, target_fps: float64): boolean
-  self.frame_sum = self.frame_sum + 1
+function rivemu_framelimiter:update_stats(frame: uint64, now: float64, time_elapsed: float64, mcycle: uint64, mcycle_elapsed: uint64, target_fps: float64): boolean
   self.time_elapsed_sum = self.time_elapsed_sum + time_elapsed
   self.mcycle_elapsed_sum = self.mcycle_elapsed_sum + mcycle_elapsed
-  self.cpu_quota = 100.0 * (mcycle / (750*128000000.0))
+  if frame == 0 then return end -- keep accumulating because we are still loading
+  self.frame_sum = self.frame_sum + 1
   local last_time_elapsed: float64 = now - self.stats_last_time
-  if last_time_elapsed >= 0.25 then
+  if last_time_elapsed >= 0.25 or frame == 1 then
     self.fps = self.frame_sum / last_time_elapsed
     self.cpu_speed = self.mcycle_elapsed_sum / (self.time_elapsed_sum * 1000000.0)
-    if self.frame_sum > 0 then
-      self.cpu_cost = target_fps * (self.mcycle_elapsed_sum / (self.frame_sum * 1000000.0))
-    else
-      self.cpu_cost = 0
-    end
+    self.cpu_cost = target_fps * (self.mcycle_elapsed_sum / (self.frame_sum * 1000000.0))
     self.cpu_usage = (self.time_elapsed_sum * 100.0) / last_time_elapsed
+    self.cpu_quota = 100.0 * (mcycle / (750*128000000.0))
     self.frame_sum = 0
     self.time_elapsed_sum = 0
     self.mcycle_elapsed_sum = 0

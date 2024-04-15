@@ -293,7 +293,7 @@ rivemu-exec riv-mksqfs hello-optimized hello-optimized.sqfs
 rivemu hello-optimized.sqfs
 ```
 
-A lot happened above, let's break it:
+Lets break what happened:
 1. In the first line we create the alias `rivemu-exec` to make easy for us to invoke commands inside the machine.
 2. In the second line we compile `hello.c` again, but this time to `hello-optimized` using compiler flags from `riv-opt-flags -Osize --cflags --ldflags`, this will supply flags to optimized for size because we passed `-Osize`, this tool also accepts `-Ospeed` to optimize for performance, and `-Odebug` for debugging.
 3. In the third line we strip unwanted data from the ELF binary `hello-optimized`, this should compress the file a little more.
@@ -393,15 +393,258 @@ cartridges are recommended to have include this metadata to distribute them on R
 Go ahead an run `/cartridge/antcopter` command in the interactive terminal,
 you should be able to play it.
 
-
 ## Benchmarking cartridges
 
-## Customizing the SDK
+It's a good practice to measure the performance of your cartridge,
+before distributing it, for two reasons.
+One because you have a quota limit on how much computation a cartridge tape can process,
+and also because you want your cartridges execution to be lightweight enough
+to run with acceptable performance on different systems the emulator is running on.
 
-TODO
+RIVEMU has the command `-bench` to help benchmarking your cartridge,
+it is recommended to benchmark only your final cartridge `.sqfs` file,
+lets benchmark `hello-optimized.sqfs`:
+
+```sh
+rivemu -quiet -bench hello-optimized.sqfs
+```
+
+You should get an output similar to:
+
+```
+[RIVEMU] frame=1 fps=0.97 cpu_cost=4190.38MIPS cpu_speed=372.25MIPS cpu_usage=18.15% cpu_quota=0.07%
+[RIVEMU] frame=16 fps=59.99 cpu_cost=2.30MIPS cpu_speed=412.79MIPS cpu_usage=0.56% cpu_quota=0.07%
+[RIVEMU] frame=31 fps=59.99 cpu_cost=2.31MIPS cpu_speed=384.98MIPS cpu_usage=0.60% cpu_quota=0.07%
+[RIVEMU] frame=46 fps=59.97 cpu_cost=2.32MIPS cpu_speed=407.28MIPS cpu_usage=0.57% cpu_quota=0.07%
+[RIVEMU] frame=62 fps=59.99 cpu_cost=2.30MIPS cpu_speed=420.51MIPS cpu_usage=0.55% cpu_quota=0.08%
+```
+
+Lets break down this information:
+- `frame`: it's the frame processed so far,
+cartridges by default usually process 60 frames per second, but this can be defined.
+- `fps`: it's how much frames per second your computer is capable of processing,
+usually we want this number to be close to 60.
+- `cpu_cost`: it's how much CPU instructions costed to process exactly 1 second of computation,
+it's measured in MIPS (million instructions per second),
+usually we want this number to be low and below `cpu_speed`,
+high values means the cartridge is suboptimized,
+cartridges must try to keep this value below 128MIPS when running to allow everyone to run it smoothly.
+- `cpu_speed`: it's how much CPU instruction per second your computer is capable of emulating,
+this value may vary on the system you are running,
+RIV is designed to run on system that is at least capable of running 128MIPS,
+systems that are not able to emulate at that speed may experience stuttering when playing heavy cartridges.
+- `cpu_usage`: it's how much of the CPU the cartridge is using,
+it this values is above 90%, you probably experience stuttering when playing the cartridge.
+- `cpu_quota`: it's how much CPU computation quota has been processed so far,
+RIV hardware spec set the quota to be 96 billion CPU instructions,
+when CPU quota reaches 100%, the game halts immediately.
+
+If you look closely the first frame always use costs more MIPS,
+because the machine have to boot and load the game.
+After the first frame the CPU quota keeps increasing slowly,
+it will increase indefinitely until the game ends.
+The FPS should remain stable most of the time.
+The CPU speed may vary a lot, because different instructions has different speeds,
+and also because your system may be busy doing processing other programs.
+The CPU cost remains stable for well designed cartridges,
+cartridges that increase CPU cost at random frames may experience
+stuttering, degrading game play quality.
+
+This RIVEMU web page can also show all this information when testing a cartridge.
+
+The `hello-optimized.sqfs` is not doing much, if you take a real cartridge,
+like DOOM, a reference for a heavy cartridge, you will see numbers similar to:
+
+```
+[RIVEMU] frame=1 fps=0.18 cpu_cost=12404.20MIPS cpu_speed=567.54MIPS cpu_usage=11.20% cpu_quota=0.37%
+[RIVEMU] frame=10 fps=33.75 cpu_cost=55.21MIPS cpu_speed=619.72MIPS cpu_usage=8.59% cpu_quota=0.38%
+[RIVEMU] frame=19 fps=35.99 cpu_cost=56.00MIPS cpu_speed=630.41MIPS cpu_usage=9.13% cpu_quota=0.40%
+[RIVEMU] frame=28 fps=33.76 cpu_cost=56.01MIPS cpu_speed=622.77MIPS cpu_usage=8.68% cpu_quota=0.41%
+```
+
+So DOOM costs about 56MIPS, still way below the recommended max amount of 128MIPS,
+most cartridges processing probably will use not cost more CPU than that.
+
+## Customizing SDK to install new tools
+
+You have learned so far how to
+create cartridges, compile them, compress them, inspect them, debug them and finally benchmark them.
+All of this you did using tools we already provide in the SDK,
+however you can also add your own tools and programming languages to the SDK,
+while you could use them from outside, using from inside the RIVEMU RISC-V machine
+you know the tool will work correctly for RISC-V.
+
+Lets download the Nim programming language, and in the section below we will use it to compile a cartridge.
+
+First let's get into a RIVEMU shell with networking support:
+
+```sh
+rivemu -quiet -sdk -workspace -net -persist -it
+```
+
+Notice the added `-net` here, this enables networking so you can install packages from internet.
+Notice we also added the `-persist` option,
+this will make changes to the SDK persist, even when you exit the machine.
+Up until now all changes were in the machine root filesystem were being
+discarded.
+
+Now lets execute `apk update` to update the Alpine Linux package list,
+then `apk add nim` to install Nim compiler, and then test it with `nim -v`, here is the session output:
+
+```sh
+$ rivemu -quiet -sdk -workspace -net -it
+rivos:/workspace# apk add nim
+fetch https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/APKINDEX.tar.gz
+fetch https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/APKINDEX.tar.gz
+fetch https://dl-cdn.alpinelinux.org/alpine/edge/testing/riscv64/APKINDEX.tar.gz
+(1/3) Installing libucontext (1.2-r3)
+(2/3) Installing libucontext-dev (1.2-r3)
+(3/3) Installing nim (2.0.2-r0)
+Executing busybox-1.36.1-r25.trigger
+OK: 321 MiB in 93 packages
+rivos:/workspace# nim -v
+Nim Compiler Version 2.0.2 [Linux: riscv64]
+Compiled at 2024-04-03
+Copyright (c) 2006-2023 by Andreas Rumpf
+
+active boot switches: -d:release
+```
+
+You can also customize your own set of tools in the SDK.
+Beaware that using `-persist` you are modifying the original SDK,
+if you want to rollback the stock defaults, just download `rivos-sdk.ext2` again.
+
+But did the changes really persisted? Let's check:
+
+```sh
+$ rivemu -quiet -no-window -sdk -exec nim -v
+Nim Compiler Version 2.0.2 [Linux: riscv64]
+Compiled at 2024-04-03
+Copyright (c) 2006-2023 by Andreas Rumpf
+
+active boot switches: -d:release
+```
+
+Yes, it's there, Nim compiler is now official part of our customized SDK.
 
 ## Using other programming languages
-TODO
+
+We can use any programming language to make cartridges,
+as long it compiles to a self contained RISC-V ELF binary,
+or its cartridge brings together all dependencies it needs.
+
+In last section we installed Nim,
+we could have installed any other programming as well.
+Since our customized SDK already have Nim,
+let's show how you can use Nim to create cartridges,
+even though there is no official support for Nim.
+
+Lets just port our hello example, create this file `hello.nim`:
+
+```python
+proc riv_present(): bool {.importc, header: "<riv.h>".}
+proc riv_clear_screen(col: uint32): void {.importc, header: "<riv.h>".}
+proc riv_draw_text(text: cstring, sps_id: uint64, x0: int64, y0: int64, col: int64, mw: int64, mh: int64, sx: int64, sy: int64): void {.importc, header: "<riv.h>".}
+const
+    RIV_COLOR_BLACK: uint32 = 0
+    RIV_COLOR_WHITE: uint32 = 1
+    RIV_SPRITESHEET_FONT_5X7: uint64 = 1023
+
+while true:
+    # clear screen
+    riv_clear_screen(ord(RIV_COLOR_BLACK))
+    # draw hello world
+    riv_draw_text("hello world!", ord(RIV_SPRITESHEET_FONT_5X7), 63, 121, ord(RIV_COLOR_WHITE), 2, 2, 2, 2)
+    if not riv_present():
+        break
+```
+
+Did you notice this code looks similar to python?
+That is because Nim syntax is inspired by Python syntax,
+but don't be fooled, this is a statically compiled programming language.
+
+Let's compile this file with Nim compiler using our customized SDK, and run it:
+
+```sh
+rivemu -quiet -no-window -sdk -workspace -exec nim compile --opt:size --mm:none -d:release --passL:-lriv --out:hello-nim hello.nim
+rivemu -workspace -exec ./hello-nim
+```
+
+You should see a screen with "hello world!" again, but this time the original source code was made in Nim.
+
+We could have installed other system programming languages, such as
+Rust,
+Zig,
+Odin,
+Zig, and Nelua.
+These are the ones recommended because they are compiled.
+You can also use scripting programming languages, will cover next section.
+
+By the way, the official SDK come for compiler for C, C++, Nelua,
+and RIV minimal OS also comes with Luajit interpreter for Lua 5.1.
+Nelua even have all `riv.h` imported.
+But it's recommended to starting using some programming language you are already familiar,
+learning libriv API plus a programming language might be too much to do at once.
+
+## Using scripting languages
+
+In the last section we mentioned that RIV OS comes with Lua 5.1 interpreter,
+LuaJIT.
+For now LuaJIT was added because it very easy to call C libraries from it,
+in the future we might add standard Lua 5.4 for those wanting to use a more recent Lua version.
+Be-aware that LuaJIT port to RISC-V at this moment is unstable and done by an unofficial contributor.
+
+First create the file `hello.lua` to be used with LuaJIT:
+```lua
+#!/usr/bin/luajit
+local ffi = require("ffi")
+ffi.cdef[[
+typedef enum riv_color_id {
+  RIV_COLOR_BLACK       = 0,
+  RIV_COLOR_WHITE       = 1,
+} riv_color_id;
+typedef enum riv_spritesheet_id {
+  RIV_SPRITESHEET_FONT_5X7 = 1023,
+} riv_spritesheet_id;
+typedef struct riv_vec2i {int64_t x; int64_t y;} riv_vec2i;
+bool riv_present();
+void riv_clear_screen(uint32_t col);
+riv_vec2i riv_draw_text(const char* text, uint64_t sps_id, int64_t x0, int64_t y0, int64_t col, int64_t mw, int64_t mh, int64_t sx, int64_t sy);
+]]
+local L = ffi.load("riv")
+
+repeat
+  L.riv_clear_screen(L.RIV_COLOR_BLACK)
+  L.riv_draw_text("hello world!", L.RIV_SPRITESHEET_FONT_5X7, 63, 121, L.RIV_COLOR_WHITE, 2, 2, 2, 2)
+until not L.riv_present()
+```
+
+Notice in this code the at the begging we are manually importing `libriv` APIs,
+at the bottom it's just again our hello example, lets run it:
+
+```sh
+rivemu -workspace -exec luajit hello.lua
+```
+
+And again, you will see the "hello world!" screen!
+
+As mentioned before `luajit` is contained the official RIV OS,
+but interpreter for programming languages are not.
+If you would like to use Python or JavaScript for example,
+you will have to embed their interpreter inside the cartridge which could make it very big,
+this is why I recommend using just official supported interpreted languages,
+or use interpreted languages small enough to embed in a cartridge.
+
+If you have read this entire page, you have by now:
+- run `hello.c` using a `riv-jit-c`
+- run `hello.c` compiled with GCC compiler
+- run `hello.c` compiled with GCC compiler with optimizations
+- run `hello.nim` compiled with Nim compiler
+- run `hello.lua` compiled with Lua
+
+It's recommended to use C for now,
+but if you are adventurous,
+you could use other languages as long you provide the bindings.
 
 ## Porting other games
 TODO
