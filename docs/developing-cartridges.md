@@ -663,4 +663,11 @@ have all the tools you need in the SDK
 and the game works under all the constraints presented so far.
 Porting a game basically is a matter of changing the graphics, audio and input APIs
 to use `libriv` C API.
+
+The [DOOM cartridge repository](https://github.com/rives-io/cartridge-freedoom)
+repository should serve as an example
+on how a source code that was originally using the SDL library for handling
+graphics/audio/input,
+was ported to use the RIV library.
+
 In the next chapter we will learn more details about the API.

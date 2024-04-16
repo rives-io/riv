@@ -65,7 +65,7 @@ local function riv_encode_png_screenshot(): string
 
   -- Image will be encoded according to ihdr.color_type, .bit_depth
   ret = spng_set_ihdr(enc, &ihdr)
-  if ret ~= 0 then error('spng_set_option failed: '..spng_strerror(ret)) end
+  if ret ~= 0 then error('spng_set_ihdr failed: '..spng_strerror(ret)) end
 
   -- Detect palette size
   local num_pixels: usize = riv.framebuffer_desc.width * riv.framebuffer_desc.height
