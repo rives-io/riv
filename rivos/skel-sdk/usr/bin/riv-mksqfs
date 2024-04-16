@@ -1,14 +1,15 @@
 #!/bin/sh
 if [ $# -lt 2 ]; then
-  echo "Usage: $0 <file1> [file2] ... <.sqfs>"
+  echo "Usage: $0 <file1> [file2] ... <.sqfs> [options]"
+  echo "riv-mksqfs is a wrapper to mksquashfs, which accept the options:"
+  echo ""
+  mksquashfs -help
   exit 0
 fi
 exec mksquashfs "$@" \
-  -comp xz \
   -mkfs-time 0 \
   -all-time 0 \
   -all-root \
   -noappend \
-  -no-fragments \
   -no-exports \
   -quiet -no-progress

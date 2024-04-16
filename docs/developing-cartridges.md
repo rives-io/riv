@@ -194,21 +194,25 @@ rivemu -quiet -no-window -sdk -workspace -exec riv-mksqfs 0-entry.sh hello.c hel
 The `riv-mksqfs` command should the actual cartridge, lets inspect it with:
 
 ```sh
-rivemu -quiet -no-window -sdk -workspace -exec "ls -l hello.sqfs && file hello.sqfs"
+rivemu -quiet -no-window -sdk -workspace -exec 'ls -l hello.sqfs && file hello.sqfs'
 ```
 
 It should output something similar to:
 ```sh
 -rw-r--r--    1 user     user          4096 Apr 14 19:10 hello.sqfs
-hello.sqfs: Squashfs filesystem, little endian, version 4.0, xz compressed, 573 bytes, 3 inodes, blocksize: 131072 bytes, created: Thu Jan  1 00:00:00 1970
+hello.sqfs: Squashfs filesystem, little endian, version 4.0, zlib compressed, 426 bytes, 3 inodes, blocksize: 131072 bytes, created: Thu Jan  1 00:00:00 1970
 ```
 
 You can see the cartridge file is 4096 bytes,
 this is because cartridges actually are SquashFS compressed filesystem,
 which are always saved in multiple of 4KB,
 this also means the minimum size for a cartridge is always 4KB.
-Noticed the cartridge contents were compressed with *xz* compression,
-the compression could also be tuned to generate smaller cartridges.
+Notice the cartridge contents were compressed with *zlib*.
+
+The compression could also be tuned to generate smaller cartridges,
+for example you could use more aggressive compression appending `-comp xz`,
+like `riv-mksqfs 0-entry.sh hello.c hello.sqfs -comp xz`
+for checking available compressions read `mksquashfs -help`
 
 
 Now lets finally run it:
