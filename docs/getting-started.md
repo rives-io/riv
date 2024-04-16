@@ -51,7 +51,7 @@ The rest of this tutorial will assume `rivemu` is available in your `PATH`.
 
 ## Playing a cartridges
 
-Let's do something more interesting, lets download and play a cartridge!
+Let's do something more interesting, let's download and play a cartridge!
 
 ```sh
 wget -O antcopter.sqfs https://rives-io.github.io/riv/cartridges/antcopter.sqfs
@@ -96,7 +96,7 @@ it's much cheaper to store just this file rather than a gameplay video.
 
 ## Viewing tape outcards
 
-Did you notice you had a score in your screen when you died in Antcopter?
+Did you notice you had a score on the last screen when you died in Antcopter?
 This score is also the game outcome, that we call it *outcard*,
 you can replay and verify the *tape* score you recorded with:
 
@@ -151,12 +151,14 @@ you needed to have the combination of the *cartridge*, the *tape*, *parameters* 
 RIVES for instance store all this information in smart contracts in order to verify tape outcomes.
 
 Tapes can also be very useful while developing games,
-to check if a gameplay is not impacted while you create new changes in the game,
-you could just create a test suite of outcard hashes and verify as tests.
+to check if game behavior is not impacted while you create new changes in the game.
+You could create a test suite of tapes along with their respective outcard hashes, to verify if they match while you do cosmetic changes in your game.
+
 
 ## Other options
 
 RIVEMU has many other options, mostly more useful while developing games,
-you can check `-help` option to see its list.
+you can check the `-help` option to see its list.
 If you are interested learning more about them,
-go to the next chapter were we get into actually developing cartridges.
+go to the next chapter were we get into actually developing cartridges
+and learn about many options along the way.
