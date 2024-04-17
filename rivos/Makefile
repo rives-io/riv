@@ -74,7 +74,7 @@ clean:
 	rm -f *.zz *.ext2 *.hash.txt
 
 distclean: clean
-	docker rmi riv/toolchain-riscv64
+	docker rmi riv/toolchain-riscv64 || true
 
 # External deps
 ../kernel/linux.bin ../kernel/linux-headers.tar.xz:

@@ -44,12 +44,12 @@ clean:
 	$(MAKE) -C rivemu-web clean
 	$(MAKE) -C demos clean
 	$(MAKE) -C libs clean
-	rm -rf dist
 
 distclean: clean
 	$(MAKE) -C kernel distclean
 	$(MAKE) -C rivemu distclean
 	$(MAKE) -C rivos distclean
+	rm -rf dist
 
 .PHONY: kernel rivos demos rivemu libs libriv rivemu-web
 

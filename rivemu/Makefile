@@ -53,7 +53,7 @@ clean:
 	rm -f rivemu rivemu.c rivemu.js rivemu.exe rivemu.wasm rivemu-linux-amd64 rivemu-linux-arm64 rivemu-windows-amd64.exe
 
 distclean: clean
-	docker rmi riv/toolchain-wasm riv/toolchain-linux-amd64 riv/toolchain-linux-arm64
+	docker rmi riv/toolchain-wasm riv/toolchain-windows-amd64 riv/toolchain-linux-amd64 riv/toolchain-linux-arm64 || true
 
 install: rivemu
 	mkdir -p $(DESTDIR)$(PREFIX)/rivemu

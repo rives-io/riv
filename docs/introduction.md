@@ -42,8 +42,8 @@ although more relaxed than other fantasy consoles.
 - GPU: no accelerated graphics, CPU software rendering
 - Operating system: RIV OS, a custom Linux distribution based on Alpine Linux
 - Processing limit: 96 billion RISC-V instructions, enough for ~30min session of DOOM or ~120min session of Antcopter
-- Memory limit: 96MB
-- Cartridge size limit: 8MB, RIVES further limits to 512KB, cartridges are compressed
+- Cartridge memory limit: 96MB
+- Cartridge size limit: RIV has no limit, RIVES limits to 512KB, cartridges are compressed
 
 ## Components
 

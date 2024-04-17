@@ -85,11 +85,13 @@ local rivemu_options: type = @record{
   print_outhash: boolean,
   quiet: boolean,
   speed: float64,
+  mem: int64,
   stop_frame: int64,
 }
 
 local function parse_options(): rivemu_options
   local opts: rivemu_options = {
+    mem = 256*1024*1024,
     speed = 1.0,
     stop_frame = -1,
   }
@@ -193,10 +195,13 @@ local function parse_options(): rivemu_options
       opts.hostname = argv
     elseif argk == '-entropy' then
       opts.entropy = argv
+    elseif argk == '-mem' then
+      assert(argv:find('^[0-9]+$') > 0, 'malformed mem integer')
+      opts.mem = tointeger(argv) * 1024*1024
+      assert(opts.mem > 0, 'mem must be positive')
     elseif argk == '-speed' then
-      local numstr: string = argv
-      assert(numstr:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
-      opts.speed = tonumber(numstr)
+      assert(argv:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
+      opts.speed = tonumber(argv)
       assert(opts.speed > 0.0, 'speed must be positive')
     elseif argk == '-stop-frame' then
       local numstr: string = argv
@@ -367,6 +372,10 @@ OPTIONS
 
   -entropy=<hash>
     Use hash as random entropy, affecting the pseudo random number generator of cartridges.
+
+  -mem=<number>
+    Set the machine RAM memory size, the value is in megabytes.
+    The default is 256.
 
   -speed=<speed>
     Set replay speed.
@@ -544,7 +553,7 @@ local function begin(): void
                                   options.kernel_filename, options.rootfs_filename,
                                   options.cartridge_filename, options.verify_filename,
                                   options.interactive, options.network, options.persist,
-                                  options.workspace_directory)
+                                  options.workspace_directory, options.mem)
   running = true
 
   if options.recording then -- start recording
