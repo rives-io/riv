@@ -136,9 +136,10 @@ that is included in the SDK, which was not included in the minimal RIV OS.
 
 Lets now install this SDK globally, to make available in any terminal in your system:
 ```sh
+mkdir -p $HOME/.riv/
 mv rivos-sdk.ext2 $HOME/.riv/
-export RIVEMU_SDK=$HOME/.riv/
-echo "export RIVEMU_SDK=$HOME/.riv/" >> ~/.bashrc
+export RIVEMU_SDK=$HOME/.riv/rivos-sdk.ext2
+echo "export RIVEMU_SDK=$HOME/.riv/rivos-sdk.ext2" >> ~/.bashrc
 ```
 
 When setting the environment `RIVEMU_SDK`,
@@ -536,6 +537,16 @@ active boot switches: -d:release
 ```
 
 Yes, it's there, Nim compiler is now part of our customized SDK.
+
+As you install new stuff to the SDK, its disk will grow
+and eventually you might be out of disk space.
+To fix this, you can increase the size of SDK disk with the following command:
+
+```sh
+rivemu -quiet -no-window -sdk -workspace="$(dirname $RIVEMU_SDK)" -exec resize2fs -f rivos-sdk.ext2 1024M
+```
+
+This will set the SDK disk size to 1024M, which should double from its default size.
 
 ## Using other programming languages
 

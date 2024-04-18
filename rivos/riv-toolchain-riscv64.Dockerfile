@@ -118,7 +118,13 @@ RUN make -C riv/libriv
 FROM --platform=linux/riscv64 riv-toolchain-stage AS rivos-sdk-stage
 
 # Install development utilities
-RUN apk add bash neovim neovim-doc htop tmux gdb strace squashfs-tools ncdu jq
+RUN apk add bash \
+        neovim neovim-doc \
+        htop tmux ncdu \
+        gdb strace \
+        squashfs-tools e2fsprogs e2fsprogs-extra \
+        curl wget \
+        jq
 
 # Make vim an alias to nvim
 RUN ln -s /usr/bin/nvim /usr/bin/vim
@@ -222,7 +228,7 @@ RUN xgenext2fs \
     xgenext2fs \
         --faketime \
         --allow-holes \
-        --readjustment +$((128*1024*1024/4096)) \
+        --readjustment +$((64*1024*1024/4096)) \
         --block-size 4096 \
         --bytes-per-inode 4096 \
         --volume-label rivos-sdk --root /rivos-sdk /rivos-sdk.ext2
