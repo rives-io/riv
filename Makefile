@@ -70,7 +70,7 @@ demo-run:
 dist:
 	$(MAKE) -C kernel
 	$(MAKE) -C rivos
-	$(MAKE) -C rivemu package
+	$(MAKE) -C rivemu dist
 	rm -rf dist
 	mkdir -p dist
 	cp rivos/rivos.ext2 rivos/rivos-sdk.ext2 dist/

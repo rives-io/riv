@@ -1,9 +1,9 @@
-FROM ubuntu:22.04
+FROM gcc:13
 
-# Install build tools
+
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y build-essential git wget meson glib2.0-dev python3 libgl-dev xorg-dev gcc-12 g++-12
+    apt-get install -y git wget meson glib2.0-dev python3 libgl-dev xorg-dev libboost1.81-dev glib2.0-dev
 
 # Build libslirp
 RUN <<EOF
@@ -22,10 +22,9 @@ set -e
 git clone --branch feature/optim-fetch --depth 1 https://github.com/cartesi/machine-emulator.git
 cd machine-emulator
 make dep
-make bundle-boost
 wget -O uarch/uarch-pristine-hash.c https://github.com/cartesi/machine-emulator/releases/download/v0.16.1/uarch-pristine-hash.c
 wget -O uarch/uarch-pristine-ram.c https://github.com/cartesi/machine-emulator/releases/download/v0.16.1/uarch-pristine-ram.c
-make -C src CC=gcc-12 CXX=g++-12 AR="gcc-ar-12 rcs" libcartesi.a slirp=yes release=yes -j$(nproc)
+make -C src libcartesi.a slirp=yes release=yes -j$(nproc)
 make install-static-libs install-headers PREFIX=/usr/local EMU_TO_LIB_A=src/libcartesi.a
 cd ..
 rm -rf machine-emulator
@@ -55,4 +54,11 @@ mkdir -p /usr/include/X11GL-wrappers
 cp *.c *.S /usr/include/X11GL-wrappers/
 cd ..
 rm -rf Implib.so
+EOF
+
+# Install arc4random so we can avoid arc4random@GLIBC_2.36
+RUN <<EOF
+git clone --depth 1 https://github.com/opencoff/portable-lib.git
+gcc -c -O2 -I./portable-lib/inc -o /usr/lib/arc4random.o portable-lib/src/arc4random.c
+rm -rf portable-lib.git
 EOF

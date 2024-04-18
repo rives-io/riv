@@ -18,7 +18,7 @@ else ifeq ($(CC), x86_64-w64-mingw32-gcc)
 	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--as-needed -static
 else # probably GCC on Linux
 	RIVEMU=rivemu
-	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--as-needed -z relro -z now -static-libgcc
+	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--as-needed -z relro -z now
 endif
 
 ifeq ($(debug), yes)
@@ -62,10 +62,10 @@ install: rivemu
 build: $(RIVEMU) rivemu.wasm
 
 # Packages
-package: rivemu.wasm rivemu-linux-amd64 rivemu-windows-amd64.exe rivemu-linux-arm64
+dist: rivemu.wasm rivemu-linux-amd64 rivemu-windows-amd64.exe rivemu-linux-arm64
 
 # Packaging for Linux
-LINUX_SO_WRAPPERS=\
+LINUX_WRAPPER_CFLAGS=\
 	/usr/include/X11GL-wrappers/libGL.so.init.c \
 	/usr/include/X11GL-wrappers/libGL.so.tramp.S \
 	/usr/include/X11GL-wrappers/libX11.so.init.c \
@@ -73,7 +73,10 @@ LINUX_SO_WRAPPERS=\
 	/usr/include/X11GL-wrappers/libXcursor.so.init.c \
 	/usr/include/X11GL-wrappers/libXcursor.so.tramp.S \
 	/usr/include/X11GL-wrappers/libXi.so.init.c \
-	/usr/include/X11GL-wrappers/libXi.so.tramp.S
+	/usr/include/X11GL-wrappers/libXi.so.tramp.S \
+	/usr/lib/arc4random.o \
+	-static-libgcc
+
 rivemu-linux-%: rivemu.nelua $(DEPS)
 	docker build --progress plain \
 		--platform linux/$* \
@@ -85,7 +88,7 @@ rivemu-linux-%: rivemu.nelua $(DEPS)
 		--workdir /mnt \
 		--hostname riv-toolchain-linux-$* \
 		--rm riv/toolchain-linux-$* \
-		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* EXTRA_CFLAGS='$(LINUX_SO_WRAPPERS)' EXTRA_NELUA_FLAGS=-DCARTESI_STATIC NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
+		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* EXTRA_CFLAGS='$(LINUX_WRAPPER_CFLAGS)' EXTRA_NELUA_FLAGS=-DCARTESI_STATIC NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
 
 # Packaging for Windows
 rivemu-windows-amd64: rivemu-windows-amd64.exe
