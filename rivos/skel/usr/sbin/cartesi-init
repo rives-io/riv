@@ -4,13 +4,14 @@
 busybox stty -onlcr
 
 # mount
-[ -d /dev ] && busybox mkdir -p /dev/pts /dev/shm
-[ -d /proc ] && busybox mount -o nosuid,nodev,noexec -t proc proc /proc
-[ -d /dev/pts ] && busybox mount -o nosuid,noexec,mode=620,gid=5 -t devpts devpts /dev/pts
-[ -d /dev/shm ] && busybox mount -o nosuid,nodev,mode=1777 -t tmpfs tmpfs /dev/shm
-[ -d /sys ] && busybox mount -o nosuid,nodev,noexec -t sysfs sys /sys
-[ -d /tmp ] && busybox mount -o nosuid,nodev,mode=1777 -t tmpfs tmpfs /tmp
-[ -d /run ] && busybox mount -o nosuid,nodev,mode=0755 -t tmpfs tmpfs /run
+[ ! -c /dev/zero ] && busybox mkdir -p /dev && busybox mount -o dev -t devtmpfs devtmpfs /dev
+busybox mkdir -p /proc /dev/pts /dev/shm /sys /tmp /run
+busybox mount -o nosuid,nodev,noexec          -t proc proc /proc
+busybox mount -o nosuid,noexec,mode=620,gid=5 -t devpts devpts /dev/pts
+busybox mount -o nosuid,nodev,mode=1777       -t tmpfs tmpfs /dev/shm
+busybox mount -o nosuid,nodev,noexec          -t sysfs sys /sys
+busybox mount -o nosuid,nodev,mode=1777       -t tmpfs tmpfs /tmp
+busybox mount -o nosuid,nodev,mode=0755       -t tmpfs tmpfs /run
 
 # system config
 [ -f /etc/sysctl.conf ] && busybox sysctl -pq
