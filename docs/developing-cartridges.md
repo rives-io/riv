@@ -5,13 +5,14 @@ development workflow and how to create your first cartridge.
 
 By the end of this tutorial you will know how to create cartridge files,
 compile cartridges, debug cartridges, benchmark cartridges,
-inspect cartridges and how you can use other compiled and even interpreted programming languages to create cartridges.
+inspect cartridges and how to use other programming languages to create cartridges.
 
-This tutorial will begin quickly by running your first graphical application inside RIV,
-and then expand slowly about all the tools RIV offers to develop cartridges,
-you will learn some new cool RIVEMU options on the go.
+This tutorial will begin quickly by running your first graphical application,
+and then expand slowly about all the tools RIV SDK offers to develop cartridges,
+you will learn some new interesting RIVEMU options on the go.
 
-If you have not installed RIVEMU yet, please read the getting started page first.
+If you have not installed RIVEMU yet, please read
+the [getting started page](/getting-started) first.
 
 ## Creating your first application in C
 
@@ -46,8 +47,10 @@ rivemu -workspace -exec riv-jit-c hello.c
 
 You should see a screen popup, and that is it, your first hello world program running in RIV!
 
-The `-exec` option overrides the standard machine entrypoint to execute a custom
-command, in this case we are executing `riv-jit-c` to run the `hello.c` file.
+The `-exec` option overrides the standard machine entrypoint to execute a custom command,
+in this case we are executing `riv-jit-c` to run the `hello.c` file.
+The `-workspace` option exposes current directory files into the machine,
+it will be explained in detail in the next section.
 
 The C code presented so far should be self explanatory,
 we have a line that clear the screen,
@@ -60,9 +63,11 @@ let's continue understanding the RIV development workflow first.
 ## Interactive terminal with workspaces
 
 Notice in the last example the `-workspace` option,
-it mounts the current working directory from your host to the `/workspace` directory in the RIV machine, to make development easier.
+it mounts the current working directory from your host to the `/workspace` directory in the RIV machine,
+to make development easier.
 
-This is a good time show how RIV is also a Linux, where you can work in its own terminal when combining with the `-it` option:
+This is a good time show how RIV is also a Linux,
+where you can work in its own terminal when combining with the `-it` option:
 
 ```sh
 rivemu -workspace -it
@@ -98,6 +103,9 @@ for developing cartridges,
 tools for compiling RISC-V binaries, compressing files into cartridge archives,
 and debuggers for debugging RISC-V applications.
 
+After you experiment with it, make sure to exit the interactive terminal session
+to continue to the next section.
+
 ## Installing the RIV SDK
 
 RIVEMU comes with a builtin and minimal operating system called RIV OS,
@@ -121,7 +129,7 @@ wget -O rivos-sdk.ext2 https://github.com/rives-io/riv/releases/latest/download/
 rivemu -sdk=rivos-sdk.ext2 -exec gcc --version
 ```
 
-You probably got an output like:
+You probably got an output that contains something like:
 ```
 gcc (Alpine 13.2.1_git20240309) 13.2.1 20240309
 Copyright (C) 2023 Free Software Foundation, Inc.
@@ -138,8 +146,8 @@ Lets now install this SDK globally, to make available in any terminal in your sy
 ```sh
 mkdir -p $HOME/.riv/
 mv rivos-sdk.ext2 $HOME/.riv/
+echo 'export RIVEMU_SDK=$HOME/.riv/rivos-sdk.ext2' >> $HOME/.bashrc
 export RIVEMU_SDK=$HOME/.riv/rivos-sdk.ext2
-echo "export RIVEMU_SDK=$HOME/.riv/rivos-sdk.ext2" >> ~/.bashrc
 ```
 
 When setting the environment `RIVEMU_SDK`,
@@ -148,7 +156,7 @@ so you can use from anywhere in your system,
 let's try it:
 
 ```sh
-rivemu -quiet -no-window -sdk -exec riv-tool version
+rivemu -quiet -no-window -sdk -exec /usr/lib/libriv.so version
 ```
 
 You should see and output similar to:
@@ -156,11 +164,11 @@ You should see and output similar to:
 0.3.0
 ```
 
-We have introduced two new command line options here.
+We have introduced new command line options here.
 The `-quiet` makes RIVEMU less verbose because we just
 want to see an output from a command executed inside the machine.
 The `-no-window` makes RIVEMU never create a graphical window,
-because we want to just run a console application in this case.
+because we want to just run a console application in this case, that is, we won't be playing a cartridge.
 The `-sdk` without a filename will try to read the SDK filesystem from `RIVEMU_SDK` environment variable.
 The `-exec /usr/lib/libriv.so version` will execute a command to check the `libriv` version in the OS.
 
@@ -178,11 +186,11 @@ chmod +x 0-entry.sh
 ```
 
 Why the name is `0-entry.sh`? When running a cartridge,
-RIV actually executes the first executable file in a cartridge
-in alphabetical order.
+RIV actually executes the first executable file in a cartridge,
+sorted alphabetically.
 In case you have other executable binaries in your cartridge,
 they could executed before the entrypoint as a mistake,
-so it is recommended to make the entrypoint be the first file listed
+so it is recommended to make the entrypoint be the first file
 when ordering its files by name.
 
 Now lets invoke RIVEMU to actually compress both `0-entry.sh` and `hello.c` into
@@ -192,7 +200,7 @@ a cartridge archive.
 rivemu -quiet -no-window -sdk -workspace -exec riv-mksqfs 0-entry.sh hello.c hello.sqfs
 ```
 
-The `riv-mksqfs` command should the actual cartridge, lets inspect it with:
+The `riv-mksqfs` command should create the actual cartridge `.sqfs` file, lets inspect it:
 
 ```sh
 rivemu -quiet -no-window -sdk -workspace -exec 'ls -l hello.sqfs && file hello.sqfs'
@@ -201,10 +209,10 @@ rivemu -quiet -no-window -sdk -workspace -exec 'ls -l hello.sqfs && file hello.s
 It should output something similar to:
 ```sh
 -rw-r--r--    1 user     user          4096 Apr 14 19:10 hello.sqfs
-hello.sqfs: Squashfs filesystem, little endian, version 4.0, zlib compressed, 426 bytes, 3 inodes, blocksize: 131072 bytes, created: Thu Jan  1 00:00:00 1970
+hello.sqfs: Squashfs filesystem, little endian, version 4.0, zlib compressed, 434 bytes, 3 inodes, blocksize: 131072 bytes, created: Thu Jan  1 00:00:00 1970
 ```
 
-You can see the cartridge file is 4096 bytes,
+You can see the cartridge file has 4096 bytes,
 this is because cartridges actually are SquashFS compressed filesystem,
 which are always saved in multiple of 4KB,
 this also means the minimum size for a cartridge is always 4KB.
@@ -233,14 +241,14 @@ Having a cartridge running locally in the RIVEMU is great,
 but most players will probably play your cartridges in a Web Browser,
 luckily RIVEMU was also ported to WebAssembly,
 RIV has a test page for you to test a cartridge in the browser
-at https://rives-io.github.io/riv/ .
-Go there search for the "Upload" button in the "Cartridge" section,
-and upload your `hello.sqfs`.
+at [this testing page](https://rives-io.github.io/riv/).
+Go there and search for the "Upload" button in the "Cartridge" section,
+use it to upload your `hello.sqfs`.
 
 If everything works fine, you should be able to see the "hello world!"
 in the browser.
-Everytime you finish developing a cartridge,
-it is recommended to actually test them in the browser,
+Every time you finish developing a cartridge,
+it's recommended to actually test it in the browser,
 because the performance can be different than running natively,
 usually performance drops by 20% or more.
 
@@ -248,21 +256,21 @@ Also in the browser you can even use game pads to test your game!
 If you have a PS4, Xbox or Nintendo Switch controller,
 just plug in your computer and most browser supports them through
 the HTML5 Gamepad API specification.
-Before trying this, you should check if your gamepad is working in the browser
-in third party services
-like [this link](https://hardwaretester.com/gamepad).
+Before trying this, you should check if your game pad is working in your browser
+in third party services such as
+[this game pad tester](https://hardwaretester.com/gamepad).
 
 ## Compiling cartridges
 
 In our first cartridge `hello.sqfs`, we used `riv-jit-c` to run `hello.c`,
-although this was very easy we can actually compile a `hello` RISC-V ELF binary:
+although this was very easy we can actually compile it into a `hello` RISC-V executable binary:
 
 ```sh
 rivemu -quiet -no-window -sdk -workspace -exec gcc hello.c -o hello -lriv
 ```
 
 The command `gcc hello.c -o hello -lriv` compiles `hello.c`
-source code into `hello` Linux ELF binary linked to `libriv.so`.
+source code into `hello` Linux RISC-V ELF binary linked to `libriv`.
 
 Before generating a cartridge for it, let's test it:
 
@@ -271,17 +279,17 @@ rivemu -workspace -exec ./hello
 ```
 
 Then you should see a hello world screen like before.
-Now let's actually compile a cartridge for it and run it:
+Now let's actually compile a cartridge and run it:
 
 ```sh
 rivemu -quiet -no-window -sdk -workspace -exec riv-mksqfs hello hello-compiled.sqfs
 rivemu hello-compiled.sqfs
 ```
 
-Again, like before you should see hello world screen,
-but this cartridge is different from the first one using that used JIT,
-it uses ahead of time compilation,
-which makes your cartridge faster to run, and perhaps smaller.
+Like before you should see hello world screen,
+but this cartridge is different from the first one,
+because it used ahead of time compilation now,
+which makes your cartridge faster to load and run and smaller for cartridges with lot of code.
 We recommend to use JIT just for prototyping,
 when possible your final release cartridge should be statically compiled.
 
@@ -297,15 +305,15 @@ Lets recompile a new cartridge for the last example again using these tools:
 
 ```sh
 alias rivemu-exec='rivemu -quiet -no-window -sdk -workspace -exec'
-rivemu-exec gcc hello.c -o hello-optimized '$(riv-opt-flags -Osize)'
+rivemu-exec gcc hello.c -o hello-optimized '$(riv-opt-flags -Ospeed)'
 rivemu-exec riv-strip hello-optimized
 rivemu-exec riv-mksqfs hello-optimized hello-optimized.sqfs
 rivemu hello-optimized.sqfs
 ```
 
 Let's break what happened:
-1. In the first line we create the alias `rivemu-exec` to make it easy for us to invoke commands inside the machine.
-2. In the second line we compile `hello.c` again, but this time to `hello-optimized` using compiler flags from `riv-opt-flags -Osize`, this will supply compiler flags to optimized for size because we passed `-Osize`, this tool also accepts `-Ospeed` to optimize for performance, and `-Odebug` to optimize for debugging.
+1. In the first line we create the alias `rivemu-exec`, a shortcut to invoke commands inside RIV OS.
+2. In the second line we compile `hello.c` again, but this time to `hello-optimized` using compiler flags from `riv-opt-flags -Ospeed`, this will supply compiler flags to optimized for speed because we passed `-Ospeed`, this tool also accepts `-Osize` to optimize for size, and `-Odebug` to optimize for debugging.
 3. In the third line we strip unwanted data from the ELF binary `hello-optimized`, this should compress the file a little more.
 4. In the fourth line we create the cartridge `hello-optimized.sqfs`
 5. Finally in the last line we test it.
@@ -320,14 +328,18 @@ Filesystem size 1573 bytes (1.54 Kbytes / 0.00 Mbytes)
 ```
 
 Notice the data in `hello-optimized.sqfs` cartridge is smaller than `hello-compiled.sqfs`.
-However if you take a look, both cartridges files are still at 4KB,
+However if you take a look with `ls -la`, you will notice both cartridges files are still at 4KB,
 this is because SquashFS files add 0 padding at the end, to make us able to use the `mount` command.
-This cartridge was very simple, only in a more complex one you would see the benefits.
+This cartridge is very small, only in a more complex one you would see the benefits.
+
+If you can afford, prefer to use `-Ospeed` to optimize for performance,
+use `-Osize` only if you really want to reduce its size as priority,
+and use `-Odebug` only to debug while in development.
 
 On RIVES it is recommended to upload optimized and small cartridges to reduce costs,
-and improve its performance.
-If you can afford, prefer to use `-Ospeed` to optimize for performance,
-and only use `-Odebug` to debug while in development.
+and improve its verification performance.
+Even though both are 4KB, the ones containing zeros will cost less to upload on RIVES,
+because transactions with zeros in them cost less in some blockchain base layers.
 
 ## Debugging cartridges
 
@@ -341,8 +353,8 @@ rivemu -quiet -no-window -sdk -workspace -exec gcc hello.c -o hello-debug '$(riv
 rivemu -quiet -sdk -workspace -it -exec gdb -silent ./hello-debug
 ```
 
-This should open `gdb` so you can debug the cartridge,
-and here is a session demonstrating how to step over each function:
+This should open `gdb` session so you can debug the cartridge,
+here is a copy of a session demonstrating how to step over each function:
 
 ```c
 $ rivemu -quiet -sdk -workspace -it -exec gdb -silent ./hello-debug
@@ -368,7 +380,14 @@ $1 = 1
 
 Notice in this session we break at the program startup, and then run each line by line.
 At the end we print which frame we are with.
-You can debug cartridges normally as debugging C programs.
+In the end, you can debug cartridges normally as debugging C programs.
+
+If you debug a cartridge with a *tape*,
+you could inspect the game frame by frame.
+Sounds useful for debugging nasty bugs while developing a game right?
+For example, imagine a player found a bug in your game,
+you could just ask him to record a tape of the bug,
+then you can use it to debug frame by frame.
 
 ## Inspecting cartridges
 
@@ -379,8 +398,8 @@ that was previously downloaded in the getting started page:
 
 ```sh
 $ rivemu -quiet -sdk -workspace -it
-rivos:/workspace# mount antcopter.sqfs /cartridge
-rivos:/workspace# cd /cartridge
+rivos-sdk:/workspace# mount antcopter.sqfs /cartridge
+rivos-sdk:/workspace# cd /cartridge
 rivos:/cartridge# ls -l
 total 43
 -rwxr-xr-x    1 root     root         42632 Jan  1  1970 antcopter
@@ -394,9 +413,9 @@ rivos:/cartridge# jq < info.json
 ...
 ```
 
-The above is an interactive session output, you can see `antcopter.sqfs` has only 2 files.
-The `antcopter` RISC-V binary that contains the game,
-and `info.json` JSON file that contains some game metadata,
+The text above is a copy of an interactive session inspecting `antcopter.sqfs`.
+You can see it has only 2 files, yhe `antcopter` RISC-V binary that contains the game,
+and `info.json` JSON file that contains some metadata,
 this metadata is used on RIVES to create a catalog of games,
 cartridges are recommended to have this metadata included to distribute them on RIVES.
 
@@ -405,14 +424,14 @@ you should be able to play it.
 
 ## Benchmarking cartridges
 
-It's a good practice to measure the performance of your cartridge,
-before distributing it, for two reasons.
+It's a good practice to measure the performance of your cartridge before distributing it,
+for two reasons.
 One because you have a quota limit on how much computation a cartridge tape can process,
 and also because you want your cartridges execution to be lightweight enough
 to run with acceptable performance on different systems the emulator is running on.
 
 RIVEMU has the command `-bench` to help benchmarking your cartridge,
-it is recommended to benchmark only your final cartridge `.sqfs` file,
+it's recommended to benchmark only your final cartridge `.sqfs` file,
 lets benchmark `hello-optimized.sqfs`:
 
 ```sh
@@ -444,26 +463,26 @@ this value may vary on the system you are running,
 RIV is designed to run on system that is at least capable of running 128MIPS,
 systems that are not able to emulate at that speed may experience stuttering when playing heavy cartridges.
 - `cpu_usage`: it's how much of the CPU the cartridge is using,
-if this value is above 90%, you probably experience stuttering when playing the cartridge.
+if this value is above 90%, you may experience stuttering when playing the cartridge.
 - `cpu_quota`: it's how much CPU computation quota has been processed so far,
 RIV hardware spec set the quota to be 96 billion CPU instructions,
 when CPU quota reaches 100%, the game halts immediately.
 
-If you look closely the first frame always use costs more MIPS,
+If you look closely the first frame always costs more MIPS,
 because the machine has to boot and load the game.
 After the first frame the CPU quota keeps increasing slowly,
 it will increase indefinitely until the game ends.
 The FPS should remain stable most of the time.
 The CPU speed may vary a lot, because different instructions has different speeds,
 and also because your system may be busy processing other programs.
-The CPU cost remains stable for well designed cartridges,
+The CPU cost should remain stable for well designed cartridges,
 cartridges that increase CPU cost at random frames may experience
 stuttering, degrading game play quality.
 
 This RIVEMU web page can also show all this information when testing a cartridge.
 
-The `hello-optimized.sqfs` is not doing much, if you take a real cartridge,
-like DOOM, a reference for a heavy cartridge, you will see numbers similar to:
+The `hello-optimized.sqfs` is not doing much, if you play a heavy cartridge,
+like DOOM, you will see numbers similar to:
 
 ```
 [RIVEMU] frame=1 fps=0.18 cpu_cost=12404.20MIPS cpu_speed=567.54MIPS cpu_usage=11.20% cpu_quota=0.37%
@@ -495,16 +514,16 @@ rivemu -quiet -sdk -workspace -net -persist -it
 Notice the added `-net` here, this enables networking so you can install packages from the internet.
 Notice we also added the `-persist` option,
 this will make changes to the SDK persist, even when you exit the machine.
-Up until now all changes were in the machine root filesystem were being
-discarded.
+Up until now any changes made in the filesystem were being
+discarded after the emulator quits.
 
-Now `apk add nim` to install Nim compiler,
-this will download and install Nim using Alpine Linux package manager,
+Inside a RIV SDK interactive terminal with networking, run `apk add nim` to install Nim compiler,
+it will download and install Nim package from Alpine Linux package manager,
 and then test it with `nim -v`, here is the session output:
 
 ```sh
-$ rivemu -quiet -sdk -workspace -net -it
-rivos:/workspace# apk add nim
+$ rivemu -quiet -sdk -workspace -net -persist -it
+rivos-sdk:/workspace# apk add nim
 fetch https://dl-cdn.alpinelinux.org/alpine/edge/main/riscv64/APKINDEX.tar.gz
 fetch https://dl-cdn.alpinelinux.org/alpine/edge/community/riscv64/APKINDEX.tar.gz
 fetch https://dl-cdn.alpinelinux.org/alpine/edge/testing/riscv64/APKINDEX.tar.gz
@@ -513,7 +532,7 @@ fetch https://dl-cdn.alpinelinux.org/alpine/edge/testing/riscv64/APKINDEX.tar.gz
 (3/3) Installing nim (2.0.2-r0)
 Executing busybox-1.36.1-r25.trigger
 OK: 321 MiB in 93 packages
-rivos:/workspace# nim -v
+rivos-sdk:/workspace# nim -v
 Nim Compiler Version 2.0.2 [Linux: riscv64]
 Compiled at 2024-04-03
 Copyright (c) 2006-2023 by Andreas Rumpf
@@ -594,23 +613,20 @@ rivemu -workspace -exec ./hello-nim
 You should see a screen with "hello world!" again, but this time the original source code was made in Nim.
 
 We could have installed other system programming languages, such as
-Rust,
-Zig,
-Odin,
-Zig, and Nelua.
+Rust, Zig, Odin, Zig, and Nelua.
 These are the ones recommended because they are compiled.
 You can also use scripting programming languages, which will be covered in the next section.
 
-By the way, the official SDK come for compiler for C, C++, Nelua,
-and RIV minimal OS also comes with Luajit interpreter for Lua 5.1.
-Nelua even have all `riv.h` imported.
-But it's recommended to starting using some programming language you are already familiar,
-learning libriv API plus a programming language might be too much to do at once.
+By the way, the official SDK come for compilers for C, C++ and Nelua.
+Nelua even already has bindings for all `riv.h` from `libriv` in the SDK.
+The RIV minimal OS also comes with LuaJIT interpreter for Lua 5.1 and a JIT for C with MIR JIT.
+But it's recommended to start using programming languages you are already familiar,
+learning `libriv` API plus a programming language might be too much to do at once.
 
 ## Using scripting languages
 
-In the last section we mentioned that RIV OS comes with Lua 5.1 interpreter,
-LuaJIT.
+In the last section we mentioned that RIV OS comes with LuaJIT, which is a JIT for the
+scripting programming language Lua 5.1.
 For now LuaJIT was added because it very easy to call C libraries from it,
 in the future we might add standard Lua 5.4 for those wanting to use a more recent Lua version.
 Be-aware that LuaJIT port to RISC-V at this moment is unstable and done by an unofficial contributor.
@@ -644,17 +660,22 @@ Notice in this code the at the beginning we are manually importing `libriv` APIs
 at the bottom it's just again our hello example, lets run it:
 
 ```sh
-rivemu -workspace -exec luajit hello.lua
+chmod +x hello.lua
+rivemu -workspace -exec ./hello.lua
 ```
 
 And again, you will see the "hello world!" screen!
 
-As mentioned before `luajit` is contained the official RIV OS,
+As mentioned before, LuaJIT is contained the official RIV OS,
 but interpreters for other programming languages are not.
 If you would like to use Python or JavaScript for example,
 you will have to embed their interpreter inside the cartridge which could make it very big,
 this is why I recommend using just official supported interpreted languages,
 or use interpreted languages small enough to embed in a cartridge.
+There exists tiny versions for both Python and Javascript,
+they are Micropython and QuickJS,
+I would recommend embedding those inside cartridges instead,
+maybe we could add official RIV support for them in the future.
 
 If you have read this entire page, you have by now:
 - run `hello.c` using a `riv-jit-c`
@@ -665,11 +686,11 @@ If you have read this entire page, you have by now:
 
 It's recommended to use C for now,
 but if you are adventurous,
-you could use other languages as long as you provide the bindings.
+you could use other languages as long as work out the bindings.
 
 ## Porting other games
 
-You can port existing games to RIV, as long you have to code for it,
+You can port existing games to RIV, as long you have the code to compile it to RISC-V,
 have all the tools you need in the SDK
 and the game works under all the constraints presented so far.
 Porting a game basically is a matter of changing the graphics, audio and input APIs
@@ -681,4 +702,5 @@ on how a source code that was originally using the SDL library for handling
 graphics/audio/input,
 was ported to use the RIV library.
 
-In the next chapter we will learn more details about the API.
+In the next chapter we will learn more details about the libriv API
+while creating a Snake game.
