@@ -250,10 +250,7 @@ local function draw_boxed_text(text: string, rect: riv_recti, fontsize: integer,
   if #text == 0 then return end
   local spacing = math.ceil(fontsize / 20)
   fontsize = 3
-  local textsize = riv_draw_text(text, RIV_SPRITESHEET_FONT_5X7, 0, 0, -1, fontsize, fontsize, fontsize, fontsize)
-  local pos: riv_vec2f = { rect.x + (rect.width - textsize.x) // 2,
-                         rect.y + (rect.height - textsize.y) // 2 }
-  riv_draw_text(text, RIV_SPRITESHEET_FONT_5X7, pos.x, pos.y, fgcolor, fontsize, fontsize, fontsize, fontsize)
+  riv_draw_text(text, RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, rect.x + rect.width // 2, rect.y + rect.height // 2, fontsize, fgcolor)
 end
 
 local function draw_tiles_grid()

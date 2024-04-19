@@ -11,7 +11,7 @@ for i=0,<RIV_NUM_COLORS do
   local x = 0
   local y = (i % 32)*8
   riv_draw_rect_fill(x, y, 256, 8, i)
-  riv_draw_text(texts[i], RIV_SPRITESHEET_FONT_3X5, x + 2, y + 2, i ~= RIV_COLOR_WHITE and RIV_COLOR_WHITE or RIV_COLOR_BLACK, 1, 1, 1, 1)
+  riv_draw_text(texts[i], RIV_SPRITESHEET_FONT_3X5, RIV_TOPLEFT, x + 2, y + 2, 1, i ~= RIV_COLOR_WHITE and RIV_COLOR_WHITE or RIV_COLOR_BLACK)
 end
 
 -- wait forever

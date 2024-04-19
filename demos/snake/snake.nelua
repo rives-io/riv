@@ -242,12 +242,12 @@ end
 
 local function draw_intro()
   local col: uint32 = riv.frame % 2 == 0 and RIV_COLOR_LIGHTRED or RIV_COLOR_DARKRED
-  riv_draw_text("snake", RIV_SPRITESHEET_FONT_5X7, (128 - 58)//2, 50, RIV_COLOR_LIGHTGREEN, 2, 2, 2, 2)
-  riv_draw_text("PRESS TO START", RIV_SPRITESHEET_FONT_5X7, (128 - 83)//2, 70, col, 1, 1, 1, 1)
+  riv_draw_text("snake", RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, (128 - 58)//2, 50, 2, RIV_COLOR_LIGHTGREEN)
+  riv_draw_text("PRESS TO START", RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, (128 - 83)//2, 70, 1, col)
 end
 
 local function draw_game_over()
-  riv_draw_text("GAME OVER", RIV_SPRITESHEET_FONT_5X7, (128 - 106)//2, (128 - 14)//2, RIV_COLOR_RED, 2, 2, 2, 2)
+  riv_draw_text("GAME OVER", RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, (128 - 106)//2, (128 - 14)//2, 2, RIV_COLOR_RED)
   finish_frames = finish_frames + 1
   if finish_frames > speed then
     riv.quit = true

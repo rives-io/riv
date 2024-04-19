@@ -47,7 +47,7 @@ local function draw()
                   1, 1, d, 1) -- w,h, mw, mh
 
   riv.draw.origin = {0, 0}
-  riv_draw_text("COLLECT THE COINS!", RIV_SPRITESHEET_FONT_5X7, TILE_SIZE//2, TILE_SIZE//2, RIV_COLOR_WHITE, 1, 1, 1, 1)
+  riv_draw_text("COLLECT THE COINS!", RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, TILE_SIZE//2, TILE_SIZE//2, 1, RIV_COLOR_WHITE)
 end
 
 local function update()

@@ -32,7 +32,7 @@ int main() {
         // clear screen
         riv_clear(RIV_COLOR_BLACK);
         // draw hello world
-        riv_draw_text("hello world", RIV_SPRITESHEET_FONT_5X7, 63, 121, RIV_COLOR_WHITE, 2, 2, 2, 2);
+        riv_draw_text("hello world!", RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 128, 128, 2, RIV_COLOR_WHITE);
     } while(riv_present());
     return 0;
 }
@@ -208,7 +208,7 @@ rivemu -quiet -no-window -sdk -workspace -exec 'ls -l hello.sqfs && file hello.s
 
 It should output something similar to:
 ```sh
--rw-r--r--    1 user     user          4096 Apr 14 19:10 hello.sqfs
+-rw-r--r--    1 user     user          4096 Apr 19 20:48 hello.sqfs
 hello.sqfs: Squashfs filesystem, little endian, version 4.0, zlib compressed, 434 bytes, 3 inodes, blocksize: 131072 bytes, created: Thu Jan  1 00:00:00 1970
 ```
 
@@ -322,9 +322,9 @@ Lets compare the final with old one we created:
 
 ```sh
 $ rivemu-exec 'unsquashfs -stat hello-compiled.sqfs | grep bytes'
-Filesystem size 3195 bytes (3.12 Kbytes / 0.00 Mbytes)
+Filesystem size 3517 bytes (3.43 Kbytes / 0.00 Mbytes)
 $ rivemu-exec 'unsquashfs -stat hello-optimized.sqfs | grep bytes'
-Filesystem size 1573 bytes (1.54 Kbytes / 0.00 Mbytes)
+Filesystem size 1661 bytes (1.62 Kbytes / 0.00 Mbytes)
 ```
 
 Notice the data in `hello-optimized.sqfs` cartridge is smaller than `hello-compiled.sqfs`.
@@ -360,19 +360,19 @@ here is a copy of a session demonstrating how to step over each function:
 $ rivemu -quiet -sdk -workspace -it -exec gdb -silent ./hello-debug
 Reading symbols from ./hello-debug...
 (gdb) break main
-Breakpoint 1 at 0x8b6: file hello.c, line 8.
+Breakpoint 1 at 0x8b0: file hello.c, line 6.
 (gdb) run
 Starting program: /workspace/hello-debug
 
-Breakpoint 1.1, main () at hello.c:8
-8           riv_clear(RIV_COLOR_BLACK);
+Breakpoint 1.1, main () at hello.c:6
+6           riv_clear(RIV_COLOR_BLACK);
 (gdb) step
-10          riv_draw_text("hello world!", RIV_SPRITESHEET_FONT_5X7, 63, 121, RIV_COLOR_WHITE, 2, 2, 2, 2);
+8           riv_draw_text("hello world!", RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 128, 128, 2, RIV_COLOR_WHITE);
 (gdb) step
-11      } while(riv_present());
+9       } while(riv_present());
 (gdb) step
 
-Breakpoint 1.1, main () at hello.c:8
+Breakpoint 1.1, main () at hello.c:6
 8           riv_clear(RIV_COLOR_BLACK);
 (gdb) p riv.frame
 $1 = 1
@@ -584,17 +584,18 @@ Lets just port our hello example, create this file `hello.nim`:
 ```python
 proc riv_present(): bool {.importc, header: "<riv.h>".}
 proc riv_clear(col: uint32): void {.importc, header: "<riv.h>".}
-proc riv_draw_text(text: cstring, sps_id: uint64, x0: int64, y0: int64, col: int64, mw: int64, mh: int64, sx: int64, sy: int64): void {.importc, header: "<riv.h>".}
+proc riv_draw_text(text: cstring, sps_id: uint64, anchor: uint32, x: int64, y: int64, size: int64, col: int64): void {.importc, header: "<riv.h>".}
 const
     RIV_COLOR_BLACK: uint32 = 0
     RIV_COLOR_WHITE: uint32 = 1
+    RIV_CENTER: uint32 = 4
     RIV_SPRITESHEET_FONT_5X7: uint64 = 1023
 
 while true:
     # clear screen
     riv_clear(ord(RIV_COLOR_BLACK))
     # draw hello world
-    riv_draw_text("hello world!", ord(RIV_SPRITESHEET_FONT_5X7), 63, 121, ord(RIV_COLOR_WHITE), 2, 2, 2, 2)
+    riv_draw_text("hello world!", ord(RIV_SPRITESHEET_FONT_5X7), ord(RIV_CENTER), 128, 128, 2, ord(RIV_COLOR_WHITE))
     if not riv_present():
         break
 ```
@@ -643,16 +644,19 @@ typedef enum riv_color_id {
 typedef enum riv_spritesheet_id {
   RIV_SPRITESHEET_FONT_5X7 = 1023,
 } riv_spritesheet_id;
+typedef enum riv_align {
+  RIV_CENTER = 4,
+} riv_align;
 typedef struct riv_vec2i {int64_t x; int64_t y;} riv_vec2i;
 bool riv_present();
 void riv_clear(uint32_t col);
-riv_vec2i riv_draw_text(const char* text, uint64_t sps_id, int64_t x0, int64_t y0, int64_t col, int64_t mw, int64_t mh, int64_t sx, int64_t sy);
+riv_vec2i riv_draw_text(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t size, int64_t col);
 ]]
 local L = ffi.load("riv")
 
 repeat
   L.riv_clear(L.RIV_COLOR_BLACK)
-  L.riv_draw_text("hello world!", L.RIV_SPRITESHEET_FONT_5X7, 63, 121, L.RIV_COLOR_WHITE, 2, 2, 2, 2)
+  L.riv_draw_text("hello world!", L.RIV_SPRITESHEET_FONT_5X7, L.RIV_CENTER, 128, 128, 2, L.RIV_COLOR_WHITE)
 until not L.riv_present()
 ```
 

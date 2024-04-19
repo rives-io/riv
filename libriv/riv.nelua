@@ -41,7 +41,8 @@ global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int6
 global function riv_draw_triangle_line(x0: int64, y0: int64, x1: int64, y1: int64, x2: int64, y2: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_image_rect(img_id: uint64, x0: int64, y0: int64, w: int64, h: int64, sx0: int64, sy0: int64, mw: int64, mh: int64): void <cimport,nodecl> end
 global function riv_draw_sprite(n: uint32, sps_id: uint64, x0: int64, y0: int64, nw: int64, nh: int64, mw: int64, mh: int64): void <cimport,nodecl> end
-global function riv_draw_text(text: cstring <const>, sps_id: uint64, x0: int64, y0: int64, col: int64, mw: int64, mh: int64, sx: int64, sy: int64): riv_vec2i <cimport,nodecl> end
+global function riv_draw_text(text: cstring <const>, sps_id: uint64, anchor: riv_align, x: int64, y: int64, size: int64, col: int64): riv_vec2i <cimport,nodecl> end
+global function riv_draw_text_ex(text: cstring <const>, sps_id: uint64, anchor: riv_align, x: int64, y: int64, mw: int64, mh: int64, sx: int64, sy: int64, col: int64): riv_vec2i <cimport,nodecl> end
 
 -- Audio
 global function riv_make_soundbuffer(desc: *riv_soundbuffer_desc): uint64 <cimport,nodecl> end

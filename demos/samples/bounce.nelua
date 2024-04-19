@@ -35,7 +35,7 @@ local vely: number = math.random()*6-3
 
 local function _draw()
   riv_clear(RIV_COLOR_DARKSLATE)
-  riv_draw_text("press x to shake", RIV_SPRITESHEET_FONT_5X7, 10,10, RIV_COLOR_WHITE, 1, 1, 1, 1)
+  riv_draw_text("press x to shake", RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, 10,10, 1, RIV_COLOR_WHITE)
   -- fillp(░)
   riv_draw_rect_fill(0,floor_y,128,128,12)
   -- fillp() -- reset

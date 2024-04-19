@@ -20,8 +20,8 @@ local function draw()
     end
   end
   riv.draw.pal_enabled = false
-  riv_draw_text("This is RIV!", RIV_SPRITESHEET_FONT_5X7, 128-(12*6)//2, 200, RIV_COLOR_RED, 1, 1, 1, 1)
-  riv_draw_text("Nice to see you.", RIV_SPRITESHEET_FONT_5X7, 128-(16*6)//2, 216, RIV_COLOR_YELLOW, 1, 1, 1, 1)
+  riv_draw_text("This is RIV!", RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 128, 128+32, 1, RIV_COLOR_RED)
+  riv_draw_text("Nice to see you.", RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 128, 128+48, 1, RIV_COLOR_YELLOW)
 end
 
 repeat draw() until not riv_present()

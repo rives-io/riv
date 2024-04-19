@@ -588,7 +588,7 @@ global function riv_draw_sprite(n: uint32, sps_id: uint64, x0: int64, y0: int64,
   ## draw_image_hot_loop()
 end
 
-global function riv_draw_text(text: cstring <const>, sps_id: uint64, x0: int64, y0: int64, col: int64, mw: int64, mh: int64, sx: int64, sy: int64): riv_vec2i <cexport>
+local function riv_draw_text_topleft(text: cstring <const>, sps_id: uint64, x0: int64, y0: int64, mw: int64, mh: int64, sx: int64, sy: int64, col: int64): riv_vec2i <cexport>
   if unlikely(mw*mh == 0 or sps_id >= RIV_MAX_SPRITESHEETS) then return riv_vec2i{0, 0} end
   local spr: *riv_spritesheet = &riv.spritesheets[sps_id]
   local gw: int64, gh: int64 = spr.cell_width*math.abs(mw), spr.cell_height*math.abs(mh)
@@ -638,4 +638,31 @@ global function riv_draw_text(text: cstring <const>, sps_id: uint64, x0: int64, 
     ymax = math.max(y, ymax)
   end
   return riv_vec2i{xmax - x0, ymax - y0}
+end
+
+global function riv_draw_text_ex(text: cstring <const>, sps_id: uint64, anchor: riv_align, x: int64, y: int64, mw: int64, mh: int64, sx: int64, sy: int64, col: int64): riv_vec2i  <cexport>
+  if anchor == RIV_TOPLEFT or col < 0 then
+    return riv_draw_text_topleft(text, sps_id, x, y, mw, mh, sx, sy, col)
+  else
+    local bbox_size: riv_vec2i = riv_draw_text_topleft(text, sps_id, x, y, mw, mh, sx, sy, -1)
+    local halign: uint32 = (@uint32)(anchor) % 3
+    local valign: uint32 = (@uint32)(anchor) // 3
+    -- horizontal
+    if halign == 2 then -- right
+      x = x - bbox_size.x
+    elseif halign == 1 then -- horizontal center
+      x = x - bbox_size.x /// 2
+    end
+    -- vertical
+    if valign == 2 then -- bottom
+      y = y - bbox_size.y
+    elseif valign == 1 then -- vertical center
+      y = y - bbox_size.y /// 2
+    end
+    return riv_draw_text_topleft(text, sps_id, x, y, mw, mh, sx, sy, col)
+  end
+end
+
+global function riv_draw_text(text: cstring <const>, sps_id: uint64, anchor: riv_align, x: int64, y: int64, size: int64, col: int64): riv_vec2i <cexport>
+  return riv_draw_text_ex(text, sps_id, anchor, x, y, size, size, size, size, col)
 end

@@ -30,7 +30,7 @@ Lorem ipsum dolor sit amet,
 consectetur adipiscing elit.
 Pellentesque ultricies tristique lacus,
 sed cursus magna facilisis quis.
-]]), RIV_SPRITESHEET_FONT_5X7, x0, y0, RIV_COLOR_WHITE, 1, 1, 1, 1)
+]]), RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, x0, y0, 1, RIV_COLOR_WHITE)
   riv_draw_rect_line(x0-2, y0-2, text_size.x+4, text_size.y+4, RIV_COLOR_YELLOW)
 end
 
