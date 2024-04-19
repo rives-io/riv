@@ -35,7 +35,7 @@ sed cursus magna facilisis quis.
 end
 
 repeat
-  riv_clear_screen(RIV_COLOR_DARKSLATE)
+  riv_clear(RIV_COLOR_DARKSLATE)
   draw_glyphs(56, 4, RIV_SPRITESHEET_FONT_5X7)
   draw_glyphs(56, 64+8, RIV_SPRITESHEET_FONT_3X5)
   draw_lorem(8, 128+16)

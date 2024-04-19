@@ -30,7 +30,7 @@ Let's begin creating a file named `hello.c` with the following contents:
 int main() {
     do {
         // clear screen
-        riv_clear_screen(RIV_COLOR_BLACK);
+        riv_clear(RIV_COLOR_BLACK);
         // draw hello world
         riv_draw_text("hello world", RIV_SPRITESHEET_FONT_5X7, 63, 121, RIV_COLOR_WHITE, 2, 2, 2, 2);
     } while(riv_present());
@@ -365,7 +365,7 @@ Breakpoint 1 at 0x8b6: file hello.c, line 8.
 Starting program: /workspace/hello-debug
 
 Breakpoint 1.1, main () at hello.c:8
-8           riv_clear_screen(RIV_COLOR_BLACK);
+8           riv_clear(RIV_COLOR_BLACK);
 (gdb) step
 10          riv_draw_text("hello world!", RIV_SPRITESHEET_FONT_5X7, 63, 121, RIV_COLOR_WHITE, 2, 2, 2, 2);
 (gdb) step
@@ -373,7 +373,7 @@ Breakpoint 1.1, main () at hello.c:8
 (gdb) step
 
 Breakpoint 1.1, main () at hello.c:8
-8           riv_clear_screen(RIV_COLOR_BLACK);
+8           riv_clear(RIV_COLOR_BLACK);
 (gdb) p riv.frame
 $1 = 1
 ```
@@ -583,7 +583,7 @@ Lets just port our hello example, create this file `hello.nim`:
 
 ```python
 proc riv_present(): bool {.importc, header: "<riv.h>".}
-proc riv_clear_screen(col: uint32): void {.importc, header: "<riv.h>".}
+proc riv_clear(col: uint32): void {.importc, header: "<riv.h>".}
 proc riv_draw_text(text: cstring, sps_id: uint64, x0: int64, y0: int64, col: int64, mw: int64, mh: int64, sx: int64, sy: int64): void {.importc, header: "<riv.h>".}
 const
     RIV_COLOR_BLACK: uint32 = 0
@@ -592,7 +592,7 @@ const
 
 while true:
     # clear screen
-    riv_clear_screen(ord(RIV_COLOR_BLACK))
+    riv_clear(ord(RIV_COLOR_BLACK))
     # draw hello world
     riv_draw_text("hello world!", ord(RIV_SPRITESHEET_FONT_5X7), 63, 121, ord(RIV_COLOR_WHITE), 2, 2, 2, 2)
     if not riv_present():
@@ -645,13 +645,13 @@ typedef enum riv_spritesheet_id {
 } riv_spritesheet_id;
 typedef struct riv_vec2i {int64_t x; int64_t y;} riv_vec2i;
 bool riv_present();
-void riv_clear_screen(uint32_t col);
+void riv_clear(uint32_t col);
 riv_vec2i riv_draw_text(const char* text, uint64_t sps_id, int64_t x0, int64_t y0, int64_t col, int64_t mw, int64_t mh, int64_t sx, int64_t sy);
 ]]
 local L = ffi.load("riv")
 
 repeat
-  L.riv_clear_screen(L.RIV_COLOR_BLACK)
+  L.riv_clear(L.RIV_COLOR_BLACK)
   L.riv_draw_text("hello world!", L.RIV_SPRITESHEET_FONT_5X7, 63, 121, L.RIV_COLOR_WHITE, 2, 2, 2, 2)
 until not L.riv_present()
 ```

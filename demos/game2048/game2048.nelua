@@ -357,7 +357,7 @@ local function draw_notifications()
 end
 
 local function draw()
-  riv_clear_screen(16)
+  riv_clear(16)
   draw_tiles_grid()
   draw_tiles()
   draw_score()

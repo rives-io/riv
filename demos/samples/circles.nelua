@@ -25,7 +25,7 @@ local function draw_boxes()
 end
 
 repeat
-  riv_clear_screen(RIV_COLOR_DARKSLATE)
+  riv_clear(RIV_COLOR_DARKSLATE)
   draw_boxes()
   draw_circles()
 until not riv_present()

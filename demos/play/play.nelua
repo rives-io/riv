@@ -81,7 +81,7 @@ end
 
 local function draw()
   --printh("_draw() start "..stat(1))
-  riv_clear_screen(0)
+  riv_clear(0)
 
   local t = riv.time
   local tt=t

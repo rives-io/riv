@@ -24,7 +24,7 @@ global function riv_make_spritesheet(img_id: uint64, w: uint32, h: uint32): uint
 global function riv_destroy_spritesheet(sps_id: uint64): void <cimport,nodecl> end
 
 -- Drawing
-global function riv_clear_screen(col: uint32): void <cimport,nodecl> end
+global function riv_clear(col: uint32): void <cimport,nodecl> end
 global function riv_draw_point(x: int64, y: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: uint32): void <cimport,nodecl> end
 global function riv_draw_rect_fill(x0: int64, y0: int64, w: int64, h: int64, col: uint32): void <cimport,nodecl> end

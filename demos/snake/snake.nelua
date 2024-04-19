@@ -255,7 +255,7 @@ local function draw_game_over()
 end
 
 local function draw()
-  riv_clear_screen(RIV_COLOR_DARKSLATE)
+  riv_clear(RIV_COLOR_DARKSLATE)
   if started then
     draw_apple()
     draw_snake()

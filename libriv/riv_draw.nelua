@@ -30,7 +30,7 @@ global function riv_init_draw(): void
   riv.spritesheets[RIV_SPRITESHEET_FONT_5X7].cell_height = #[riv_fonts.f5x7.cell_height]#
 end
 
-global function riv_clear_screen(col: uint32): void <cexport>
+global function riv_clear(col: uint32): void <cexport>
   C.memset(&riv.framebuffer[0], (@uint8)(col), riv.width * riv.height)
 end
 

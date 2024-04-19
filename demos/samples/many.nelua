@@ -14,7 +14,7 @@ local mx: int64 = SCREEN_SIZE//2
 local my: int64 = SCREEN_SIZE//2
 
 local function spiral(time: number, frame: int64)
-  riv_clear_screen(RIV_COLOR_BLACK)
+  riv_clear(RIV_COLOR_BLACK)
   for i=1,60,2 do
     local sx = SCREEN_SIZE//2 + math.ifloor(math.cos((-time/2+i/30)*tau)*9)
     local sy = SCREEN_SIZE//2 + math.ifloor(-math.sin((-time/2+i/30)*tau)*9)
@@ -24,7 +24,7 @@ local function spiral(time: number, frame: int64)
 end
 
 local function wheel(time: number, frame: int64)
-  riv_clear_screen(RIV_COLOR_BLACK)
+  riv_clear(RIV_COLOR_BLACK)
   for i=31,1,-1 do
     riv_draw_circle_fill(
       SCREEN_SIZE//2 + math.ifloor(math.cos((time+i/5)*tau)*5),
@@ -34,7 +34,7 @@ local function wheel(time: number, frame: int64)
 end
 
 local function pulse(time: number, frame: int64)
-  riv_clear_screen(RIV_COLOR_BLACK)
+  riv_clear(RIV_COLOR_BLACK)
   riv_draw_circle_line(SCREEN_SIZE//2, SCREEN_SIZE//2, 80+2*math.ifloor(math.cos(time*tau)*10), RIV_COLOR_WHITE)
 end
 
@@ -43,7 +43,7 @@ local function paint(time: number, frame: int64)
 end
 
 local function magnet(time: number, frame: int64)
-  riv_clear_screen(RIV_COLOR_BLACK)
+  riv_clear(RIV_COLOR_BLACK)
   for y=0,<SCREEN_SIZE,10 do
     for x=0,<SCREEN_SIZE,10 do
       -- angle between mouse and point
@@ -65,7 +65,7 @@ local function lines(time: number, frame: int64)
 end
 
 local function hexopus(time: number, frame: int64)
-  riv_clear_screen(RIV_COLOR_BLACK)
+  riv_clear(RIV_COLOR_BLACK)
   local da = math.cos(time/5*tau)/12
   for j = 0,5 do
     local x,y = 128.0, 128.0

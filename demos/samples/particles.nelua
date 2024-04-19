@@ -33,7 +33,7 @@ local lmx, lmy = 128, 128
 local mx, my = 128, 128
 
 repeat
-  riv_clear_screen(RIV_COLOR_DARKSLATE)
+  riv_clear(RIV_COLOR_DARKSLATE)
 
   if riv.keys[RIV_GAMEPAD_LEFT].down then mx = mx - 4 end
   if riv.keys[RIV_GAMEPAD_RIGHT].down then mx = mx + 4 end

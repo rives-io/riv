@@ -3,7 +3,7 @@ require 'math'
 require 'string'
 
 local function draw()
-  riv_clear_screen(RIV_COLOR_DARKSLATE)
+  riv_clear(RIV_COLOR_DARKSLATE)
 
   local text = 'HELLO WORLD!'
   local t = riv.time

@@ -710,7 +710,7 @@ RIV_API void riv_destroy_spritesheet(uint64_t sps_id);
 
 // Drawing
 
-RIV_API void riv_clear_screen(uint32_t col);
+RIV_API void riv_clear(uint32_t col);
 RIV_API void riv_draw_point(int64_t x, int64_t y, uint32_t col);
 RIV_API void riv_draw_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, uint32_t col);
 RIV_API void riv_draw_rect_fill(int64_t x0, int64_t y0, int64_t w, int64_t h, uint32_t col);
