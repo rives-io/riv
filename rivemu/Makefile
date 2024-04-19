@@ -65,7 +65,7 @@ build: $(RIVEMU) rivemu.wasm
 dist: rivemu.wasm rivemu-linux-amd64 rivemu-windows-amd64.exe rivemu-linux-arm64
 
 # Packaging for Linux
-LINUX_WRAPPER_CFLAGS=\
+LINUX_WRAPPER_LDFLAGS=\
 	/usr/include/X11GL-wrappers/libGL.so.init.c \
 	/usr/include/X11GL-wrappers/libGL.so.tramp.S \
 	/usr/include/X11GL-wrappers/libX11.so.init.c \
@@ -88,7 +88,12 @@ rivemu-linux-%: rivemu.nelua $(DEPS)
 		--workdir /mnt \
 		--hostname riv-toolchain-linux-$* \
 		--rm riv/toolchain-linux-$* \
-		bash -c "make -C /mnt/rivemu rivemu-linux-$* RIVEMU=rivemu-linux-$* EXTRA_CFLAGS='$(LINUX_WRAPPER_CFLAGS)' EXTRA_NELUA_FLAGS=-DCARTESI_STATIC NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
+		bash -c "make -C /mnt/rivemu rivemu-linux-$* \
+					RIVEMU=rivemu-linux-$* \
+					EXTRA_LDFLAGS='$(LINUX_WRAPPER_LDFLAGS)' \
+					EXTRA_NELUA_FLAGS=-DCARTESI_STATIC \
+					NELUA_CACHEDIR=/tmp/nelua && \
+				chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-linux-$*"
 
 # Packaging for Windows
 rivemu-windows-amd64: rivemu-windows-amd64.exe
@@ -101,7 +106,12 @@ rivemu-windows-%.exe: rivemu.nelua $(DEPS)
 		--workdir /mnt \
 		--hostname riv-toolchain-windows-amd64 \
 		--rm riv/toolchain-windows-amd64 \
-		bash -c "make -C /mnt/rivemu rivemu-windows-amd64.exe RIVEMU=rivemu-windows-amd64.exe CC=x86_64-w64-mingw32-gcc EXTRA_NELUA_FLAGS=-DCARTESI_STATIC NELUA_CACHEDIR=/tmp/nelua && chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-windows-amd64.exe"
+		bash -c "make -C /mnt/rivemu rivemu-windows-amd64.exe \
+					RIVEMU=rivemu-windows-amd64.exe \
+					CC=x86_64-w64-mingw32-gcc \
+					EXTRA_NELUA_FLAGS=-DCARTESI_STATIC \
+					NELUA_CACHEDIR=/tmp/nelua && \
+				chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-windows-amd64.exe"
 
 # Packaging for WASM
 rivemu.wasm: rivemu.nelua $(DEPS)

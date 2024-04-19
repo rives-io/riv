@@ -1,6 +1,5 @@
 FROM gcc:13
 
-
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y git wget meson glib2.0-dev python3 libgl-dev xorg-dev libboost1.81-dev glib2.0-dev
