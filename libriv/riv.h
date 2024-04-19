@@ -498,17 +498,9 @@ typedef struct riv_draw_state {
   bool pal_enabled;                 // Draw swap palette enabled
 } riv_draw_state;
 
-// Frame buffer description
-typedef struct riv_framebuffer_desc {
-  uint32_t height;               // Screen height
-  uint32_t width;                // Screen width
-  uint32_t target_fps;           // Screen target refresh rate
-  riv_pixel_format pixel_format; // Screen pixel format
-} riv_framebuffer_desc;
-
 // Sound buffer description
 typedef struct riv_soundbuffer_desc {
-  uint64_t id;                // Sound buffer id (filled automatically)
+  uint64_t id;              // Sound buffer id (filled automatically)
   riv_sound_format format;  // Sound format
   uint32_t channels;        // Sound channels (0 = auto detect)
   uint32_t sample_rate;     // Sound sample rate (0 = auto detect)
@@ -517,8 +509,8 @@ typedef struct riv_soundbuffer_desc {
 
 // Sound description
 typedef struct riv_sound_desc {
-  uint64_t id;          // Sound id (filled automatically, or used when updating a sound)
-  uint64_t buffer_id;   // Sound buffer id (must be 0 when updating a sound)
+  uint64_t id;        // Sound id (filled automatically, or used when updating a sound)
+  uint64_t buffer_id; // Sound buffer id (must be 0 when updating a sound)
   float delay;        // Start delay time in seconds (0 = no delay)
   float duration;     // Duration in seconds (0 = let id end, -1 = loop)
   float fade_in;      // Fade in time in seconds (0 = no fade in)
@@ -531,7 +523,7 @@ typedef struct riv_sound_desc {
 
 // Waveform sound description
 typedef struct riv_waveform_desc {
-  uint64_t id;              // Sound id (filled automatically)
+  uint64_t id;            // Sound id (filled automatically)
   riv_waveform_type type; // Waveform type
   float delay;            // Start delay in seconds
   float attack;           // Attack duration in seconds
@@ -597,7 +589,10 @@ typedef struct riv_mmio_driver {
   uint64_t frame;
   uint32_t outcard_len;
   uint32_t statecard_len;
-  riv_framebuffer_desc framebuffer_desc;
+  uint32_t height;
+  uint32_t width;
+  uint32_t target_fps;
+  riv_pixel_format pixel_format;
   uint32_t palette[RIV_MAX_COLORS];
   bool tracked_keys[RIV_NUM_KEYCODE];
   riv_command commands[RIV_MAX_COMMANDS];
@@ -623,7 +618,10 @@ typedef struct riv_context {
   uint64_t frame;                                     // [R] Current frame number
   uint32_t outcard_len;                               // [RW] Output card length
   uint32_t statecard_len;                             // [RW] State card length
-  riv_framebuffer_desc framebuffer_desc;              // [RW] Screen frame buffer description
+  uint32_t height;                                    // [RW] Screen height
+  uint32_t width;                                     // [RW] Screen width
+  uint32_t target_fps;                                // [RW] Screen target refresh rate
+  riv_pixel_format pixel_format;                      // [RW] Screen pixel format
   uint32_t palette[RIV_MAX_COLORS];                   // [RW] Color palette
   bool tracked_keys[RIV_NUM_KEYCODE];                 // [RW] Key codes being tracked
   riv_command commands[RIV_MAX_COMMANDS];             // Command queue to be executed by the device

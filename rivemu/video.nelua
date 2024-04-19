@@ -10,7 +10,10 @@ require '.machine'
 global rivemu_video = @record{}
 
 -- Video subsystem state.
-local fb_desc: riv_framebuffer_desc
+local fb_height: uint32
+local fb_width: uint32
+local fb_target_fps: uint32
+local fb_pixel_format: riv_pixel_format
 local fb_pixel_count: int64
 local fb_image: sg_image
 local fb_pixel_perfect: boolean
@@ -30,7 +33,10 @@ end
 -- Reset video subsystem.
 function rivemu_video.reset(): void
   destroy_framebuffer_image()
-  fb_desc = {}
+  fb_height = 0
+  fb_width = 0
+  fb_target_fps = 0
+  fb_pixel_format = RIV_PIXELFORMAT_PLT256
   fb_pixel_count = 0
   memory.zero(&framebuffer[0], RIV_SIZE_FRAMEBUFFER)
   memory.zero(&framebuffer_rgba[0], RIV_SIZE_FRAMEBUFFER * 4)
@@ -59,13 +65,19 @@ function rivemu_video.shutdown(): void
 end
 
 -- Resize the window framebuffer image.
-local function update_framebuffer_desc(): void
+local function update_framebuffer_size(): void
   -- update framebuffer desc
-  if fb_desc == machine.mmio_driver.framebuffer_desc then return end
-  local recreate: boolean = fb_desc.width ~= machine.mmio_driver.framebuffer_desc.width or
-                            fb_desc.height ~= machine.mmio_driver.framebuffer_desc.height
-  fb_desc = machine.mmio_driver.framebuffer_desc
-  fb_pixel_count = fb_desc.width * fb_desc.height
+  if fb_width == machine.mmio_driver.width and
+     fb_height == machine.mmio_driver.height and
+     fb_target_fps == machine.mmio_driver.target_fps and
+     fb_pixel_format == machine.mmio_driver.pixel_format then return end
+  local recreate: boolean = fb_width ~= machine.mmio_driver.width or
+                            fb_height ~= machine.mmio_driver.height
+  fb_width = machine.mmio_driver.width
+  fb_height = machine.mmio_driver.height
+  fb_target_fps = machine.mmio_driver.target_fps
+  fb_pixel_format = machine.mmio_driver.pixel_format
+  fb_pixel_count = fb_width * fb_height
 
   -- return early if no resize is needed
   if not recreate then return end
@@ -74,13 +86,13 @@ local function update_framebuffer_desc(): void
   destroy_framebuffer_image()
 
   -- no need to create an fb image when its size is 0
-  if fb_desc.width * fb_desc.height == 0 then return end
+  if fb_width * fb_height == 0 then return end
 
   -- create the framebuffer
   fb_image = sg_make_image(sg_image_desc{
     usage = SG_USAGE_STREAM,
-    width = fb_desc.width,
-    height = fb_desc.height,
+    width = fb_width,
+    height = fb_height,
   })
   assert(sg_query_image_state(fb_image) == SG_RESOURCESTATE_VALID, "failed to create frame buffer image")
 end
@@ -123,7 +135,7 @@ end
 local function draw_framebuffer(screen_width: int64, screen_height: int64): void
   if fb_pixel_count == 0 then return end
   sgp_set_image(0, fb_image)
-  sgp_draw_filled_rect(fit_box(fb_desc.width, fb_desc.height, screen_width, screen_height, fb_pixel_perfect))
+  sgp_draw_filled_rect(fit_box(fb_width, fb_height, screen_width, screen_height, fb_pixel_perfect))
   sgp_reset_image(0)
 end
 
@@ -214,7 +226,7 @@ end
 
 function rivemu_video.update_framebuffer()
   if not machine:is_mmio_ready() then return end
-  update_framebuffer_desc()
+  update_framebuffer_size()
   update_framebuffer_mem()
 end
 
@@ -264,8 +276,8 @@ local function riv_encode_png_screenshot(): string
 
   -- Specify image dimensions, PNG format
   local ihdr: spng_ihdr = {
-    width = fb_desc.width,
-    height = fb_desc.height,
+    width = fb_width,
+    height = fb_height,
     bit_depth = 8,
     color_type = SPNG_COLOR_TYPE_INDEXED
   }
@@ -275,7 +287,7 @@ local function riv_encode_png_screenshot(): string
   if ret ~= 0 then error('spng_set_ihdr failed: '..spng_strerror(ret)) end
 
   -- Detect palette size
-  local num_pixels: usize = fb_desc.width * fb_desc.height
+  local num_pixels: usize = fb_width * fb_height
   local num_colors: usize = 0
   for i: usize=0,<num_pixels do
     if framebuffer[i] > num_colors then num_colors = framebuffer[i] end

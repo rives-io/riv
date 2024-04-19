@@ -31,11 +31,11 @@ global function riv_init_draw(): void
 end
 
 global function riv_clear_screen(col: uint32): void <cexport>
-  C.memset(&riv.framebuffer[0], (@uint8)(col), riv.framebuffer_desc.width * riv.framebuffer_desc.height)
+  C.memset(&riv.framebuffer[0], (@uint8)(col), riv.width * riv.height)
 end
 
 local function riv_get_clip_limits(): (int64, int64, int64, int64, int64) <inline>
-  local fw: int64, fh: int64 = riv.framebuffer_desc.width, riv.framebuffer_desc.height
+  local fw: int64, fh: int64 = riv.width, riv.height
   local cx0: int64, cy0: int64 = math.max(0, riv.draw.clip.x), math.max(0, riv.draw.clip.y)
   local cx1: int64, cy1: int64 = math.min(fw, riv.draw.clip.x + riv.draw.clip.width) - 1, math.min(fh, riv.draw.clip.y + riv.draw.clip.height) - 1
   return cx0, cy0, cx1, cy1, fw

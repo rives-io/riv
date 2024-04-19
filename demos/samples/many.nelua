@@ -6,8 +6,8 @@ require 'vector'
 require 'string'
 
 local SCREEN_SIZE <comptime> = 256
-riv.framebuffer_desc.width = SCREEN_SIZE
-riv.framebuffer_desc.height = SCREEN_SIZE
+riv.width = SCREEN_SIZE
+riv.height = SCREEN_SIZE
 
 local tau: number <comptime> = math.pi*2
 local mx: int64 = SCREEN_SIZE//2

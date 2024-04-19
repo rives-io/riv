@@ -61,9 +61,9 @@ local function draw() <noinline>
   print((riv_rdcycle()-a)/(SIZE*SIZE))
 end
 
-riv.framebuffer_desc.width = SIZE
-riv.framebuffer_desc.height = SIZE
-riv.framebuffer_desc.target_fps = 24
+riv.width = SIZE
+riv.height = SIZE
+riv.target_fps = 24
 for col=0,<256 do
   riv.palette[col] = (col << 16) | (col << 8) | (col << 0)
 end

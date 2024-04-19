@@ -57,8 +57,8 @@ local function riv_encode_png_screenshot(): string
 
   -- Specify image dimensions, PNG format
   local ihdr: spng_ihdr = {
-    width = riv.framebuffer_desc.width,
-    height = riv.framebuffer_desc.height,
+    width = riv.width,
+    height = riv.height,
     bit_depth = 8,
     color_type = SPNG_COLOR_TYPE_INDEXED
   }
@@ -68,7 +68,7 @@ local function riv_encode_png_screenshot(): string
   if ret ~= 0 then error('spng_set_ihdr failed: '..spng_strerror(ret)) end
 
   -- Detect palette size
-  local num_pixels: usize = riv.framebuffer_desc.width * riv.framebuffer_desc.height
+  local num_pixels: usize = riv.width * riv.height
   local num_colors: usize = 0
   for i: usize=0,<num_pixels do
     if riv.framebuffer[i] > num_colors then num_colors = riv.framebuffer[i] end

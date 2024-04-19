@@ -25,8 +25,8 @@ riv.palette[17] = 0xFFFFFF
 -- Compile time constants
 local SCREEN_WIDTH <comptime> = 300
 local SCREEN_HEIGH <comptime> = 400
-riv.framebuffer_desc.width = SCREEN_WIDTH
-riv.framebuffer_desc.height = SCREEN_HEIGH
+riv.width = SCREEN_WIDTH
+riv.height = SCREEN_HEIGH
 local TILEMAP_WIDTH <comptime> = 256
 local TILEMAP_OFFSET: riv_vec2f = {
   (SCREEN_WIDTH - TILEMAP_WIDTH) // 2,

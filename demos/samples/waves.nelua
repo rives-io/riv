@@ -1,9 +1,9 @@
 require 'riv'
 require 'math'
 
-riv.framebuffer_desc.width = 128
-riv.framebuffer_desc.height = 128
-riv.framebuffer_desc.target_fps = 30
+riv.width = 128
+riv.height = 128
+riv.target_fps = 30
 
 repeat
   riv_clear_screen(RIV_COLOR_DARKSLATE)

@@ -45,12 +45,10 @@ global function riv_init(): void <cattribute'constructor',cexport>
     features = 0,
     uuid = 0
   }
-  riv.framebuffer_desc = {
-    width = RIV_DEFAULT_WIDTH,
-    height = RIV_DEFAULT_HEIGHT,
-    target_fps = RIV_DEFAULT_TARGET_FPS,
-    pixel_format = RIV_DEFAULT_PIXELFORMAT,
-  }
+  riv.width = RIV_DEFAULT_WIDTH
+  riv.height = RIV_DEFAULT_HEIGHT
+  riv.target_fps = RIV_DEFAULT_TARGET_FPS
+  riv.pixel_format = RIV_DEFAULT_PIXELFORMAT
   -- init input
   riv_init_input()
   -- init video
@@ -155,7 +153,7 @@ global function riv_present(): boolean <cexport>
   riv.frame = frame
   -- update time trackers
   -- TODO: clock can skew with target_fps changes, this could be detected
-  local target_fps: uint64 = riv.framebuffer_desc.target_fps > 0 and riv.framebuffer_desc.target_fps or RIV_DEFAULT_TARGET_FPS
+  local target_fps: uint64 = riv.target_fps > 0 and riv.target_fps or RIV_DEFAULT_TARGET_FPS
   riv.time = frame / target_fps
   riv.time_ms = (@int64)((frame * 1000) // target_fps)
   -- audio commands was flushed

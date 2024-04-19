@@ -7,7 +7,7 @@ require 'math'
 local function memset(s: pointer, c: int32, n: usize): pointer <cimport,cinclude'<string.h>'> end
 
 local function riv_get_clip_limits(): (int64, int64, int64, int64, int64) <inline>
-  local fw: int64, fh: int64 = riv.framebuffer_desc.width, riv.framebuffer_desc.height
+  local fw: int64, fh: int64 = riv.width, riv.height
   local cx0: int64, cy0: int64 = math.max(0, riv.draw.clip.x), math.max(0, riv.draw.clip.y)
   local cx1: int64, cy1: int64 = math.min(fw, riv.draw.clip.x + riv.draw.clip.width) - 1, math.min(fh, riv.draw.clip.y + riv.draw.clip.height) - 1
   return cx0, cy0, cx1, cy1, fw
@@ -158,7 +158,7 @@ local function init()
   end
 end
 
-riv.framebuffer_desc.width = 480
-riv.framebuffer_desc.height = 270
-riv.framebuffer_desc.target_fps = 60
+riv.width = 480
+riv.height = 270
+riv.target_fps = 60
 init() repeat draw() until not riv_present()

@@ -295,10 +295,10 @@ local function frame()
 end
 
 local function init()
-  riv.framebuffer_desc.width = SCREEN_SIZE
-  riv.framebuffer_desc.height = SCREEN_SIZE
-  riv.framebuffer_desc.target_fps = speed
-  riv.framebuffer_desc.pixel_format = RIV_PIXELFORMAT_PLT256
+  riv.width = SCREEN_SIZE
+  riv.height = SCREEN_SIZE
+  riv.target_fps = speed
+  riv.pixel_format = RIV_PIXELFORMAT_PLT256
   save_score()
 end
 

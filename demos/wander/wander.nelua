@@ -3,8 +3,8 @@ require 'math'
 
 local TILE_SIZE <comptime> = 16
 local MAP_SIZE <comptime> = 16
-riv.framebuffer_desc.width = TILE_SIZE*MAP_SIZE
-riv.framebuffer_desc.height = TILE_SIZE*MAP_SIZE
+riv.width = TILE_SIZE*MAP_SIZE
+riv.height = TILE_SIZE*MAP_SIZE
 
 local sps_id: uint64 = riv_make_spritesheet(riv_make_image("wander.png", 0), TILE_SIZE, TILE_SIZE)
 local x: float32, y: float32 = MAP_SIZE // 2, MAP_SIZE // 2   -- position (in tiles)

@@ -814,7 +814,7 @@ local function advance_frame(): void
   local time_elapsed: float64 = now - time_start
   local mcycle: uint64 = machine:read_mcycle()
   local mcycle_elapsed: uint64 = mcycle - mcycle_start
-  local target_fps: uint32 = machine.mmio_driver.framebuffer_desc.target_fps
+  local target_fps: uint32 = machine.mmio_driver.target_fps
   local frame: uint64 = machine.mmio_driver.frame
 
   -- warn about slow frames
@@ -842,8 +842,8 @@ local function advance_frame(): void
   -- notify when game begins
   if not loading and was_loading then
     ## if ccinfo.is_emscripten then
-      local width: int32 <nodce> = machine.mmio_driver.framebuffer_desc.width
-      local height: int32 <nodce> = machine.mmio_driver.framebuffer_desc.height
+      local width: int32 <nodce> = machine.mmio_driver.width
+      local height: int32 <nodce> = machine.mmio_driver.height
       local target_fps: int32 <nodce> = (@int32)(target_fps)
       local num_frames: int32 <nodce> = rivemu_input.get_replay_frames()
       local canvas_width: int32 <nodce> = (default_canvas_width // width) * width

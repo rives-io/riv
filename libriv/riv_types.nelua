@@ -391,12 +391,6 @@ global riv_draw_state: type <cimport,nodecl> = @record{
   pal: [256]uint8,
   pal_enabled: boolean
 }
-global riv_framebuffer_desc: type <cimport,nodecl> = @record{
-  height: uint32,
-  width: uint32,
-  target_fps: uint32,
-  pixel_format: riv_pixel_format
-}
 global riv_soundbuffer_desc: type <cimport,nodecl> = @record{
   id: uint64,
   format: riv_sound_format,
@@ -466,7 +460,10 @@ global riv_mmio_driver: type <cimport,nodecl> = @record{
   frame: uint64,
   outcard_len: uint32,
   statecard_len: uint32,
-  framebuffer_desc: riv_framebuffer_desc,
+  height: uint32,
+  width: uint32,
+  target_fps: uint32,
+  pixel_format: riv_pixel_format,
   palette: [256]uint32,
   tracked_keys: [192]boolean,
   commands: [32]riv_command,
@@ -484,7 +481,10 @@ global riv_context: type <cimport,nodecl> = @record{
   frame: uint64,
   outcard_len: uint32,
   statecard_len: uint32,
-  framebuffer_desc: riv_framebuffer_desc,
+  height: uint32,
+  width: uint32,
+  target_fps: uint32,
+  pixel_format: riv_pixel_format,
   palette: [256]uint32,
   tracked_keys: [192]boolean,
   commands: [32]riv_command,
