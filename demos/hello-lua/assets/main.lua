@@ -1,5 +1,5 @@
-#!/usr/bin/luajit
-local ffi = require("ffi")
+#!/usr/bin/lua5.4
+local ffi = require("cffi")
 ffi.cdef[[
 typedef enum riv_color_id {
   RIV_COLOR_BLACK       = 0,

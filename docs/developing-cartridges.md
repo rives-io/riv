@@ -620,22 +620,22 @@ You can also use scripting programming languages, which will be covered in the n
 
 By the way, the official SDK come for compilers for C, C++ and Nelua.
 Nelua even already has bindings for all `riv.h` from `libriv` in the SDK.
-The RIV minimal OS also comes with LuaJIT interpreter for Lua 5.1 and a JIT for C with MIR JIT.
+The RIV minimal OS also comes with Lua 5.4 interpreter and a JIT for C11
+[with MIR JIT](https://github.com/vnmakarov/mir).
 But it's recommended to start using programming languages you are already familiar,
 learning `libriv` API plus a programming language might be too much to do at once.
 
 ## Using scripting languages
 
-In the last section we mentioned that RIV OS comes with LuaJIT, which is a JIT for the
-scripting programming language Lua 5.1.
-For now LuaJIT was added because it very easy to call C libraries from it,
-in the future we might add standard Lua 5.4 for those wanting to use a more recent Lua version.
-Be-aware that LuaJIT port to RISC-V at this moment is unstable and done by an unofficial contributor.
+In the last section we mentioned that RIV OS comes with Lua programming language,
+let's try it.
+In other to call functions from the C library `libriv`,
+we will use the [cffi-lua](https://github.com/q66/cffi-lua) to import and call C functions.
 
 First create the file `hello.lua` to be used with LuaJIT:
 ```lua
-#!/usr/bin/luajit
-local ffi = require("ffi")
+#!/usr/bin/lua5.4
+local ffi = require 'cffi'
 ffi.cdef[[
 typedef enum riv_color_id {
   RIV_COLOR_BLACK       = 0,
@@ -670,14 +670,14 @@ rivemu -workspace -exec ./hello.lua
 
 And again, you will see the "hello world!" screen!
 
-As mentioned before, LuaJIT is contained the official RIV OS,
+As mentioned before, Lua is contained the official RIV OS,
 but interpreters for other programming languages are not.
 If you would like to use Python or JavaScript for example,
 you will have to embed their interpreter inside the cartridge which could make it very big,
-this is why I recommend using just official supported interpreted languages,
+this is it's recommended to use just official supported interpreted languages,
 or use interpreted languages small enough to embed in a cartridge.
 There exists tiny versions for both Python and Javascript,
-they are Micropython and QuickJS,
+they are [Micropython](https://micropython.org/) and [QuickJS](https://bellard.org/quickjs/),
 I would recommend embedding those inside cartridges instead,
 maybe we could add official RIV support for them in the future.
 
@@ -686,7 +686,7 @@ If you have read this entire page, you have by now:
 - run `hello.c` compiled with GCC compiler
 - run `hello.c` compiled with GCC compiler with optimizations
 - run `hello.nim` compiled with Nim compiler
-- run `hello.lua` interpreted with LuaJIT
+- run `hello.lua` interpreted with Lua
 
 It's recommended to use C for now,
 but if you are adventurous,

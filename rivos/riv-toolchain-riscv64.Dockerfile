@@ -52,29 +52,34 @@ RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/5dcba9
 ################################
 # Build nelua
 FROM --platform=linux/riscv64 riv-toolchain-stage AS nelua-stage
-RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarball/05a2633a18dfdde7389394b9289da582c10e79bc && \
+RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarball/9f75e009db190feda0f90ae858b48fd82f51b8b1 && \
     tar -xzf edubart-nelua-lang.tar.gz && \
     mv edubart-nelua-lang-* edubart-nelua-lang && cd edubart-nelua-lang && \
     mkdir -p /pkg/usr && \
-    make PREFIX=/pkg/usr && \
+    make PREFIX=/pkg/usr nelua-lua nelua-luac && \
     make install PREFIX=/pkg/usr && \
-    strip /pkg/usr/bin/nelua-lua && \
+    cp nelua-luac /pkg/usr/bin/nelua-luac && \
+    strip /pkg/usr/bin/nelua-lua /pkg/usr/bin/nelua-luac && \
     ln -s nelua-lua /pkg/usr/bin/lua5.4 && \
+    ln -s nelua-luac /pkg/usr/bin/luac5.4 && \
     tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
 ################################
-# Build luajit
-FROM --platform=linux/riscv64 riv-toolchain-stage AS luajit-stage
-RUN wget -O infiWang-LJRV.tar.gz https://github.com/infiWang/LJRV/tarball/af9c41c38a285abde6d40ba575392609221bbc0f && \
-    tar -xzf infiWang-LJRV.tar.gz && \
-    mv infiWang-LJRV-* infiWang-LJRV && cd infiWang-LJRV && \
+# Build cffi-lua
+FROM --platform=linux/riscv64 riv-toolchain-stage AS cffi-lua-stage
+RUN apk add cmake meson lua5.4-dev lua5.4-libs libffi-dev
+RUN mkdir -p /pkg/usr/lib /pkg/usr/include && \
+    cp -L /usr/lib/lua5.4/liblua.so /pkg/usr/lib/liblua5.4.so && \
+    cp -L /usr/lib/lua5.4/liblua.a /pkg/usr/lib/liblua5.4.a && \
+    cp -R /usr/include/lua5.4 /pkg/usr/include/lua5.4
+RUN wget -O q66-cffi-lua.tar.gz https://github.com/q66/cffi-lua/tarball/2e0c577c4c3aad3da543040200d1303798780616 && \
+    tar -xzf q66-cffi-lua.tar.gz && \
+    mv q66-cffi-lua-* q66-cffi-lua && cd q66-cffi-lua && \
     mkdir -p /pkg/usr && \
-    make amalg PREFIX=/usr && \
-    make install PREFIX=/usr DESTDIR=/pkg && \
-    rm -rf /pkg/usr/share/man /pkg/usr/bin/luajit && \
-    mv /pkg/usr/bin/luajit-* /pkg/usr/bin/luajit && \
-    strip /pkg/usr/bin/luajit && \
-    strip -S -x /pkg/usr/lib/*.so.* && \
+    meson build -Dlua_version=5.4 -Dtests=false -Dprefix=/pkg/usr && \
+    ninja -C build && \
+    ninja -C build install && \
+    strip -S -x /pkg/usr/lib/*.so && \
     tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
 ################################
@@ -132,7 +137,7 @@ RUN ln -s /usr/bin/nvim /usr/bin/vim
 # Download apks to be installed in rivos
 RUN mkdir -p apks && \
     cd apks && \
-    apk fetch musl libgcc libstdc++
+    apk fetch musl libgcc libstdc++ libffi
 
 # Install linux-headers
 WORKDIR /root
@@ -149,7 +154,7 @@ COPY --from=mirjit-stage /pkg/usr /usr
 COPY --from=nelua-stage /pkg/usr /usr
 COPY --from=bwrapbox-stage /pkg/usr /usr
 COPY --from=bubblewrap-stage /pkg/usr /usr
-COPY --from=luajit-stage /pkg/usr /usr
+COPY --from=cffi-lua-stage /pkg/usr /usr
 
 # Install skel
 COPY rivos/skel/etc /etc
@@ -197,10 +202,14 @@ RUN cp -a /usr/bin/c2m usr/bin/c2m && \
     cp -a /usr/include/c2mir.h usr/include/ && \
     cp -a /usr/include/mir* usr/include/
 
-# Install luajit
-RUN cp -a /usr/bin/luajit usr/bin/ && \
-    cp -a /usr/lib/libluajit-5.1.so* usr/lib/ && \
-    cp -a /usr/include/luajit-2.1 usr/include/
+# Install cffi
+RUN cp -aL /usr/lib/libffi.so* usr/lib/
+
+# Install lua + cffi-lua
+RUN cp -aL /usr/bin/lua5.4 usr/bin/lua5.4 && \
+    cp -aL /usr/lib/liblua5.4.so usr/lib/liblua5.4.so && \
+    cp -aL /usr/include/lua5.4 usr/include/lua5.4 && \
+    cp -a /usr/lib/lua usr/lib/lua
 
 # Install skel files
 COPY rivos/skel/etc etc

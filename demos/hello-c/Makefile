@@ -1,4 +1,4 @@
-NAME=jit-c
+NAME=hello-c
 
 COMP?=xz
 ASSETS_DIR?=assets
