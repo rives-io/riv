@@ -766,16 +766,17 @@ typedef struct riv_context {
   // Public state
   int64_t time_ms;                                    // [R] Current time in milliseconds since first frame
   double time;                                        // [R] Current time in seconds since first frame
+  uint64_t quit_frame;                                // [RW] When set, main loop will stop at the specified frame
+  bool quit;                                          // [RW] When set true, main loop will stop
   bool valid;                                         // [R] Whether we are initialized
   bool verifying;                                     // [R] Whether we are verifying
   bool yielding;                                      // [R] Whether an audio/video/input devices are connected and yielding
-  bool quit;                                          // [RW] When set true, main loop will stop
   uint32_t key_modifiers;                             // [R] Current keyboard modifiers (e.g CTRL/ALT/SHIFT)
   riv_key_state keys[RIV_NUM_KEYCODE];                // [R] Current keyboard state
   riv_draw_state draw;                                // [RW] Draw state
   riv_image images[RIV_MAX_IMAGES];                   // [RW] Loaded images
   riv_spritesheet spritesheets[RIV_MAX_SPRITESHEETS]; // [RW] Loaded sprite sheets
-  uint8_t pub_driver_padding[1002672];                // Reserved
+  uint8_t pub_driver_padding[1002664];                // Reserved
 
   //////////////////////////////////////
   // Internal state

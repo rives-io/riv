@@ -49,6 +49,7 @@ global function riv_init(): void <cattribute'constructor',cexport>
   riv.height = RIV_DEFAULT_HEIGHT
   riv.target_fps = RIV_DEFAULT_TARGET_FPS
   riv.pixel_format = RIV_DEFAULT_PIXELFORMAT
+  riv.quit_frame = (@uint64)(-1)
   -- init input
   riv_init_input()
   -- init video
@@ -160,5 +161,5 @@ global function riv_present(): boolean <cexport>
   riv.command_len = 0
   -- poll keyboard inputs
   riv_poll_inputs()
-  return not riv.quit
+  return not riv.quit and frame <= riv.quit_frame
 end
