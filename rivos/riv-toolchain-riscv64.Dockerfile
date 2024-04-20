@@ -159,8 +159,9 @@ COPY --from=cffi-lua-stage /pkg/usr /usr
 # Install skel
 COPY rivos/skel/etc /etc
 COPY rivos/skel/usr /usr
-RUN ln -s ld-musl-riscv64.so.1 /lib/ld-musl.so && \
-    mkdir -p /cartridge /cartridges /workspace && chown 500:500 /cartridge && \
+RUN mkdir -p /cartridge /cartridges /workspace && \
+    chown 500:500 /cartridge && \
+    chown 1000:1000 /workspace && \
     chown root:root /root && \
     rm -rf /media
 
@@ -176,7 +177,6 @@ RUN mkdir -p usr/bin usr/sbin usr/lib var/tmp proc sys dev root cartridge cartri
     chmod 1777 tmp var/tmp && \
     ln -s /run var/run && \
     ln -s ../proc/mounts etc/mtab && \
-    ln -s ld-musl-riscv64.so.1 lib/ld-musl.so && \
     ln -s ../../lib/ld-musl-riscv64.so.1 usr/lib/libc.so
 
 # Install apks

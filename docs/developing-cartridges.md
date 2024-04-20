@@ -405,7 +405,7 @@ total 43
 -rwxr-xr-x    1 root     root         42632 Jan  1  1970 antcopter
 -rw-r--r--    1 root     root          1006 Jan  1  1970 info.json
 rivos:/cartridge# file antcopter
-antcopter: ELF 64-bit LSB pie executable, UCB RISC-V, RVC, double-float ABI, version 1 (SYSV), dynamically linked, interpreter /lib/ld-musl.so, no section header
+antcopter: ELF 64-bit LSB pie executable, UCB RISC-V, RVC, double-float ABI, version 1 (SYSV), dynamically linked, interpreter /lib/ld-musl-riscv64.so.1, no section header
 rivos:/cartridge# jq < info.json
 {
   "name": "Antcopter",
