@@ -588,8 +588,8 @@ local function startup(): void
   end
   if not options.no_audio then
     rivemu_audio.setup(options.speed)
+    rivemu_audio.start()
     if not options.no_loading then
-      rivemu_audio.start()
       rivemu_audio.start_boot_sound()
     end
   end

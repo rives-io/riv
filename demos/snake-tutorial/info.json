@@ -1,0 +1,6 @@
+{
+    "name": "Snake",
+    "summary": "Snake game from tutorial",
+    "description": "Use arrow to move, the game ends when the snake hits itself or a wall!",
+    "tags": ["puzzle", "2d", "snake"]
+}
