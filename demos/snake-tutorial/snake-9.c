@@ -1,4 +1,4 @@
-// Chapter 8 - Drawing sprites
+// Chapter 9 - Saving scores
 
 // Header including all RIV APIs
 #include <riv.h>
@@ -14,6 +14,8 @@ enum {
 bool started; // true when game has started
 bool ended; // true when game has ended
 int apples; // total amount of apples eaten
+int ticks; // total amount of game iterations
+int score; // game overall score
 riv_vec2i apple_pos; // position of the current apple
 riv_vec2i head_pos; // position of the snake head
 riv_vec2i head_dir; // direction of the snake head
@@ -83,6 +85,7 @@ void end_game() {
 
 // Update game logic
 void update_game() {
+    ticks++;
     // Set head direction based on inputs
     if (riv->keys[RIV_GAMEPAD_UP].press) {
         head_dir = (riv_vec2i){0, -1};
@@ -143,6 +146,10 @@ void draw_game() {
     int flip_x = (head_dir.x == -1) ? -1 : 1;
     int flip_y = (head_dir.y == -1) ? -1 : 1;
     riv_draw_sprite(spr_id, GAME_SPRITESHEET, head_pos.x*TILE_SIZE, head_pos.y*TILE_SIZE, 1, 1, flip_x, flip_y);
+    // Draw score
+    char buf[128];
+    riv_snprintf(buf, sizeof(buf), "SCORE %d", score);
+    riv_draw_text(buf, RIV_SPRITESHEET_FONT_3X5, RIV_BOTTOMLEFT, 1, 128-1, 1, RIV_COLOR_WHITE);
 }
 
 // Draw game start screen
@@ -171,6 +178,12 @@ void draw_end_screen() {
     riv_draw_text("GAME OVER", RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 64, 64, 2, RIV_COLOR_RED);
 }
 
+// Output scores on the output card
+void update_scores() {
+    score = apples * MAP_SIZE * 2 - ticks;
+    riv->outcard_len = riv_snprintf((char*)riv->outcard, RIV_SIZE_OUTCARD, "JSON{\"score\":%d,\"apples\":%d,\"ticks\":%d}", score, apples, ticks);
+}
+
 // Called every frame to update game state
 void update() {
     if (!started) { // Game not started yet
@@ -181,6 +194,8 @@ void update() {
     } else if (!ended) { // Game is progressing
         update_game();
     }
+    // Output scores
+    update_scores();
 }
 
 // Called every frame to draw the game

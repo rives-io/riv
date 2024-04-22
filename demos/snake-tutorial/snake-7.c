@@ -1,4 +1,4 @@
-// Drawing sprites
+// Chapter 7 - Adding sound effects
 
 // Header including all RIV APIs
 #include <riv.h>
@@ -7,7 +7,6 @@
 enum {
     MAP_SIZE = 16, // 16x16 tiles
     TILE_SIZE = 8, // 8x8 pixels
-    GAME_SPRITESHEET = 1,
 };
 
 // Game state
@@ -129,7 +128,7 @@ void update_game() {
 // Draw the game map
 void draw_game() {
     // Draw apple
-    riv_draw_sprite(0, GAME_SPRITESHEET, apple_pos.x*TILE_SIZE, apple_pos.y*TILE_SIZE, 1, 1, 1, 1);
+    riv_draw_rect_fill(apple_pos.x*TILE_SIZE, apple_pos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE, RIV_COLOR_LIGHTRED);
     // Draw snake body
     for (int y = 0; y < MAP_SIZE; y++) {
         for (int x = 0; x < MAP_SIZE; x++) {
@@ -138,11 +137,6 @@ void draw_game() {
             }
         }
     }
-    // Draw snake head
-    int spr_id = 2 + ((head_dir.x != 0) ? 1 : 0);
-    int flip_x = (head_dir.x == -1) ? -1 : 1;
-    int flip_y = (head_dir.y == -1) ? -1 : 1;
-    riv_draw_sprite(spr_id, GAME_SPRITESHEET, head_pos.x*TILE_SIZE, head_pos.y*TILE_SIZE, 1, 1, flip_x, flip_y);
 }
 
 // Draw game start screen
@@ -203,8 +197,6 @@ int main() {
     riv->width = 128;
     riv->height = 128;
     riv->target_fps = 8;
-    // Load sprites
-    riv_make_spritesheet(riv_make_image("sprites.png", 0), 8, 8);
     // Main loop, keep presenting frames until user quit or game ends
     do {
         // Update game state

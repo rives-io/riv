@@ -1,4 +1,4 @@
-// Adding sound effects
+// Chapter 6 - Growing the snake
 
 // Header including all RIV APIs
 #include <riv.h>
@@ -18,26 +18,6 @@ riv_vec2i head_pos; // position of the snake head
 riv_vec2i head_dir; // direction of the snake head
 riv_vec2i tail_pos; // position of the snake tail
 riv_vec2i snake_body[MAP_SIZE][MAP_SIZE]; // move directions for the snake body
-
-// Sound effects
-riv_waveform_desc start_sfx = {
-    .type = RIV_WAVEFORM_PULSE,
-    .attack = 0.01f, .decay = 0.01f, .sustain = 0.1f, .release = 0.01f,
-    .start_frequency = RIV_NOTE_A3, .end_frequency = RIV_NOTE_A4,
-    .amplitude = 0.25f, .sustain_level = 0.5f,
-};
-riv_waveform_desc end_sfx = {
-    .type = RIV_WAVEFORM_PULSE,
-    .attack = 0.01f, .decay = 0.01f, .sustain = 0.1f, .release = 0.01f,
-    .start_frequency = RIV_NOTE_A3, .end_frequency = RIV_NOTE_A2,
-    .amplitude = 0.5f, .sustain_level = 0.5f,
-};
-riv_waveform_desc eat_sfx = {
-    .type = RIV_WAVEFORM_PULSE,
-    .attack = 0.01f, .decay = 0.01f, .sustain = 0.1f, .release = 0.01f,
-    .start_frequency = RIV_NOTE_A4, .end_frequency = RIV_NOTE_A4,
-    .amplitude = 0.25f, .sustain_level = 0.5f,
-};
 
 // Check if position collides with snake body
 bool collides_with_body(riv_vec2i pos) {
@@ -66,8 +46,6 @@ void start_game() {
     snake_body[head_pos.y][head_pos.x] = head_dir;
     snake_body[tail_pos.y][tail_pos.x] = head_dir;
     respawn_apple();
-    // Play start sound
-    riv_waveform(&start_sfx);
 }
 
 // Called when game ends
@@ -76,8 +54,6 @@ void end_game() {
     ended = true;
     // Quit in 3 seconds
     riv->quit_frame = riv->frame + 3*riv->target_fps;
-    // Play end sound
-    riv_waveform(&end_sfx);
 }
 
 // Update game logic
@@ -110,8 +86,6 @@ void update_game() {
         if (head_pos.x == apple_pos.x && head_pos.y == apple_pos.y) { // Apple was eaten
             apples++;
             riv_printf("APPLES %d\n", apples);
-            // Play eat sound
-            riv_waveform(&eat_sfx);
             if (!respawn_apple()) { // End game when cannot spawn more apples
                 end_game();
             }

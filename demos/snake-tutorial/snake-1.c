@@ -1,4 +1,4 @@
-// Customizing the resolution and frame rate
+// Chapter 1 - Setup project files
 
 // Header including all RIV APIs
 #include <riv.h>
@@ -12,19 +12,15 @@ void draw() {
         "snake",                  // text to draw
         RIV_SPRITESHEET_FONT_5X7, // sprite sheet id of the font
         RIV_CENTER,               // anchor point on the text bounding box
-        64,                       // anchor x
-        64,                       // anchor y
-        2,                        // text size multiplier
+        128,                      // anchor x
+        128,                      // anchor y
+        4,                        // text size multiplier
         RIV_COLOR_LIGHTGREEN      // text color
     );
 }
 
 // Entry point
 int main() {
-    // Set screen size and default frame rate
-    riv->width = 128;
-    riv->height = 128;
-    riv->target_fps = 8;
     // Main loop, keep presenting frames until user quit or game ends
     do {
         // Draw game graphics

@@ -1,4 +1,4 @@
-// Moving the snake
+// Chapter 4 - Spawning the apple
 
 // Header including all RIV APIs
 #include <riv.h>
@@ -12,10 +12,7 @@ enum {
 // Game state
 bool started; // true when game has started
 bool ended; // true when game has ended
-int apples; // total amount of apples eaten
 riv_vec2i apple_pos; // position of the current apple
-riv_vec2i head_pos; // position of the snake head
-riv_vec2i head_dir; // direction of the snake head
 
 // Spawn apple in a new position
 bool respawn_apple() {
@@ -27,8 +24,6 @@ bool respawn_apple() {
 void start_game() {
     riv_printf("GAME START\n");
     started = true;
-    head_dir = (riv_vec2i){0, -1};
-    head_pos = (riv_vec2i){MAP_SIZE / 2, MAP_SIZE / 2};
     respawn_apple();
 }
 
@@ -42,41 +37,14 @@ void end_game() {
 
 // Update game logic
 void update_game() {
-    // Set head direction based on inputs
-    if (riv->keys[RIV_GAMEPAD_UP].press) {
-        head_dir = (riv_vec2i){0, -1};
-    } else if (riv->keys[RIV_GAMEPAD_DOWN].press) {
-        head_dir = (riv_vec2i){0, 1};
-    } else if (riv->keys[RIV_GAMEPAD_LEFT].press) {
-        head_dir = (riv_vec2i){-1, 0};
-    } else if (riv->keys[RIV_GAMEPAD_RIGHT].press) {
-        head_dir = (riv_vec2i){1, 0};
-    }
-    // Move head
-    riv_vec2i next_head_pos = (riv_vec2i){head_pos.x + head_dir.x, head_pos.y + head_dir.y};
-    // Check if the head collides with the map boundary
-    if (next_head_pos.x < 0 || next_head_pos.y < 0 || next_head_pos.x >= MAP_SIZE || next_head_pos.y >= MAP_SIZE) {
-        end_game();
-    } else {
-        // Place the head on the body (will be overwritten later)
-        head_pos = next_head_pos;
-        // Check if the head collides with the apple
-        if (head_pos.x == apple_pos.x && head_pos.y == apple_pos.y) { // Apple was eaten
-            apples++;
-            riv_printf("APPLES %d\n", apples);
-            if (!respawn_apple()) { // End game when cannot spawn more apples
-                end_game();
-            }
-        }
-    }
+    // TODO: update game
+    end_game();
 }
 
 // Draw the game map
 void draw_game() {
     // Draw apple
     riv_draw_rect_fill(apple_pos.x*TILE_SIZE, apple_pos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE, RIV_COLOR_LIGHTRED);
-    // Draw snake head
-    riv_draw_rect_fill(head_pos.x*TILE_SIZE, head_pos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE, RIV_COLOR_LIGHTGREEN);
 }
 
 // Draw game start screen

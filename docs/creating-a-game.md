@@ -11,24 +11,25 @@ in the future it might be expanded to other languages.
 
 To make thing easier (and also performant!),
 the C code is structured without use of pointers or memory allocations,
-so should be easy to follow, even for people who knows only basic C.
+so it should be easy to follow, even for people who know only basic C.
 
 ## Goals
 
 At the end of this tutorial, you will have a working cartridge of the Snake game,
-ready to be distributed or uploaded on rives.io .
+ready to be distributed or uploaded on RIVES.
 
 During this tutorial you will learn to:
 - Draw rectangles on the screen
 - Draw sprites on the screen
-- Handle game pad inputs
+- Handle gamepad inputs
 - Play simple sounds
 - Compile a cartridge
 
 ## Code for the game
 
 If you are stuck, checkout the full source code for this tutorial at
-[https://github.com/rives-io/riv/blob/main/samples/snake-tutorial.c].
+[demos/snake-tutorial folder](https://github.com/rives-io/riv/tree/main/demos/snake-tutorial),
+every chapter has its full source code there.
 
 ## Setup project files
 
@@ -101,11 +102,11 @@ alias rivemu-jitc='rivemu -sdk -workspace -no-loading -bench -exec riv-jit-c'
 rivemu-jitc snake.c
 ```
 
-You should see the game first title screen.
+You should see the game's first title screen.
 Notice we added `-no-loading` option here,
 this will skip the loading screen, so we can test faster,
 the other options are explained in
-[developing cartridges page](/develping-cartridges).
+[developing cartridges page](/developing-cartridges).
 
 The code should be easy to understand so far,
 it just create the main game loop,
@@ -117,11 +118,14 @@ and two small predefined monospaced fonts,
 both are customizable,
 however for this tutorial we will just use the default colors and fonts.
 
+The source code for this chapter can be seen at
+[snake-1.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-1.c).
+
 ## Customizing the resolution and frame rate
 
 By default RIV has a default resolution of 256x256
 and target frame rate of 60 frames per second,
-both are customizable and can be changed at any time, even during game main loop.
+both are customizable and can be changed at any time, even during the game main loop.
 We will change the resolution down to 128x128 and target fps down o 8,
 as an exercise and because our snake game will be so simple
 that drawing at a lower resolution and lower frame rate
@@ -175,17 +179,20 @@ rivemu-jitc snake.c
 ```
 
 It should just draw the exactly same title as before,
-but now it's the computation is much lighter.
+but now the computation is much lighter.
 In fact if you compare this code version with the first code using the `-bench` option
 you will notice the overall rendering CPU cost is down from 2.90 MIPS to 0.12MIPS (96% decrease!).
-If you want to learn more about the `-bench` option, check [developing cartridges page](/develping-cartridges).
+If you want to learn more about the `-bench` option, check [developing cartridges page](/developing-cartridges).
+
+The source code for this chapter can be seen at
+[snake-2.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-2.c).
 
 ## Starting the game
 
 Ideally, every cartridge should have a start screen with a "press to start",
 mainly for two reasons. One because you don't know when the player loading
 screen will finish, the performance may vary between systems the emulator is running on,
-and you don't want the game to start before the player attention is on the screen.
+and you don't want the game to start before the player's attention is on the screen.
 Second because we will let RIV intentionally use the timing to press the button
 to feed entropy to its pseudo random number generator,
 so the apple on the snake game can start at random places despite
@@ -314,6 +321,9 @@ we can continue.
 Next chapters will apply patches on this base structure to evolve the game,
 so make sure you understand it before going on.
 
+The source code for this chapter can be seen at
+[snake-3.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-3.c).
+
 ## Spawning the apple
 
 Let's spawn our first apple, and learn how to draw a rectangle in the process.
@@ -342,7 +352,7 @@ bool respawn_apple() {
 ```
 
 Notice we are using RIV random functions here, the `riv_rand_uint`,
-games should always try to use RIV random.
+games should always prefer to use RIV's random functions instead of the programming language random.
 
 We will call this method when the game starts, so add the following line at the end of `start_game()`:
 ```c
@@ -363,6 +373,9 @@ Now run it multiple times, and notice every time we start the apple appears at r
 despite the game being deterministic.
 That is because we took advantage of the starting screen timing and key inputs
 to seed the pseudo random number generator.
+
+The source code for this chapter can be seen at
+[snake-4.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-4.c).
 
 ## Moving the snake
 
@@ -418,10 +431,10 @@ void update_game() {
 }
 ```
 
-Notice in the begging we check `pressed` state for game pad buttons,
+Notice in the beginning we check `pressed` state for gamepad buttons,
 this boolean becomes true only in the frame the button was pressed.
-RIV emulates game pads even with keyboards, but allows using them
-when a game pad is plugged (such as PS4 Controller, XBOX or Nintendo Switch controller).
+RIV emulates gamepads even with keyboards, but allows using them
+when a gamepad is plugged (such as PS4 Controller, XBOX or Nintendo Switch controller).
 
 Notice some logic was added to check if the head collides with map boundaries
 or it collides with an apple, when it collides with an apple we spawn a new apple.
@@ -436,6 +449,9 @@ Run it, now you can move and catch apples!
 
 Notice every time we collides with an apple the "APPLES" message is printed,
 and it respawns it in a new position.
+
+The source code for this chapter can be seen at
+[snake-5.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-5.c).
 
 ## Growing the snake
 
@@ -548,13 +564,16 @@ Run it, now our snake grows!
 The game logic is effectively finished.
 In the next chapters we will focus on polishing it.
 
+The source code for this chapter can be seen at
+[snake-6.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-6.c).
+
 ## Adding sounds
 The game has no sound yet, let's add it.
 
 RIV comes with a simple level API for synthesizing sound waves using
 [ADSR envelope](https://en.wikipedia.org/wiki/Envelope_(music)#ADSR)
-on simple wave forms (such as square, triangular and sine waves),
-and you can play different tones by varying this wave forms frequency.
+on simple waveforms (such as square, triangular and sine waves),
+and you can play different tones by varying the waveform frequency.
 This is how old school game consoles generated sounds.
 
 Let's add on top of the file sound effect configs for start game, end game and eat apple:
@@ -581,9 +600,9 @@ riv_waveform_desc eat_sfx = {
 ```
 
 Here we choose pulse for chiptune style sounds.
-The start sound has its wave frequency growing, giving the felling the something will begin.
-The end sound has its wave frequency decaying, giving the felling the something will end.
-The eat sound has its wave frequency steady, giving the felling you got a point.
+The start sound has its wave frequency growing, giving the feeling that something will begin.
+The end sound has its wave frequency decaying, giving the feeling that something will end.
+The eat sound has its wave frequency steady, giving the feeling you got a point.
 You can play with these values to synthesize different sound styles.
 
 Now we just need to emit these sound effects at the right places.
@@ -607,6 +626,9 @@ riv_waveform(&eat_sfx);
 
 Run it, now the game has sounds!
 
+The source code for this chapter can be seen at
+[snake-7.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-7.c).
+
 ## Drawing sprites
 
 So far we have draw only solid squares,
@@ -629,7 +651,7 @@ riv_make_spritesheet(riv_make_image("sprites.png", 0), 8, 8);
 ```
 
 This will load the image `sprites.png` into a sprite sheet of 8x8 pixels of id `1`.
-The first sprite sheet loaded will have id is `1`, and the next `2`, and so on.
+The first sprite sheet loaded will always have its id set to `1`, and the next `2`, and so on.
 To make our code clear, let's define this sprite sheet id in our constants enum:
 
 ```c
@@ -658,6 +680,9 @@ riv_draw_sprite(spr_id, GAME_SPRITESHEET, head_pos.x*TILE_SIZE, head_pos.y*TILE_
 We do some tricks here to choose the correct sprite and flip it depending on the head direction.
 
 Run it, now the game has more interesting visuals!
+
+The source code for this chapter can be seen at
+[snake-8.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-8.c).
 
 ## Adding scores
 
@@ -704,7 +729,7 @@ Next, we want to increment `ticks` every `update_game()`, so add to its begin:
 ticks++;
 ```
 
-Finally, lets draw the overall score on the screen, add at the end of `draw_map()`:
+Finally, let's draw the overall score on the screen, add at the end of `draw_map()`:
 ```c
 // Draw score
 char buf[128];
@@ -712,11 +737,14 @@ riv_snprintf(buf, sizeof(buf), "SCORE %d", score);
 riv_draw_text(buf, RIV_SPRITESHEET_FONT_3X5, RIV_BOTTOMLEFT, 1, 128-1, 1, RIV_COLOR_WHITE);
 ```
 
-Run it, now the game has score!
+Run it, now the game has scores!
+
+The source code for this chapter can be seen at
+[snake-9.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-9.c).
 
 ## Compiling the cartridge
 
-Compiling a cartridge has been covered in the [developing cartridges page](/develping-cartridges)
+Compiling a cartridge has been covered in the [developing cartridges page](/developing-cartridges)
 guide, read there for more details.
 
 But in a short, having the SDK, you can compile the final snake cartridge and test it with:
@@ -732,10 +760,10 @@ rivemu snake.sqfs
 ## Where to go now?
 
 You can continue and do more improvements in the snake, such as:
-- Improve the input handling. Right now if you release a hey while other is being pressed, the snake will not move.
+- Improve the input handling. Right now if you release a key while another is being pressed, the snake will not move.
 - Increase the snake speed as the game progresses, you could increase target fps while running for this.
 - Tweak and add more sounds.
 - Tweak and add more graphics.
 - Make a more interesting score screen, with more statistics.
 
-After you finish your tweaking, you could try upload it on RIVES.
+After you finish your tweaking, you could try uploading it on RIVES.

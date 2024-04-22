@@ -1,30 +1,16 @@
-// Spawning the apple
+// Chapter 3 - Starting the game
 
 // Header including all RIV APIs
 #include <riv.h>
 
-// Constants
-enum {
-    MAP_SIZE = 16, // 16x16 tiles
-    TILE_SIZE = 8, // 8x8 pixels
-};
-
 // Game state
 bool started; // true when game has started
 bool ended; // true when game has ended
-riv_vec2i apple_pos; // position of the current apple
-
-// Spawn apple in a new position
-bool respawn_apple() {
-    apple_pos = (riv_vec2i){riv_rand_uint(MAP_SIZE-1), riv_rand_uint(MAP_SIZE-1)};
-    return true;
-}
 
 // Called when game starts
 void start_game() {
     riv_printf("GAME START\n");
     started = true;
-    respawn_apple();
 }
 
 // Called when game ends
@@ -43,8 +29,7 @@ void update_game() {
 
 // Draw the game map
 void draw_game() {
-    // Draw apple
-    riv_draw_rect_fill(apple_pos.x*TILE_SIZE, apple_pos.y*TILE_SIZE, TILE_SIZE, TILE_SIZE, RIV_COLOR_LIGHTRED);
+    // TODO: draw game
 }
 
 // Draw game start screen
