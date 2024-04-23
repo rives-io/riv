@@ -455,7 +455,9 @@ OPTIONS
 ]]
       os.exit(0)
     else
-      error(string.format("unknown command line option '%s'", argk))
+      ## if not ccinfo.is_emscripten then
+        error(string.format("unknown command line option '%s'", argk))
+      ## end
     end
     argi = argi + 1
   end
