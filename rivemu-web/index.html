@@ -4,20 +4,23 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>RIVEMU</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <style>
       body {
-        background-color: #111;
+        background-color: #0d1117;
         color: white;
+        font-family: monospace;
+        margin-top: 0px;
       }
-      .small-font {
+      button, select {
         font-size: 12px;
         font-family: monospace;
       }
       .canvas-wrapper {
         text-align: center;
+        position: relative;
       }
       .content-wrapper {
-        font-family: monospace;
         max-width: 768px;
         margin: auto;
         text-align: left;
@@ -28,6 +31,17 @@
         outline: none;
         max-width: 768px;
         max-height: 768px;
+        margin: 8px;
+      }
+      #canvas-overlay {
+        font-size: 20px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%);
+        z-index: 999;
+        user-select: none;
+        pointer-events: none;
       }
       .row {
         display: flex;
@@ -53,90 +67,109 @@
           max-width: 512px;
         }
       }
+      .small {
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
     <div class="canvas-wrapper">
+      <span id="canvas-overlay"><span class="material-symbols-outlined">download</span><br>Drag and drop<br>cartridge .sqfs file</span>
       <canvas id="canvas" tabindex="-1" width="768" height="768" oncontextmenu="event.preventDefault()"></canvas>
     </div>
     <div class="content-wrapper">
       <div>
-        <button id="record" disabled="true" onclick="rivemuRecord()">Record</button>
-        <button id="replay" disabled="true" onclick="rivemuReplay()">Replay</button>
-        <button id="stop" disabled="true" onclick="rivemuStop()">Stop</button>
-        <button id="fullscreen" onclick="rivemuFullscreen()">Fullscreen</button>
+        <button id="record" disabled autocomplete="off" onclick="rivemuRecord()">Record</button>
+        <button id="replay" disabled autocomplete="off" onclick="rivemuReplay()">Replay</button>
+        <button id="stop" disabled autocomplete="off" onclick="rivemuStop()">Stop</button>
+        <button id="fullscreen" autocomplete="off" onclick="rivemuFullscreen()">Fullscreen</button>
+        <select name="games" id="games" style="float: right;" autocomplete="off">
+          <option selected disabled hidden>Select DEMO</option>
+          <option onclick="rivemuUploadCartridge('cartridges/antcopter.sqfs')">GAME - Antcopter</option>
+          <option onclick="rivemuUploadCartridge('cartridges/game2048.sqfs')">GAME - 2048</option>
+          <option onclick="rivemuUploadCartridge('cartridges/snake.sqfs')">GAME - Snake</option>
+          <option onclick="rivemuUploadCartridge('cartridges/freedoom.sqfs')">GAME - Freedoom</option>
+          <option onclick="rivemuUploadCartridge('cartridges/monky.sqfs')">GAME - Monky</option>
+          <option onclick="rivemuUploadCartridge('cartridges/tetrix.sqfs')">GAME - Tetrix</option>
+          <option onclick="rivemuUploadCartridge('cartridges/bounce.sqfs')">DEMO - bounce</option>
+          <option onclick="rivemuUploadCartridge('cartridges/circles.sqfs')">DEMO - circles</option>
+          <option onclick="rivemuUploadCartridge('cartridges/glyphs.sqfs')">DEMO - glyphs</option>
+          <option onclick="rivemuUploadCartridge('cartridges/hello.sqfs')">DEMO - hello</option>
+          <option onclick="rivemuUploadCartridge('cartridges/lines.sqfs')">DEMO - lines</option>
+          <option onclick="rivemuUploadCartridge('cartridges/many.sqfs')">DEMO - many</option>
+          <option onclick="rivemuUploadCartridge('cartridges/palette.sqfs')">DEMO - palette</option>
+          <option onclick="rivemuUploadCartridge('cartridges/particles.sqfs')">DEMO - particles</option>
+          <option onclick="rivemuUploadCartridge('cartridges/play.sqfs')">DEMO - play</option>
+          <option onclick="rivemuUploadCartridge('cartridges/wander.sqfs')">DEMO - wander</option>
+          <option onclick="rivemuUploadCartridge('cartridges/waves.sqfs')">DEMO - waves</option>
+          <option onclick="rivemuUploadCartridge('cartridges/hello-c.sqfs')">DEMO - hello-c</option>
+          <option onclick="rivemuUploadCartridge('cartridges/hello-lua.sqfs')">DEMO - hello-lua</option>
+        </select>
       </div>
       <div class="row">
         <div class="column-2">
-          <div><b>Status: </b><span id="status">Downloading emulator...</span></div>
-          <div><b>Time: </b><span id="time">N/A</span></div>
-          <div><b>Frame: </b><span id="frame">N/A</span></div>
-          <div><b>Score: </b><span id="score">N/A</span></div>
-          <div><b>FPS: </b><span id="fps">N/A</span></div>
-          <div><b>Progress: </b><span id="progress">N/A</span></div>
+          <table>
+            <tr><th>Status</th><td><span id="status">Downloading emulator...</span></td></tr>
+            <tr><th>Time</th><td><span id="time">N/A</span></td></tr>
+            <tr><th>Frame</th><td><span id="frame">N/A</span></td></tr>
+            <tr><th>Progress</th><td><span id="progress">N/A</span></td></tr>
+            <tr><th>Score</th><td><span id="score">N/A</span></td></tr>
+            <tr><th>Resolution</th><td><span id="resolution">N/A</span></td></tr>
+          </table>
         </div>
         <div class="column-2">
-          <div><b>CPU Cost: </b><span id="cpuCost">N/A</span></div>
-          <div><b>CPU Speed: </b><span id="cpuSpeed">N/A</span></div>
-          <div><b>CPU Usage: </b><span id="cpuUsage">N/A</span></div>
-          <div><b>CPU Cycles: </b><span id="cpuCycles">N/A</span></div>
-          <div><b>Resolution: </b><span id="resolution">N/A</span></div>
+          <table>
+            <tr><th>FPS</th><td><span id="fps">N/A</span></td></tr>
+            <tr><th>CPU Cost</th><td><span id="cpuCost">N/A</span></td></tr>
+            <tr><th>CPU Speed</th><td><span id="cpuSpeed">N/A</span></td></tr>
+            <tr><th>CPU Usage</th><td><span id="cpuUsage">N/A</span></td></tr>
+            <tr><th>CPU Cycles</th><td><span id="cpuCycles">N/A</span></td></tr>
+          </table>
         </div>
       </div>
       <div>
         <b>Cartridge: </b>
         <span id="cartsize">N/A</span> - <span id="carthash">N/A</span>
-        <button id="upload_cartridge" class="small-font" onclick="rivemuUploadCartridge()">Upload</button>
-        <button id="download_cartridge" class="small-font" disabled="true" onclick="rivemuDownloadCartridge()">Download</button>
+        <button id="upload_cartridge" autocomplete="off" onclick="rivemuUploadCartridge()">
+          <span class="material-symbols-outlined small">upload</span>
+        </button>
+        <button id="download_cartridge" autocomplete="off" disabled onclick="rivemuDownloadCartridge()">
+          <span class="material-symbols-outlined small">download</span>
+        </button>
       </div>
       <div>
         <b>Tape: </b><span id="tapesize">N/A</span> - <span id="tapehash">N/A</span>
-        <button id="upload_tape" class="small-font" onclick="rivemuUploadTape()">Upload</button>
-        <button id="download_tape" class="small-font" disabled="true" onclick="rivemuDownloadTape()">Download</button>
+        <button id="upload_tape" autocomplete="off" onclick="rivemuUploadTape()">
+          <span class="material-symbols-outlined small">upload</span>
+        </button>
+        <button id="download_tape" disabled autocomplete="off" onclick="rivemuDownloadTape()">
+          <span class="material-symbols-outlined small">download</span>
+        </button>
       </div>
       <div>
         <b>Incard: </b><span id="insize">N/A</span> - <span id="inhash">N/A</span>
-        <button id="upload_incard" class="small-font" onclick="rivemuUploadIncard()">Upload</button>
-        <button id="download_incard" class="small-font" onclick="rivemuDownloadIncard()">Download</button>
+        <button id="upload_incard" autocomplete="off" onclick="rivemuUploadIncard()">
+          <span class="material-symbols-outlined small">upload</span>
+        </button>
+        <button id="download_incard" disabled autocomplete="off" onclick="rivemuDownloadIncard()">
+          <span class="material-symbols-outlined small">download</span>
+        </button>
       </div>
       <div>
         <b>Outcard: </b><span id="outsize">N/A</span> - <span id="outhash">N/A</span>
-        <button id="download_outcard" class="small-font" disabled="true" onclick="rivemuDownloadOutcard()">Download</button>
+        <button id="download_outcard" disabled autocomplete="off" onclick="rivemuDownloadOutcard()">
+          <span class="material-symbols-outlined small">download</span>
+        </button>
       </div>
       <div>
         <b>Entropy: </b><span id="entropysize">N/A</span> - <span id="entropyhash">N/A</span>
         <br/>
-        <input type="text" class="small-font" id="entropy" style="width: 75%"/>
+        <input type="text" id="entropy" autocomplete="off" style="width: 99%"/>
       </div>
       <div>
         <b>Args: </b><span id="argssize">N/A</span> - <span id="argshash">N/A</span>
         <br/>
-        <input type="text" class="small-font" id="args" style="width: 75%"/>
-      </div>
-      <h3>Games</h3>
-      <div>
-        <button onclick="rivemuUploadCartridge('cartridges/antcopter.sqfs')">Antcopter</button>
-        <button onclick="rivemuUploadCartridge('cartridges/game2048.sqfs')">2048</button>
-        <button onclick="rivemuUploadCartridge('cartridges/snake.sqfs')">Snake</button>
-        <button onclick="rivemuUploadCartridge('cartridges/freedoom.sqfs')">DOOM</button>
-        <button onclick="rivemuUploadCartridge('cartridges/monky.sqfs')">Monky</button>
-        <button onclick="rivemuUploadCartridge('cartridges/tetrix.sqfs')">Tetrix</button>
-      </div>
-      <h3>Demos</h3>
-      <div>
-        <button onclick="rivemuUploadCartridge('cartridges/bounce.sqfs')">bounce</button>
-        <button onclick="rivemuUploadCartridge('cartridges/circles.sqfs')">circles</button>
-        <button onclick="rivemuUploadCartridge('cartridges/glyphs.sqfs')">glyphs</button>
-        <button onclick="rivemuUploadCartridge('cartridges/hello.sqfs')">hello</button>
-        <button onclick="rivemuUploadCartridge('cartridges/lines.sqfs')">lines</button>
-        <button onclick="rivemuUploadCartridge('cartridges/many.sqfs')">many</button>
-        <button onclick="rivemuUploadCartridge('cartridges/palette.sqfs')">palette</button>
-        <button onclick="rivemuUploadCartridge('cartridges/particles.sqfs')">particles</button>
-        <button onclick="rivemuUploadCartridge('cartridges/play.sqfs')">play</button>
-        <button onclick="rivemuUploadCartridge('cartridges/wander.sqfs')">wander</button>
-        <button onclick="rivemuUploadCartridge('cartridges/waves.sqfs')">waves</button>
-        <button onclick="rivemuUploadCartridge('cartridges/hello-c.sqfs')">hello-c</button>
-        <button onclick="rivemuUploadCartridge('cartridges/hello-lua.sqfs')">hello-lua</button>
+        <input type="text" id="args" autocomplete="off" style="width: 99%"/>
       </div>
     </div>
     <script src="index.js"></script>

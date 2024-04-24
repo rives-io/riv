@@ -23,6 +23,7 @@ let cpuUsageElem = document.getElementById("cpuUsage");
 let cpuCyclesElem = document.getElementById("cpuCycles");
 let resolutionElem = document.getElementById("resolution");
 let canvasElem = document.getElementById("canvas");
+let canvasOverlayElem = document.getElementById("canvas-overlay");
 let tapesizeElem = document.getElementById("tapesize");
 let tapehashElem = document.getElementById("tapehash");
 let entropyhashElem = document.getElementById("entropyhash");
@@ -50,6 +51,18 @@ window.addEventListener('keydown', function(e) {
 canvasElem.addEventListener("webglcontextlost", (e) => {
   alert('WebGL context lost. You will need to reload the page.'); e.preventDefault();
 }, false);
+
+canvasElem.ondragover = canvasElem.ondragenter = function(evt) {
+  evt.preventDefault();
+};
+
+canvasElem.ondrop = function(e) {
+  let file = e.dataTransfer.files[0];
+  e.preventDefault();
+  file.arrayBuffer().then(async function(a){
+    await rivemuRecord(new Uint8Array(a));
+  });
+};
 
 // Fired by Emscripten when WASM is ready.
 Module.onRuntimeInitialized = function(status) {
@@ -113,7 +126,7 @@ async function uploadFileDialog(ext) {
 // Fetch a file from a URL.
 async function downloadFile(url) {
   // Retrieve cartridge
-  const response = await fetch(url);
+  const response = await fetch(url, {method: "GET", mode: "cors", cache: "no-cache"});
   if (!response.ok) {
     return null;
   }
@@ -172,6 +185,7 @@ async function rivemuBeforeStart(tape, cartridge, incard, entropy, args) {
     outhashElem.textContent = "N/A";
     outsizeElem.textContent = "N/A";
   }
+  canvasOverlayElem.style.display = "none";
 
   // Disable some buttons while recording/replaying
   document.getElementById('stop').disabled = false;
@@ -323,6 +337,7 @@ async function rivemu_on_finish(tape, outcard, outhash) {
   document.getElementById('stop').disabled = true;
   document.getElementById('replay').disabled = false;
   document.getElementById('download_outcard').disabled = false;
+  document.getElementById('download_incard').disabled = false;
   document.getElementById('download_tape').disabled = false;
   // Update labels
   statusElem.textContent = "Stopped";
@@ -355,8 +370,14 @@ function rivemu_on_frame(outcard, frame, cycles, fps, cpu_cost, cpu_speed, cpu_u
   }
 }
 
-let params = new URL(document.location.toString()).searchParams;
+let hash = window.location.hash.substr(1);
+let params = hash.split('&').reduce(function (res, item) {
+    var parts = item.split('=');
+    res[parts[0]] = parts[1];
+    return res;
+}, {});
+
 // Play external cartridge
-if (params.has("cartridge")) {
-  rivemuUploadCartridge(params.get("cartridge"));
+if (params.cartridge) {
+  rivemuUploadCartridge(params.cartridge);
 }

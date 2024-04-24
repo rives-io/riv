@@ -11,3 +11,6 @@ clean:
 
 publish:
 	surge . rivemu.surge.sh
+
+serve:
+	npx serve --cors
