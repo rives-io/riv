@@ -1,5 +1,5 @@
 MINIZ_VERSION=3.0.2
-CARTESI_VERSION=feature/optim-fetch
+CARTESI_VERSION=v0.17.0
 SOKOL_TAG=master
 SHA3_BRANCH=master
 MINIAUDIO_BRANCH=master
@@ -42,7 +42,6 @@ update-cartesi:
 	wget -O host/machine-c-api.h https://raw.githubusercontent.com/cartesi/machine-emulator/$(CARTESI_VERSION)/src/machine-c-api.h
 	wget -O host/machine-c-defines.h https://raw.githubusercontent.com/cartesi/machine-emulator/$(CARTESI_VERSION)/src/machine-c-defines.h
 	wget -O host/machine-c-version.h https://raw.githubusercontent.com/cartesi/machine-emulator/$(CARTESI_VERSION)/tools/template/machine-c-version.h.template
-# 	sed -i 's/EMULATOR_VERSION_MAJOR/0/g;s/EMULATOR_VERSION_MINOR/0/g;s/EMULATOR_VERSION_MINOR/17/g;s/EMULATOR_VERSION_MINOR/17/g;s/EMULATOR_VERSION_LABEL/"-riv"/g' host/machine-c-version.h
 
 clean:
-	rm -rf cartesi-machine-pkg cartesi-machine-v$(CARTESI_VERSION)_amd64.deb miniz-$(MINIZ_VERSION).zip
+	rm -rf miniz-$(MINIZ_VERSION).zip

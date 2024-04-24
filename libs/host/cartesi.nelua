@@ -224,13 +224,13 @@ global cm_virtio_config_array: type <cimport,nodecl> = @record{
   entry: *cm_virtio_device_config,
   count: csize
 }
-global cm_rollup_config: type <cimport,nodecl> = @record{
-  has_value: boolean,
-  rx_buffer: cm_memory_range_config,
-  tx_buffer: cm_memory_range_config,
-  input_metadata: cm_memory_range_config,
-  voucher_hashes: cm_memory_range_config,
-  notice_hashes: cm_memory_range_config
+global cm_cmio_buffer_config: type <cimport,nodecl> = @record{
+  shared: boolean,
+  image_filename: cstring
+}
+global cm_cmio_config: type <cimport,nodecl> = @record{
+  rx_buffer: cm_cmio_buffer_config,
+  tx_buffer: cm_cmio_buffer_config
 }
 global cm_uarch_ram_config: type <cimport,nodecl> = @record{
   image_filename: cstring
@@ -255,7 +255,7 @@ global cm_machine_config: type <cimport,nodecl> = @record{
   plic: cm_plic_config,
   htif: cm_htif_config,
   virtio: cm_virtio_config_array,
-  rollup: cm_rollup_config,
+  cmio: cm_cmio_config,
   uarch: cm_uarch_config
 }
 global cm_merkle_tree_proof: type <cimport,nodecl> = @record{
@@ -478,6 +478,7 @@ global function cm_delete_uarch_config(config: *cm_uarch_config): void <cimport,
 global function cm_delete_semantic_version(version: *cm_semantic_version): void <cimport,nodecl> end
 global function cm_destroy(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_snapshot(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_commit(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_rollback(m: *cm_machine, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_read_uarch_x(m: *cm_machine, i: cint, val: *uint64, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_write_uarch_x(m: *cm_machine, i: cint, val: uint64, err_msg: *cstring): cint <cimport,nodecl> end
@@ -492,6 +493,10 @@ global function cm_log_uarch_reset(m: *cm_machine, log_type: cm_access_log_type,
 global function cm_machine_run_uarch(m: *cm_machine, uarch_cycle_end: uint64, status_result: *CM_UARCH_BREAK_REASON, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_get_memory_ranges(m: *cm_machine, mrda: **cm_memory_range_descr_array, err_msg: *cstring): cint <cimport,nodecl> end
 global function cm_delete_memory_range_descr_array(mrda: *cm_memory_range_descr_array): void <cimport,nodecl> end
+global function cm_send_cmio_response(m: *cm_machine, reason: uint16, data: *cuchar, length: csize, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_log_send_cmio_response(m: *cm_machine, reason: uint16, data: *cuchar, length: csize, log_type: cm_access_log_type, one_based: boolean, access_log: **cm_access_log, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_verify_send_cmio_response_log(reason: uint16, data: *cuchar, length: csize, log: *cm_access_log, runtime_config: *cm_machine_runtime_config, one_based: boolean, err_msg: *cstring): cint <cimport,nodecl> end
+global function cm_verify_send_cmio_response_state_transition(reason: uint16, data: *cuchar, length: csize, root_hash_before: *cm_hash, log: *cm_access_log, root_hash_after: *cm_hash, runtime_config: *cm_machine_runtime_config, one_based: boolean, err_msg: *cstring): cint <cimport,nodecl> end
 global CM_MACHINE_HASH_BYTE_SIZE: cint <comptime> = 32
 global CM_MACHINE_X_REG_COUNT: cint <comptime> = 32
 global CM_MACHINE_F_REG_COUNT: cint <comptime> = 32
