@@ -4,27 +4,15 @@ all:
 	$(MAKE) rivemu
 	$(MAKE) demos
 
-all-cross:
-	$(MAKE) kernel
-	$(MAKE) rivos-cross
-	$(MAKE) rivemu
-	$(MAKE) demos-cross
-
 # Targets that uses the host toolchain
-libs kernel rivos rivemu rivemu-web:
+libs kernel rivos rivemu rivemu-web demos:
 	$(MAKE) -C $@
 
 libriv-cross:
 	$(MAKE) -C libriv
 
-rivos-cross: libriv-cross
-	$(MAKE) -C rivos
-
-demos-cross:
-	$(MAKE) -C demos
-
 # Targets that uses RISC-V toolchain
-libriv demos:
+libriv:
 	$(MAKE) -C rivos toolchain-exec COMMAND="make -C $@"
 
 toolchain toolchain-exec toolchain-env toolchain-env-asroot shell shell-sdk:

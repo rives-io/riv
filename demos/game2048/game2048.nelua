@@ -1,4 +1,4 @@
-## pragma{gc=true}
+## pragma{nogc=true, noerrorloc=true}
 
 require 'riv'
 require 'math'

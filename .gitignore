@@ -33,7 +33,6 @@ rivemu.wasm
 # ignore generated C sources
 /rivemu/rivemu.c
 /libriv/libriv.c
-/demos/*/*.c
 
 # demos
 demos/freedoom

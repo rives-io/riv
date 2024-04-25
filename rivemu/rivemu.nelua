@@ -253,9 +253,9 @@ local function parse_options(): rivemu_options
       argi = argi + 1
       if argc > argi + 1 then -- multiple arguments
         entrypoint_sb:clear()
-        local first_argi: integer = argi
+        entrypoint_sb:write('exec')
         while argi < argc do
-          if argi ~= first_argi then entrypoint_sb:write(' ') end
+          entrypoint_sb:write(' ')
           local argv_quoted: string <close> = arg[argi]:gsub([[']], [['\'']])
           entrypoint_sb:write([[']],argv_quoted,[[']])
           argi = argi + 1

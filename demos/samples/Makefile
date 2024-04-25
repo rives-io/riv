@@ -1,9 +1,18 @@
-DEMOLANG=nelua
-SAMPLES=$(patsubst %.nelua, build/%.sqfs, $(wildcard *.nelua)) \
-		$(patsubst %.nelua, build/%.dump.txt, $(wildcard *.nelua)) \
-		$(patsubst %.nelua, build/%.readelf.txt, $(wildcard *.nelua)) \
-		$(patsubst %.nelua, build/%.strings.txt, $(wildcard *.nelua)) \
-		$(patsubst %.nelua, build/%.hash.txt, $(wildcard *.nelua)) \
-		$(patsubst %.nelua, build/%.elftoc.c, $(wildcard *.nelua))
+SAMPLES=$(patsubst %.nelua, %.sqfs, $(wildcard *.nelua))
+NAME=game2048
+COMP=xz
+RIVEMU=rivemu
+RIVEMU_EXEC=$(RIVEMU) -quiet -no-window -sdk -workspace -exec
+CFLAGS=$(shell $(RIVEMU_EXEC) riv-opt-flags -Ospeed)
+
 all: $(SAMPLES)
-include ../demo-base.mk
+
+clean:
+	rm -f *.sqfs *.elf *.c
+
+%.sqfs: %.elf $(DATA_FILES)
+	$(RIVEMU_EXEC) riv-mksqfs $^ $@ -comp $(COMP)
+
+%.elf: %.nelua
+	$(RIVEMU_EXEC) nelua --verbose --release --binary --cache-dir=. --cflags="$(CFLAGS)" --output=$@ $<
+	$(RIVEMU_EXEC) riv-strip $@

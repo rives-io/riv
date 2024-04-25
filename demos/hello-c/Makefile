@@ -1,42 +1,15 @@
 NAME=hello-c
+DATA_FILES=hello.c
+RIVEMU=rivemu
+RIVEMU_EXEC=$(RIVEMU) -quiet -no-window -sdk -workspace -exec
 
-COMP?=xz
-ASSETS_DIR?=assets
-ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+build: $(NAME).sqfs
 
-all: build/$(NAME).sqfs build/$(NAME).hash.txt
-
-run: build/$(NAME).sqfs
-	cd ../.. && ./rivemu/rivemu -cartridge=$(ROOT_DIR)/build/$(NAME).sqfs $(ARGS)
+run: $(NAME).sqfs
+	$(RIVEMU) $<
 
 clean:
-	rm -rf build
+	rm -f *.sqfs
 
-build/%.sqfs: build/%.fs
-	mksquashfs $< $@ \
-	    -quiet \
-	    -comp $(COMP) \
-	    -mkfs-time 0 \
-	    -all-time 0 \
-	    -all-root \
-	    -noappend \
-	    -no-fragments \
-	    -no-exports \
-	    -no-progress
-
-build:
-	mkdir -p build
-
-build/%.fs: $(ASSETS_DIR)/*
-	rm -rf $@
-	mkdir -p $@
-	cp -r $(ASSETS_DIR)/* $@/
-
-build/%.hash.txt: build/%.sqfs
-	stat -c "%s %n" $^ > $@
-	sha256sum $^ >> $@
-
-$(ASSETS_DIR)/*:;
-
-.PHONY: all run clean
-.PRECIOUS: build/%.fs
+$(NAME).sqfs: $(DATA_FILES)
+	$(RIVEMU_EXEC) riv-mksqfs $^ $@
