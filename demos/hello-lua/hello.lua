@@ -6,7 +6,7 @@ typedef enum riv_color_id {
   RIV_COLOR_WHITE       = 1,
 } riv_color_id;
 typedef enum riv_spritesheet_id {
-  RIV_SPRITESHEET_FONT_5X7 = 1023,
+  RIV_SPRITESHEET_FONT_5X7 = 4095,
 } riv_spritesheet_id;
 typedef enum riv_align {
   RIV_CENTER = 4,

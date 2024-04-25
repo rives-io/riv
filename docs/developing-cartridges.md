@@ -589,7 +589,7 @@ const
     RIV_COLOR_BLACK: uint32 = 0
     RIV_COLOR_WHITE: uint32 = 1
     RIV_CENTER: uint32 = 4
-    RIV_SPRITESHEET_FONT_5X7: uint64 = 1023
+    RIV_SPRITESHEET_FONT_5X7: uint64 = 4095
 
 while true:
     # clear screen
@@ -642,7 +642,7 @@ typedef enum riv_color_id {
   RIV_COLOR_WHITE       = 1,
 } riv_color_id;
 typedef enum riv_spritesheet_id {
-  RIV_SPRITESHEET_FONT_5X7 = 1023,
+  RIV_SPRITESHEET_FONT_5X7 = 4095,
 } riv_spritesheet_id;
 typedef enum riv_align {
   RIV_CENTER = 4,

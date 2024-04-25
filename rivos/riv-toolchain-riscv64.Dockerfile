@@ -138,7 +138,8 @@ RUN apk add bash \
         gdb strace \
         squashfs-tools e2fsprogs e2fsprogs-extra \
         curl wget \
-        jq
+        jq \
+        libffi-dev
 
 # Make vim an alias to nvim
 RUN ln -s /usr/bin/nvim /usr/bin/vim

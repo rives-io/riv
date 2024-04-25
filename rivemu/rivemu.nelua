@@ -743,7 +743,7 @@ local function machine_frame(): void
     if loading and not options.no_loading then
       -- advance just a few cycles to not freeze the application
       -- and display a loading screen
-      mcycle_end = machine:read_mcycle() + 1024*1024
+      mcycle_end = machine:read_mcycle() + 2*1024*1024
     end
     switch machine:run(mcycle_end) do
     case CM_BREAK_REASON_YIELDED_SOFTLY then
