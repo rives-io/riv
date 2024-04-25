@@ -1,8 +1,9 @@
 SAMPLES=$(patsubst %.nelua, %.sqfs, $(wildcard *.nelua))
-NAME=game2048
 COMP=xz
-RIVEMU=rivemu
-RIVEMU_EXEC=$(RIVEMU) -quiet -no-window -sdk -workspace -exec
+RIVEMU_EXEC=rivemu -quiet -no-window -sdk -workspace -exec
+ifneq (,$(wildcard /usr/sbin/riv-run))
+	RIVEMU_EXEC=
+endif
 CFLAGS=$(shell $(RIVEMU_EXEC) riv-opt-flags -Ospeed)
 
 all: $(SAMPLES)

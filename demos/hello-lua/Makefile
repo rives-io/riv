@@ -1,12 +1,16 @@
 NAME=hello-lua
 DATA_FILES=hello.lua
-RIVEMU=rivemu
-RIVEMU_EXEC=$(RIVEMU) -quiet -no-window -sdk -workspace -exec
+RIVEMU_RUN=rivemu
+RIVEMU_EXEC=rivemu -quiet -no-window -sdk -workspace -exec
+ifneq (,$(wildcard /usr/sbin/riv-run))
+	RIVEMU_RUN=riv-run
+	RIVEMU_EXEC=
+endif
 
 build: $(NAME).sqfs
 
 run: $(NAME).sqfs
-	$(RIVEMU) $<
+	$(RIVEMU_RUN) $<
 
 clean:
 	rm -f *.sqfs

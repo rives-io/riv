@@ -1,7 +1,11 @@
 DATA_FILES=info.json sprites.png
 RIVEMU=rivemu
-RIVEMU_EXEC=$(RIVEMU) -quiet -no-window -sdk -workspace -exec
-RIVEMU_RUN=$(RIVEMU) -quiet -workspace -exec
+RIVEMU_RUN=rivemu -quiet -workspace -exec
+RIVEMU_EXEC=rivemu -quiet -no-window -sdk -workspace -exec
+ifneq (,$(wildcard /usr/sbin/riv-run))
+	RIVEMU_RUN=
+	RIVEMU_EXEC=
+endif
 CFLAGS=$(shell $(RIVEMU_EXEC) riv-opt-flags -Ospeed)
 
 # Compile all cartridges
