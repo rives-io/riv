@@ -115,6 +115,10 @@ global function riv_fini(): void <cattribute'destructor',cexport>
   assert(munmap(riv, RIV_SIZE_CONTEXT) == 0, 'riv munmap failed')
 end
 
+global function riv_get_context(): *riv_context <cexport>
+  return riv_ctx
+end
+
 global function riv_present(): boolean <cexport>
   -- force exit when replay ends
   if riv.verifying then

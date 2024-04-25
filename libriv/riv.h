@@ -829,6 +829,7 @@ RIV_API uint64_t riv_snprintf(char* buf, uint64_t n, const char* format, ...);  
 
 // Basic
 
+RIV_API riv_context* riv_get_context(void);                                     // Returns the RIV context, intended to be used with C FFI libraries
 RIV_API bool riv_present(void);                                                 // Present current frame, returns true until quit is requested.
 
 // Images

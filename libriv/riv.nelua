@@ -13,6 +13,7 @@ global function riv_printf(format: cstring <const>, ...: cvarargs): usize <cimpo
 global function riv_snprintf(buf: cstring, n: usize, format: cstring <const>, ...: cvarargs): usize <cimport,nodecl> end
 
 -- Basic
+global function riv_get_context(): *riv_context <cimport,nodecl> end
 global function riv_present(): boolean <cimport,nodecl> end
 
 -- Images
