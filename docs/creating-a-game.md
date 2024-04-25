@@ -28,7 +28,7 @@ During this tutorial you will learn to:
 ## Code for the game
 
 If you are stuck, checkout the full source code for this tutorial at
-[demos/snake-tutorial folder](https://github.com/rives-io/riv/tree/main/demos/snake-tutorial),
+[demos/tutorial-snake folder](https://github.com/rives-io/riv/tree/main/demos/tutorial-snake),
 every chapter has its full source code there.
 
 ## Setup project files
@@ -36,12 +36,12 @@ every chapter has its full source code there.
 Before you begin you must have RIVEMU installed first, if you did not download it yet,
 please read [getting started page](/getting-started) first.
 
-Let's begin creating a brand new directory called `snake-tutorial`
+Let's begin creating a brand new directory called `tutorial-snake`
 with the basic stuff you need there:
 
 ```sh
-mkdir snake-tutorial
-cd snake-tutorial
+mkdir tutorial-snake
+cd tutorial-snake
 echo "void main() {}" > snake.c
 rivemu -workspace -exec riv-jit-c snake.c
 ```
@@ -119,7 +119,7 @@ both are customizable,
 however for this tutorial we will just use the default colors and fonts.
 
 The source code for this chapter can be seen at
-[snake-1.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-1.c).
+[snake-1.c](https://github.com/rives-io/riv/blob/main/demos/tutorial-snake/snake-1.c).
 
 ## Customizing the resolution and frame rate
 
@@ -185,7 +185,7 @@ you will notice the overall rendering CPU cost is down from 2.90 MIPS to 0.12MIP
 If you want to learn more about the `-bench` option, check [developing cartridges page](/developing-cartridges).
 
 The source code for this chapter can be seen at
-[snake-2.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-2.c).
+[snake-2.c](https://github.com/rives-io/riv/blob/main/demos/tutorial-snake/snake-2.c).
 
 ## Starting the game
 
@@ -322,7 +322,7 @@ Next chapters will apply patches on this base structure to evolve the game,
 so make sure you understand it before going on.
 
 The source code for this chapter can be seen at
-[snake-3.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-3.c).
+[snake-3.c](https://github.com/rives-io/riv/blob/main/demos/tutorial-snake/snake-3.c).
 
 ## Spawning the apple
 
@@ -375,7 +375,7 @@ That is because we took advantage of the starting screen timing and key inputs
 to seed the pseudo random number generator.
 
 The source code for this chapter can be seen at
-[snake-4.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-4.c).
+[snake-4.c](https://github.com/rives-io/riv/blob/main/demos/tutorial-snake/snake-4.c).
 
 ## Moving the snake
 
@@ -451,7 +451,7 @@ Notice every time we collides with an apple the "APPLES" message is printed,
 and it respawns it in a new position.
 
 The source code for this chapter can be seen at
-[snake-5.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-5.c).
+[snake-5.c](https://github.com/rives-io/riv/blob/main/demos/tutorial-snake/snake-5.c).
 
 ## Growing the snake
 
@@ -565,7 +565,7 @@ The game logic is effectively finished.
 In the next chapters we will focus on polishing it.
 
 The source code for this chapter can be seen at
-[snake-6.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-6.c).
+[snake-6.c](https://github.com/rives-io/riv/blob/main/demos/tutorial-snake/snake-6.c).
 
 ## Adding sounds
 The game has no sound yet, let's add it.
@@ -627,7 +627,7 @@ riv_waveform(&eat_sfx);
 Run it, now the game has sounds!
 
 The source code for this chapter can be seen at
-[snake-7.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-7.c).
+[snake-7.c](https://github.com/rives-io/riv/blob/main/demos/tutorial-snake/snake-7.c).
 
 ## Drawing sprites
 
@@ -682,7 +682,7 @@ We do some tricks here to choose the correct sprite and flip it depending on the
 Run it, now the game has more interesting visuals!
 
 The source code for this chapter can be seen at
-[snake-8.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-8.c).
+[snake-8.c](https://github.com/rives-io/riv/blob/main/demos/tutorial-snake/snake-8.c).
 
 ## Adding scores
 
@@ -740,7 +740,7 @@ riv_draw_text(buf, RIV_SPRITESHEET_FONT_3X5, RIV_BOTTOMLEFT, 1, 128-1, 1, RIV_CO
 Run it, now the game has scores!
 
 The source code for this chapter can be seen at
-[snake-9.c](https://github.com/rives-io/riv/blob/main/demos/snake-tutorial/snake-9.c).
+[snake-9.c](https://github.com/rives-io/riv/blob/main/demos/tutorial-snake/snake-9.c).
 
 ## Compiling the cartridge
 

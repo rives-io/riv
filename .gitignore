@@ -36,7 +36,7 @@ rivemu.wasm
 /libriv/libriv.c
 
 # external demos
-/demos/freedoom
-/demos/antcopter
-/demos/monky
-/demos/tetrix
+/demos/game-freedoom
+/demos/game-antcopter
+/demos/game-monky
+/demos/game-tetrix

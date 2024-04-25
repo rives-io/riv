@@ -1,4 +1,5 @@
 NAME=game2048
+CARTRIDGE=2048.sqfs
 DATA_FILES=info.json
 COMP=xz
 RIVEMU_RUN=rivemu
@@ -9,17 +10,17 @@ ifneq (,$(wildcard /usr/sbin/riv-run))
 endif
 CFLAGS=$(shell $(RIVEMU_EXEC) riv-opt-flags -Ospeed)
 
-build: $(NAME).sqfs
+build: $(CARTRIDGE)
 
-run: $(NAME).sqfs
+run: $(CARTRIDGE)
 	$(RIVEMU_RUN) $<
 
 clean:
 	rm -f *.sqfs *.elf *.c
 
-$(NAME).sqfs: $(NAME).elf $(DATA_FILES)
+$(CARTRIDGE): $(NAME).elf $(DATA_FILES)
 	$(RIVEMU_EXEC) riv-mksqfs $^ $@ -comp $(COMP)
 
-$(NAME).elf: $(NAME).nelua
+$(NAME).elf: $(NAME).nelua *.nelua
 	$(RIVEMU_EXEC) nelua --verbose --release --binary --cache-dir=. --cflags="$(CFLAGS)" --output=$@ $<
 	$(RIVEMU_EXEC) riv-strip $@
