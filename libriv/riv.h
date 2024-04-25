@@ -464,8 +464,8 @@ typedef enum riv_constants {
   RIV_DEFAULT_TARGET_FPS = 60,
   RIV_DEFAULT_PIXELFORMAT = RIV_PIXELFORMAT_PLT256,
   RIV_MAX_COLORS = 256,
-  RIV_MAX_IMAGES = 1024,
-  RIV_MAX_SPRITESHEETS = 1024,
+  RIV_MAX_IMAGES = 4096,
+  RIV_MAX_SPRITESHEETS = 4096,
   RIV_MAX_KEY_TOGGLES = 64,
   RIV_MAX_COMMANDS = 32,
   RIV_NUM_GAMEPADS = 4,
@@ -501,7 +501,7 @@ typedef enum riv_align {
 } riv_align;
 
 ////////////////////////////////////////////////////////////////////////////////
-// Constants used to implement the driver and device communication
+// Constants used internally for driver and device communication
 
 // Device control commands
 typedef enum riv_control_command {
@@ -535,18 +535,18 @@ typedef enum riv_mem_size {
   RIV_SIZE_TXBUFFER     =  2*1024*1024, // 2 MB
 } riv_mem_size;
 
-// Memory mapped virtual address bases
+// Memory mapped virtual address
 typedef enum riv_mem_addr {
-  RIV_VADDR_CONTEXT      = 0x10000000,
-  RIV_VADDR_MMIO_DRIVER  = 0x10000000,
-  RIV_VADDR_MMIO_DEVICE  = 0x10001000,
-  RIV_VADDR_PUB_DRIVER   = 0x10002000,
-  RIV_VADDR_PRV_DRIVER   = 0x10100000,
-  RIV_VADDR_INCARD       = 0x10200000,
-  RIV_VADDR_OUTCARD      = 0x10400000,
-  RIV_VADDR_STATECARD    = 0x10600000,
-  RIV_VADDR_FRAMEBUFFER  = 0x10800000,
-  RIV_VADDR_TXBUFFER     = 0x10a00000,
+  RIV_VADDR_CONTEXT      = 0x10000000, // Context fixed address
+  RIV_VADDR_MMIO_DRIVER  = 0x10000000, // Driver memory mapped IO fixed address
+  RIV_VADDR_MMIO_DEVICE  = 0x10001000, // Device memory mapped IO fixed address
+  RIV_VADDR_PUB_DRIVER   = 0x10002000, // Public driver region fixed address
+  RIV_VADDR_PRV_DRIVER   = 0x10100000, // Private driver region fixed address
+  RIV_VADDR_INCARD       = 0x10200000, // Input card buffer fixed address
+  RIV_VADDR_OUTCARD      = 0x10400000, // Output card buffer fixed address
+  RIV_VADDR_STATECARD    = 0x10600000, // State card buffer fixed address
+  RIV_VADDR_FRAMEBUFFER  = 0x10800000, // Frame buffer fixed address
+  RIV_VADDR_TXBUFFER     = 0x10a00000, // Transfer buffer fixed address
 } riv_mem_addr;
 
 // Canaries
@@ -558,32 +558,30 @@ typedef enum riv_canary_ids {
 ////////////////////////////////////////////////////////////////////////////////
 // Primitive types
 
-typedef uint8_t* riv_unbounded_uint8;
-typedef uint32_t* riv_unbounded_uint32;
-typedef bool* riv_unbounded_bool;
-typedef uint64_t uint64_t;
+typedef uint8_t* riv_bytes;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Structures
 
+// Bounded contiguous array of bytes
 typedef struct riv_span_uint8 {
-  riv_unbounded_uint8 data;
+  riv_bytes data;
   uint64_t size;
 } riv_span_uint8;
 
-// Vector2 (integer)
+// Vector2 (int64)
 typedef struct riv_vec2i {
   int64_t x;
   int64_t y;
 } riv_vec2i;
 
-// Vector2 (float)
+// Vector2 (float64)
 typedef struct riv_vec2f {
-  float x;
-  float y;
+  double x;
+  double y;
 } riv_vec2f;
 
-// Rectangle (integer)
+// Rectangle (int64)
 typedef struct riv_recti {
   int64_t x;
   int64_t y;
@@ -591,92 +589,92 @@ typedef struct riv_recti {
   int64_t height;
 } riv_recti;
 
-// Rectangle (float)
+// Rectangle (float64)
 typedef struct riv_rectf {
-  int64_t x;
-  int64_t y;
-  int64_t width;
-  int64_t height;
+  double x;
+  double y;
+  double width;
+  double height;
 } riv_rectf;
 
 // Draw image
 typedef struct riv_image {
-  riv_unbounded_uint8 pixels;
-  uint16_t width;
-  uint16_t height;
-  int16_t color_key;
-  bool owned;
+  riv_bytes pixels;           // Image pixel data, 1 byte per pixel
+  uint16_t width;             // Image width
+  uint16_t height;            // Image height
+  int16_t color_key;          // Color on the image used to represent transparent pixels
+  bool owned;                 // Whether pixel data should be freed when destroying the image
 } riv_image;
 
 // Draw sprite
 typedef struct riv_spritesheet {
-  uint64_t image_id;
-  uint32_t cell_width;
-  uint32_t cell_height;
+  uint64_t image_id;          // Image for the sprite sheet
+  uint32_t cell_width;        // Common sprite width
+  uint32_t cell_height;       // Common sprite height
 } riv_spritesheet;
 
 // Draw state
 typedef struct riv_draw_state {
-  riv_vec2i origin;                 // Draw origin
-  riv_recti clip;                   // Draw clipping bounding box
-  uint8_t pal[RIV_MAX_COLORS];      // Draw swap palette
-  bool pal_enabled;                 // Draw swap palette enabled
+  riv_vec2i origin;            // Draw origin
+  riv_recti clip;              // Draw clipping bounding box
+  uint8_t pal[RIV_MAX_COLORS]; // Draw swap palette
+  bool pal_enabled;            // Whether swap palette is enabled
 } riv_draw_state;
 
 // Sound buffer description
 typedef struct riv_soundbuffer_desc {
-  uint64_t id;              // Sound buffer id (filled automatically)
-  riv_sound_format format;  // Sound format
-  uint32_t channels;        // Sound channels (0 = auto detect)
-  uint32_t sample_rate;     // Sound sample rate (0 = auto detect)
-  riv_span_uint8 data;      // Sound data
+  uint64_t id;                 // Sound buffer id (filled automatically)
+  riv_sound_format format;     // Sound format
+  uint32_t channels;           // Sound channels (0 = auto detect)
+  uint32_t sample_rate;        // Sound sample rate (0 = auto detect)
+  riv_span_uint8 data;         // Sound data
 } riv_soundbuffer_desc;
 
 // Sound description
 typedef struct riv_sound_desc {
-  uint64_t id;        // Sound id (filled automatically, or used when updating a sound)
-  uint64_t buffer_id; // Sound buffer id (must be 0 when updating a sound)
-  float delay;        // Start delay time in seconds (0 = no delay)
-  float duration;     // Duration in seconds (0 = let id end, -1 = loop)
-  float fade_in;      // Fade in time in seconds (0 = no fade in)
-  float fade_out;     // Fade out time in seconds (0 = no fade out)
-  float seek;         // Seek in time in seconds (0 = no seek, -1 = stop)
-  float volume;       // Volume gain in range [0.0, 1.0]
-  float pan;          // Pan in range [-1.0, 1.0]
-  float pitch;        // Pitch (0.0 = no pitch change)
+  uint64_t id;                 // Sound id (filled automatically, or used when updating a sound)
+  uint64_t buffer_id;          // Sound buffer id (must be 0 when updating a sound)
+  float delay;                 // Start delay time in seconds (0 = no delay)
+  float duration;              // Duration in seconds (0 = let id end, -1 = loop)
+  float fade_in;               // Fade in time in seconds (0 = no fade in)
+  float fade_out;              // Fade out time in seconds (0 = no fade out)
+  float seek;                  // Seek in time in seconds (0 = no seek, -1 = stop)
+  float volume;                // Volume gain in range [0.0, 1.0]
+  float pan;                   // Pan in range [-1.0, 1.0]
+  float pitch;                 // Pitch (0.0 = no pitch change)
 } riv_sound_desc;
 
 // Waveform sound description
 typedef struct riv_waveform_desc {
-  uint64_t id;            // Sound id (filled automatically)
-  riv_waveform_type type; // Waveform type
-  float delay;            // Start delay in seconds
-  float attack;           // Attack duration in seconds
-  float decay;            // Decay duration in seconds
-  float sustain;          // Sustain duration in seconds
-  float release;          // Release duration in seconds
-  float start_frequency;  // Starting frequency in Hz
-  float end_frequency;    // Starting frequency in Hz
-  float amplitude;        // Maximum amplitude in range [0.0, 1.0]
-  float sustain_level;    // Sustain level in range [0.0, 1.0]
-  float duty_cycle;       // Duty cycle in range [0.0, 1.0]
-  float pan;              // Pan in range [-1.0, 1.0]
+  uint64_t id;                 // Sound id (filled automatically)
+  riv_waveform_type type;      // Waveform type
+  float delay;                 // Start delay in seconds
+  float attack;                // Attack duration in seconds
+  float decay;                 // Decay duration in seconds
+  float sustain;               // Sustain duration in seconds
+  float release;               // Release duration in seconds
+  float start_frequency;       // Starting frequency in Hz
+  float end_frequency;         // Starting frequency in Hz
+  float amplitude;             // Maximum amplitude in range [0.0, 1.0]
+  float sustain_level;         // Sustain level in range [0.0, 1.0]
+  float duty_cycle;            // Duty cycle in range [0.0, 1.0]
+  float pan;                   // Pan in range [-1.0, 1.0]
 } riv_waveform_desc;
 
 // Key state
 typedef struct riv_key_state {
-  uint64_t down_frame;  // Last frame the key was pressed
-  uint64_t up_frame;    // Last frame the key was released
-  bool down;            // Becomes trues when the key is pressed, becomes false only when it is released
-  bool up;              // Becomes trues when the key is released, becomes false only when it is pressed
-  bool press;           // True only in the frame the key is pressed
-  bool release;         // True only in the frame the key is released
+  uint64_t down_frame;         // Last frame the key was pressed
+  uint64_t up_frame;           // Last frame the key was released
+  bool down;                   // Becomes true when the key is pressed, becomes false when released
+  bool up;                     // Becomes true when the key is released, becomes false when pressed
+  bool press;                  // True only in the frame the key is pressed
+  bool release;                // True only in the frame the key is released
 } riv_key_state;
 
 // Key toggle event
 typedef struct riv_key_toggle_event {
-  uint8_t key_code;
-  uint64_t frame;
+  uint8_t key_code;     // Key that is changing its state
+  uint64_t frame;       // Frame number that triggered the key toggle event
 } riv_key_toggle_event;
 
 // Pseudo random number generator based on xoshiro256
@@ -685,7 +683,7 @@ typedef struct riv_xoshiro256 {
 } riv_xoshiro256;
 
 ////////////////////////////////////////////////////////////////////////////////
-// Structures used for device and driver communication
+// Structures used internally for device and driver communication
 
 // Device audio command description
 typedef union riv_command_desc {
@@ -734,8 +732,17 @@ typedef struct riv_mmio_device {
 } riv_mmio_device;
 
 ////////////////////////////////////////////////////////////////////////////////
-// Main RIV structure
-
+// RIV context structure
+//
+// The RIV context is a 12MB structure mapped at the virtual memory address 0x10000000,
+// it contains all the public and private state used by other RIV APIs.
+// Some fields can be read/write directly as convenience.
+// Every field that can be read or written directly are marked as:
+// - [R] - Can be read at any moment
+// - [W] - Can be write at any moment
+// - [RW] - Can be read/write at any moment
+// Other fields without RW marks are used internally and should not be read or written.
+//
 typedef struct riv_context {
   //////////////////////////////////////
   // MMIO driver (driver writes/device reads)
@@ -776,7 +783,7 @@ typedef struct riv_context {
   riv_draw_state draw;                                // [RW] Draw state
   riv_image images[RIV_MAX_IMAGES];                   // [RW] Loaded images
   riv_spritesheet spritesheets[RIV_MAX_SPRITESHEETS]; // [RW] Loaded sprite sheets
-  uint8_t pub_driver_padding[1002664];                // Reserved
+  uint8_t pub_driver_padding[904360];                 // Reserved
 
   //////////////////////////////////////
   // Internal state
@@ -788,10 +795,10 @@ typedef struct riv_context {
   uint64_t soundbuffer_gen;                           // Counter for generating sound buffer ids
   uint64_t image_gen;                                 // Counter for generating image ids
   uint64_t sprite_gen;                                // Counter for generating sprite ids
-  uint32_t txbuffer_off;                              // Current tx buffer offset
-  uint32_t verify_key_event_index;
-  riv_key_toggle_event *verify_key_events;
-  uint64_t stop_frame;
+  uint32_t txbuffer_off;                              // Current transfer buffer offset
+  uint32_t verify_key_event_index;                    // Current event index when verifying
+  riv_key_toggle_event *verify_key_events;            // List of events to follow when verifying
+  uint64_t stop_frame;                                // Device requested stop frame
   uint8_t prv_driver_padding[1047456];                // Reserved
 
   //////////////////////////////////////
@@ -800,7 +807,7 @@ typedef struct riv_context {
   uint8_t outcard[RIV_SIZE_OUTCARD];                  // [RW] Output card buffer
   uint8_t statecard[RIV_SIZE_STATECARD];              // [RW] State card buffer
   uint8_t framebuffer[RIV_SIZE_FRAMEBUFFER];          // [RW] Screen frame buffer
-  uint8_t txbuffer[RIV_SIZE_TXBUFFER];                // Used by internal commands
+  uint8_t txbuffer[RIV_SIZE_TXBUFFER];                // Data buffer for device commands
 } riv_context;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -808,53 +815,53 @@ typedef struct riv_context {
 
 // Global RIV context
 #ifdef RIV_IMPORT_CONTEXT
-RIV_API riv_context *riv;
+RIV_API riv_context *riv;                                        // RIV context exported as a symbol to be used with C FFI libraries
 #else
-static riv_context *const riv = (riv_context*)RIV_VADDR_CONTEXT;
+static riv_context *const riv = (riv_context*)RIV_VADDR_CONTEXT; // RIV context mapped at fixed virtual memory address 0x10000000
 #endif
 
 // Utilities
 
-RIV_API uint64_t riv_version(void);                                               // Get the RIV runtime version
-RIV_API uint64_t riv_rdcycle(void);                                               // Get the current machine cycle, THIS IS NOT REPRODUCIBLE, use for bench-marking only
-RIV_API uint64_t riv_printf(const char* format, ...);                             // Print to standard output, use for debugging
-RIV_API uint64_t riv_snprintf(char* s, uint64_t maxlen, const char* format, ...); // Print to a string
+RIV_API uint64_t riv_version(void);                                             // Get the RIV version at runtime
+RIV_API uint64_t riv_rdcycle(void);                                             // Get the current machine cycle, THIS IS NON REPRODUCIBLE, use for bench-marking only
+RIV_API uint64_t riv_printf(const char* format, ...);                           // Print to standard output, use for debugging only
+RIV_API uint64_t riv_snprintf(char* buf, uint64_t n, const char* format, ...);  // Format a string
 
 // Basic
 
-RIV_API bool riv_present();  // Present current frame, returns true until quit is requested.
+RIV_API bool riv_present(void);                                                 // Present current frame, returns true until quit is requested.
 
 // Images
 
-RIV_API uint64_t riv_make_image(const char* filename, int64_t color_key);
-RIV_API void riv_destroy_image(uint64_t img_id);
+RIV_API uint64_t riv_make_image(const char* filename, int64_t color_key);       // Load an image from a file
+RIV_API void riv_destroy_image(uint64_t img_id);                                // Destroy an image
 
 // Sprites
 
-RIV_API uint64_t riv_make_spritesheet(uint64_t img_id, uint32_t w, uint32_t h);
-RIV_API void riv_destroy_spritesheet(uint64_t sps_id);
+RIV_API uint64_t riv_make_spritesheet(uint64_t img_id, uint32_t w, uint32_t h); // Create an sprite sheet from an image
+RIV_API void riv_destroy_spritesheet(uint64_t sps_id);                          // Destroy an sprite sheet
 
 // Drawing
 
-RIV_API void riv_clear(uint32_t col);
-RIV_API void riv_draw_point(int64_t x, int64_t y, uint32_t col);
-RIV_API void riv_draw_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, uint32_t col);
-RIV_API void riv_draw_rect_fill(int64_t x0, int64_t y0, int64_t w, int64_t h, uint32_t col);
-RIV_API void riv_draw_rect_line(int64_t x0, int64_t y0, int64_t w, int64_t h, uint32_t col);
-RIV_API void riv_draw_quad_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, int64_t x3, int64_t y3, uint32_t col);
-RIV_API void riv_draw_quad_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, int64_t x3, int64_t y3, uint32_t col);
-RIV_API void riv_draw_box_fill(int64_t ox, int64_t oy, int64_t w, int64_t h, float rot, uint32_t col);
-RIV_API void riv_draw_box_line(int64_t ox, int64_t oy, int64_t w, int64_t h, float rot, uint32_t col);
-RIV_API void riv_draw_circle_fill(int64_t ox, int64_t oy, int64_t d, uint32_t col);
-RIV_API void riv_draw_circle_line(int64_t ox, int64_t oy, int64_t d, uint32_t col);
-RIV_API void riv_draw_ellipse_fill(int64_t ox, int64_t oy, int64_t w, int64_t h, uint32_t col);
-RIV_API void riv_draw_ellipse_line(int64_t ox, int64_t oy, int64_t w, int64_t h, uint32_t col);
-RIV_API void riv_draw_triangle_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
-RIV_API void riv_draw_triangle_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col);
-RIV_API void riv_draw_image_rect(uint64_t img_id, int64_t x0, int64_t y0, int64_t w, int64_t h, int64_t sx0, int64_t sy0, int64_t mw, int64_t mh);
-RIV_API void riv_draw_sprite(uint32_t n, uint64_t sps_id, int64_t x0, int64_t y0, int64_t nw, int64_t nh, int64_t mw, int64_t mh);
-RIV_API riv_vec2i riv_draw_text(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t size, int64_t col);
-RIV_API riv_vec2i riv_draw_text_ex(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t mw, int64_t mh, int64_t sx, int64_t sy, int64_t col);
+RIV_API void riv_clear(uint32_t col);                                                               // Clear the screen
+RIV_API void riv_draw_point(int64_t x, int64_t y, uint32_t col);                                    // Draw a point
+RIV_API void riv_draw_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, uint32_t col);           // Draw a line determined by two points
+RIV_API void riv_draw_rect_fill(int64_t x0, int64_t y0, int64_t w, int64_t h, uint32_t col);        // Draw fill of a rectangle determined by its top left and size
+RIV_API void riv_draw_rect_line(int64_t x0, int64_t y0, int64_t w, int64_t h, uint32_t col);        // Draw lines of a rectangle determined by its top left and size
+RIV_API void riv_draw_quad_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, int64_t x3, int64_t y3, uint32_t col); // Draw fill of a quad determined by 4 points
+RIV_API void riv_draw_quad_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, int64_t x3, int64_t y3, uint32_t col); // Draw lines of a quad determined by 4 points
+RIV_API void riv_draw_box_fill(int64_t ox, int64_t oy, int64_t w, int64_t h, float rot, uint32_t col); // Draw fill of a rotated rectangle determined by its center and size
+RIV_API void riv_draw_box_line(int64_t ox, int64_t oy, int64_t w, int64_t h, float rot, uint32_t col); // Draw lines of a rotated rectangle determined by its center and size
+RIV_API void riv_draw_circle_fill(int64_t ox, int64_t oy, int64_t d, uint32_t col);                 // Draw fill of a circle determined by its center and size
+RIV_API void riv_draw_circle_line(int64_t ox, int64_t oy, int64_t d, uint32_t col);                 // Draw line of a circle determined by its center and size
+RIV_API void riv_draw_ellipse_fill(int64_t ox, int64_t oy, int64_t w, int64_t h, uint32_t col);     // Draw fill of a ellipse determined by its center and size
+RIV_API void riv_draw_ellipse_line(int64_t ox, int64_t oy, int64_t w, int64_t h, uint32_t col);     // Draw line of a ellipse determined by its center and size
+RIV_API void riv_draw_triangle_fill(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col); // Draw fill of a triangle determined by 3 points
+RIV_API void riv_draw_triangle_line(int64_t x0, int64_t y0, int64_t x1, int64_t y1, int64_t x2, int64_t y2, uint32_t col); // Draw line of a triangle determined by 3 points
+RIV_API void riv_draw_image_rect(uint64_t img_id, int64_t x0, int64_t y0, int64_t w, int64_t h, int64_t sx0, int64_t sy0, int64_t mw, int64_t mh); // Draw fill of a rectangle copied from an image
+RIV_API void riv_draw_sprite(uint32_t n, uint64_t sps_id, int64_t x0, int64_t y0, int64_t nw, int64_t nh, int64_t mw, int64_t mh); // Draw fill of a rectangle copied from a sprite sheet
+RIV_API riv_vec2i riv_draw_text(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t size, int64_t col); // Draw text determined by its anchor point and size
+RIV_API riv_vec2i riv_draw_text_ex(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t mw, int64_t mh, int64_t sx, int64_t sy, int64_t col); // Draw text determined by its anchor point, size, scale and spacing
 
 // Audio
 
@@ -865,10 +872,10 @@ RIV_API uint64_t riv_waveform(riv_waveform_desc* desc);              // Play a w
 
 // Pseudo random number generator (PRNG)
 
-RIV_API void riv_srand(uint64_t a, uint64_t b);          // Seed PRNG
-RIV_API uint64_t riv_rand();                             // Returns a random uint64 in range [0, MAX_UINT64]
-RIV_API uint64_t riv_rand_uint(uint64_t high);           // Returns a random uint64 in range [0, high]
-RIV_API int64_t riv_rand_int(int64_t low, int64_t high); // Returns a random int64 in range [low, high]
-RIV_API double riv_rand_float();                         // Returns a random float64 in range [0.0, 1.0)
+RIV_API void riv_srand(uint64_t a, uint64_t b);          // Seed pseudo random number generator
+RIV_API uint64_t riv_rand(void);                         // Return a random  uint64 in range [0, MAX_UINT64]
+RIV_API uint64_t riv_rand_uint(uint64_t high);           // Return a random  uint64 in range [0, high]
+RIV_API int64_t riv_rand_int(int64_t low, int64_t high); // Return a random   int64 in range [low, high]
+RIV_API double riv_rand_float(void);                     // Return a random float64 in range [0.0, 1.0)
 
 #endif

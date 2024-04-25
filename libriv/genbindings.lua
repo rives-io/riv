@@ -7,9 +7,7 @@ nldecl.generate_bindings_file{
   include_names = {'^riv_', '^RIV_'},
   -- import_constants = true,
   force_exclude_names = {
-    ['riv_unbounded_uint8'] = true,
-    ['riv_unbounded_uint32'] = true,
-    ['riv_unbounded_bool'] = true,
+    ['riv_bytes'] = true,
   },
   enum_types = {
     riv_key_code = 'uint8',
@@ -26,7 +24,6 @@ nldecl.generate_bindings_file{
     {'pixels: %*', 'pixels: *[0]'},
     {'data: %*', 'data: *[0]'},
     {'verify_key_events: %*', 'verify_key_events: *[0]'},
-    {'palette: %*', 'palette: *[0]'},
   },
   output_head = [[
 ## pragmas.unitname = ''

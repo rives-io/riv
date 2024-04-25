@@ -399,8 +399,8 @@ global riv_constants: type <cimport,nodecl,using> = @enum(uint32){
   RIV_DEFAULT_TARGET_FPS = 60,
   RIV_DEFAULT_PIXELFORMAT = 0,
   RIV_MAX_COLORS = 256,
-  RIV_MAX_IMAGES = 1024,
-  RIV_MAX_SPRITESHEETS = 1024,
+  RIV_MAX_IMAGES = 4096,
+  RIV_MAX_SPRITESHEETS = 4096,
   RIV_MAX_KEY_TOGGLES = 64,
   RIV_MAX_COMMANDS = 32,
   RIV_NUM_GAMEPADS = 4,
@@ -409,13 +409,13 @@ global riv_constants: type <cimport,nodecl,using> = @enum(uint32){
 }
 global riv_image_id: type <cimport,nodecl,using> = @enum(uint32){
   RIV_IMAGE_NONE = 0,
-  RIV_IMAGE_FONT_5X7 = 1023,
-  RIV_IMAGE_FONT_3X5 = 1022
+  RIV_IMAGE_FONT_5X7 = 4095,
+  RIV_IMAGE_FONT_3X5 = 4094
 }
 global riv_spritesheet_id: type <cimport,nodecl,using> = @enum(uint32){
   RIV_SPRITESHEET_NONE = 0,
-  RIV_SPRITESHEET_FONT_5X7 = 1023,
-  RIV_SPRITESHEET_FONT_3X5 = 1022
+  RIV_SPRITESHEET_FONT_5X7 = 4095,
+  RIV_SPRITESHEET_FONT_3X5 = 4094
 }
 global riv_align: type <cimport,nodecl,using> = @enum(uint32){
   RIV_TOPLEFT = 0,
@@ -479,8 +479,8 @@ global riv_vec2i: type <cimport,nodecl> = @record{
   y: int64
 }
 global riv_vec2f: type <cimport,nodecl> = @record{
-  x: float32,
-  y: float32
+  x: float64,
+  y: float64
 }
 global riv_recti: type <cimport,nodecl> = @record{
   x: int64,
@@ -489,10 +489,10 @@ global riv_recti: type <cimport,nodecl> = @record{
   height: int64
 }
 global riv_rectf: type <cimport,nodecl> = @record{
-  x: int64,
-  y: int64,
-  width: int64,
-  height: int64
+  x: float64,
+  y: float64,
+  width: float64,
+  height: float64
 }
 global riv_image: type <cimport,nodecl> = @record{
   pixels: *[0]uint8,
@@ -627,9 +627,9 @@ global riv_context: type <cimport,nodecl> = @record{
   key_modifiers: uint32,
   keys: [192]riv_key_state,
   draw: riv_draw_state,
-  images: [1024]riv_image,
-  spritesheets: [1024]riv_spritesheet,
-  pub_driver_padding: [1002664]uint8,
+  images: [4096]riv_image,
+  spritesheets: [4096]riv_spritesheet,
+  pub_driver_padding: [904360]uint8,
   prng: riv_xoshiro256,
   entropy: [128]uint64,
   entropy_index: uint32,

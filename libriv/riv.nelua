@@ -10,7 +10,7 @@ global argv: *[0]cstring <cimport,nodecl>
 global function riv_version(): uint64 <cimport,nodecl> end
 global function riv_rdcycle(): uint64 <cimport,nodecl> end
 global function riv_printf(format: cstring <const>, ...: cvarargs): usize <cimport,nodecl> end
-global function riv_snprintf(s: cstring, maxlen: usize, format: cstring <const>, ...: cvarargs): usize <cimport,nodecl> end
+global function riv_snprintf(buf: cstring, n: usize, format: cstring <const>, ...: cvarargs): usize <cimport,nodecl> end
 
 -- Basic
 global function riv_present(): boolean <cimport,nodecl> end
