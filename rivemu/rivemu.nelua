@@ -23,6 +23,7 @@ require 'C.stdlib'
 global restart_requested: boolean
 global quit_requested: boolean
 global running_sapp: boolean
+global exit_code: integer
 
 global function rivemu_quit(): void
   quit_requested = true
@@ -250,14 +251,20 @@ local function parse_options(): rivemu_options
       end
     elseif argk == '-exec' or argk == '--' then
       argi = argi + 1
-      entrypoint_sb:clear()
-      local first_argi: integer = argi
-      while argi < argc do
-        if argi ~= first_argi then entrypoint_sb:write(' ') end
-        entrypoint_sb:write(arg[argi])
+      if argc > argi + 1 then -- multiple arguments
+        entrypoint_sb:clear()
+        local first_argi: integer = argi
+        while argi < argc do
+          if argi ~= first_argi then entrypoint_sb:write(' ') end
+          local argv_quoted: string <close> = arg[argi]:gsub([[']], [['\'']])
+          entrypoint_sb:write([[']],argv_quoted,[[']])
+          argi = argi + 1
+        end
+        opts.entrypoint = entrypoint_sb:view()
+      else -- one argument
+        opts.entrypoint = arg[argi]
         argi = argi + 1
       end
-      opts.entrypoint = entrypoint_sb:view()
     elseif argk:find('^[^%-].*%.sqfs$') > 0 then
       opts.cartridge_filename = argk
       entrypoint_sb:clear()
@@ -711,6 +718,10 @@ local function shutdown(): void
     rivemu_audio.shutdown()
   end
 
+  if machine:is_halted() then
+    exit_code = machine:read_halt_exit_code()
+  end
+
   machine:destroy()
   framelimiter = {}
   started = false
@@ -1016,6 +1027,7 @@ end
 -- parse options and run
 options = parse_options()
 run()
+return exit_code
 
 ## else
 

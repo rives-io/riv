@@ -112,6 +112,15 @@ RUN wget -O edubart-bwrapbox.tar.gz https://github.com/edubart/bwrapbox/tarball/
     tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
 ################################
+# Build xhalt
+FROM --platform=linux/riscv64 riv-toolchain-stage AS xhalt-stage
+RUN apk add libseccomp-dev
+RUN wget -O xhalt.c https://raw.githubusercontent.com/cartesi/machine-emulator-tools/158948a343e792c181a8cee6964cea122c644c52/sys-utils/xhalt/xhalt.c && \
+    mkdir -p /pkg/usr/sbin/ && \
+    gcc xhalt.c -Os -s -o /pkg/usr/sbin/xhalt && \
+    strip /pkg/usr/sbin/xhalt
+
+################################
 # Build riv
 FROM --platform=linux/riscv64 nelua-stage AS libriv-stage
 COPY libs/guest-host riv/libs/guest-host
@@ -155,6 +164,7 @@ COPY --from=nelua-stage /pkg/usr /usr
 COPY --from=bwrapbox-stage /pkg/usr /usr
 COPY --from=bubblewrap-stage /pkg/usr /usr
 COPY --from=cffi-lua-stage /pkg/usr /usr
+COPY --from=xhalt-stage /pkg/usr /usr
 
 # Install skel
 COPY rivos/skel/etc /etc
@@ -210,6 +220,9 @@ RUN cp -aL /usr/bin/lua5.4 usr/bin/lua5.4 && \
     cp -aL /usr/lib/liblua5.4.so usr/lib/liblua5.4.so && \
     cp -aL /usr/include/lua5.4 usr/include/lua5.4 && \
     cp -a /usr/lib/lua usr/lib/lua
+
+# Install xhalt
+RUN cp -aL /usr/sbin/xhalt usr/sbin/xhalt
 
 # Install skel files
 COPY rivos/skel/etc etc

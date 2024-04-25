@@ -235,6 +235,13 @@ function rivemu_machine:read_mcycle(): uint64
   return mcycle
 end
 
+-- Get machine halt status code.
+function rivemu_machine:read_halt_exit_code(): uint64
+  local tohost_data: uint64
+  cm_assert!(cm_read_htif_tohost_data(self.machine, &tohost_data))
+  return tohost_data >> 1
+end
+
 -- Read machine memory.
 function rivemu_machine:read_memory(paddr: uint64, dest: span(byte)): void
   cm_assert!(cm_read_memory(self.machine, paddr, dest.data, dest.size))
