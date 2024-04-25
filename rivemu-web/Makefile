@@ -9,8 +9,5 @@ clean:
 	rm -rf cartridges
 	rm -f rivemu.{js,wasm}
 
-publish:
-	surge . rivemu.surge.sh
-
 serve:
 	npx serve --cors

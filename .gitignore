@@ -13,17 +13,18 @@
 *.dump
 *.out
 *.TODO
-*.fs
 *.elftoc.c
-*.rivlog
 *.txt
-*.hash
-*.outcard
 *.deb
+*.rivtape
+*.rivincard
+*.rivoutcard
 
+# wasm
 rivemu.js
 rivemu.wasm
 
+# distribution binaries
 /dist
 
 # ignore generated binaries
@@ -34,8 +35,8 @@ rivemu.wasm
 /rivemu/rivemu.c
 /libriv/libriv.c
 
-# demos
-demos/freedoom
-demos/antcopter
-demos/monky
-demos/tetrix
+# external demos
+/demos/freedoom
+/demos/antcopter
+/demos/monky
+/demos/tetrix
