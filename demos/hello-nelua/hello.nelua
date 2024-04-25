@@ -1,0 +1,6 @@
+require 'riv'
+
+repeat
+  riv_clear(RIV_COLOR_BLACK)
+  riv_draw_text("hello world!", RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 128, 128, 2, RIV_COLOR_WHITE)
+until not riv_present()
