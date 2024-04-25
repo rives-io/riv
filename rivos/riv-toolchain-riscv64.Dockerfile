@@ -56,7 +56,7 @@ RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarb
     tar -xzf edubart-nelua-lang.tar.gz && \
     mv edubart-nelua-lang-* edubart-nelua-lang && cd edubart-nelua-lang && \
     mkdir -p /pkg/usr && \
-    make PREFIX=/pkg/usr nelua-lua nelua-luac && \
+    CFLAGS=-march=rv64g make PREFIX=/pkg/usr nelua-lua nelua-luac && \
     make install PREFIX=/pkg/usr && \
     cp nelua-luac /pkg/usr/bin/nelua-luac && \
     strip /pkg/usr/bin/nelua-lua /pkg/usr/bin/nelua-luac && \
@@ -80,6 +80,20 @@ RUN wget -O q66-cffi-lua.tar.gz https://github.com/q66/cffi-lua/tarball/2e0c577c
     ninja -C build && \
     ninja -C build install && \
     strip -S -x /pkg/usr/lib/*.so && \
+    strip -S -x /pkg/usr/lib/lua/5.4/*.so && \
+    tree /pkg/usr && cp -a /pkg/usr/* /usr/
+
+################################
+# Build quickjs-ffi
+FROM --platform=linux/riscv64 riv-toolchain-stage AS quickjs-ffi-stage
+RUN apk add libffi libffi-dev quickjs quickjs-dev
+RUN wget -O edubart-quickjs-ffi.tar.gz https://github.com/edubart/quickjs-ffi/tarball/b9b019116ee24e56d8d203e58607334678689dda && \
+    tar -xzf edubart-quickjs-ffi.tar.gz && \
+    mv edubart-quickjs-ffi-* edubart-quickjs-ffi && cd edubart-quickjs-ffi && \
+    make && \
+    mkdir -p /pkg/usr/lib/qjs && \
+    cp quickjs-ffi.so quickjs-ffi.js /pkg/usr/lib/qjs/ && \
+    strip -S -x /pkg/usr/lib/qjs/*.so && \
     tree /pkg/usr && cp -a /pkg/usr/* /usr/
 
 ################################
@@ -139,7 +153,9 @@ RUN apk add bash \
         squashfs-tools e2fsprogs e2fsprogs-extra \
         curl wget \
         jq \
-        libffi-dev
+        libffi libffi-dev \
+        quickjs quickjs-dev \
+        micropython@testing
 
 # Make vim an alias to nvim
 RUN ln -s /usr/bin/nvim /usr/bin/vim
@@ -165,6 +181,7 @@ COPY --from=nelua-stage /pkg/usr /usr
 COPY --from=bwrapbox-stage /pkg/usr /usr
 COPY --from=bubblewrap-stage /pkg/usr /usr
 COPY --from=cffi-lua-stage /pkg/usr /usr
+COPY --from=quickjs-ffi-stage /pkg/usr /usr
 COPY --from=xhalt-stage /pkg/usr /usr
 
 # Install skel
@@ -222,8 +239,15 @@ RUN cp -aL /usr/bin/lua5.4 usr/bin/lua5.4 && \
     cp -aL /usr/include/lua5.4 usr/include/lua5.4 && \
     cp -a /usr/lib/lua usr/lib/lua
 
+# Install quickjs + quickjs-ffi
+RUN cp -aL /usr/bin/qjs usr/bin/ && \
+    cp -aL /usr/lib/qjs usr/lib/qjs
+
+# Install micropython
+RUN cp -aL /usr/bin/micropython usr/bin/
+
 # Install xhalt
-RUN cp -aL /usr/sbin/xhalt usr/sbin/xhalt
+RUN cp -aL /usr/sbin/xhalt usr/sbin/
 
 # Install skel files
 COPY rivos/skel/etc etc
