@@ -13,4 +13,4 @@ const riv_draw_text = (new ffi.CFunction('libriv.so', 'riv_draw_text', null, 'vo
 do {
   riv_clear(RIV_COLOR_BLACK);
   riv_draw_text("hello world!", RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 128, 128, 2, RIV_COLOR_WHITE);
-} while(riv_present() != 0);
+} while(riv_present());
