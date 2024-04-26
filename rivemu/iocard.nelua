@@ -30,7 +30,7 @@ end
 
 function rivemu_iocard.update_outcard(): void
   outcard_data.size = math.min(machine.mmio_driver.outcard_len, RIV_SIZE_OUTCARD)
-  machine:read_virtual_memory(RIV_VADDR_OUTCARD, outcard_data)
+  machine:translate_and_read_virtual_memory(RIV_VADDR_OUTCARD, outcard_data)
 
   if outhist_tracking then
     local outcard_str: string = {data=outcard_data.data, size=outcard_data.size}

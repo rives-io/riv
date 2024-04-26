@@ -19,7 +19,7 @@ global riscv_reg_ids: type <using> = @enum(int64) {
   RISCV_REG_A0 = 10
 }
 
-global RIV_SIZE_REPLAYLOG: uint64< comptime> = 2*1024*1024
+global RIV_SIZE_REPLAYLOG: uint64 <comptime> = 2*1024*1024
 
 --------------------------------------------------------------------------------
 
@@ -255,6 +255,18 @@ end
 -- Read machine virtual memory.
 function rivemu_machine:read_virtual_memory(paddr: uint64, dest: span(byte)): void
   cm_assert!(cm_read_virtual_memory(self.machine, paddr, dest.data, dest.size))
+end
+
+-- Translate machine virtual address.
+function rivemu_machine:translate_virtual_address(paddr: uint64): uint64
+  local vaddr: uint64
+  cm_assert!(cm_translate_virtual_address(self.machine, paddr, &vaddr))
+  return vaddr
+end
+
+-- Translate and read machine virtual memory.
+function rivemu_machine:translate_and_read_virtual_memory(vaddr: uint64, dest: span(byte)): void
+  self:read_memory(self:translate_virtual_address(vaddr), dest)
 end
 
 -- Write machine virtual memory.
