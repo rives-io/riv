@@ -257,7 +257,7 @@ async function rivemuRecord(cartridge, incard, entropy, args) {
   const incardBuf = Module._malloc(incard.length);
   Module.HEAPU8.set(cartridge, cartridgeBuf);
   Module.HEAPU8.set(incard, incardBuf);
-  Module.ccall('rivemu_start_record', null, ['number', 'number', 'number', 'number', 'string'], [
+  Module.ccall('rivemu_start_record', null, ['number', 'number', 'number', 'number', 'string', 'string'], [
     cartridgeBuf, cartridge.length,
     incardBuf, incard.length,
     entropy, args
@@ -290,7 +290,7 @@ async function rivemuReplay(tape, cartridge, incard, entropy, args) {
   Module.HEAPU8.set(cartridge, cartridgeBuf);
   Module.HEAPU8.set(incard, incardBuf);
   Module.HEAPU8.set(tape, tapeBuf);
-  Module.ccall('rivemu_start_replay', null, ['number', 'number', 'number', 'number', 'string', 'number', 'number'], [
+  Module.ccall('rivemu_start_replay', null, ['number', 'number', 'number', 'number', 'string', 'string', 'number', 'number'], [
     cartridgeBuf, cartridge.length,
     incardBuf, incard.length,
     entropy, args,

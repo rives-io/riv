@@ -19,6 +19,8 @@
 *.rivtape
 *.rivincard
 *.rivoutcard
+*.ttf
+CNAME
 
 # wasm
 rivemu.js
