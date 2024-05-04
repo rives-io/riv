@@ -1,0 +1,81 @@
+@import url('https://cdnjs.cloudflare.com/ajax/libs/Iosevka/11.1.1/iosevka/iosevka.min.css');
+
+* {
+  font-family: 'Iosevka Web', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 14px;
+  font-synthesis: none;
+}
+body {
+  background-color: #131415;
+  color: white;
+  margin-top: 0px;
+}
+.canvas-wrapper {
+  text-align: center;
+  position: relative;
+}
+.content-wrapper {
+  max-width: 768px;
+  margin: auto;
+  text-align: left;
+}
+#canvas {
+  background-color: black;
+  image-rendering: pixelated;
+  outline: none;
+  max-width: 768px;
+  max-height: 768px;
+  margin: 4px;
+}
+#canvas-overlay {
+  font-size: 32px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%);
+  z-index: 999;
+  user-select: none;
+  pointer-events: none;
+}
+@media screen and (max-width: 768px), screen and (max-height: 768px) {
+  #canvas, #canvas-overlay {
+    max-width: 512px;
+    max-height: 512px;
+  }
+  .content-wrapper {
+    max-width: 768px;
+  }
+}
+@media screen and (max-width: 512px), screen and (max-height: 512px)  {
+  #canvas, #canvas-overlay {
+    max-width: 256px;
+    max-height: 256px;
+  }
+  .content-wrapper {
+    max-width: 512px;
+  }
+}
+.right {
+  float: right;
+}
+.row {
+  display: flex;
+}
+.column-2 {
+  flex: 50%;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th {
+  width: 80px;
+  padding-right: 8px;
+  text-align: right;
+}
+td {
+  color: #aaa;
+}
+.small {
+  font-size: 12px;
+}
