@@ -619,9 +619,9 @@ typedef struct mz_dummy_time_t_tag
 extern "C" {
 #endif
 
-extern MINIZ_EXPORT void *miniz_def_alloc_func(void *opaque, size_t items, size_t size);
-extern MINIZ_EXPORT void miniz_def_free_func(void *opaque, void *address);
-extern MINIZ_EXPORT void *miniz_def_realloc_func(void *opaque, void *address, size_t items, size_t size);
+MINIZ_EXPORT void *miniz_def_alloc_func(void *opaque, size_t items, size_t size);
+MINIZ_EXPORT void miniz_def_free_func(void *opaque, void *address);
+MINIZ_EXPORT void *miniz_def_realloc_func(void *opaque, void *address, size_t items, size_t size);
 
 #define MZ_UINT16_MAX (0xFFFFU)
 #define MZ_UINT32_MAX (0xFFFFFFFFU)

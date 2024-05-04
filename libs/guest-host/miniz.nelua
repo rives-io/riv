@@ -2,6 +2,7 @@
 cdefine 'MINIZ_NO_ARCHIVE_APIS'
 cdefine 'MINIZ_NO_STDIO'
 cdefine 'MINIZ_NO_TIME'
+cdefine 'MINIZ_EXPORT static'
 cinclude 'miniz.h'
 cinclude 'miniz.c'
 ]]

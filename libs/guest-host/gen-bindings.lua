@@ -35,6 +35,7 @@ nldecl.generate_bindings_file{
 cdefine 'MINIZ_NO_ARCHIVE_APIS'
 cdefine 'MINIZ_NO_STDIO'
 cdefine 'MINIZ_NO_TIME'
+cdefine 'MINIZ_EXPORT static'
 cinclude 'miniz.h'
 cinclude 'miniz.c'
 ]]
@@ -51,7 +52,7 @@ nldecl.generate_bindings_file{
 ##[[
 cdefine 'SPNG_USE_MINIZ'
 cdefine 'SPNG_DISABLE_OPT'
-cdefine 'SPNG_STATIC'
+cdefine 'SPNG_API static'
 cinclude 'spng.h'
 cinclude 'spng.c'
 ]]

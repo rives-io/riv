@@ -69,6 +69,9 @@ LDFLAGS="-Wl,--build-id=none -Wl,--sort-common"
 # fast floating point
 [ "$mode" != "debug" ] && CFLAGS="$CFLAGS -ffast-math -fallow-store-data-races"
 
+# some options from -O3 that optimizes while not impacting much code size
+[ "$mode" = "speed" ] && CFLAGS="$CFLAGS -fgcse-after-reload -fpredictive-commoning -fsplit-paths -ftree-partial-pre"
+
 # minimize undefined behavior
 CFLAGS="$CFLAGS -fno-strict-overflow -fno-strict-aliasing"
 
@@ -76,15 +79,12 @@ CFLAGS="$CFLAGS -fno-strict-overflow -fno-strict-aliasing"
 [ "$mode" != "debug" ] && CFLAGS="$CFLAGS -fno-stack-protector"
 
 # discard unused functions and data
-[ "$mode" != "debug" ] && CFLAGS="$CFLAGS -ffunction-sections -fdata-sections"
 [ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,--gc-sections"
 
 # make final binary smaller
 [ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,--as-needed -Wl,--hash-style=gnu"
 
 # link optimization
-[ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,-z,relro"
-[ "$mode" = "size" ] && LDFLAGS="$LDFLAGS -Wl,-z,lazy"
 [ "$mode" = "speed" ] && LDFLAGS="$LDFLAGS -Wl,-z,now"
 
 # force exporting symbols for backtraces

@@ -15,9 +15,11 @@ else ifeq ($(CC), emcc)
 else ifeq ($(CC), x86_64-w64-mingw32-gcc)
 	RIVEMU=rivemu.exe
 	CFLAGS+=-Wno-unknown-pragmas
+	LDFLAGS+=-Wl,--gc-sections
 	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--as-needed -static
 else # probably GCC on Linux
 	RIVEMU=rivemu
+	LDFLAGS+=-Wl,--gc-sections
 	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--as-needed -z relro -z now
 endif
 
