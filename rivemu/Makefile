@@ -40,6 +40,8 @@ DEPS=*.nelua \
 	../kernel/linux.bin.zz \
 	../rivos/rivos.ext2.zz
 
+all: $(RIVEMU)
+
 $(RIVEMU): rivemu.nelua $(DEPS)
 	nelua $(NELUA_FLAGS) $(EXTRA_NELUA_FLAGS) \
 		--cc=$(CC) \
@@ -58,8 +60,6 @@ distclean: clean
 install: rivemu
 	mkdir -p $(DESTDIR)$(PREFIX)/rivemu
 	install -m755 rivemu $(DESTDIR)$(PREFIX)/bin/rivemu
-
-build: $(RIVEMU) rivemu.wasm
 
 # Packages
 dist: rivemu.wasm rivemu-linux-amd64 rivemu-windows-amd64.exe rivemu-linux-arm64

@@ -1,9 +1,9 @@
 SKEL_FILES=$(shell find skel -type f) $(shell find skel-sdk -type f)
 LIBRIV_FILES=../libriv/*.nelua ../libriv/*.h
 
-all: rivos rivos-sdk
+all: rivos-sdk.ext2 rivos-sdk.hash.txt rivos.ext2 rivos.hash.txt rivos.ext2.zz
 
-rivos: rivos.ext2.zz rivos.ext2 rivos.hash.txt
+rivos: rivos.ext2 rivos.hash.txt rivos.ext2.zz
 rivos-sdk: rivos-sdk.ext2 rivos-sdk.hash.txt
 
 rivos-sdk.ext2: riv-toolchain-riscv64.Dockerfile ../kernel/linux-headers.tar.xz $(SKEL_FILES) $(LIBRIV_FILES)

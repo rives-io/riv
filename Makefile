@@ -8,9 +8,6 @@ all:
 libs kernel rivos rivemu rivemu-web demos:
 	$(MAKE) -C $@
 
-libriv-cross:
-	$(MAKE) -C libriv
-
 # Targets that uses RISC-V toolchain
 libriv:
 	$(MAKE) -C rivos toolchain-exec COMMAND="make -C $@"
