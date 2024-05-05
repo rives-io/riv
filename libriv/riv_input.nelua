@@ -24,34 +24,39 @@ local function riv_append_keystroke_entropy(key_code: uint8, down: boolean, fram
   end
 end
 
-global function riv_poll_inputs(): void
-  for i: uint32=0,<#riv.keys do
-    riv.keys[i].press = false
-    riv.keys[i].release = false
-  end
+global function riv_reset_inputs(): void
   local key_toggle_count: uint32 = riv.key_toggle_count
-  if key_toggle_count > 0 then
-    for i: uint32=0,<math.min(key_toggle_count,(@uint32)(#riv.key_toggles)) do
-      local key_code: uint8 = riv.key_toggles[i]
-      local down: boolean = not riv.keys[key_code].down
-      local frame: uint64 = riv.frame
-      riv.key_toggles[i] = key_code
-      riv.keys[key_code].down = down
-      riv.keys[key_code].up = not down
-      if down then
-        riv.keys[key_code].press = true
-        riv.keys[key_code].down_frame = frame
-      else -- up
-        riv.keys[key_code].release = true
-        riv.keys[key_code].up_frame = frame
-      end
-      riv_append_keystroke_entropy(key_code, down, frame)
-    end
-    local entropy: span(uint8) = {data=(@*[0]uint8)(&riv.entropy),size=riv.entropy_size * #@uint64}
-    riv.prng:srand_entropy(entropy)
-  end
-  for i: uint32=key_toggle_count,<math.min(riv.key_toggle_count,(@uint32)(#riv.key_toggles)) do
+  if key_toggle_count == 0 then return end
+  for i: uint32=0,<math.min(key_toggle_count,(@uint32)(#riv.key_toggles)) do
+    local key_code: uint8 = riv.key_toggles[i]
     riv.key_toggles[i] = 0
+    riv.keys[key_code].press = false
+    riv.keys[key_code].release = false
+  end
+  riv.key_toggle_count = 0
+end
+
+global function riv_poll_inputs(): void
+  local key_toggle_count: uint32 = riv.key_toggle_count
+  if key_toggle_count == 0 then return end
+  key_toggle_count = math.min(key_toggle_count,(@uint32)(#riv.key_toggles))
+  for i: uint32=0,<key_toggle_count do
+    local key_code: uint8 = riv.key_toggles[i]
+    local down: boolean = not riv.keys[key_code].down
+    local frame: uint64 = riv.frame
+    riv.key_toggles[i] = key_code
+    riv.keys[key_code].down = down
+    riv.keys[key_code].up = not down
+    if down then
+      riv.keys[key_code].press = true
+      riv.keys[key_code].down_frame = frame
+    else -- up
+      riv.keys[key_code].release = true
+      riv.keys[key_code].up_frame = frame
+    end
+    riv_append_keystroke_entropy(key_code, down, frame)
   end
   riv.key_toggle_count = key_toggle_count
+  local entropy: span(uint8) = {data=(@*[0]uint8)(&riv.entropy),size=riv.entropy_size * #@uint64}
+  riv.prng:srand_entropy(entropy)
 end

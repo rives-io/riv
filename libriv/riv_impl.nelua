@@ -131,6 +131,8 @@ global function riv_present(): boolean <cexport>
   end
   -- copy outcard description to driver
   riv_sync_outcard(false)
+  -- reset keyboard inputs before the device fill it
+  riv_reset_inputs()
   -- present
   riv_yield(RIV_CONTROL_PRESENT)
   -- should we stop?

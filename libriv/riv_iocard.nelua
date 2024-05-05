@@ -4,6 +4,9 @@ require 'linux'
 require 'memory'
 require '.riv_types'
 
+local outcard_fd: cint = 0
+local outcard_fd_size: uint32 = 0
+local outhist_fd: cint = 0
 local outhist_tracking_json: boolean = false
 
 local function get_env_fd(name: string): int32
@@ -15,57 +18,65 @@ local function get_env_fd(name: string): int32
 end
 
 global function riv_sync_incard(): void <noinline>
-  riv.incard_len = riv.incard_len & (@uint32)(RIV_SIZE_INCARD-1)
+  assert(riv.incard_len < RIV_SIZE_INCARD, 'incard is too large')
 
   -- retrieve input card from fd
-  local fd: int32 = get_env_fd('RIV_INCARD_FD')
-  if fd > 0 then
-    local size: isize = lseek(fd, 0, SEEK_END)
+  local incard_fd: int32 = get_env_fd('RIV_INCARD_FD')
+  if incard_fd > 0 then
+    local size: isize = lseek(incard_fd, 0, SEEK_END)
     assert(size >= 0 and size < RIV_SIZE_INCARD, 'invalid incard fd size')
     if size > 0 then
-      local ptr: pointer = mmap(nilptr, (@usize)(size), PROT_READ, MAP_SHARED, fd, 0)
+      local ptr: pointer = mmap(nilptr, (@usize)(size), PROT_READ, MAP_SHARED, incard_fd, 0)
       assert(ptr ~= MAP_FAILED, 'incard fd mmap failed')
       memory.copy(&riv.incard[0], ptr, (@usize)(size))
       munmap(ptr, (@usize)(size))
     end
     riv.incard_len = (@uint32)(size)
   end
+
+  outcard_fd = get_env_fd('RIV_OUTCARD_FD')
+  if outcard_fd > 0 then
+    assert(ftruncate(outcard_fd, riv.outcard_len) == 0, 'outcard ftruncate failed')
+    outcard_fd_size = riv.outcard_len
+  end
+  outhist_fd = get_env_fd('RIV_OUTHIST_FD')
 end
 
 global function riv_sync_outcard(last: boolean): void <noinline>
-  riv.outcard_len = riv.outcard_len
+  assert(riv.outcard_len < RIV_SIZE_OUTCARD, 'outcard is too large')
 
   local outcard_str: string = {data=&riv.outcard[0], riv.outcard_len}
 
-  do -- save output card to fd
-    local fd: int32 = get_env_fd('RIV_OUTCARD_FD')
-    if fd > 0 then
-      assert(lseek(fd, 0, SEEK_SET) == 0, 'outcard lseek failed')
-      assert(write(fd, outcard_str.data, outcard_str.size) == outcard_str.size, 'outcard write failed')
-      assert(ftruncate(fd, outcard_str.size) == 0, 'outcard ftruncate failed')
+  -- save output card to fd
+  if outcard_fd > 0 then
+    if outcard_str.size > 0 then
+      assert(lseek(outcard_fd, 0, SEEK_SET) == 0, 'outcard lseek failed')
+      assert(write(outcard_fd, outcard_str.data, outcard_str.size) == outcard_str.size, 'outcard write failed')
+    end
+    if outcard_fd_size ~= outcard_str.size then
+      assert(ftruncate(outcard_fd, outcard_str.size) == 0, 'outcard ftruncate failed')
+      outcard_fd_size = outcard_str.size
     end
   end
 
-  do -- save output history to fd
-    local fd: int32 = get_env_fd('RIV_OUTHIST_FD')
-    if fd > 0 then
+  -- save output history to fd
+  if outhist_fd > 0 then
+    if riv.frame == 0 then
+      outhist_tracking_json = #outcard_str >= 4 and outcard_str:subview(1,4) == 'JSON'
+    end
+    if outhist_tracking_json then
       if riv.frame == 0 then
-        outhist_tracking_json = #outcard_str >= 4 and outcard_str:subview(1,4) == 'JSON'
-      end
-      if outhist_tracking_json then
-        if riv.frame == 0 then
-          assert(write(fd, '[\n'_cstring, 2) == 2, 'outhist write failed')
-        else
-          assert(write(fd, ',\n'_cstring, 2) == 2, 'outhist write failed')
-        end
-        outcard_str = outcard_str:subview(5)
-        assert(write(fd, outcard_str.data, outcard_str.size) == outcard_str.size, 'outhist write failed')
-        if last then
-          assert(write(fd, '\n]\n'_cstring, 2) == 2, 'outhist write failed')
-        end
+        assert(write(outhist_fd, '[\n'_cstring, 2) == 2, 'outhist write failed')
       else
-        assert(write(fd, outcard_str.data, outcard_str.size) == outcard_str.size, 'outhist write failed')
+        assert(write(outhist_fd, ',\n'_cstring, 2) == 2, 'outhist write failed')
       end
+      outcard_str = outcard_str:subview(5)
+      assert(write(outhist_fd, outcard_str.data, outcard_str.size) == outcard_str.size, 'outhist write failed')
+      if last then
+        assert(write(outhist_fd, '\n]\n'_cstring, 2) == 2, 'outhist write failed')
+      end
+    else
+      assert(write(outhist_fd, outcard_str.data, outcard_str.size) == outcard_str.size, 'outhist write failed')
     end
   end
 end
