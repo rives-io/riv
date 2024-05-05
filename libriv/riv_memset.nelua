@@ -1,0 +1,56 @@
+## pragmas.unitname = ''
+
+## local function fast_memset_impl(chunk_size)
+  -- fill head and tail with minimal branching
+  if n == 0 then return end
+  s[0] = c
+  s[n-1] = c
+  if n <= 2 then return end
+  s[1] = c
+  s[n-2] = c
+  s[2] = c
+  s[n-3] = c
+  if n <= 6 then return end
+  s[3] = c
+  s[n-4] = c
+  s[4] = c
+  s[n-5] = c
+  s[5] = c
+  s[n-6] = c
+  s[6] = c
+  s[n-7] = c
+  if n <= 14 then return end
+  -- align to 8 bytes
+  local k: uint64 = -(@usize)(s) & 7_u64
+  s = &s[k]
+  n = (n - k) & -8_u64
+  -- set large chunks
+  local c8: uint64 = 0x0101010101010101_u64 * c
+  while n >= #[chunk_size]# do
+    local s8: *[0]uint64 = (@*[0]uint64)(&s[n - #[chunk_size]#])
+    ## for j=0,chunk_size//8-1 do
+      s8[#[j]#] = c8
+    ## end
+    n = n - #[chunk_size]#
+  end
+  -- set trailing chunks
+  ## local w = chunk_size
+  ## repeat
+    ## w = w // 2
+    if n >= #[w]# then
+      local s8: *[0]uint64 = (@*[0]uint64)(&s[n - #[w]#])
+      ## for j=0,w//8-1 do
+        s8[#[j]#] = c8
+      ## end
+      n = n - #[w]#
+    end
+  ## until w == 8
+## end
+
+global function riv_memset_large(s: *[0]uint8, c: uint8, n: uint64): void <inline>
+  ## fast_memset_impl(256)
+end
+
+global function riv_memset_small(s: *[0]uint8, c: uint8, n: uint64): void <inline>
+  ## fast_memset_impl(32)
+end

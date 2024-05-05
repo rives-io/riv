@@ -8,7 +8,8 @@ local MAP_SIZE <comptime> = 16
 riv.width = TILE_SIZE*MAP_SIZE
 riv.height = TILE_SIZE*MAP_SIZE
 
-local sps_id: uint64 = riv_make_spritesheet(riv_make_image("wander.png", 0), TILE_SIZE, TILE_SIZE)
+local img_id: uint64 = riv_make_image("wander.png", 0)
+local sps_id: uint64 = riv_make_spritesheet(img_id, TILE_SIZE, TILE_SIZE)
 local x: float32, y: float32 = MAP_SIZE // 2, MAP_SIZE // 2   -- position (in tiles)
 local dx: float32, dy: float32 = 0.0, 0.0 -- velocity
 local f: float32 = 0.0                    -- frame number
@@ -37,11 +38,13 @@ local map: [MAP_SIZE][MAP_SIZE]uint8 = {
 
 local function draw()
   -- draw map
+  riv.images[img_id].color_key = -1
   for y=0,<MAP_SIZE do
     for x=0,<MAP_SIZE do
       riv_draw_sprite(map[y][x], sps_id, x*TILE_SIZE, y*TILE_SIZE, 1, 1, 1, 1)
     end
   end
+  riv.images[img_id].color_key = 0
 
   -- draw the player
   riv_draw_sprite(1 + math.ifloor(f), sps_id, -- n, sps_id

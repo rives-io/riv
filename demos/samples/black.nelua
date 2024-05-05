@@ -1,0 +1,7 @@
+## pragma{nogc = true, noerrorloc = true}
+
+require 'riv'
+
+repeat
+  riv_clear(RIV_COLOR_BLACK)
+until not riv_present()

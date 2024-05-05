@@ -22,7 +22,7 @@ NELUA_CACHEDIR=.
 ifeq ($(debug), yes)
 	CFLAGS+=-Og -march=rv64g
 else # release flags
-	CFLAGS+=-O2 -march=rv64g -DNDEBUG -fno-stack-protector -ffast-math -fallow-store-data-races
+	CFLAGS+=-Ofast -march=rv64g -DNDEBUG -fno-stack-protector
 	STRIPFLAGS+=--strip-unneeded --remove-section=.comment
 	NELUA_FLAGS+=--strip-bin --stripflags="$(STRIPFLAGS)"
 endif

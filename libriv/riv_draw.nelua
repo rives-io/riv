@@ -1,10 +1,9 @@
 ## pragmas.unitname = ''
 
-require 'memory'
 require 'math'
-require 'C.string'
 require '.riv_types'
 require '.riv_fonts'
+require '.riv_memset'
 
 global function riv_init_draw(): void
   -- set initial clip big enough for all screen sizes
@@ -31,7 +30,7 @@ global function riv_init_draw(): void
 end
 
 global function riv_clear(col: uint32): void <cexport>
-  C.memset(&riv.framebuffer[0], (@uint8)(col), riv.width * riv.height)
+  riv_memset_large(&riv.framebuffer[0], (@uint8)(col), riv.width * riv.height)
 end
 
 local function riv_get_clip_limits(): (int64, int64, int64, int64, int64) <inline>
@@ -64,7 +63,7 @@ global function riv_draw_line(x0: int64, y0: int64, x1: int64, y1: int64, col: u
       local ix0: int64, ix1: int64 = math.max(x0, cx0), math.min(x1, cx1)
       local dx: int64 = ix1 - ix0 + 1
       if dx > 0 then
-        C.memset(&fb[y0*fw + ix0], co, (@usize)(dx))
+        riv_memset_small(&fb[y0*fw + ix0], co, (@usize)(dx))
       end
     end
   elseif x0 == x1 then -- vertical line
@@ -127,10 +126,10 @@ global function riv_draw_rect_fill(x0: int64, y0: int64, w: int64, h: int64, col
   if dx > 0 and dy > 0 then
     if dx ~= fw then
       for y: int64=iy0,<iy1 do
-        C.memset(&fb[y*fw + ix0], co, (@usize)(dx))
+        riv_memset_small(&fb[y*fw + ix0], co, (@usize)(dx))
       end
     else
-      C.memset(&fb[iy0*fw + ix0], co, (@usize)((iy1-iy0)*dx))
+      riv_memset_large(&fb[iy0*fw + ix0], co, (@usize)((iy1-iy0)*dx))
     end
   end
 end
@@ -150,10 +149,10 @@ global function riv_draw_rect_line(x0: int64, y0: int64, w: int64, h: int64, col
     local x1: int64 = x0 + w - 1
     local y1: int64 = y0 + h - 1
     if y0 >= cy0 and y0 <= cy1 then -- top
-      C.memset(&fb[y0*fw + ix0], co, (@usize)(dx))
+      riv_memset_small(&fb[y0*fw + ix0], co, (@usize)(dx))
     end
     if y1 >= cy0 and y1 <= cy1 then -- bottom
-      C.memset(&fb[y1*fw + ix0], co, (@usize)(dx))
+      riv_memset_small(&fb[y1*fw + ix0], co, (@usize)(dx))
     end
     local vy0: int64, vy1: int64 = math.max(y0+1,iy0), math.min(y1, cy1+1)
     if x0 >= cx0 and x0 <= cx1 then -- left
@@ -190,8 +189,8 @@ global function riv_draw_circle_fill(ox: int64, oy: int64, d: int64, col: uint32
       local ix1: int64 = math.min(ox + erx, cx1)
       local dx: int64 = ix1 - ix0 + 1
       if dx > 0 then
-        if iy0v then C.memset(&fb[iy0*fw + ix0], co, (@usize)(dx)) end
-        if iy1v then C.memset(&fb[iy1*fw + ix0], co, (@usize)(dx)) end
+        if iy0v then riv_memset_small(&fb[iy0*fw + ix0], co, (@usize)(dx)) end
+        if iy1v then riv_memset_small(&fb[iy1*fw + ix0], co, (@usize)(dx)) end
       end
     end
   end
@@ -254,8 +253,8 @@ global function riv_draw_ellipse_fill(ox: int64, oy: int64, w: int64, h: int64, 
       local ix1: int64 = math.min(ox + irx, cx1)
       local dx: int64 = ix1 - ix0 + 1
       if dx > 0 then
-        if iy0v then C.memset(&fb[iy0*fw + ix0], co, (@usize)(dx)) end
-        if iy1v then C.memset(&fb[iy1*fw + ix0], co, (@usize)(dx)) end
+        if iy0v then riv_memset_small(&fb[iy0*fw + ix0], co, (@usize)(dx)) end
+        if iy1v then riv_memset_small(&fb[iy1*fw + ix0], co, (@usize)(dx)) end
       end
     end
   end
@@ -351,7 +350,7 @@ global function riv_draw_triangle_fill(x0: int64, y0: int64, x1: int64, y1: int6
       local ix1: int64 = math.min(math.ifloor(ix1f + 0.125_f32), cx1)
       local dx: int64 = ix1 - ix0 + 1
       if dx > 0 then
-        C.memset(&fb[iy*fw + ix0], co, (@usize)(dx))
+        riv_memset_small(&fb[iy*fw + ix0], co, (@usize)(dx))
       end
     end
   end
@@ -500,7 +499,6 @@ end
     else -- palette swap disabled
       if imgcolkey < 256 then -- valid color key
         for iy0: int64=by0,ey1 do
-          local isy: int64 = iy0 + sy0
           for ix0: int64=bx0,ex1 do
             local co: uint8 = imgp[(iy0 + sy0)*imgw + (ix0 + sx0)]
             if co ~= imgcolkey then
