@@ -235,19 +235,22 @@ local global_pcm_frame: uint64
 local global_sample_rate: uint64
 
 -- Initialize audio subsystem.
-function rivemu_audio.setup(pitch: float64): void
+function rivemu_audio.setup(): void
   -- initialize miniaudio
   local config: ma_engine_config = ma_engine_config_init()
   config.sampleRate = DEFAULT_SAMPLE_RATE
   config.channels = DEFAULT_CHANNELS
   config.periodSizeInFrames = DEFAULT_PERIOD_SIZE
   config.noAutoStart = MA_TRUE
-  global_pitch = pitch
+  global_pitch = 1
   ma_assert!(ma_engine_init(&config, &engine))
   ma_engine_set_volume(&engine, DEFAULT_VOLUME)
   global_sample_rate = ma_engine_get_sample_rate(&engine)
   global_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine)
+end
 
+function rivemu_audio.set_pitch(pitch: float64): void
+  global_pitch = pitch
 end
 
 -- Reset audio subsystem.
@@ -344,13 +347,14 @@ local function handle_sound(desc: riv_sound_desc): void
     end
     local asound: *ma_sound = new(@ma_sound)
     local flags: uint32 = MA_SOUND_FLAG_NO_SPATIALIZATION
-    if desc.pitch ~= 0 then flags = flags | MA_SOUND_FLAG_NO_PITCH end
+    local pitch: float64 = (desc.pitch > 0 and desc.pitch or 1.0) * global_pitch
+    if desc.pitch <= 0 and pitch == 1.0 then flags = flags | MA_SOUND_FLAG_NO_PITCH end
     ma_assert!(ma_sound_init_from_data_source(&engine, ds, flags, nilptr, asound))
     local sample_rate: uint32
     ma_assert!(ma_sound_get_data_format(asound, nilptr, nilptr, &sample_rate, nilptr, 0))
     ma_sound_set_volume(asound, desc.volume)
     if desc.pan ~= 0 then ma_sound_set_pan(asound, desc.pan) end
-    if desc.pitch > 0 then ma_sound_set_pitch(asound, desc.pitch) end
+    if pitch ~= 1.0 then ma_sound_set_pitch(asound, pitch) end
     if desc.seek > 0 then
       local seek_frame: uint64 = math.ifloor(sample_rate * desc.seek)
       ma_assert!(ma_sound_seek_to_pcm_frame(asound, seek_frame))
@@ -396,8 +400,8 @@ local function handle_sound(desc: riv_sound_desc): void
     else -- update sound
       ma_sound_set_volume(sound.asound, desc.volume)
       ma_sound_set_pan(sound.asound, desc.pan)
-      if desc.pitch ~= 0 then
-        ma_sound_set_pitch(sound.asound, desc.pitch)
+      if desc.pitch > 0 then
+        ma_sound_set_pitch(sound.asound, desc.pitch * global_pitch)
       end
     end
   end

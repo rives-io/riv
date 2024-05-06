@@ -7,6 +7,9 @@ var lastCartridge;
 var lastFrame;
 var lastTotalFrames;
 var lastTargetFps;
+var statusBeforePause;
+var paused = false;
+var speed = 1;
 var runtimeInitialized = false;
 
 let statusElem = document.getElementById("status");
@@ -36,6 +39,9 @@ let outhashElem = document.getElementById("outhash");
 let outsizeElem = document.getElementById("outsize");
 let cartsizeElem = document.getElementById("cartsize");
 let carthashElem = document.getElementById("carthash");
+let cartridgesElem = document.getElementById("cartridges");
+let analysisBoxElem = document.getElementById("analysis-box");
+let changeSpeedElem = document.getElementById("change-speed");
 let textDecoder = new TextDecoder();
 let textEncode = new TextEncoder();
 var Module = {};
@@ -146,6 +152,15 @@ function waitEvent(name) {
   })
 }
 
+// Toggle visibility of an element.
+function toggleElem(el) {
+  if (el.style.display === "none") {
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
+  }
+}
+
 // Wait the WASM emulator be downloaded and initialized.
 async function waitRuntimeInitialize() {
   if (!runtimeInitialized) {
@@ -186,12 +201,30 @@ async function rivemuBeforeStart(tape, cartridge, incard, entropy, args) {
     outsizeElem.textContent = "N/A";
   }
   canvasOverlayElem.style.display = "none";
+  changeSpeedElem.textContent = "1.0X"
+  speed = 1.0;
+  paused = false;
 
   // Disable some buttons while recording/replaying
+  document.getElementById('pause').disabled = false;
+  document.getElementById('change-speed').disabled = false;
   document.getElementById('stop').disabled = false;
   document.getElementById('record').disabled = false;
   document.getElementById('replay').disabled = false;
   document.getElementById('download_cartridge').disabled = false;
+}
+
+async function rivemuUpload(cartridgeUrl, tapeUrl) {
+  await rivemuStop();
+  statusElem.textContent = "Downloading cartridge...";
+  let cartridgeFile = cartridgeUrl ? await downloadFile(cartridgeUrl) : await uploadFileDialog(".sqfs");
+  if (tapeUrl) {
+    statusElem.textContent = "Downloading tape...";
+    let tapeFile = tapeUrl ? await downloadFile(tapeUrl) : await uploadTapeDialog(".rivtape");
+    await rivemuReplay(tapeFile, cartridgeFile);
+  } else {
+    await rivemuRecord(cartridgeFile, tapeFile);
+  }
 }
 
 async function rivemuUploadCartridge(url) {
@@ -225,6 +258,42 @@ function rivemuDownloadIncard() {
 
 function rivemuDownloadOutcard() {
   downloadFileDialog(lastOutcard, "gameplay.rivoutcard");
+}
+
+// Pause recording/replaying.
+function rivemuPause() {
+  if (!paused) {
+    paused = true;
+    statusBeforePause = statusElem.textContent;
+    statusElem.textContent = "Paused";
+    Module.ccall('rivemu_set_speed', null, ['number'], [0]);
+  } else {
+    paused = false;
+    statusElem.textContent = statusBeforePause;
+    Module.ccall('rivemu_set_speed', null, ['number'], [speed]);
+  }
+}
+
+function rivemuChangeSpeed() {
+  if (speed >= 4.0) {
+    changeSpeedElem.textContent = "0.5X"
+    speed = 0.5;
+  } else if (speed >= 2.0) {
+    changeSpeedElem.textContent = "4.0X"
+    speed = 4.0;
+  } else if (speed >= 1.5) {
+    changeSpeedElem.textContent = "2.0X"
+    speed = 2.0;
+  } else if (speed >= 1) {
+    changeSpeedElem.textContent = "1.5X"
+    speed = 1.5;
+  } else if (speed >= 0.5) {
+    changeSpeedElem.textContent = "1.0X"
+    speed = 1.0;
+  }
+  if (!paused) {
+    Module.ccall('rivemu_set_speed', null, ['number'], [speed]);
+  }
 }
 
 // Stop recording/replaying.
@@ -306,6 +375,10 @@ function rivemuFullscreen() {
   canvasElem.requestFullscreen();
 }
 
+function rivemuToggleAnalysis() {
+  toggleElem(analysisBoxElem);
+}
+
 // Called by RIVEMU before the first frame.
 function rivemu_on_begin(width, height, target_fps, total_frames) {
   lastFrame = 0;
@@ -334,6 +407,9 @@ async function rivemu_on_finish(tape, outcard, outhash) {
     console.log(scores);
   }
   // Update buttons
+  paused = false;
+  document.getElementById('pause').disabled = true;
+  document.getElementById('change-speed').disabled = true;
   document.getElementById('stop').disabled = true;
   document.getElementById('replay').disabled = false;
   document.getElementById('download_outcard').disabled = false;
@@ -379,5 +455,6 @@ let params = hash.split('&').reduce(function (res, item) {
 
 // Play external cartridge
 if (params.cartridge) {
-  rivemuUploadCartridge(params.cartridge);
+  cartridgesElem.style.display = "none";
+  rivemuUpload(params.cartridge, params.tape);
 }

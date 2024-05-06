@@ -25,7 +25,12 @@ body {
   outline: none;
   max-width: 768px;
   max-height: 768px;
-  margin: 4px;
+  margin-top: 4px;
+}
+#cartridges {
+  display: block;
+  margin: 0 auto;
+  margin-top: 4px;
 }
 #canvas-overlay {
   font-size: 32px;
@@ -58,8 +63,14 @@ body {
 .right {
   float: right;
 }
+.center {
+  text-align: center;
+}
 .row {
   display: flex;
+}
+.m-4 {
+  margin: 4px;
 }
 .column-2 {
   flex: 50%;
@@ -76,6 +87,18 @@ th {
 td {
   color: #aaa;
 }
-.small {
-  font-size: 12px;
+#button-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#button-box button {
+  margin: 0 2px;
+}
+#button-box svg {
+  display: block;
+}
+#change-speed {
+  font-size: 11px;
+  font-weight: bold;
 }

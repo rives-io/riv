@@ -596,7 +596,8 @@ local function startup(): void
     end
   end
   if not options.no_audio then
-    rivemu_audio.setup(options.speed)
+    rivemu_audio.setup()
+    rivemu_audio.set_pitch(options.speed)
     rivemu_audio.start()
     if not options.no_loading then
       rivemu_audio.start_boot_sound()
@@ -943,11 +944,13 @@ local function frame(): void
       framelimiter.last_frame_time = os.now()
     elseif options.no_window then -- process immediately when there is no window
       advance_frame()
+    elseif options.speed <= 0 then
+      -- skip
     elseif framelimiter.target_update_fps <= refresh_rate then -- wait time between frames
       if framelimiter:should_process_next_frame(os.now()) then
         advance_frame()
       end
-    else -- advance many frames at once when FPS is too big
+    else
       local now_start: float64 = os.now()
       local now_end: float64 = now_start + (1.0 / refresh_rate)
       local dt: float64 = 1.0 / (refresh_rate * options.speed)
@@ -1092,6 +1095,14 @@ local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32,
   run()
 end
 
+local function rivemu_set_speed(speed: float64) <cexport>
+  speed = math.clamp(speed, 0, 4)
+  options.speed = speed
+  if speed > 0 then
+    rivemu_audio.set_pitch(speed)
+  end
+end
+
 local function rivemu_stop(url: cstring): boolean <cexport>
   if not started then return false end
   rivemu_printer.debugf('[RIVEMU] Stop requested!\n')
@@ -1118,6 +1129,7 @@ local export_functions = {
   '_rivemu_start_record',
   '_rivemu_start_replay',
   '_rivemu_stop',
+  '_rivemu_set_speed',
   '_malloc',
   '_free',
 }

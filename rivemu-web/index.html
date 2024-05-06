@@ -4,129 +4,152 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>RIVEMU</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
     <link rel="stylesheet" href="index.css">
   </head>
   <body>
+    <select name="cartridges" id="cartridges" onchange="rivemuUploadCartridge(this.value);" autocomplete="off">
+      <option selected disabled hidden>Select Cartridge</option>
+      <option value="cartridges/antcopter.sqfs">GAME - Antcopter</option>
+      <option value="cartridges/2048.sqfs">GAME - 2048</option>
+      <option value="cartridges/snake.sqfs">GAME - Snake</option>
+      <option value="cartridges/freedoom.sqfs">GAME - Freedoom</option>
+      <option value="cartridges/monky.sqfs">GAME - Monky</option>
+      <option value="cartridges/tetrix.sqfs">GAME - Tetrix</option>
+      <option value="cartridges/bounce.sqfs">DEMO - bounce</option>
+      <option value="cartridges/circles.sqfs">DEMO - circles</option>
+      <option value="cartridges/glyphs.sqfs">DEMO - glyphs</option>
+      <option value="cartridges/hello.sqfs">DEMO - hello</option>
+      <option value="cartridges/lines.sqfs">DEMO - lines</option>
+      <option value="cartridges/many.sqfs">DEMO - many</option>
+      <option value="cartridges/palette.sqfs">DEMO - palette</option>
+      <option value="cartridges/particles.sqfs">DEMO - particles</option>
+      <option value="cartridges/wander.sqfs">DEMO - wander</option>
+      <option value="cartridges/waves.sqfs">DEMO - waves</option>
+      <option value="cartridges/hello-c.sqfs">DEMO - hello-c</option>
+      <option value="cartridges/hello-lua.sqfs">DEMO - hello-lua</option>
+      <option value="cartridges/hello-nelua.sqfs">DEMO - hello-nelua</option>
+      <option value="cartridges/hello-js.sqfs">DEMO - hello-js</option>
+      <option value="cartridges/hello-py.sqfs">DEMO - hello-py</option>
+    </select>
     <div class="canvas-wrapper">
-      <span id="canvas-overlay"><span class="material-symbols-outlined">download</span><br>Drop cartridge .sqfs file</span>
+      <span id="canvas-overlay">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="2em" height="2em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 16l-5-5l1.4-1.45l2.6 2.6V4h2v8.15l2.6-2.6L17 11zm-8 4v-5h2v3h12v-3h2v5z"/></svg>
+        </div>
+        Drop cartridge .sqfs file
+      </span>
       <canvas id="canvas" tabindex="-1" width="768" height="768" oncontextmenu="event.preventDefault()"></canvas>
     </div>
     <div class="content-wrapper">
-      <div>
-        <button id="record" disabled autocomplete="off" onclick="rivemuRecord()">Record</button>
-        <button id="replay" disabled autocomplete="off" onclick="rivemuReplay()">Replay</button>
-        <button id="stop" disabled autocomplete="off" onclick="rivemuStop()">Stop</button>
-        <button id="fullscreen" autocomplete="off" onclick="rivemuFullscreen()">Fullscreen</button>
-        <select name="games" id="games" class="right" onchange="rivemuUploadCartridge(this.value);" autocomplete="off">
-          <option selected disabled hidden>Select Cartridge</option>
-          <option value="cartridges/antcopter.sqfs">GAME - Antcopter</option>
-          <option value="cartridges/2048.sqfs">GAME - 2048</option>
-          <option value="cartridges/snake.sqfs">GAME - Snake</option>
-          <option value="cartridges/freedoom.sqfs">GAME - Freedoom</option>
-          <option value="cartridges/monky.sqfs">GAME - Monky</option>
-          <option value="cartridges/tetrix.sqfs">GAME - Tetrix</option>
-          <option value="cartridges/bounce.sqfs">DEMO - bounce</option>
-          <option value="cartridges/circles.sqfs">DEMO - circles</option>
-          <option value="cartridges/glyphs.sqfs">DEMO - glyphs</option>
-          <option value="cartridges/hello.sqfs">DEMO - hello</option>
-          <option value="cartridges/lines.sqfs">DEMO - lines</option>
-          <option value="cartridges/many.sqfs">DEMO - many</option>
-          <option value="cartridges/palette.sqfs">DEMO - palette</option>
-          <option value="cartridges/particles.sqfs">DEMO - particles</option>
-          <option value="cartridges/wander.sqfs">DEMO - wander</option>
-          <option value="cartridges/waves.sqfs">DEMO - waves</option>
-          <option value="cartridges/hello-c.sqfs">DEMO - hello-c</option>
-          <option value="cartridges/hello-lua.sqfs">DEMO - hello-lua</option>
-          <option value="cartridges/hello-nelua.sqfs">DEMO - hello-nelua</option>
-          <option value="cartridges/hello-js.sqfs">DEMO - hello-js</option>
-          <option value="cartridges/hello-py.sqfs">DEMO - hello-py</option>
-        </select>
+      <div id="button-box">
+        <button id="record" title="Record" onclick="rivemuRecord()" disabled autocomplete="off">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M19 12c0 3.86-3.14 7-7 7s-7-3.14-7-7s3.14-7 7-7s7 3.14 7 7"/></svg>
+        </button>
+        <button id="replay" title="Replay" onclick="rivemuReplay()" disabled autocomplete="off">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 22q-1.875 0-3.512-.712t-2.85-1.925t-1.925-2.85T3 13h2q0 2.925 2.038 4.963T12 20t4.963-2.037T19 13t-2.037-4.962T12 6h-.15l1.55 1.55L12 9L8 5l4-4l1.4 1.45L11.85 4H12q1.875 0 3.513.713t2.85 1.925t1.925 2.85T21 13t-.712 3.513t-1.925 2.85t-2.85 1.925T12 22"/></svg>
+        </button>
+        <button id="stop" title="Stop" onclick="rivemuStop()" disabled autocomplete="off">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M6 18V6h12v12z"/></svg>
+        </button>
+        <button id="pause" title="Toggle Pause" onclick="rivemuPause()" disabled autocomplete="off">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5v14l8-7m2 7h3V5h-3m5 0v14h3V5"/></svg>
+        </button>
+        <button id="change-speed" title="Toggle Speed" onclick="rivemuChangeSpeed()" disabled autocomplete="off">
+          1.0X
+        </button>
+        <button id="fullscreen" title="Fullscreen" onclick="rivemuFullscreen()" autocomplete="off">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M3 21v-5h2v3h3v2zm13 0v-2h3v-3h2v5zM3 8V3h5v2H5v3zm16 0V5h-3V3h5v5z"/></svg>
+        </button>
+        <button id="analyze" title="Analyze" onclick="rivemuToggleAnalysis()" autocomplete="off">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M21.71 7.29a1 1 0 0 0-1.42 0L14 13.59l-4.29-4.3a1 1 0 0 0-1.42 0l-6 6a1 1 0 0 0 0 1.42a1 1 0 0 0 1.42 0L9 11.41l4.29 4.3a1 1 0 0 0 1.42 0l7-7a1 1 0 0 0 0-1.42"/></svg>
+        </button>
       </div>
-      <div class="row">
-        <div class="column-2">
-          <table>
-            <tr><th>Status</th><td><span id="status">Downloading emulator...</span></td></tr>
-            <tr><th>Time</th><td><span id="time">N/A</span></td></tr>
-            <tr><th>Frame</th><td><span id="frame">N/A</span></td></tr>
-            <tr><th>Progress</th><td><span id="progress">N/A</span></td></tr>
-            <tr><th>Score</th><td><span id="score">N/A</span></td></tr>
-            <tr><th>Resolution</th><td><span id="resolution">N/A</span></td></tr>
-          </table>
+      <div id="analysis-box" style="display: none">
+        <div class="row">
+          <div class="column-2">
+            <table>
+              <tr><th>Status</th><td><span id="status">Downloading emulator...</span></td></tr>
+              <tr><th>Time</th><td><span id="time">N/A</span></td></tr>
+              <tr><th>Frame</th><td><span id="frame">N/A</span></td></tr>
+              <tr><th>Progress</th><td><span id="progress">N/A</span></td></tr>
+              <tr><th>Score</th><td><span id="score">N/A</span></td></tr>
+              <tr><th>Resolution</th><td><span id="resolution">N/A</span></td></tr>
+            </table>
+          </div>
+          <div class="column-2">
+            <table>
+              <tr><th>FPS</th><td><span id="fps">N/A</span></td></tr>
+              <tr><th>CPU Cost</th><td><span id="cpuCost">N/A</span></td></tr>
+              <tr><th>CPU Speed</th><td><span id="cpuSpeed">N/A</span></td></tr>
+              <tr><th>CPU Usage</th><td><span id="cpuUsage">N/A</span></td></tr>
+              <tr><th>CPU Cycles</th><td><span id="cpuCycles">N/A</span></td></tr>
+            </table>
+          </div>
         </div>
-        <div class="column-2">
-          <table>
-            <tr><th>FPS</th><td><span id="fps">N/A</span></td></tr>
-            <tr><th>CPU Cost</th><td><span id="cpuCost">N/A</span></td></tr>
-            <tr><th>CPU Speed</th><td><span id="cpuSpeed">N/A</span></td></tr>
-            <tr><th>CPU Usage</th><td><span id="cpuUsage">N/A</span></td></tr>
-            <tr><th>CPU Cycles</th><td><span id="cpuCycles">N/A</span></td></tr>
-          </table>
-        </div>
+        <table>
+          <tr>
+            <th>Cartridge</th>
+            <td>
+              <span id="carthash">N/A</span> - <span id="cartsize">N/A</span>
+              <button id="upload_cartridge" autocomplete="off" onclick="rivemuUploadCartridge()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11 16V7.85l-2.6 2.6L7 9l5-5l5 5l-1.4 1.45l-2.6-2.6V16zm-7 4v-5h2v3h12v-3h2v5z"/></svg>
+              </button>
+              <button id="download_cartridge" autocomplete="off" disabled onclick="rivemuDownloadCartridge()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 16l-5-5l1.4-1.45l2.6 2.6V4h2v8.15l2.6-2.6L17 11zm-8 4v-5h2v3h12v-3h2v5z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <th>Tape</th>
+            <td>
+              <span id="tapehash">N/A</span> - <span id="tapesize">N/A</span>
+              <button id="upload_tape" autocomplete="off" onclick="rivemuUploadTape()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11 16V7.85l-2.6 2.6L7 9l5-5l5 5l-1.4 1.45l-2.6-2.6V16zm-7 4v-5h2v3h12v-3h2v5z"/></svg>
+              </button>
+              <button id="download_tape" disabled autocomplete="off" onclick="rivemuDownloadTape()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 16l-5-5l1.4-1.45l2.6 2.6V4h2v8.15l2.6-2.6L17 11zm-8 4v-5h2v3h12v-3h2v5z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <th>Incard</th>
+            <td>
+              <span id="inhash">N/A</span> - <span id="insize">N/A</span>
+              <button id="upload_incard" autocomplete="off" onclick="rivemuUploadIncard()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11 16V7.85l-2.6 2.6L7 9l5-5l5 5l-1.4 1.45l-2.6-2.6V16zm-7 4v-5h2v3h12v-3h2v5z"/></svg>
+              </button>
+              <button id="download_incard" disabled autocomplete="off" onclick="rivemuDownloadIncard()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 16l-5-5l1.4-1.45l2.6 2.6V4h2v8.15l2.6-2.6L17 11zm-8 4v-5h2v3h12v-3h2v5z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <th>Outcard</th>
+            <td>
+              <span id="outhash">N/A</span> - <span id="outsize">N/A</span>
+              <button id="download_outcard" disabled autocomplete="off" onclick="rivemuDownloadOutcard()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 16l-5-5l1.4-1.45l2.6 2.6V4h2v8.15l2.6-2.6L17 11zm-8 4v-5h2v3h12v-3h2v5z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <th>Entropy</th>
+            <td>
+              <span id="entropyhash">N/A</span> - <span id="entropysize">N/A</span>
+              <br/>
+              <input type="text" id="entropy" autocomplete="off" style="width: 99%"/>
+            </td>
+          </tr>
+          <tr>
+            <th>Args</th>
+            <td>
+              <span id="argshash">N/A</span> - <span id="argssize">N/A</span>
+              <br/>
+              <input type="text" id="args" autocomplete="off" style="width: 99%"/>
+            </td>
+          </tr>
+        </table>
       </div>
-      <table>
-        <tr>
-          <th>Cartridge</th>
-          <td>
-            <span id="carthash">N/A</span> - <span id="cartsize">N/A</span>
-            <button id="upload_cartridge" autocomplete="off" onclick="rivemuUploadCartridge()">
-              <span class="material-symbols-outlined small">upload</span>
-            </button>
-            <button id="download_cartridge" autocomplete="off" disabled onclick="rivemuDownloadCartridge()">
-              <span class="small material-symbols-outlined">download</span>
-            </button>
-          </td>
-        </tr>
-        <tr>
-          <th>Tape</th>
-          <td>
-            <span id="tapehash">N/A</span> - <span id="tapesize">N/A</span>
-            <button id="upload_tape" autocomplete="off" onclick="rivemuUploadTape()">
-              <span class="material-symbols-outlined small">upload</span>
-            </button>
-            <button id="download_tape" disabled autocomplete="off" onclick="rivemuDownloadTape()">
-              <span class="material-symbols-outlined small">download</span>
-            </button>
-          </td>
-        </tr>
-        <tr>
-          <th>Incard</th>
-          <td>
-            <span id="inhash">N/A</span> - <span id="insize">N/A</span>
-            <button id="upload_incard" autocomplete="off" onclick="rivemuUploadIncard()">
-              <span class="material-symbols-outlined small">upload</span>
-            </button>
-            <button id="download_incard" disabled autocomplete="off" onclick="rivemuDownloadIncard()">
-              <span class="material-symbols-outlined small">download</span>
-            </button>
-          </td>
-        </tr>
-        <tr>
-          <th>Outcard</th>
-          <td>
-            <span id="outhash">N/A</span> - <span id="outsize">N/A</span>
-            <button id="download_outcard" disabled autocomplete="off" onclick="rivemuDownloadOutcard()">
-              <span class="material-symbols-outlined small">download</span>
-            </button>
-          </td>
-        </tr>
-        <tr>
-          <th>Entropy</th>
-          <td>
-            <span id="entropyhash">N/A</span> - <span id="entropysize">N/A</span>
-            <br/>
-            <input type="text" id="entropy" autocomplete="off" style="width: 99%"/>
-          </td>
-        </tr>
-        <tr>
-          <th>Args</th>
-          <td>
-            <span id="argshash">N/A</span> - <span id="argssize">N/A</span>
-            <br/>
-            <input type="text" id="args" autocomplete="off" style="width: 99%"/>
-          </td>
-        </tr>
-      </table>
     </div>
     <script src="index.js"></script>
     <script async src="rivemu.js"></script>
