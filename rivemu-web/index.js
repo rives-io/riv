@@ -42,6 +42,7 @@ let cartridgesElem = document.getElementById("cartridges");
 let analysisBoxElem = document.getElementById("analysis-box");
 let changeSpeedElem = document.getElementById("change-speed");
 let canvasDropElem = document.getElementById("canvas-drop");
+let canvasStartElem = document.getElementById("canvas-start");
 let canvasLoadElem = document.getElementById("canvas-load");
 let textDecoder = new TextDecoder();
 let textEncode = new TextEncoder();
@@ -224,6 +225,7 @@ async function rivemuBeforeStart(tape, cartridge, incard, entropy, args) {
   paused = false;
 
   // Disable some buttons while recording/replaying
+  hideElem(canvasStartElem);
   document.getElementById('pause').disabled = false;
   document.getElementById('change-speed').disabled = false;
   document.getElementById('stop').disabled = false;
@@ -238,18 +240,17 @@ function resetCanvasSize() {
 }
 
 async function rivemuUpload(cartridgeUrl, tapeUrl) {
+  hideElem(cartridgesElem);
   hideElem(canvasDropElem);
   await rivemuStop();
   resetCanvasSize();
   statusElem.textContent = "Downloading cartridge...";
-  let cartridgeFile = cartridgeUrl ? await downloadFile(cartridgeUrl) : await uploadFileDialog(".sqfs");
+  lastCartridge = cartridgeUrl ? await downloadFile(cartridgeUrl) : await uploadFileDialog(".sqfs");
   if (tapeUrl) {
     statusElem.textContent = "Downloading tape...";
-    let tapeFile = tapeUrl ? await downloadFile(tapeUrl) : await uploadTapeDialog(".rivtape");
-    await rivemuReplay(tapeFile, cartridgeFile);
-  } else {
-    await rivemuRecord(cartridgeFile);
+    lastTape = tapeUrl ? await downloadFile(tapeUrl) : await uploadTapeDialog(".rivtape");
   }
+  showFlexElem(canvasStartElem);
 }
 
 async function rivemuUploadCartridge(url) {
@@ -480,6 +481,11 @@ let params = hash.split('&').reduce(function (res, item) {
 
 // Play external cartridge
 if (params.cartridge) {
-  hideElem(cartridgesElem);
   rivemuUpload(params.cartridge, params.tape);
+}
+
+if (params.simple) {
+  hideElem(document.getElementById('pause'));
+  hideElem(document.getElementById('change-speed'));
+  hideElem(document.getElementById('analyze'));
 }
