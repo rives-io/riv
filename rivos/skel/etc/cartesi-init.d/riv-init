@@ -1,11 +1,17 @@
 #!/bin/sh
 
 # initialize cgroups
-[ -f /sys/fs/cgroup/cgroup.subtree_control ] || busybox mount -o nosuid,nodev,noexec -t cgroup2 cgroup2 /sys/fs/cgroup
-[ -d /sys/fs/cgroup ] && echo "+cpu +pids +memory" > /sys/fs/cgroup/cgroup.subtree_control
+busybox mount -o nosuid,nodev,noexec -t cgroup2 cgroup2 /sys/fs/cgroup
+echo "+cpu +pids +memory" > /sys/fs/cgroup/cgroup.subtree_control
 
 # allocate a 2MB hugepage for memory mapped devices
 busybox grep -Fq hugetlbfs /proc/filesystems && echo 6 > /proc/sys/vm/nr_hugepages
+
+# enable binfmt_misc
+mount -t binfmt_misc none /proc/sys/fs/binfmt_misc
+
+# allow to run C files using riv-jit-c
+echo ':c:M:://riv-jit-c::/usr/bin/riv-jit-c:' > /proc/sys/fs/binfmt_misc/register
 
 # security
 busybox mount -o noatime,nosuid,remount /

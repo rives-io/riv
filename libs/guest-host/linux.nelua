@@ -9,8 +9,9 @@ global function write(fd: cint, buf: pointer, n: usize): isize <cimport,cinclude
 global function lseek(fd: cint, offset: isize, whence: cint): isize <cimport,cinclude'<unistd.h>'> end
 global function ftruncate(fd: cint, length: isize): cint <cimport,cinclude'<unistd.h>'> end
 global function fsync(fd: cint): cint <cimport,cinclude'<unistd.h>'> end
-global function ioctl(fd: cint, request: usize, ...: cvarargs): cint  <cimport,cinclude'<sys/ioctl.h>'> end
+global function ioctl(fd: cint, request: usize, ...: cvarargs): cint <cimport,cinclude'<sys/ioctl.h>'> end
 global function getenv(name: cstring): cstring <cimport,cinclude'<stdlib.h>'> end
+global function chmod(pathname: cstring, mode: cint): cint <cimport,cinclude'<sys/stat.h>'> end
 
 global PROT_READ: cint <cimport,cinclude'<sys/mman.h>'>
 global PROT_WRITE: cint <cimport,cinclude'<sys/mman.h>'>

@@ -45,7 +45,7 @@ let canvasDropElem = document.getElementById("canvas-drop");
 let canvasStartElem = document.getElementById("canvas-start");
 let canvasLoadElem = document.getElementById("canvas-load");
 let textDecoder = new TextDecoder();
-let textEncode = new TextEncoder();
+let textEncoder = new TextEncoder();
 var Module = {};
 
 // Prevent space bar from clicking buttons
@@ -207,9 +207,9 @@ async function rivemuBeforeStart(tape, cartridge, incard, entropy, args) {
   carthashElem.textContent = await sha256sum(cartridge);
   inhashElem.textContent = await sha256sum(incard);
   insizeElem.textContent = incard.length + " B";
-  entropyhashElem.textContent = await sha256sum(textEncode.encode(entropy));
+  entropyhashElem.textContent = await sha256sum(textEncoder.encode(entropy));
   entropysizeElem.textContent = entropy.length + " B";
-  argshashElem.textContent = await sha256sum(textEncode.encode(args));
+  argshashElem.textContent = await sha256sum(textEncoder.encode(args));
   argssizeElem.textContent = args.length + " B";
   if (tape) {
     tapesizeElem.textContent = tape.length + " B";

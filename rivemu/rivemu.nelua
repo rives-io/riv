@@ -1034,6 +1034,8 @@ return exit_code
 
 ## else
 
+require 'linux'
+
 local function rivemu_start_record(cartridge_ptr: *uint8, cartridge_len: int32,
                                   incard_ptr: *uint8, incard_len: int32,
                                   entropy: cstring, args: cstring): void <cexport>
@@ -1041,20 +1043,29 @@ local function rivemu_start_record(cartridge_ptr: *uint8, cartridge_len: int32,
   options = parse_options()
   do
     local contents: string = {data=(@*[0]byte)(cartridge_ptr), size=cartridge_len}
-    local file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
-    fn_assert!(file:write(contents))
+    if contents:subview(1,4) == 'hsqs' then -- SQFS cartridge
+      local file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
+      fn_assert!(file:write(contents))
+      options.cartridge_filename = '/cartridge.sqfs'
+      options.entrypoint = "exec riv-run"
+    else -- some other file type, try to actually run it
+      local file: filestream <close> = fn_assert!(io.open('/cartridge', 'wb'))
+      fn_assert!(file:write(contents))
+      chmod('/cartridge', 755)
+      options.workspace_directory = "/"
+      options.workdir = "/workspace"
+      options.entrypoint = "exec ./cartridge"
+    end
   end
   do
     local contents: string = {data=(@*[0]byte)(incard_ptr), size=incard_len}
     local file: filestream <close> = fn_assert!(io.open('/replay.incard', 'wb'))
     fn_assert!(file:write(contents))
   end
-  options.cartridge_filename = '/cartridge.sqfs'
   options.record_filename = '/replay.rivlog'
   options.incard_filename = '/replay.incard'
   options.outcard_filename = '/replay.outcard'
   options.outhash_filename = '/replay.outhash'
-  options.entrypoint = "exec riv-run"
   options.entropy = entropy
   options.args = args
   options.recording = true
@@ -1070,8 +1081,19 @@ local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32,
   options = parse_options()
   do
     local contents: string = {data=(@*[0]byte)(cartridge_ptr), size=cartridge_len}
-    local file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
-    fn_assert!(file:write(contents))
+    if contents:subview(1,4) == 'hsqs' then -- SQFS cartridge
+      local file: filestream <close> = fn_assert!(io.open('/cartridge.sqfs', 'wb'))
+      fn_assert!(file:write(contents))
+      options.cartridge_filename = '/cartridge.sqfs'
+      options.entrypoint = "exec riv-run"
+    else -- some other file type, try to actually run it
+      local file: filestream <close> = fn_assert!(io.open('/cartridge', 'wb'))
+      fn_assert!(file:write(contents))
+      chmod('/cartridge', 755)
+      options.workspace_directory = "/"
+      options.workdir = "/workspace"
+      options.entrypoint = "exec ./cartridge"
+    end
   end
   do
     local contents: string = {data=(@*[0]byte)(incard_ptr), size=incard_len}
@@ -1083,12 +1105,10 @@ local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32,
     local file: filestream <close> = fn_assert!(io.open('/replay.rivlog', 'wb'))
     fn_assert!(file:write(contents))
   end
-  options.cartridge_filename = '/cartridge.sqfs'
   options.replay_filename = '/replay.rivlog'
   options.incard_filename = '/replay.incard'
   options.outcard_filename = '/replay.outcard'
   options.outhash_filename = '/replay.outhash'
-  options.entrypoint = "exec riv-run"
   options.entropy = entropy
   options.args = args
   options.replaying = true
