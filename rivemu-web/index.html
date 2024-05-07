@@ -32,12 +32,21 @@
       <option value="cartridges/hello-py.sqfs">DEMO - hello-py</option>
     </select>
     <div class="canvas-wrapper">
-      <span id="canvas-overlay">
+      <div id="canvas-drop" class="canvas-overlay">
         <div>
-          <svg xmlns="http://www.w3.org/2000/svg" width="2em" height="2em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 16l-5-5l1.4-1.45l2.6 2.6V4h2v8.15l2.6-2.6L17 11zm-8 4v-5h2v3h12v-3h2v5z"/></svg>
+          <div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="2em" height="2em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 16l-5-5l1.4-1.45l2.6 2.6V4h2v8.15l2.6-2.6L17 11zm-8 4v-5h2v3h12v-3h2v5z"/></svg>
+          </div>
+          Drop cartridge .sqfs file
         </div>
-        Drop cartridge .sqfs file
-      </span>
+      </div>
+      <div id="canvas-load" class="canvas-overlay" style="display: none">
+        <div>
+          <div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="2em" height="2em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2A10 10 0 1 0 22 12A10 10 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8A8 8 0 0 1 12 20Z" opacity="0.5"/><path fill="currentColor" d="M20 12h2A10 10 0 0 0 12 2V4A8 8 0 0 1 20 12Z"><animateTransform attributeName="transform" dur="1s" from="0 12 12" repeatCount="indefinite" to="360 12 12" type="rotate"/></path></svg>
+          </div>
+        </div>
+      </div>
       <canvas id="canvas" tabindex="-1" width="768" height="768" oncontextmenu="event.preventDefault()"></canvas>
     </div>
     <div class="content-wrapper">

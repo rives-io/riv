@@ -2,14 +2,15 @@
 
 * {
   font-family: 'Iosevka Web', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  font-size: 14px;
-  font-synthesis: none;
 }
+
 body {
   background-color: #131415;
   color: white;
-  margin-top: 0px;
+  margin-top: 4px;
+  font-size: 14px;
 }
+
 .canvas-wrapper {
   text-align: center;
   position: relative;
@@ -20,30 +21,38 @@ body {
   text-align: left;
 }
 #canvas {
+  margin-top: 4px;
+  max-width: 768px;
+  max-height: 768px;
   background-color: black;
   image-rendering: pixelated;
   outline: none;
-  max-width: 768px;
-  max-height: 768px;
-  margin-top: 4px;
 }
 #cartridges {
   display: block;
   margin: 0 auto;
-  margin-top: 4px;
 }
-#canvas-overlay {
-  font-size: 32px;
+.canvas-overlay {
+  margin-top: 4px;
   position: absolute;
-  top: 50%;
+  top: 0;
   left: 50%;
   transform: translate(-50%);
+  width: 100%;
+  height: 100%;
+  max-width: 768px;
+  max-height: 768px;
   z-index: 999;
   user-select: none;
   pointer-events: none;
+  background-color: rgba(0, 0, 0, 0.5);
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 @media screen and (max-width: 768px), screen and (max-height: 768px) {
-  #canvas, #canvas-overlay {
+  #canvas, .canvas-overlay {
     max-width: 512px;
     max-height: 512px;
   }
@@ -52,7 +61,7 @@ body {
   }
 }
 @media screen and (max-width: 512px), screen and (max-height: 512px)  {
-  #canvas, #canvas-overlay {
+  #canvas, .canvas-overlay {
     max-width: 256px;
     max-height: 256px;
   }

@@ -26,7 +26,6 @@ let cpuUsageElem = document.getElementById("cpuUsage");
 let cpuCyclesElem = document.getElementById("cpuCycles");
 let resolutionElem = document.getElementById("resolution");
 let canvasElem = document.getElementById("canvas");
-let canvasOverlayElem = document.getElementById("canvas-overlay");
 let tapesizeElem = document.getElementById("tapesize");
 let tapehashElem = document.getElementById("tapehash");
 let entropyhashElem = document.getElementById("entropyhash");
@@ -42,6 +41,8 @@ let carthashElem = document.getElementById("carthash");
 let cartridgesElem = document.getElementById("cartridges");
 let analysisBoxElem = document.getElementById("analysis-box");
 let changeSpeedElem = document.getElementById("change-speed");
+let canvasDropElem = document.getElementById("canvas-drop");
+let canvasLoadElem = document.getElementById("canvas-load");
 let textDecoder = new TextDecoder();
 let textEncode = new TextEncoder();
 var Module = {};
@@ -85,6 +86,25 @@ async function sha256sum(data) {
   return hashHex;
 }
 
+// Show an element.
+function showFlexElem(el) {
+  el.style.display = "flex";
+}
+
+// Show an element.
+function hideElem(el) {
+  el.style.display = "none";
+}
+
+// Toggle visibility of an element.
+function toggleElemVisibility(el) {
+  if (el.style.display === "none") {
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
+  }
+}
+
 // Open an user file dialog for saving a file.
 function downloadFileDialog(data, filename) {
   if (typeof data === 'undefined') {
@@ -119,25 +139,31 @@ async function uploadFileDialog(ext) {
     el.click();
   });
   let url = URL.createObjectURL(src);
+  showFlexElem(canvasLoadElem);
   let response = await fetch(url);
   URL.revokeObjectURL(url);
   if (!response.ok) {
+    hideElem(canvasLoadElem);
     return null;
   }
   const buffer = await response.arrayBuffer();
   const data = new Uint8Array(buffer);
+  hideElem(canvasLoadElem);
   return data;
 }
 
 // Fetch a file from a URL.
 async function downloadFile(url) {
   // Retrieve cartridge
+  showFlexElem(canvasLoadElem);
   const response = await fetch(url, {method: "GET", mode: "cors", cache: "no-cache"});
   if (!response.ok) {
+    hideElem(canvasLoadElem);
     return null;
   }
   const buffer = await response.arrayBuffer();
   const data = new Uint8Array(buffer);
+  hideElem(canvasLoadElem);
   return data;
 }
 
@@ -152,20 +178,13 @@ function waitEvent(name) {
   })
 }
 
-// Toggle visibility of an element.
-function toggleElem(el) {
-  if (el.style.display === "none") {
-    el.style.display = "block";
-  } else {
-    el.style.display = "none";
-  }
-}
-
 // Wait the WASM emulator be downloaded and initialized.
 async function waitRuntimeInitialize() {
   if (!runtimeInitialized) {
     statusElem.textContent = "Downloading emulator...";
+    showFlexElem(canvasLoadElem);
     await waitEvent("rivemu_on_runtime_initialized");
+    hideElem(canvasLoadElem);
   }
 }
 
@@ -200,7 +219,6 @@ async function rivemuBeforeStart(tape, cartridge, incard, entropy, args) {
     outhashElem.textContent = "N/A";
     outsizeElem.textContent = "N/A";
   }
-  canvasOverlayElem.style.display = "none";
   changeSpeedElem.textContent = "1.0X"
   speed = 1.0;
   paused = false;
@@ -214,8 +232,15 @@ async function rivemuBeforeStart(tape, cartridge, incard, entropy, args) {
   document.getElementById('download_cartridge').disabled = false;
 }
 
+function resetCanvasSize() {
+  canvasElem.width = 768;
+  canvasElem.height = 768;
+}
+
 async function rivemuUpload(cartridgeUrl, tapeUrl) {
+  hideElem(canvasDropElem);
   await rivemuStop();
+  resetCanvasSize();
   statusElem.textContent = "Downloading cartridge...";
   let cartridgeFile = cartridgeUrl ? await downloadFile(cartridgeUrl) : await uploadFileDialog(".sqfs");
   if (tapeUrl) {
@@ -223,12 +248,14 @@ async function rivemuUpload(cartridgeUrl, tapeUrl) {
     let tapeFile = tapeUrl ? await downloadFile(tapeUrl) : await uploadTapeDialog(".rivtape");
     await rivemuReplay(tapeFile, cartridgeFile);
   } else {
-    await rivemuRecord(cartridgeFile, tapeFile);
+    await rivemuRecord(cartridgeFile);
   }
 }
 
 async function rivemuUploadCartridge(url) {
+  hideElem(canvasDropElem);
   await rivemuStop();
+  resetCanvasSize();
   statusElem.textContent = "Downloading cartridge...";
   let file = url ? await downloadFile(url) : await uploadFileDialog(".sqfs");
   await rivemuRecord(file);
@@ -320,7 +347,6 @@ async function rivemuRecord(cartridge, incard, entropy, args) {
   lastEntropy = entropy;
   lastArgs = args;
   await rivemuBeforeStart(null, cartridge, incard, entropy, args);
-  await waitRuntimeInitialize();
   // Move cartridge into WASM memory
   const cartridgeBuf = Module._malloc(cartridge.length);
   const incardBuf = Module._malloc(incard.length);
@@ -351,7 +377,6 @@ async function rivemuReplay(tape, cartridge, incard, entropy, args) {
   lastEntropy = entropy;
   lastArgs = args;
   await rivemuBeforeStart(tape, cartridge, incard, entropy, args);
-  await waitRuntimeInitialize();
   // Move cartridge into WASM memory
   const cartridgeBuf = Module._malloc(cartridge.length);
   const incardBuf = Module._malloc(incard.length);
@@ -376,7 +401,7 @@ function rivemuFullscreen() {
 }
 
 function rivemuToggleAnalysis() {
-  toggleElem(analysisBoxElem);
+  toggleElemVisibility(analysisBoxElem);
 }
 
 // Called by RIVEMU before the first frame.
@@ -455,6 +480,6 @@ let params = hash.split('&').reduce(function (res, item) {
 
 // Play external cartridge
 if (params.cartridge) {
-  cartridgesElem.style.display = "none";
+  hideElem(cartridgesElem);
   rivemuUpload(params.cartridge, params.tape);
 }
