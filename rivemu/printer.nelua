@@ -10,6 +10,6 @@ end
 
 function rivemu_printer.debugf(...: varargs): void
   if not quiet then
-    io.stderr:printf(...)
+    io.printf(...)
   end
 end

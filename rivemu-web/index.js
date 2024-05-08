@@ -49,9 +49,22 @@ let textEncoder = new TextEncoder();
 var Module = {};
 
 // Prevent space bar from clicking buttons
-window.addEventListener('keydown', function(e) {
-  if(e.keyCode === 32) {
+window.addEventListener("keydown", function(e) {
+  if (e.keyCode === 32) {
     e.preventDefault();
+  }
+});
+
+// Allow starting different cartridges from cross origin iframes
+window.addEventListener("message", async function(e) {
+  let params = e.data;
+  lastCartridge = textEncoder.encode(params.code);
+  if (params.start) {
+    rivemuRecord();
+  } else {
+    await rivemuStop();
+    hideElem(canvasLoadElem);
+    showFlexElem(canvasStartElem);
   }
 });
 
@@ -488,4 +501,10 @@ if (params.simple) {
   hideElem(document.getElementById('pause'));
   hideElem(document.getElementById('change-speed'));
   hideElem(document.getElementById('analyze'));
+}
+
+if (params.editor) {
+  hideElem(cartridgesElem);
+  hideElem(canvasDropElem);
+  showFlexElem(canvasLoadElem);
 }

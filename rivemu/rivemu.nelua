@@ -1057,19 +1057,18 @@ local function rivemu_start_record(cartridge_ptr: *uint8, cartridge_len: int32,
       options.entrypoint = "exec ./cartridge"
     end
   end
-  do
+  if incard_len > 0 then
     local contents: string = {data=(@*[0]byte)(incard_ptr), size=incard_len}
     local file: filestream <close> = fn_assert!(io.open('/replay.incard', 'wb'))
     fn_assert!(file:write(contents))
+    options.incard_filename = '/replay.incard'
   end
   options.record_filename = '/replay.rivlog'
-  options.incard_filename = '/replay.incard'
   options.outcard_filename = '/replay.outcard'
   options.outhash_filename = '/replay.outhash'
   options.entropy = entropy
   options.args = args
   options.recording = true
-  options.no_quit = true
   run()
 end
 
@@ -1095,18 +1094,18 @@ local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32,
       options.entrypoint = "exec ./cartridge"
     end
   end
-  do
+  if incard_len > 0 then
     local contents: string = {data=(@*[0]byte)(incard_ptr), size=incard_len}
     local file: filestream <close> = fn_assert!(io.open('/replay.incard', 'wb'))
     fn_assert!(file:write(contents))
+    options.incard_filename = '/replay.incard'
   end
   do
     local contents: string = {data=(@*[0]byte)(rivlog_ptr), size=rivlog_len}
     local file: filestream <close> = fn_assert!(io.open('/replay.rivlog', 'wb'))
     fn_assert!(file:write(contents))
+    options.replay_filename = '/replay.rivlog'
   end
-  options.replay_filename = '/replay.rivlog'
-  options.incard_filename = '/replay.incard'
   options.outcard_filename = '/replay.outcard'
   options.outhash_filename = '/replay.outhash'
   options.entropy = entropy

@@ -60,7 +60,7 @@ function rivemu_framelimiter:update_stats(frame: uint64, now: float64, time_elap
   return false
 end
 
--- Print the frame rate statistics to stderr every second.
+-- Print the frame rate statistics every second.
 function rivemu_framelimiter:print_stats(frame: uint64): void
   io.printf('[RIVEMU] frame=%d fps=%.2f cpu_cost=%.2fMIPS cpu_speed=%.2fMIPS cpu_usage=%.2f%% cpu_quota=%.2f%%\n',
     frame, self.fps, self.cpu_cost, self.cpu_speed, self.cpu_usage, self.cpu_quota)
