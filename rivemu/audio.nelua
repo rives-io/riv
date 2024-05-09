@@ -50,7 +50,7 @@ function riv_waveform_desc:sample(time: float32, sample_rate: float32): float32 
   local decay: float32 = mathx.mix(1.0_f32, self.sustain_level, mathx.linearstep(self.attack, ad_duration, time))
   local amplitude: float32 = self.amplitude * attack * decay * release
   -- compute frequency
-  local freq: float32 = mathx.mix(self.start_frequency, self.end_frequency, time / adsr_duration)
+  local freq: float32 = mathx.mix(self.start_frequency, self.end_frequency, time / (2*adsr_duration))
   local x: float32 = time * freq
   -- compute wave
   local wave: float32
@@ -60,7 +60,7 @@ function riv_waveform_desc:sample(time: float32, sample_rate: float32): float32 
   case RIV_WAVEFORM_SQUARE then
     local d1: float32 = self.duty_cycle
     local d2: float32 = 0.5_f32 - d1
-    wave = 2*(math.fract(x+d1)-math.fract(x)+d2) -- square
+    wave = 2*(math.fract(x+d1)-math.fract(x)+d2)-1 -- square
   case RIV_WAVEFORM_TRIANGLE then
     wave = math.abs(4*math.fract(x-0.25_f32)-2)-1 -- triangle
   case RIV_WAVEFORM_SAWTOOTH then
@@ -76,8 +76,7 @@ function riv_waveform_desc:sample(time: float32, sample_rate: float32): float32 
     local d = 0.5_f32/(1-self.duty_cycle)
     local t = math.mod(x*d, d) -- infinite repetition
     local p = 8*t*(1-2*t) -- parabola
-    wave = math.max(p, 0_f32)
-    wave = 2*wave - 1
+    wave = 2*math.max(p, 0_f32) - 1
   else
     wave = 0
   end
@@ -230,6 +229,7 @@ global rivemu_audio: type = @record{}
 local engine: ma_engine
 local buffers: hashmap(uint64, riv_soundbuffer_desc)
 local sounds: hashmap(uint64, Sound)
+local releasing_sounds: vector(Sound)
 local global_pitch: float64
 local global_pcm_frame: uint64
 local global_sample_rate: uint64
@@ -261,6 +261,11 @@ function rivemu_audio.reset(): void
     sound:destroy()
   end
   sounds:destroy()
+  -- destroy releasing sounds
+  for id: uint64, sound: *Sound in mpairs(releasing_sounds) do
+    sound:destroy()
+  end
+  releasing_sounds:destroy()
   -- destroy sound buffers
   for id: uint64, buffer: *riv_soundbuffer_desc in mpairs(buffers) do
     delete((@span(byte)){data=buffer.data.data, size=buffer.data.size})
@@ -299,6 +304,12 @@ function rivemu_audio.poll(): void
       sounds:remove(id)
     end
   end
+  for id: uint64, sound: *Sound in mpairs(releasing_sounds) do
+    if sound:is_finished(now) then
+      sound:destroy()
+    end
+  end
+  releasing_sounds:clear()
 end
 
 --------------------------------------------------------------------------------
@@ -383,6 +394,13 @@ local function handle_sound(desc: riv_sound_desc): void
     elseif desc.duration == -1 then
       ma_sound_set_looping(asound, MA_TRUE)
     end
+    -- release sound with same id
+    local prev_sound: *Sound = sounds:peek(desc.id)
+    if prev_sound then
+      ma_assert!(ma_sound_stop_with_fade_in_pcm_frames(prev_sound.asound, math.ifloor(0.05 * global_sample_rate)))
+      releasing_sounds:push($prev_sound)
+      sounds:remove(desc.id)
+    end
     -- start
     ma_assert!(ma_sound_start(asound))
     sounds[desc.id] = Sound{=asound, =abuffer, =adecoder}
@@ -421,6 +439,13 @@ local function handle_waveform(desc: riv_waveform_desc): void
   end
   if global_pitch ~= 1.0 then
     ma_sound_set_pitch(asound, global_pitch)
+  end
+  -- release sound with same id
+  local prev_sound: *Sound = sounds:peek(desc.id)
+  if prev_sound then
+    ma_assert!(ma_sound_stop_with_fade_in_pcm_frames(prev_sound.asound, math.ifloor(0.05 * global_sample_rate)))
+    releasing_sounds:push($prev_sound)
+    sounds:remove(desc.id)
   end
   ma_assert!(ma_sound_start(asound))
   sounds[desc.id] = Sound{=asound, =waveform}

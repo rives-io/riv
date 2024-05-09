@@ -53,6 +53,7 @@ end
 
 global function riv_sound(desc: *riv_sound_desc): uint64 <cexport>
   -- choose sound id
+  local prev_id: uint64 = desc.id
   if desc.id == 0 then
     if desc.buffer_id == 0 then return 0 end -- nothing to play
     desc.id = riv.sound_gen + 1
@@ -63,17 +64,24 @@ global function riv_sound(desc: *riv_sound_desc): uint64 <cexport>
     type = RIV_COMMAND_SOUND,
     desc = {sound = $desc}
   }
-  return desc.id
+  local id: uint64 = desc.id
+  desc.id = prev_id
+  return id
 end
 
 global function riv_waveform(desc: *riv_waveform_desc): uint64 <cexport>
   -- choose sound id
-  desc.id = riv.sound_gen + 1
-  riv.sound_gen = desc.id
+  local prev_id: uint64 = desc.id
+  if desc.id == 0 then
+    desc.id = riv.sound_gen + 1
+    riv.sound_gen = desc.id
+  end
   -- queue command
   riv_queue_command{
     type = RIV_COMMAND_WAVEFORM,
     desc = {waveform = $desc}
   }
-  return desc.id
+  local id: uint64 = desc.id
+  desc.id = prev_id
+  return id
 end
