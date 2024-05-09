@@ -11,6 +11,10 @@ all: $(SAMPLES)
 clean:
 	rm -f *.sqfs *.elf
 
+lint:
+	gcc -Wall -Wextra -fsyntax-only -fanalyzer -I../../libriv *.c
+	clang-tidy *.c -- -I../../libriv
+
 %.sqfs: %.elf $(DATA_FILES)
 	$(RIVEMU_EXEC) riv-mksqfs $^ $@ -comp $(COMP)
 

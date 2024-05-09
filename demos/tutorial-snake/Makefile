@@ -33,7 +33,7 @@ test: all
 
 # Check code for syntax errors
 lint:
-	gcc -fsyntax-only -fanalyzer -I../../libriv *.c
+	gcc -Wall -Wextra -fsyntax-only -fanalyzer -I../../libriv *.c
 	clang-tidy *.c -- -I../../libriv
 
 # Clean generated cartridges

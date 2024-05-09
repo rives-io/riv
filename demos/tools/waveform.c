@@ -6,6 +6,10 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
 enum {
+  TYPE_COUNT = RIV_WAVEFORM_PULSE
+};
+
+typedef enum panel_type {
   PANEL_PRESET = 0,
   PANEL_TYPE,
   PANEL_ATTACK,
@@ -19,10 +23,8 @@ enum {
   PANEL_DUTY_CYCLE,
   PANEL_PAN,
   PANEL_COUNT,
-};
-enum {
-  TYPE_COUNT = RIV_WAVEFORM_PULSE
-};
+} panel_type;
+
 typedef enum preset_type {
   PRESET_SHOOT = 0,
   PRESET_JUMP,
@@ -202,8 +204,9 @@ static riv_waveform_desc get_preset_waveform(preset_type preset) {
       .duty_cycle = 0.25f,
       .pan = 0.0f,
     };
+    default:
+      return (riv_waveform_desc){.type=RIV_WAVEFORM_NONE};
   }
-  return (riv_waveform_desc){.type=RIV_WAVEFORM_NONE};
 }
 
 static void draw_panel(const char *title, const char *value, bool focused) {
@@ -226,7 +229,7 @@ static bool is_key_press(uint8_t key) {
   return false;
 }
 
-void main() {
+int main() {
   bool needs_play = false;
   int focus = 0;
   int preset = PRESET_SHOOT;
@@ -334,6 +337,6 @@ void main() {
       x = nx; y = ny;
       riv_draw_circle_fill(x*sx, y*sy, 4, RIV_COLOR_RED);
     }
-
   } while(riv_present()); // refresh screen and wait next frame
+  return 0;
 }
