@@ -417,6 +417,15 @@ async function rivemuReplay(tape, cartridge, incard, entropy, args) {
   Module._free(tapeBuf);
 }
 
+// Called when big play button is pressed the first time.
+function rivemuStart() {
+  if (lastTape) {
+    rivemuReplay()
+  } else {
+    rivemuRecord()
+  }
+}
+
 // Enter fullscreen mode.
 function rivemuFullscreen() {
   canvasElem.requestFullscreen();
