@@ -58,15 +58,17 @@ window.addEventListener("keydown", function(e) {
 // Allow starting different cartridges from cross origin iframes
 window.addEventListener("message", async function(e) {
   let params = e.data;
-  lastCartridge = textEncoder.encode(params.code);
-  if (params.start) {
-    rivemuRecord();
-  } else {
-    await rivemuStop();
-    hideElem(canvasLoadElem);
-    showFlexElem(canvasStartElem);
+  if (params.rivemuRunCode) {
+    lastCartridge = textEncoder.encode(params.code);
+    if (params.start) {
+      rivemuRecord();
+    } else {
+      await rivemuStop();
+      hideElem(canvasLoadElem);
+      showFlexElem(canvasStartElem);
+    }
   }
-});
+}, false);
 
 // Alert when WebGL context is lost.
 canvasElem.addEventListener("webglcontextlost", (e) => {
@@ -103,6 +105,11 @@ async function sha256sum(data) {
 // Show an element.
 function showFlexElem(el) {
   el.style.display = "flex";
+}
+
+// Show an element.
+function showBlockElem(el) {
+  el.style.display = "block";
 }
 
 // Show an element.
@@ -239,6 +246,7 @@ async function rivemuBeforeStart(tape, cartridge, incard, entropy, args) {
 
   // Disable some buttons while recording/replaying
   hideElem(canvasStartElem);
+  hideElem(canvasDropElem);
   document.getElementById('pause').disabled = false;
   document.getElementById('change-speed').disabled = false;
   document.getElementById('stop').disabled = false;
@@ -485,6 +493,7 @@ function rivemu_on_frame(outcard, frame, cycles, fps, cpu_cost, cpu_speed, cpu_u
   }
 }
 
+// Parse params
 let hash = window.location.hash.substr(1);
 let params = hash.split('&').reduce(function (res, item) {
     var parts = item.split('=');
@@ -492,19 +501,23 @@ let params = hash.split('&').reduce(function (res, item) {
     return res;
 }, {});
 
-// Play external cartridge
-if (params.cartridge) {
-  rivemuUpload(params.cartridge, params.tape);
+// Show or hide elements based on params
+if (params.editor) {
+  showFlexElem(canvasLoadElem);
+} else {
+  showBlockElem(cartridgesElem);
+  showFlexElem(canvasDropElem);
 }
-
 if (params.simple) {
   hideElem(document.getElementById('pause'));
   hideElem(document.getElementById('change-speed'));
   hideElem(document.getElementById('analyze'));
 }
 
-if (params.editor) {
-  hideElem(cartridgesElem);
-  hideElem(canvasDropElem);
-  showFlexElem(canvasLoadElem);
+// Play external cartridge
+if (params.cartridge) {
+  rivemuUpload(params.cartridge, params.tape);
 }
+
+// Send event to parent window when the page is loaded
+window.parent.postMessage({ rivemuLoaded: true }, '*');

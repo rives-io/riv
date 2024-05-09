@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="index.css">
   </head>
   <body>
-    <select name="cartridges" id="cartridges" onchange="rivemuUploadCartridge(this.value);" autocomplete="off">
+    <select name="cartridges" id="cartridges" onchange="rivemuUploadCartridge(this.value);" style="display: none" autocomplete="off">
       <option selected disabled hidden>Select Cartridge</option>
       <option value="cartridges/antcopter.sqfs">GAME - Antcopter</option>
       <option value="cartridges/2048.sqfs">GAME - 2048</option>
@@ -30,9 +30,10 @@
       <option value="cartridges/hello-nelua.sqfs">DEMO - hello-nelua</option>
       <option value="cartridges/hello-js.sqfs">DEMO - hello-js</option>
       <option value="cartridges/hello-py.sqfs">DEMO - hello-py</option>
+      <option value="cartridges/waveform.sqfs">TOOL - Waveform Editor</option>
     </select>
     <div class="canvas-wrapper">
-      <div id="canvas-drop" class="canvas-overlay canvas-noclick">
+      <div id="canvas-drop" class="canvas-overlay canvas-noclick" style="display: none">
         <div>
           <div>
             <svg xmlns="http://www.w3.org/2000/svg" width="2em" height="2em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 16l-5-5l1.4-1.45l2.6 2.6V4h2v8.15l2.6-2.6L17 11zm-8 4v-5h2v3h12v-3h2v5z"/></svg>
