@@ -15,8 +15,9 @@ lint:
 	gcc -Wall -Wextra -fsyntax-only -fanalyzer -I../../libriv *.c
 	clang-tidy *.c -- -I../../libriv
 
-%.sqfs: %.elf $(DATA_FILES)
-	$(RIVEMU_EXEC) riv-mksqfs $^ $@ -comp $(COMP)
+gamepad.sqfs: DATA_FILES=gamepad.png
+%.sqfs: %.elf
+	$(RIVEMU_EXEC) riv-mksqfs $^ $(DATA_FILES) $@ -comp $(COMP)
 
 %.elf: %.c
 	$(RIVEMU_EXEC) "gcc $< -o $@ $(CFLAGS) && riv-strip $@"
