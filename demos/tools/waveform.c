@@ -1,12 +1,14 @@
 //riv-jit-c (DO NOT REMOVE THIS LINE)
 #include <riv.h>
 #include <math.h>
+#include <stddef.h>
 
 #define sformat(fmt, ...) ({ char buf[256];riv_snprintf(buf, 256, fmt, __VA_ARGS__); buf; })
 #define min(a, b) ((a) < (b) ? (a) : (b))
+#define array_len(a) (sizeof(a)/sizeof(a[0]))
 
 enum {
-  TYPE_COUNT = RIV_WAVEFORM_PULSE
+  WAVEFORM_TYPE_COUNT = RIV_WAVEFORM_PULSE,
 };
 
 typedef enum panel_type {
@@ -25,19 +27,191 @@ typedef enum panel_type {
   PANEL_COUNT,
 } panel_type;
 
-typedef enum preset_type {
-  PRESET_SHOOT = 0,
-  PRESET_JUMP,
-  PRESET_GAMEOVER,
-  PRESET_EXPLOSION,
-  PRESET_HIT,
-  PRESET_COIN,
-  PRESET_POWERUP,
-  PRESET_ERROR,
-  PRESET_LASER,
-  PRESET_COUNT,
-  PRESET_CUSTOM,
-} preset_type;
+typedef struct note_config {
+  const char *name;
+  float rel_freq;
+  bool sharp;
+  uint8_t key;
+} note_config;
+
+typedef struct preset_config {
+  const char *name;
+  riv_waveform_desc waveform;
+} preset_config;
+
+// Notes
+static note_config notes[] = {
+  {"C4", (261.63/261.63), false, RIV_KEYCODE_Q},
+  {NULL, (277.18/261.63), true,  RIV_KEYCODE_2},
+  {"D4", (293.66/261.63), false, RIV_KEYCODE_W},
+  {NULL, (311.13/261.63), true,  RIV_KEYCODE_3},
+  {"E4", (329.63/261.63), false, RIV_KEYCODE_E},
+  {"F4", (349.23/261.63), false, RIV_KEYCODE_R},
+  {NULL, (369.99/261.63), true,  RIV_KEYCODE_5},
+  {"G4", (392.00/261.63), false, RIV_KEYCODE_T},
+  {NULL, (415.30/261.63), true,  RIV_KEYCODE_6},
+  {"A4", (440.00/261.63), false, RIV_KEYCODE_Y},
+  {NULL, (466.16/261.63), true,  RIV_KEYCODE_7},
+  {"B4", (493.88/261.63), false, RIV_KEYCODE_U},
+  {"C5", (523.25/261.63), false, RIV_KEYCODE_I},
+  {NULL, (554.37/261.63), true,  RIV_KEYCODE_9},
+  {"D5", (587.33/261.63), false, RIV_KEYCODE_O},
+  {NULL, (622.25/261.63), true,  RIV_KEYCODE_0},
+  {"E5", (659.25/261.63), false, RIV_KEYCODE_P},
+  {"F5", (698.46/261.63), false, RIV_KEYCODE_LEFT_BRACKET},
+  {NULL, (739.99/261.63), true,  RIV_KEYCODE_EQUAL},
+  {"G5", (783.99/261.63), false, RIV_KEYCODE_RIGHT_BRACKET},
+  {NULL, (830.61/261.63), true,  RIV_KEYCODE_BACKSPACE},
+  {"A5", (880.00/261.63), false, RIV_KEYCODE_BACKSLASH},
+  // {NULL, (932.33/261.63), true,  RIV_KEYCODE_},
+  // {"B5", (987.77/261.63), false, RIV_KEYCODE_},
+};
+enum { NUM_NOTES = array_len(notes) };
+
+// Presets
+static preset_config presets[] = {
+  {"PIANO", {
+    .id = 101,
+    .type = RIV_WAVEFORM_PULSE,
+    .attack = 0.15f,
+    .decay = 0.2f,
+    .sustain = 0.5f,
+    .release = 0.25f,
+    .start_frequency = 261.63f,
+    .end_frequency = 261.63f,
+    .amplitude = 0.25f,
+    .sustain_level = 0.3f,
+    .duty_cycle = 0.2f,
+    .pan = 0.0f,
+  }},
+  {"SHOOT", {
+    .id = 102,
+    .type = RIV_WAVEFORM_PULSE,
+    .attack = 0.05f,
+    .decay = 0.05f,
+    .sustain = 0.15f,
+    .release = 0.075f,
+    .start_frequency = 880.0f,
+    .end_frequency = 220.0f,
+    .amplitude = 0.15f,
+    .sustain_level = 0.25f,
+    .duty_cycle = 0.65f,
+    .pan = 0.0f,
+  }},
+  {"JUMP", {
+    .id = 103,
+    .type = RIV_WAVEFORM_TRIANGLE,
+    .attack = 0.025f,
+    .decay = 0.1f,
+    .sustain = 0.075f,
+    .release = 0.025f,
+    .start_frequency = 327.0f,
+    .end_frequency = 702.0f,
+    .amplitude = 0.25f,
+    .sustain_level = 0.05f,
+    .duty_cycle = 0.5f,
+    .pan = 0.0f,
+  }},
+  {"GAMEOVER", {
+    .id = 104,
+    .type = RIV_WAVEFORM_PULSE,
+    .attack = 0.01f,
+    .decay = 0.15f,
+    .sustain = 0.1f,
+    .release = 0.1f,
+    .start_frequency = 110.0f,
+    .end_frequency = 22.0f,
+    .amplitude = 0.2f,
+    .sustain_level = 0.5f,
+    .duty_cycle = 0.5f,
+    .pan = 0.0f,
+  }},
+  {"EXPLOSION", {
+    .id = 105,
+    .type = RIV_WAVEFORM_NOISE,
+    .attack = 0.025f,
+    .decay = 0.1f,
+    .sustain = 0.5f,
+    .release = 0.025f,
+    .start_frequency = 110.0f,
+    .end_frequency = 27.0f,
+    .amplitude = 0.25f,
+    .sustain_level = 0.5f,
+    .duty_cycle = 0.5f,
+    .pan = 0.0f,
+  }},
+  {"HIT", {
+    .id = 106,
+    .type = RIV_WAVEFORM_NOISE,
+    .attack = 0.025f,
+    .decay = 0.075f,
+    .sustain = 0.075f,
+    .release = 0.025f,
+    .start_frequency = 250.0f,
+    .end_frequency = 100.0f,
+    .amplitude = 0.25f,
+    .sustain_level = 0.1f,
+    .duty_cycle = 0.5f,
+    .pan = 0.0f,
+  }},
+  {"COIN", {
+    .id = 107,
+    .type = RIV_WAVEFORM_TRIANGLE,
+    .attack = 0.025f,
+    .decay = 0.075f,
+    .sustain = 0.125f,
+    .release = 0.120f,
+    .start_frequency = 1760.0f,
+    .end_frequency = 1760.0f,
+    .amplitude = 0.25f,
+    .sustain_level = 0.3f,
+    .duty_cycle = 0.5f,
+    .pan = 0.0f,
+  }},
+  {"POWERUP", {
+    .id = 108,
+    .type = RIV_WAVEFORM_PULSE,
+    .attack = 0.01f,
+    .decay = 0.2f,
+    .sustain = 0.3f,
+    .release = 0.2f,
+    .start_frequency = 55.0f,
+    .end_frequency = 1760.0f,
+    .amplitude = 0.2f,
+    .sustain_level = 0.25f,
+    .duty_cycle = 0.125f,
+    .pan = 0.0f,
+  }},
+  {"ERROR", {
+    .id = 109,
+    .type = RIV_WAVEFORM_SAWTOOTH,
+    .attack = 0.075f,
+    .decay = 0.15f,
+    .sustain = 0.075f,
+    .release = 0.225f,
+    .start_frequency = 42.0f,
+    .end_frequency = 42.0f,
+    .amplitude = 0.2f,
+    .sustain_level = 0.1f,
+    .duty_cycle = 0.5f,
+    .pan = 0.0f,
+  }},
+  {"LASER", {
+    .id = 110,
+    .type = RIV_WAVEFORM_PULSE,
+    .attack = 0.1f,
+    .decay = 1.0f,
+    .sustain = 0.75f,
+    .release = 0.5f,
+    .start_frequency = 41.0f,
+    .end_frequency = 41.0f,
+    .amplitude = 0.15f,
+    .sustain_level = 0.5f,
+    .duty_cycle = 0.25f,
+    .pan = 0.0f,
+  }},
+};
+enum { NUM_PRESETS = array_len(presets) };
 
 static const char *get_waveform_type_name(riv_waveform_type type) {
   switch (type) {
@@ -48,164 +222,6 @@ static const char *get_waveform_type_name(riv_waveform_type type) {
   case RIV_WAVEFORM_NOISE: return "NOISE";
   case RIV_WAVEFORM_PULSE: return "PULSE";
   default: return "UNKNOWN";
-  }
-}
-
-static const char *get_preset_name(preset_type preset) {
-  switch (preset) {
-  case PRESET_SHOOT: return "SHOOT";
-  case PRESET_JUMP: return "JUMP";
-  case PRESET_GAMEOVER: return "GAMEOVER";
-  case PRESET_EXPLOSION: return "EXPLOSION";
-  case PRESET_HIT: return "HIT";
-  case PRESET_COIN: return "COIN";
-  case PRESET_POWERUP: return "POWERUP";
-  case PRESET_ERROR: return "ERROR";
-  case PRESET_LASER: return "LASER";
-  case PRESET_CUSTOM: return "CUSTOM";
-  default: return "UNKNOWN";
-  }
-}
-
-static riv_waveform_desc get_preset_waveform(preset_type preset) {
-  switch (preset) {
-    case PRESET_SHOOT:
-      return (riv_waveform_desc){
-      .id = 1,
-      .type = RIV_WAVEFORM_PULSE,
-      .attack = 0.05f,
-      .decay = 0.05f,
-      .sustain = 0.15f,
-      .release = 0.075f,
-      .start_frequency = 880.0f,
-      .end_frequency = 220.0f,
-      .amplitude = 0.15f,
-      .sustain_level = 0.25f,
-      .duty_cycle = 0.65f,
-      .pan = 0.0f,
-    };
-    case PRESET_JUMP:
-      return (riv_waveform_desc){
-      .id = 1,
-      .type = RIV_WAVEFORM_TRIANGLE,
-      .attack = 0.025f,
-      .decay = 0.1f,
-      .sustain = 0.075f,
-      .release = 0.025f,
-      .start_frequency = 327.0f,
-      .end_frequency = 702.0f,
-      .amplitude = 0.25f,
-      .sustain_level = 0.05f,
-      .duty_cycle = 0.5f,
-      .pan = 0.0f,
-    };
-    case PRESET_GAMEOVER:
-      return (riv_waveform_desc){
-      .id = 1,
-      .type = RIV_WAVEFORM_PULSE,
-      .attack = 0.01f,
-      .decay = 0.15f,
-      .sustain = 0.1f,
-      .release = 0.1f,
-      .start_frequency = 110.0f,
-      .end_frequency = 22.0f,
-      .amplitude = 0.2f,
-      .sustain_level = 0.5f,
-      .duty_cycle = 0.5f,
-      .pan = 0.0f,
-    };
-    case PRESET_EXPLOSION:
-      return (riv_waveform_desc){
-      .id = 1,
-      .type = RIV_WAVEFORM_NOISE,
-      .attack = 0.025f,
-      .decay = 0.1f,
-      .sustain = 0.5f,
-      .release = 0.025f,
-      .start_frequency = 110.0f,
-      .end_frequency = 27.0f,
-      .amplitude = 0.25f,
-      .sustain_level = 0.5f,
-      .duty_cycle = 0.5f,
-      .pan = 0.0f,
-    };
-    case PRESET_HIT:
-      return (riv_waveform_desc){
-      .id = 1,
-      .type = RIV_WAVEFORM_NOISE,
-      .attack = 0.025f,
-      .decay = 0.075f,
-      .sustain = 0.075f,
-      .release = 0.025f,
-      .start_frequency = 250.0f,
-      .end_frequency = 100.0f,
-      .amplitude = 0.25f,
-      .sustain_level = 0.1f,
-      .duty_cycle = 0.5f,
-      .pan = 0.0f,
-    };
-    case PRESET_COIN:
-      return (riv_waveform_desc){
-      .id = 1,
-      .type = RIV_WAVEFORM_TRIANGLE,
-      .attack = 0.025f,
-      .decay = 0.075f,
-      .sustain = 0.125f,
-      .release = 0.120f,
-      .start_frequency = 1760.0f,
-      .end_frequency = 1760.0f,
-      .amplitude = 0.25f,
-      .sustain_level = 0.3f,
-      .duty_cycle = 0.5f,
-      .pan = 0.0f,
-    };
-    case PRESET_POWERUP:
-      return (riv_waveform_desc){
-      .id = 1,
-      .type = RIV_WAVEFORM_PULSE,
-      .attack = 0.01f,
-      .decay = 0.2f,
-      .sustain = 0.3f,
-      .release = 0.2f,
-      .start_frequency = 55.0f,
-      .end_frequency = 1760.0f,
-      .amplitude = 0.2f,
-      .sustain_level = 0.25f,
-      .duty_cycle = 0.125f,
-      .pan = 0.0f,
-    };
-    case PRESET_ERROR:
-      return (riv_waveform_desc){
-      .id = 1,
-      .type = RIV_WAVEFORM_SAWTOOTH,
-      .attack = 0.075f,
-      .decay = 0.15f,
-      .sustain = 0.075f,
-      .release = 0.225f,
-      .start_frequency = 42.0f,
-      .end_frequency = 42.0f,
-      .amplitude = 0.2f,
-      .sustain_level = 0.1f,
-      .duty_cycle = 0.5f,
-      .pan = 0.0f,
-    };
-    case PRESET_LASER:
-      return (riv_waveform_desc){
-      .id = 1,
-      .type = RIV_WAVEFORM_PULSE,
-      .attack = 0.1f,
-      .decay = 1.0f,
-      .sustain = 0.75f,
-      .release = 0.5f,
-      .start_frequency = 41.0f,
-      .end_frequency = 41.0f,
-      .amplitude = 0.15f,
-      .sustain_level = 0.5f,
-      .duty_cycle = 0.25f,
-      .pan = 0.0f,
-    };
-    default:
-      return (riv_waveform_desc){.type=RIV_WAVEFORM_NONE};
   }
 }
 
@@ -229,11 +245,21 @@ static bool is_key_press(uint8_t key) {
   return false;
 }
 
+static void play_note(int id, float rel_freq, riv_waveform_desc *waveform) {
+  riv_waveform_desc note_waveform = *waveform;
+  note_waveform.id = id;
+  note_waveform.start_frequency = waveform->start_frequency*rel_freq;
+  note_waveform.end_frequency = waveform->end_frequency*rel_freq;
+  riv_waveform(&note_waveform);
+}
+
 int main() {
   bool needs_play = false;
   int focus = 0;
-  int preset = PRESET_SHOOT;
-  riv_waveform_desc waveform = get_preset_waveform(PRESET_SHOOT);
+  int preset = 0;
+  riv_waveform_desc waveform = presets[preset].waveform;
+  for (int i=0;i<NUM_NOTES;++i)
+    riv->tracked_keys[notes[i].key] = true;
   do { // main loop
     // handle inputs
     int change = 0;
@@ -243,7 +269,7 @@ int main() {
     if (is_key_press(RIV_GAMEPAD_RIGHT)) change++;
     if (is_key_press(RIV_GAMEPAD_A1)) needs_play = true;
     if (is_key_press(RIV_GAMEPAD_A2)) {
-      waveform.type = riv_rand() % TYPE_COUNT + 1;
+      waveform.type = riv_rand() % WAVEFORM_TYPE_COUNT + 1;
       float duration = 0.025+riv_rand_float();
       waveform.attack = duration*riv_rand_float();
       waveform.decay = duration*riv_rand_float();
@@ -255,14 +281,21 @@ int main() {
       waveform.sustain_level = riv_rand_float();
       waveform.duty_cycle = riv_rand_float();
       waveform.pan = 0.0f;
-      preset = PRESET_CUSTOM;
+      preset = -1;
       needs_play = true;
+    }
+    for (int i=0;i<NUM_NOTES;++i) {
+      note_config note = notes[i];
+      if (riv->keys[note.key].press)
+        play_note(1+i, note.rel_freq, &waveform);
+      else if (riv->keys[note.key].release)
+        play_note(1+i, note.rel_freq, &(riv_waveform_desc){});
     }
     // adjust sound
     if (change != 0) {
       switch (focus) {
-      case PANEL_PRESET: preset = (preset + PRESET_COUNT + change) % PRESET_COUNT; waveform = get_preset_waveform(preset); break;
-      case PANEL_TYPE: waveform.type = (((waveform.type-1) + TYPE_COUNT + change) % TYPE_COUNT) + 1; break;
+      case PANEL_PRESET: preset = (preset + NUM_PRESETS + change) % NUM_PRESETS; waveform = presets[preset].waveform; break;
+      case PANEL_TYPE: waveform.type = (((waveform.type-1) + WAVEFORM_TYPE_COUNT + change) % WAVEFORM_TYPE_COUNT) + 1; break;
       case PANEL_ATTACK: waveform.attack = clamp_quant(waveform.attack + change*0.025f, 0, 1); break;
       case PANEL_DECAY: waveform.decay = clamp_quant(waveform.decay + change*0.025f, 0, 1); break;
       case PANEL_SUSTAIN: waveform.sustain = clamp_quant(waveform.sustain + change*0.025f, 0, 1); break;
@@ -274,7 +307,7 @@ int main() {
       case PANEL_DUTY_CYCLE: waveform.duty_cycle = clamp_quant(waveform.duty_cycle + change*0.025f, 0, 1); break;
       case PANEL_PAN: waveform.pan = clamp_quant(waveform.pan + change*0.025f, -1, 1); break;
       }
-      if (focus != PANEL_PRESET) preset = PRESET_CUSTOM;
+      if (focus != PANEL_PRESET) preset = -1;
       needs_play = true;
     }
     if (needs_play && riv->frame % 8 == 0) {
@@ -284,8 +317,8 @@ int main() {
     // draw screen
     riv_clear(RIV_COLOR_BLACK); // clear screen
     riv->draw.origin = (riv_vec2i){4, 4};
-    riv_draw_text_ex("Press UP/DOWN to navigate\nPress LEFT/RIGHT to adjust\nPress Z to play  X to randomize", RIV_SPRITESHEET_FONT_5X7, RIV_BOTTOMLEFT, 0, 256-8, 1, 1, 1, 2, RIV_COLOR_LIGHTGREY);
-    draw_panel("PRESET", get_preset_name(preset), focus == PANEL_PRESET);
+    riv_draw_text_ex("UP/DOWN    - navigate    Z - play\nLEFT/RIGHT - adjust      X - randomize\nQWERTYUIOP - piano", RIV_SPRITESHEET_FONT_5X7, RIV_BOTTOMLEFT, 0, 256-8, 1, 1, 1, 2, RIV_COLOR_LIGHTGREY);
+    draw_panel("PRESET", preset >= 0 ? presets[preset].name : "CUSTOM", focus == PANEL_PRESET);
     draw_panel("WAVEFORM TYPE", get_waveform_type_name(waveform.type), focus == PANEL_TYPE);
     draw_panel("ATTACK", sformat("%.3f", waveform.attack), focus == PANEL_ATTACK);
     draw_panel("DECAY", sformat("%.3f", waveform.decay), focus == PANEL_DECAY);
@@ -300,7 +333,7 @@ int main() {
 
     { // ADSR graph
       float x = 0, y = 0;
-      float sx = 62, sy = 96;
+      float sx = 62, sy = 64;
       float nx, ny;
       riv->draw.origin.y += sy + 2;
       // amplitude
@@ -336,6 +369,24 @@ int main() {
       riv_draw_circle_fill(x*sx, y*sy, 4, RIV_COLOR_RED);
       x = nx; y = ny;
       riv_draw_circle_fill(x*sx, y*sy, 4, RIV_COLOR_RED);
+    }
+
+    { // Piano
+      riv->draw.origin.y += 4;
+      int x = 8;
+      for (int i=0;i<NUM_NOTES;++i)  {
+        note_config note = notes[i];
+        int h = !note.sharp ? 24 : 16;
+        int w = !note.sharp ? 12 : 6;
+        int col = !note.sharp ? RIV_COLOR_WHITE : RIV_COLOR_GREY;
+        if (riv->keys[note.key].down) {
+          col = RIV_COLOR_LIGHTRED;
+        }
+        riv_draw_rect_fill(x, 0, w, h, col);
+        if (note.name)
+          riv_draw_text(note.name, RIV_SPRITESHEET_FONT_3X5, RIV_LEFT, x+1, h-5, 1, RIV_COLOR_BLACK);
+        x += w + 1;
+      }
     }
   } while(riv_present()); // refresh screen and wait next frame
   return 0;

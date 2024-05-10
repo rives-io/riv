@@ -443,7 +443,11 @@ local function handle_waveform(desc: riv_waveform_desc): void
   -- release sound with same id
   local prev_sound: *Sound = sounds:peek(desc.id)
   if prev_sound then
-    ma_assert!(ma_sound_stop_with_fade_in_pcm_frames(prev_sound.asound, math.ifloor(0.05 * global_sample_rate)))
+    local fade: float32 = 0.05
+    if prev_sound.waveform then
+      fade = math.clamp(prev_sound.waveform.waveform_desc.release, 0, 1.0)
+    end
+    ma_assert!(ma_sound_stop_with_fade_in_pcm_frames(prev_sound.asound, math.ifloor(fade * global_sample_rate)))
     releasing_sounds:push($prev_sound)
     sounds:remove(desc.id)
   end
