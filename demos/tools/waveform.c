@@ -237,7 +237,7 @@ static float clamp_quant(float v, float minv, float maxv) {
   else return (int64_t)(v * 1000.0f + (v < 0 ? -0.5f : 0.5f)) / 1000.0f;
 }
 
-static bool is_key_press(uint8_t key) {
+static bool is_key_repeat(uint8_t key) {
   if (riv->keys[key].press)
     return true;
   if (riv->keys[key].down && riv->keys[key].down_frame + 20 <= riv->frame && riv->frame % 4 == 0)
@@ -263,12 +263,12 @@ int main() {
   do { // main loop
     // handle inputs
     int change = 0;
-    if (is_key_press(RIV_GAMEPAD_UP)) focus = (focus+PANEL_COUNT-1) % PANEL_COUNT;
-    if (is_key_press(RIV_GAMEPAD_DOWN)) focus = (focus+PANEL_COUNT+1) % PANEL_COUNT;
-    if (is_key_press(RIV_GAMEPAD_LEFT)) change--;
-    if (is_key_press(RIV_GAMEPAD_RIGHT)) change++;
-    if (is_key_press(RIV_GAMEPAD_A1)) needs_play = true;
-    if (is_key_press(RIV_GAMEPAD_A2)) {
+    if (is_key_repeat(RIV_GAMEPAD_UP)) focus = (focus+PANEL_COUNT-1) % PANEL_COUNT;
+    if (is_key_repeat(RIV_GAMEPAD_DOWN)) focus = (focus+PANEL_COUNT+1) % PANEL_COUNT;
+    if (is_key_repeat(RIV_GAMEPAD_LEFT)) change--;
+    if (is_key_repeat(RIV_GAMEPAD_RIGHT)) change++;
+    if (is_key_repeat(RIV_GAMEPAD_A1)) needs_play = true;
+    if (is_key_repeat(RIV_GAMEPAD_A2)) {
       waveform.type = riv_rand() % WAVEFORM_TYPE_COUNT + 1;
       float duration = 0.025+riv_rand_float();
       waveform.attack = duration*riv_rand_float();

@@ -72,7 +72,7 @@ local function _update()
   -- gravity!
   vely = vely + 0.2
   -- press X to randomly choose a new velocity
-  if riv.keys[RIV_GAMEPAD_SELECT].press then
+  if riv.keys[RIV_GAMEPAD_A1].press then
     velx = math.random()*6-3
     vely = math.random()*6-8
     -- sfx(2)

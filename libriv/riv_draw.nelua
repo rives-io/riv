@@ -609,7 +609,7 @@ local function riv_draw_text_topleft(text: cstring <const>, sps_id: uint64, x0: 
       y = y + gh
       ymax = math.max(y, ymax)
       y = y + sy
-      xmax = math.max(x, xmax)
+      xmax = math.max(x - sx, xmax)
       x = x0
     elseif glyph == '\r'_b then
       -- skip
@@ -631,7 +631,7 @@ local function riv_draw_text_topleft(text: cstring <const>, sps_id: uint64, x0: 
     riv.draw.pal_enabled = oldpal_enabled
     riv.draw.pal[1] = oldcol1
   end
-  if x ~= x0 then
+  if x ~= x0 or y ~= y0 then
     y = y + gh
     ymax = math.max(y, ymax)
   end

@@ -2,6 +2,7 @@
 #define RIV_H
 
 #ifndef RIV_NO_INCLUDES
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 #endif

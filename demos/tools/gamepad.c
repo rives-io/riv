@@ -1,7 +1,6 @@
 //riv-jit-c (DO NOT REMOVE THIS LINE)
 #include <riv.h>
 #include <math.h>
-#include <stddef.h>
 
 int main() {
   int img_id = riv_make_image("gamepad.png", RIV_COLOR_BLACK);
