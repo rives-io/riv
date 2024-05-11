@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stddef.h>
 
-#define sformat(fmt, ...) ({ char buf[256];riv_snprintf(buf, 256, fmt, __VA_ARGS__); buf; })
+#define sformat(fmt, ...) ({ char buf[32];riv_snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); buf; })
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define array_len(a) (sizeof(a)/sizeof(a[0]))
 
