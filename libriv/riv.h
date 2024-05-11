@@ -835,8 +835,9 @@ RIV_API bool riv_present(void);                                                 
 
 // Images
 
-RIV_API uint64_t riv_make_image(const char* filename, int64_t color_key);       // Load an image from a file
-RIV_API void riv_destroy_image(uint64_t img_id);                                // Destroy an image
+RIV_API uint64_t riv_make_image(const char* filename, int64_t color_key);   // Load an image from a PNG file
+RIV_API void riv_destroy_image(uint64_t img_id);                            // Destroy an image
+RIV_API uint32_t riv_load_palette(const char* filename, uint8_t start_col); // Load color palette from a PNG file
 
 // Sprites
 

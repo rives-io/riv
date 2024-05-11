@@ -22,16 +22,6 @@ local function generate_image_id(): uint64
   return 0
 end
 
-local function get_plte_size(): uint64
-  -- determine palette size
-  for i: int64=RIV_MAX_COLORS-1,0,-1 do
-    if riv.palette[(@uint64)(i)] ~= 0 then
-      return (@uint64)(i + 1)
-    end
-  end
-  return 1
-end
-
 local function rgb_distance2(a: uint32, b: uint32): int64 <inline>
   local dr: int64 = (@int64)((a >> 16) & 0xff) - (@int64)((b >> 16) & 0xff)
   local dg: int64 = (@int64)((a >>  8) & 0xff) - (@int64)((b >>  8) & 0xff)
@@ -39,17 +29,29 @@ local function rgb_distance2(a: uint32, b: uint32): int64 <inline>
   return dr*dr + dg*dg + db*db
 end
 
+local function get_rgba_to_plte_map(): hashmap(uint32, uint8)
+  local rgba_to_plte_map: hashmap(uint32, uint8)
+  local plte: *[RIV_MAX_COLORS]uint32 = &riv.palette[0]
+  -- rgba -> plte mapping
+  rgba_to_plte_map:reserve(32)
+  for i: int64=RIV_MAX_COLORS-1,0,-1 do
+    rgba_to_plte_map[plte[uint64(i)] & 0xffffff] = uint8(i)
+  end
+  return rgba_to_plte_map
+end
+
 local function convert_rgba_to_plte(pixels_rgba: *[0]uint32, pixels_plte: *[0]uint8, size: uint64, color_key: uint8): void
-  local rgba_to_plte_cache: hashmap(uint32, uint8) <close>
-  rgba_to_plte_cache:reserve(32)
-  local plte: *[0]uint32 = &riv.palette[0]
-  local plte_size: uint64 = get_plte_size()
+  local rgba_to_plte_map: hashmap(uint32, uint8) <close> = get_rgba_to_plte_map()
+  local plte_size: uint64 = rgba_to_plte_map.size
+  local plte: *[RIV_MAX_COLORS]uint32 = &riv.palette[0]
+  -- convert rgba -> plte
   for i: uint64=0,<size do
     local rgba: uint32 = pixels_rgba[i]
     if rgba >> 24 == 0 then -- transparent
       pixels_plte[i] = color_key
     else
-      local found: boolean, col: uint8 = rgba_to_plte_cache:has_and_get(rgba)
+      rgba = rgba & 0xffffff
+      local found: boolean, col: uint8 = rgba_to_plte_map:has_and_get(rgba)
       if not found then -- find nearest color in the palette
         local mind: int64 = rgb_distance2(rgba, plte[0])
         for j: uint64=1,<plte_size do
@@ -58,6 +60,9 @@ local function convert_rgba_to_plte(pixels_rgba: *[0]uint32, pixels_plte: *[0]ui
             mind = d
             col = (@uint8)(j)
           end
+        end
+        if rgba_to_plte_map.size < 4096 then
+          rgba_to_plte_map[rgba] = col
         end
       end
       pixels_plte[i] = col
@@ -118,7 +123,7 @@ global function riv_make_image(filename: cstring <const>, color_key: int64): uin
     return 0
   end
   -- decode image
-  spngerr = spng_decode_image(ctx, pixels_rgba, size_rgba, SPNG_FMT_RGBA8, 0)
+  spngerr = spng_decode_image(ctx, pixels_rgba, size_rgba, SPNG_FMT_RGBA8, SPNG_DECODE_TRNS)
   if spngerr ~= 0 then
     io.stderr:writef('ERROR: unable to make image %d from file "%s": %s\n', img_id, filename, spng_strerror(spngerr))
     C.free(pixels_plte)
@@ -143,4 +148,50 @@ global function riv_destroy_image(img_id: uint64): void <cexport>
     C.free(img.pixels)
   end
   $img = {}
+end
+
+global function riv_load_palette(filename: cstring <const>, start_col: uint8): uint32 <cexport>
+  -- open file
+  local file: *FILE = C.fopen(filename, 'rb')
+  if not file then
+    io.stderr:writef('ERROR: unable to load palette from file "%s": %s\n', filename, C.strerror(C.errno))
+    return 0
+  end
+  defer C.fclose(file) end
+  -- create PNG context
+  local ctx: *spng_ctx = spng_ctx_new(0)
+  if not ctx then
+    io.stderr:writef('ERROR: unable to load palette from file "%s": failed to allocate PNG context\n', filename)
+    return 0
+  end
+  defer spng_ctx_free(ctx) end
+  -- set PNG file
+  local spngerr: cint = spng_set_png_file(ctx, file)
+  if spngerr ~= 0 then
+    io.stderr:writef('ERROR: unable to load palette from file "%s": %s\n', filename, spng_strerror(spngerr))
+    return 0
+  end
+  -- load plte
+  local plte: spng_plte
+  if spng_get_plte(ctx, &plte) ~= 0 then
+    io.stderr:writef('ERROR: unable to load palette from file "%s": %s\n', filename, spng_strerror(spngerr))
+    return 0
+  end
+  -- load colors
+  local rgba_to_plte_map: hashmap(uint32, uint8) <close> = get_rgba_to_plte_map()
+  local col: uint32 = start_col
+  for i: uint32=0,<plte.n_entries do
+    if col >= RIV_MAX_COLORS then
+      io.stderr:writef('WARNING: reached maximum amount of colors while loading palette from file "%s"\n', filename, spng_strerror(spngerr))
+      break
+    end
+    local rgba: uint32 = ((@uint32)(plte.entries[i].blue ) << 16) |
+                         ((@uint32)(plte.entries[i].green) << 8) |
+                         ((@uint32)(plte.entries[i].red  ) << 0)
+    if not rgba_to_plte_map:has(rgba) then
+      riv.palette[col] = rgba
+      col = col + 1
+    end
+  end
+  return col - start_col
 end
