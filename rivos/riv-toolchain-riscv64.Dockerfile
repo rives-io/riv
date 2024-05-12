@@ -153,6 +153,7 @@ RUN apk add bash \
         squashfs-tools e2fsprogs e2fsprogs-extra \
         curl wget \
         jq \
+        optipng pngquant oxipng \
         libffi libffi-dev \
         quickjs quickjs-dev \
         micropython@testing

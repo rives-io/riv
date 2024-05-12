@@ -3,9 +3,7 @@
 #include <math.h>
 
 int main() {
-  int img_id = riv_make_image("logo.png", RIV_COLOR_BLACK);
-  int img_w = riv->images[img_id].width;
-  int img_h = riv->images[img_id].height;
+  int img_id = riv_make_image("simple_dungeon_crawler_16x16.png", RIV_COLOR_BLACK);
   riv->target_fps = 30;
   do {
     riv_clear(RIV_COLOR_BLACK);
@@ -32,7 +30,7 @@ int main() {
         case 10: name="TRIANGLE FILL"; riv_draw_triangle_fill(ox-dy/2, oy-dy/2, ox-dx/2, oy+dy/2, ox+dx/2, oy+dy/2, RIV_COLOR_PEACH); break;
         case 11: name="TRIANGLE LINE"; riv_draw_triangle_fill(ox-dy/2, oy-dy/2, ox-dx/2, oy+dy/2, ox+dx/2, oy+dy/2, RIV_COLOR_LIGHTPEACH); break;
         case 12: name="POINT"; riv_draw_point(ox+dx-s, oy, RIV_COLOR_LIGHTRED); break;
-        case 13: name="IMAGE RECT"; riv_draw_image_rect(img_id, ox-img_w, oy-img_h, img_w, img_h, 0, 0, 2, 2); break;
+        case 13: name="IMAGE RECT"; riv_draw_image_rect(img_id, ox-16, oy-16, 16, 16, ((riv->frame / 4) % 6) * 16, 128, 2, 2); break;
         case 14: name="TEXT"; riv_draw_text("HELLO", RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, ox, oy, (int)(sinf(i+t*4)+2), RIV_COLOR_WHITE); break;
         case 15: name="TEXT EX"; riv_draw_text_ex("HELLO", RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, ox, oy, (int)(sinf(i+t*3)+2), (int)(sinf(i+t*4)+2), 2, 2, RIV_COLOR_WHITE); break;
       }
