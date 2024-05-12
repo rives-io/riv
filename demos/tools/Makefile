@@ -16,6 +16,7 @@ lint:
 	clang-tidy *.c -- -I../../libriv
 
 gamepad.sqfs: DATA_FILES=gamepad.png
+coins.sqfs: DATA_FILES=simple_dungeon_crawler_16x16.png
 shapes.sqfs: DATA_FILES=logo.png
 %.sqfs: %.elf
 	$(RIVEMU_EXEC) riv-mksqfs $^ $(DATA_FILES) $@ -comp $(COMP)
