@@ -32,8 +32,8 @@ function riv_waveform_desc:fill_defaults()
   self.decay = math.max(self.decay, 1e-6)
   self.sustain = math.max(self.sustain, 1e-6)
   self.release = math.max(self.release, 1e-6)
-  if self.amplitude == 0 then self.amplitude = 1.0_f32 end
-  if self.sustain_level == 0 then self.sustain_level = 1.0_f32 end
+  if self.amplitude == 0 then self.amplitude = 0.25_f32 end
+  if self.sustain_level == 0 then self.sustain_level = 0.5_f32 end
   if self.end_frequency == 0 then self.end_frequency = self.start_frequency end
   if self.duty_cycle == 0 then self.duty_cycle = 0.5_f32 end
 end
@@ -465,6 +465,7 @@ function rivemu_audio.start_boot_sound()
     release = 0.01,
     start_frequency = 440.0,
     amplitude = 0.1,
+    sustain_level = 1,
   }
   handle_waveform{
     id = 2,
@@ -475,6 +476,7 @@ function rivemu_audio.start_boot_sound()
     release = 0.01,
     start_frequency = 2*440.0,
     amplitude = 0.1,
+    sustain_level = 1,
   }
   handle_waveform{
     id = 3,
@@ -485,6 +487,7 @@ function rivemu_audio.start_boot_sound()
     release = 0.02,
     start_frequency = 4*440.0,
     amplitude = 0.1,
+    sustain_level = 1,
   }
 end
 

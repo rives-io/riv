@@ -658,9 +658,9 @@ typedef struct riv_waveform_desc {
   float release;               // Release duration in seconds
   float start_frequency;       // Starting frequency in Hz
   float end_frequency;         // Starting frequency in Hz
-  float amplitude;             // Maximum amplitude in range [0.0, 1.0]
-  float sustain_level;         // Sustain level in range [0.0, 1.0]
-  float duty_cycle;            // Duty cycle in range [0.0, 1.0]
+  float amplitude;             // Maximum amplitude in range (0.0, 1.0]
+  float sustain_level;         // Sustain level in range (0.0, 1.0]
+  float duty_cycle;            // Duty cycle in range (0.0, 1.0]
   float pan;                   // Pan in range [-1.0, 1.0]
 } riv_waveform_desc;
 
