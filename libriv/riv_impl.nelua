@@ -165,6 +165,8 @@ global function riv_present(): boolean <cexport>
   riv.time_ms = (@int64)((frame * 1000) // target_fps)
   -- audio commands was flushed
   riv.command_len = 0
+  -- flush temporary string buffer
+  riv.temp_str_off = 0
   -- poll keyboard inputs
   riv_poll_inputs()
   return not riv.quit and frame <= riv.quit_frame

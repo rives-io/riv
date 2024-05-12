@@ -534,6 +534,7 @@ typedef enum riv_mem_size {
   RIV_SIZE_STATECARD    =  2*1024*1024, // 2 MB
   RIV_SIZE_FRAMEBUFFER  =  2*1024*1024, // 2 MB
   RIV_SIZE_TXBUFFER     =  2*1024*1024, // 2 MB
+  RIV_SIZE_TEMP_STRBUF  =  64*1024,     // 64KB
 } riv_mem_size;
 
 // Memory mapped virtual address
@@ -800,7 +801,9 @@ typedef struct riv_context {
   uint32_t verify_key_event_index;                    // Current event index when verifying
   riv_key_toggle_event *verify_key_events;            // List of events to follow when verifying
   uint64_t stop_frame;                                // Device requested stop frame
-  uint8_t prv_driver_padding[1047456];                // Reserved
+  uint64_t temp_str_off;                              // Temporary string buffer offset
+  uint8_t temp_str_buf[RIV_SIZE_TEMP_STRBUF];         // Temporary string buffer (used by riv_tprintf)
+  uint8_t prv_driver_padding[981912];                 // Reserved
 
   //////////////////////////////////////
   // Buffers
@@ -827,6 +830,7 @@ RIV_API uint64_t riv_version(void);                                             
 RIV_API uint64_t riv_rdcycle(void);                                             // Get the current machine cycle, THIS IS NON REPRODUCIBLE, use for bench-marking only
 RIV_API uint64_t riv_printf(const char* format, ...);                           // Print to standard output, use for debugging only
 RIV_API uint64_t riv_snprintf(char* buf, uint64_t n, const char* format, ...);  // Format a string
+RIV_API char *riv_tprintf(const char* format, ...);                             // Format a string into a temporary buffer that remains valid until next frame
 
 // Basic
 

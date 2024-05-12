@@ -26,7 +26,7 @@ global function riv_printf(format: cstring <const>, ...: cvarargs): usize <cexpo
   return ret
 end
 
--- Formats an string.
+-- Formats a string.
 global function riv_snprintf(buf: cstring, n: usize, format: cstring <const>, ...: cvarargs): usize <cexport>
   local args: cvalist
   C.va_start(args, format)
@@ -34,4 +34,20 @@ global function riv_snprintf(buf: cstring, n: usize, format: cstring <const>, ..
   C.va_end(args)
   if ret < 0 then ret = 0 end
   return ret
+end
+
+-- Formats a temporary string.
+global function riv_tprintf(format: cstring <const>, ...: cvarargs): cstring <cexport>
+  local maxlen: usize = #riv.temp_str_buf - riv.temp_str_off
+  if maxlen == 0 then return (@cstring)(&riv.temp_str_buf[#riv.temp_str_buf-1]) end
+  local args: cvalist
+  C.va_start(args, format)
+  local buf: cstring = (@cstring)(&riv.temp_str_buf[riv.temp_str_off])
+  local ret: cint = C.vsnprintf(buf, maxlen, format, args)
+  C.va_end(args)
+  if ret <= 0 then
+    return (@cstring)(&riv.temp_str_buf[#riv.temp_str_buf-1])
+  end
+  riv.temp_str_off = riv.temp_str_off + (@usize)(ret + 1)
+  return buf
 end

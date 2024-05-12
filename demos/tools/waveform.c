@@ -3,7 +3,6 @@
 #include <math.h>
 #include <stddef.h>
 
-#define sformat(fmt, ...) ({ char buf[32];riv_snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); buf; })
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define array_len(a) (sizeof(a)/sizeof(a[0]))
 
@@ -289,7 +288,7 @@ int main() {
       if (riv->keys[note.key].press)
         play_note(1+i, note.rel_freq, &waveform);
       else if (riv->keys[note.key].release)
-        play_note(1+i, note.rel_freq, &(riv_waveform_desc){});
+        play_note(1+i, note.rel_freq, &(riv_waveform_desc){.type = RIV_WAVEFORM_NONE});
     }
     // adjust sound
     if (change != 0) {
@@ -320,16 +319,16 @@ int main() {
     riv_draw_text_ex("UP/DOWN    - navigate    Z - play\nLEFT/RIGHT - adjust      X - randomize\nQWERTYUIOP - piano", RIV_SPRITESHEET_FONT_5X7, RIV_BOTTOMLEFT, 0, 256-8, 1, 1, 1, 2, RIV_COLOR_LIGHTGREY);
     draw_panel("PRESET", preset >= 0 ? presets[preset].name : "CUSTOM", focus == PANEL_PRESET);
     draw_panel("WAVEFORM TYPE", get_waveform_type_name(waveform.type), focus == PANEL_TYPE);
-    draw_panel("ATTACK", sformat("%.3f", waveform.attack), focus == PANEL_ATTACK);
-    draw_panel("DECAY", sformat("%.3f", waveform.decay), focus == PANEL_DECAY);
-    draw_panel("SUSTAIN", sformat("%.3f", waveform.sustain), focus == PANEL_SUSTAIN);
-    draw_panel("RELEASE", sformat("%.3f", waveform.release), focus == PANEL_RELEASE);
-    draw_panel("START FREQ", sformat("%.3f", waveform.start_frequency), focus == PANEL_START_FREQ);
-    draw_panel("END FREQ", sformat("%.3f", waveform.end_frequency), focus == PANEL_END_FREQ);
-    draw_panel("AMPLITUDE", sformat("%.3f", waveform.amplitude), focus == PANEL_AMPLITUDE);
-    draw_panel("SUSTAIN LEVEL", sformat("%.3f", waveform.sustain_level), focus == PANEL_SUSTAIN_LEVEL);
-    draw_panel("DUTY CYCLE", sformat("%.3f", waveform.duty_cycle), focus == PANEL_DUTY_CYCLE);
-    draw_panel("PAN", sformat("%.3f", waveform.pan), focus == PANEL_PAN);
+    draw_panel("ATTACK", riv_tprintf("%.3f", waveform.attack), focus == PANEL_ATTACK);
+    draw_panel("DECAY", riv_tprintf("%.3f", waveform.decay), focus == PANEL_DECAY);
+    draw_panel("SUSTAIN", riv_tprintf("%.3f", waveform.sustain), focus == PANEL_SUSTAIN);
+    draw_panel("RELEASE", riv_tprintf("%.3f", waveform.release), focus == PANEL_RELEASE);
+    draw_panel("START FREQ", riv_tprintf("%.3f", waveform.start_frequency), focus == PANEL_START_FREQ);
+    draw_panel("END FREQ", riv_tprintf("%.3f", waveform.end_frequency), focus == PANEL_END_FREQ);
+    draw_panel("AMPLITUDE", riv_tprintf("%.3f", waveform.amplitude), focus == PANEL_AMPLITUDE);
+    draw_panel("SUSTAIN LEVEL", riv_tprintf("%.3f", waveform.sustain_level), focus == PANEL_SUSTAIN_LEVEL);
+    draw_panel("DUTY CYCLE", riv_tprintf("%.3f", waveform.duty_cycle), focus == PANEL_DUTY_CYCLE);
+    draw_panel("PAN", riv_tprintf("%.3f", waveform.pan), focus == PANEL_PAN);
 
     { // ADSR graph
       float x = 0, y = 0;

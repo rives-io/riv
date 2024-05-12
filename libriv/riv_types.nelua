@@ -452,7 +452,8 @@ global riv_mem_size: type <cimport,nodecl,using> = @enum(uint32){
   RIV_SIZE_OUTCARD = 2097152,
   RIV_SIZE_STATECARD = 2097152,
   RIV_SIZE_FRAMEBUFFER = 2097152,
-  RIV_SIZE_TXBUFFER = 2097152
+  RIV_SIZE_TXBUFFER = 2097152,
+  RIV_SIZE_TEMP_STRBUF = 65536
 }
 global riv_mem_addr: type <cimport,nodecl,using> = @enum(uint32){
   RIV_VADDR_CONTEXT = 268435456,
@@ -642,7 +643,9 @@ global riv_context: type <cimport,nodecl> = @record{
   verify_key_event_index: uint32,
   verify_key_events: *[0]riv_key_toggle_event,
   stop_frame: uint64,
-  prv_driver_padding: [1047456]uint8,
+  temp_str_off: uint64,
+  temp_str_buf: [65536]uint8,
+  prv_driver_padding: [981912]uint8,
   incard: [2097152]uint8,
   outcard: [2097152]uint8,
   statecard: [2097152]uint8,

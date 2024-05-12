@@ -147,9 +147,7 @@ void draw_game() {
     int flip_y = (head_dir.y == -1) ? -1 : 1;
     riv_draw_sprite(spr_id, GAME_SPRITESHEET, head_pos.x*TILE_SIZE, head_pos.y*TILE_SIZE, 1, 1, flip_x, flip_y);
     // Draw score
-    char buf[128];
-    riv_snprintf(buf, sizeof(buf), "SCORE %d", score);
-    riv_draw_text(buf, RIV_SPRITESHEET_FONT_3X5, RIV_BOTTOMLEFT, 1, 128-1, 1, RIV_COLOR_WHITE);
+    riv_draw_text(riv_tprintf("SCORE %d", score), RIV_SPRITESHEET_FONT_3X5, RIV_BOTTOMLEFT, 1, 128-1, 1, RIV_COLOR_WHITE);
 }
 
 // Draw game start screen
