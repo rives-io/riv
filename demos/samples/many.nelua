@@ -3,7 +3,6 @@
 require 'riv'
 require 'math'
 require 'vector'
-require 'string'
 
 local SCREEN_SIZE <comptime> = 256
 riv.width = SCREEN_SIZE

@@ -2,7 +2,6 @@
 
 require 'riv'
 require 'math'
-require 'string'
 
 local function draw()
   riv_clear(RIV_COLOR_DARKSLATE)

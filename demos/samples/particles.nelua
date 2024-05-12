@@ -3,7 +3,6 @@
 require 'riv'
 require 'math'
 require 'vector'
-require 'string'
 
 local Particle = @record{
   x: float32,
@@ -64,6 +63,5 @@ repeat
   end
   dots:removeif(function(a: Particle): boolean return a.expired end)
 
-  local text <close> = string.format('PARTICLES: %d', n)
-  riv_draw_text(text, RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, 4, 4, 1, RIV_COLOR_WHITE)
+  riv_draw_text(riv_tprintf('PARTICLES: %ld', n), RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, 4, 4, 1, RIV_COLOR_WHITE)
 until not riv_present()
