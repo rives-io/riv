@@ -260,7 +260,7 @@ function resetCanvasSize() {
   canvasElem.height = 768;
 }
 
-async function rivemuUpload(cartridgeUrl, tapeUrl) {
+async function rivemuUpload(cartridgeUrl, tapeUrl, autoPlay) {
   hideElem(cartridgesElem);
   hideElem(canvasDropElem);
   await rivemuStop();
@@ -271,7 +271,11 @@ async function rivemuUpload(cartridgeUrl, tapeUrl) {
     statusElem.textContent = "Downloading tape...";
     lastTape = tapeUrl ? await downloadFile(tapeUrl) : await uploadTapeDialog(".rivtape");
   }
-  showFlexElem(canvasStartElem);
+  if (autoPlay) {
+    rivemuStart();
+  } else {
+    showFlexElem(canvasStartElem);
+  }
 }
 
 async function rivemuUploadCartridge(url) {
@@ -517,6 +521,9 @@ if (params.editor) {
   showBlockElem(cartridgesElem);
   showFlexElem(canvasDropElem);
 }
+if (params.nocontrols) {
+  hideElem(document.getElementById('button-box'));
+}
 if (params.simple) {
   hideElem(document.getElementById('pause'));
   hideElem(document.getElementById('change-speed'));
@@ -525,7 +532,7 @@ if (params.simple) {
 
 // Play external cartridge
 if (params.cartridge) {
-  rivemuUpload(params.cartridge, params.tape);
+  rivemuUpload(params.cartridge, params.tape, params.autoplay);
 }
 
 // Send event to parent window when the page is loaded

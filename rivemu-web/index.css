@@ -18,6 +18,8 @@ body {
   text-align: left;
 }
 #canvas {
+  display: block;
+  margin: 0 auto;
   max-width: 768px;
   max-height: 768px;
   background-color: black;
