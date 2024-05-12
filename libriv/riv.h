@@ -621,6 +621,7 @@ typedef struct riv_draw_state {
   riv_recti clip;              // Draw clipping bounding box
   uint8_t pal[RIV_MAX_COLORS]; // Draw swap palette
   bool pal_enabled;            // Whether swap palette is enabled
+  bool color_key_disabled;     // Whether drawing of sprites/images should consider color key
 } riv_draw_state;
 
 // Sound buffer description

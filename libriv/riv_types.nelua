@@ -511,7 +511,8 @@ global riv_draw_state: type <cimport,nodecl> = @record{
   origin: riv_vec2i,
   clip: riv_recti,
   pal: [256]uint8,
-  pal_enabled: boolean
+  pal_enabled: boolean,
+  color_key_disabled: boolean
 }
 global riv_soundbuffer_desc: type <cimport,nodecl> = @record{
   id: uint64,

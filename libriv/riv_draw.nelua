@@ -464,7 +464,7 @@ end
 ## local function draw_image_hot_loop()
   local imgp: *[0]uint8 = img.pixels
   if unlikely(sx0 + w > imgw or sy0 + h > imgh or not imgp) then return end
-  local imgcolkey: uint64 = (@uint64)(img.color_key)
+  local imgcolkey: uint64 = riv.draw.color_key_disabled and (@uint64)(-1) or (@uint64)(img.color_key)
   x0 = x0 + riv.draw.origin.x
   y0 = y0 + riv.draw.origin.y
   local fb: *[0]uint8 = &riv.framebuffer[0]
