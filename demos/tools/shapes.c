@@ -1,4 +1,3 @@
-//riv-jit-c (DO NOT REMOVE THIS LINE)
 #include <riv.h>
 #include <math.h>
 
@@ -28,7 +27,7 @@ int main() {
         case 8: name="QUAD FILL"; riv_draw_quad_fill(ox-dy/2, oy-dy/2, ox+dy/2, oy-dy/2, ox-dx/2, oy+dy/2, ox+dx/2, oy+dy/2, RIV_COLOR_PINK); break;
         case 9: name="QUAD LINE"; riv_draw_quad_line(ox-dy/2, oy-dy/2, ox+dy/2, oy-dy/2, ox-dx/2, oy+dy/2, ox+dx/2, oy+dy/2, RIV_COLOR_LIGHTPINK); break;
         case 10: name="TRIANGLE FILL"; riv_draw_triangle_fill(ox-dy/2, oy-dy/2, ox-dx/2, oy+dy/2, ox+dx/2, oy+dy/2, RIV_COLOR_PEACH); break;
-        case 11: name="TRIANGLE LINE"; riv_draw_triangle_fill(ox-dy/2, oy-dy/2, ox-dx/2, oy+dy/2, ox+dx/2, oy+dy/2, RIV_COLOR_LIGHTPEACH); break;
+        case 11: name="TRIANGLE LINE"; riv_draw_triangle_line(ox-dy/2, oy-dy/2, ox-dx/2, oy+dy/2, ox+dx/2, oy+dy/2, RIV_COLOR_LIGHTPEACH); break;
         case 12: name="POINT"; riv_draw_point(ox+dx-s, oy, RIV_COLOR_LIGHTRED); break;
         case 13: name="IMAGE RECT"; riv_draw_image_rect(img_id, ox-16, oy-16, 16, 16, ((riv->frame / 4) % 6) * 16, 128, 2, 2); break;
         case 14: name="TEXT"; riv_draw_text("HELLO", RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, ox, oy, (int)(sinf(i+t*4)+2), RIV_COLOR_WHITE); break;

@@ -1,4 +1,3 @@
-//riv-jit-c (DO NOT REMOVE THIS LINE)
 #include <riv.h>
 #include <math.h>
 #include <stddef.h>

@@ -1,4 +1,3 @@
-//riv-jit-c (DO NOT REMOVE THIS LINE)
 #include <riv.h>
 
 uint32_t bswap32(uint32_t val) {

@@ -12,6 +12,7 @@ mount -t binfmt_misc none /proc/sys/fs/binfmt_misc
 
 # allow to run C files using riv-jit-c
 echo ':c:M:://riv-jit-c::/usr/bin/riv-jit-c:' > /proc/sys/fs/binfmt_misc/register
+echo ':riv-c:M::#include <riv.h>::/usr/bin/riv-jit-c:' > /proc/sys/fs/binfmt_misc/register
 
 # security
 busybox mount -o noatime,nosuid,remount /
