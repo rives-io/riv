@@ -33,7 +33,7 @@ function riv_waveform_desc:fill_defaults()
   self.sustain = math.max(self.sustain, 1e-6)
   self.release = math.max(self.release, 1e-6)
   if self.amplitude == 0 then self.amplitude = 0.25_f32 end
-  if self.sustain_level == 0 then self.sustain_level = 0.5_f32 end
+  if self.sustain_level == 0 then self.sustain_level = 1.0_f32 end
   if self.end_frequency == 0 then self.end_frequency = self.start_frequency end
   if self.duty_cycle == 0 then self.duty_cycle = 0.5_f32 end
 end
