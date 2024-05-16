@@ -887,9 +887,9 @@ RIV_API void riv_draw_image_rect(uint64_t img_id, int64_t x0, int64_t y0, int64_
 // Draw fill of a rectangle copied from a sprite sheet
 RIV_API void riv_draw_sprite(uint32_t n, uint64_t sps_id, int64_t x0, int64_t y0, int64_t nw, int64_t nh, int64_t mw, int64_t mh);
 // Draw text determined by its sprite sheet, anchor point, size and returns its size
-RIV_API riv_vec2i riv_draw_text(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t size, int64_t col);
+RIV_API riv_recti riv_draw_text(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t size, int64_t col);
 // Draw text determined by its sprite sheet, anchor point, size, scale, spacing and returns its size
-RIV_API riv_vec2i riv_draw_text_ex(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t mw, int64_t mh, int64_t sx, int64_t sy, int64_t col);
+RIV_API riv_recti riv_draw_text_ex(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t mw, int64_t mh, int64_t sx, int64_t sy, int64_t col);
 
 ////////////////////////////////////////
 // Audio

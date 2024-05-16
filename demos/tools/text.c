@@ -170,8 +170,8 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZ\n\
     glyphs_draw_glyphs(56, 16, RIV_SPRITESHEET_FONT_5X7);
     riv_draw_text("SMALL FONT - 3x5 pixels", RIV_SPRITESHEET_FONT_3X5, RIV_TOP, 128, 88, 1, RIV_COLOR_YELLOW);
     glyphs_draw_glyphs(56, 98, RIV_SPRITESHEET_FONT_3X5);
-    riv_vec2i text_size = riv_draw_text(text, RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, 8, 168, 1, 1);
-    riv_draw_rect_line(6, 166, (text_size.x + 4), (text_size.y + 4), RIV_COLOR_RED);
+    riv_recti text_bbox = riv_draw_text(text, RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, 8, 168, 1, 1);
+    riv_draw_rect_line(6, 166, (text_bbox.width + 4), (text_bbox.height + 4), RIV_COLOR_RED);
   } while(riv_present());
   return 0;
 }
