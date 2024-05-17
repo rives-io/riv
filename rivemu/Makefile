@@ -79,7 +79,7 @@ LINUX_WRAPPER_LDFLAGS=\
 	/usr/lib/arc4random.o \
 	-static-libgcc
 
-rivemu-linux-%: rivemu.nelua $(DEPS)
+rivemu-linux-%: rivemu.nelua $(DEPS) riv-toolchain-linux.Dockerfile
 	docker build --progress plain \
 		--platform linux/$* \
 		--tag riv/toolchain-linux-$* \
@@ -99,7 +99,7 @@ rivemu-linux-%: rivemu.nelua $(DEPS)
 
 # Packaging for Windows
 rivemu-windows-amd64: rivemu-windows-amd64.exe
-rivemu-windows-%.exe: rivemu.nelua $(DEPS)
+rivemu-windows-%.exe: rivemu.nelua $(DEPS) riv-toolchain-windows.Dockerfile
 	docker build --progress plain \
 		--tag riv/toolchain-windows-amd64 \
 		--file riv-toolchain-windows.Dockerfile .
@@ -116,7 +116,7 @@ rivemu-windows-%.exe: rivemu.nelua $(DEPS)
 				chown $(shell id -u):$(shell id -g) /mnt/rivemu/rivemu-windows-amd64.exe"
 
 # Packaging for WASM
-rivemu.wasm: rivemu.nelua $(DEPS)
+rivemu.wasm: rivemu.nelua $(DEPS) riv-toolchain-wasm.Dockerfile
 	docker build --progress plain \
 		--tag riv/toolchain-wasm \
 		--file riv-toolchain-wasm.Dockerfile .

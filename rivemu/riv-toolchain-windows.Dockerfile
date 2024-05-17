@@ -7,7 +7,7 @@ RUN pacman -Syyu --noconfirm && \
 # Install cartesi machine
 RUN <<EOF
 set -e
-git clone --branch feature/optim-fetch --depth 1 https://github.com/cartesi/machine-emulator.git
+git clone --branch feature/windows-virtio-9p --depth 1 https://github.com/cartesi/machine-emulator.git
 cd machine-emulator
 make dep
 make bundle-boost
