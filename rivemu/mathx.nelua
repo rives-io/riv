@@ -31,10 +31,10 @@ function mathx.hash1(x: float32): float32 <inline,nosideeffect>
 end
 
 function mathx.valuenoise(x: auto) <inline,nosideeffect>
-  local i, f = math.floor(x), math.fract(x)
-  local I = math.floor(i + 1)
-  local a = mathx.hash1(i)
-  local b = mathx.hash1(I)
+  local ia, f = math.floor(x), math.fract(x)
+  local ib = math.floor(ia + 1)
+  local a = mathx.hash1(ia)
+  local b = mathx.hash1(ib)
   local u = f*f*(3-2*f) -- cubic interpolation
   return mathx.mix(a, b, u)
 end

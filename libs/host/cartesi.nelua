@@ -1,14 +1,18 @@
 ##[[
 cinclude 'machine-c-api.h'
 if CARTESI_STATIC then
-  linklib 'libcartesi.a'
-  if not ccinfo.is_wasm then
+  if ccinfo.is_macos then
+    linklib 'cartesi'
+    linklib 'c++'
+  elseif ccinfo.is_wasm then
+    linklib 'libcartesi.a'
+  elseif ccinfo.is_windows then
+    linklib 'libcartesi.a'
     linklib 'libstdc++.a'
-  end
-  -- libslirp related
-  if ccinfo.is_windows then
     linklib 'ws2_32'
-  elseif not ccinfo.is_wasm then
+  elseif ccinfo.is_linux then
+    linklib 'libcartesi.a'
+    linklib 'libstdc++.a'
     linklib 'libslirp.a'
     linklib 'libglib-2.0.a'
   end

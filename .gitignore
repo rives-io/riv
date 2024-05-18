@@ -31,7 +31,7 @@ rivemu.wasm
 
 # ignore generated binaries
 /rivemu/rivemu
-/rivemu/rivemu-linux-*
+/rivemu/rivemu-*-*
 
 # ignore generated C sources
 /rivemu/rivemu.c

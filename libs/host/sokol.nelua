@@ -7,21 +7,29 @@ elseif ccinfo.is_windows then
   linklib 'gdi32'
   linklib 'dxgi'
   linklib 'd3d11'
+elseif ccinfo.is_macos then
+  cdefine 'SOKOL_METAL'
 else
   cdefine 'SOKOL_GLCORE33'
   linklib 'GL'
 end
 -- sokol_gfx
-cdefine 'SOKOL_GFX_API_DECL static'
-cdefine 'SOKOL_GFX_IMPL'
+if not ccinfo.is_macos then
+  cdefine 'SOKOL_GFX_API_DECL static'
+  cdefine 'SOKOL_GFX_IMPL'
+end
 cinclude 'sokol_gfx.h'
 -- sokol_gp
-cdefine 'SOKOL_GP_API_DECL static'
-cdefine 'SOKOL_GP_IMPL'
+if not ccinfo.is_macos then
+  cdefine 'SOKOL_GP_API_DECL static'
+  cdefine 'SOKOL_GP_IMPL'
+end
 cinclude 'sokol_gp.h'
 -- sokol_app
-cdefine 'SOKOL_APP_API_DECL static'
-cdefine 'SOKOL_APP_IMPL'
+if not ccinfo.is_macos then
+  cdefine 'SOKOL_APP_API_DECL static'
+  cdefine 'SOKOL_APP_IMPL'
+end
 cdefine 'SOKOL_NO_ENTRY'
 cinclude 'sokol_app.h'
 if ccinfo.is_linux then
@@ -34,6 +42,14 @@ elseif ccinfo.is_windows then
   linklib 'kernel32'
   linklib 'user32'
   linklib 'shell32'
+elseif ccinfo.is_macos then
+  ldflags '-framework Cocoa'
+  ldflags '-framework QuartzCore'
+  ldflags '-framework Metal'
+  ldflags '-framework MetalKit'
+  local fs = require 'nelua.utils.fs'
+  local sokol_m = fs.realpath(fs.scriptdir()..'/sokol.m')
+  cflags('-x objective-c '..sokol_m..' -x c')
 end
 -- sokol_glue
 cdefine 'SOKOL_GLUE_API_DECL static'
