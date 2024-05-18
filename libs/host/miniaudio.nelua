@@ -2,10 +2,12 @@
 if not MINIAUDIO_NO_IMPL then
   cdefine 'MA_API static'
   cdefine 'MA_PRIVATE static'
-  cdefine 'MA_NO_PTHREAD_IN_HEADER'
   cdefine 'MA_NO_GENERATION'
   cdefine 'MA_NO_RESOURCE_MANAGER'
   cdefine 'MINIAUDIO_IMPLEMENTATION'
+end
+if ccinfo.is_macos then
+  cdefine 'MA_NO_RUNTIME_LINKING'
 end
 cinclude 'miniaudio.h'
 if ccinfo.is_linux then
@@ -13,6 +15,12 @@ if ccinfo.is_linux then
   cflags '-pthread'
 elseif ccinfo.is_windows then
   linklib 'ole32'
+elseif ccinfo.is_macos then
+  ldflags '-framework CoreFoundation'
+  ldflags '-framework CoreAudio'
+  ldflags '-framework AudioToolbox'
+  linklib 'pthread'
+  linklib 'm'
 end
 ]]
 global ma_int8: type <cimport,nodecl> = @cschar
