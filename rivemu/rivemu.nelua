@@ -203,6 +203,7 @@ local function parse_options(): rivemu_options
     elseif argk == '-speed' then
       assert(argv:find('^[0-9]+%.?[0-9]*$') > 0, 'malformed speed number')
       opts.speed = tonumber(argv)
+      assert(math.floor(4*opts.speed) == 4*opts.speed, 'speed must be a multiple of 0.25')
       assert(opts.speed > 0.0, 'speed must be positive')
     elseif argk == '-stop-frame' then
       local numstr: string = argv
@@ -598,7 +599,6 @@ local function startup(): void
   if not options.no_audio then
     rivemu_audio.setup()
     rivemu_audio.set_pitch(options.speed)
-    rivemu_audio.start()
     if not options.no_loading then
       rivemu_audio.start_boot_sound()
     end
@@ -624,7 +624,7 @@ local function finish(halting: boolean): void
   end
 
   if not options.no_audio then
-    rivemu_audio.stop()
+    rivemu_audio.reset()
   end
 
   if options.tracking_outhist then
@@ -775,6 +775,12 @@ local function machine_frame(): void
         end
         -- poll audio
         if not options.no_audio then
+          -- reset audio in the first frame
+          if machine.mmio_driver.frame == last_open_device_frame then
+            rivemu_audio.reset()
+          else
+            rivemu_audio.advance_pcm_frame(machine.mmio_driver.target_fps * options.speed)
+          end
           rivemu_audio.poll_commands()
         end
         -- copy output card from guest memory into host memory
@@ -940,8 +946,8 @@ local function frame(): void
     -- TODO: get display refresh rate
     local refresh_rate: float64 = 60
     if not machine:is_mmio_ready() then -- process immediately the first frame
-      advance_frame()
       framelimiter.last_frame_time = os.now()
+      advance_frame()
     elseif options.no_window then -- process immediately when there is no window
       advance_frame()
     elseif options.speed <= 0 then
@@ -950,7 +956,7 @@ local function frame(): void
       if framelimiter:should_process_next_frame(os.now()) then
         advance_frame()
       end
-    else
+    else -- processing faster than refresh rate
       local now_start: float64 = os.now()
       local now_end: float64 = now_start + (1.0 / refresh_rate)
       local dt: float64 = 1.0 / (refresh_rate * options.speed)
@@ -969,6 +975,10 @@ local function frame(): void
   -- display the frame
   if not options.no_video then
     rivemu_video.present()
+  end
+  -- sync audio
+  if not options.no_audio then
+    rivemu_audio.sync_pcm_frame(framelimiter.target_update_fps)
   end
   -- restart when requested
   if restart_requested then
@@ -1116,9 +1126,17 @@ end
 
 local function rivemu_set_speed(speed: float64) <cexport>
   speed = math.clamp(speed, 0, 4)
+  local resuming = options.speed <= 0 and speed > 0
+  local pausing = options.speed > 0 and speed <= 0
   options.speed = speed
   if speed > 0 then
     rivemu_audio.set_pitch(speed)
+  end
+  if resuming then
+    framelimiter.last_frame_time = os.now() - 1.0/framelimiter.target_update_fps
+    rivemu_audio.start()
+  elseif pausing then
+    rivemu_audio.stop()
   end
 end
 

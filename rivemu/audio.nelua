@@ -180,6 +180,45 @@ function WaveForm:uninit(): void
 end
 
 --------------------------------------------------------------------------------
+-- Silence
+
+local Silence: type = @record{
+  ds: ma_data_source_base,
+}
+
+function Silence:_read(frames_out: *[0]float32, frame_count: uint64, frames_read: *uint64): ma_result
+  return MA_AT_END
+end
+
+function Silence:_get_data_format(format: *ma_format, channels: *uint32, sample_rate: *uint32, channel_map: *ma_channel, channel_map_cap: csize): ma_result
+  $format = ma_format_f32
+  $channels = 1
+  $sample_rate = 48000
+  ma_channel_map_init_standard(ma_standard_channel_map_default, channel_map, channel_map_cap, 1)
+  return MA_SUCCESS
+end
+
+local silence_data_source_vtable: ma_data_source_vtable = {
+  onRead = (@function(pDataSource: *ma_data_source, pFramesOut: pointer, frameCount: ma_uint64, pFramesRead: *ma_uint64): ma_result)(Silence._read),
+  onSeek = nilptr,
+  onGetDataFormat = (@function(pDataSource: *ma_data_source, pFormat: *ma_format, pChannels: *ma_uint32, pSampleRate: *ma_uint32, pChannelMap: *ma_channel, channelMapCap: csize): ma_result)(Silence._get_data_format),
+  onGetCursor = nilptr,
+  onGetLength = nilptr,
+  onSetLooping = nilptr
+}
+
+function Silence:init(sample_rate: uint32): ma_result
+  local data_source_config: ma_data_source_config = ma_data_source_config_init()
+  data_source_config.vtable = &silence_data_source_vtable
+  ma_assert!(ma_data_source_init(&data_source_config, &self.ds))
+  return MA_SUCCESS
+end
+
+function Silence:uninit(): void
+  ma_data_source_uninit(&self.ds)
+end
+
+--------------------------------------------------------------------------------
 -- Sound
 
 local Sound: type = @record{
@@ -219,7 +258,7 @@ end
 
 local DEFAULT_SAMPLE_RATE <comptime> = 48000
 local DEFAULT_CHANNELS <comptime> = 2
-local DEFAULT_PERIOD_SIZE <comptime> = DEFAULT_SAMPLE_RATE // 30
+local DEFAULT_PERIOD_SIZE <comptime> = DEFAULT_SAMPLE_RATE // 20
 local DEFAULT_VOLUME <comptime> = 0.8
 
 -- Audio subsystem.
@@ -231,8 +270,25 @@ local buffers: hashmap(uint64, riv_soundbuffer_desc)
 local sounds: hashmap(uint64, Sound)
 local releasing_sounds: vector(Sound)
 local global_pitch: float64
-local global_pcm_frame: uint64
 local global_sample_rate: uint64
+local global_pcm_frame: uint64
+local global_pcm_frame_rem: float64
+local global_sync_rem: int64
+local last_engine_sync_pcm_frame: uint64
+local silence: Silence
+local silence_asound: ma_sound
+
+-- Start audio thread.
+function rivemu_audio.start(): void
+  ma_assert!(ma_engine_start(&engine))
+  ma_assert!(ma_sound_start(silence_asound))
+end
+
+-- Stop audio thread.
+function rivemu_audio.stop(): void
+  ma_assert!(ma_sound_stop(silence_asound))
+  ma_assert!(ma_engine_stop(&engine))
+end
 
 -- Initialize audio subsystem.
 function rivemu_audio.setup(): void
@@ -246,7 +302,15 @@ function rivemu_audio.setup(): void
   ma_assert!(ma_engine_init(&config, &engine))
   ma_engine_set_volume(&engine, DEFAULT_VOLUME)
   global_sample_rate = ma_engine_get_sample_rate(&engine)
-  global_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine)
+  -- create dummy silence sound to keep audio global time incrementing
+  ma_assert!(Silence.init(&silence, global_sample_rate))
+  ma_assert!(ma_sound_init_from_data_source(&engine, &silence.ds, MA_SOUND_FLAG_NO_SPATIALIZATION, nilptr, &silence_asound))
+  ma_sound_set_looping(&silence_asound, MA_TRUE)
+  rivemu_audio.start()
+  global_pcm_frame = DEFAULT_PERIOD_SIZE
+  last_engine_sync_pcm_frame = 0
+  global_sync_rem = 0
+  global_pcm_frame_rem = 0
 end
 
 function rivemu_audio.set_pitch(pitch: float64): void
@@ -255,7 +319,7 @@ end
 
 -- Reset audio subsystem.
 function rivemu_audio.reset(): void
-  ma_engine_stop(&engine)
+  rivemu_audio.stop()
   -- destroy sounds
   for id: uint64, sound: *Sound in mpairs(sounds) do
     sound:destroy()
@@ -271,27 +335,23 @@ function rivemu_audio.reset(): void
     delete((@span(byte)){data=buffer.data.data, size=buffer.data.size})
   end
   buffers:destroy()
-end
-
--- Start audio thread.
-function rivemu_audio.start(): void
-  ma_assert!(ma_engine_start(&engine))
-end
-
--- Stop audio thread.
-function rivemu_audio.stop(): void
-  ma_assert!(ma_engine_stop(&engine))
+  -- rewind time
+  global_pcm_frame = DEFAULT_PERIOD_SIZE
+  last_engine_sync_pcm_frame = 0
+  global_sync_rem = 0
+  global_pcm_frame_rem = 0
+  ma_assert!(ma_engine_set_time_in_pcm_frames(&engine, 0))
+  rivemu_audio.start()
 end
 
 -- Terminate audio subsystem.
 function rivemu_audio.shutdown(): void
   rivemu_audio.reset()
+  -- destroy silence
+  silence:uninit()
+  ma_sound_uninit(&silence_asound)
   -- destroy miniaudio
   ma_engine_uninit(&engine)
-  -- destroy state
-  global_pitch = 0
-  global_pcm_frame = 0
-  global_sample_rate = 0
 end
 
 -- Poll audio subsystem.
@@ -371,22 +431,22 @@ local function handle_sound(desc: riv_sound_desc): void
       ma_assert!(ma_sound_seek_to_pcm_frame(asound, seek_frame))
     end
     -- start delay
-    local start_time: uint64 = global_pcm_frame + math.ifloor(desc.delay * global_sample_rate)
+    local start_time: uint64 = ma_engine_get_time_in_pcm_frames(&engine) + math.ifloor(desc.delay * global_sample_rate * global_pitch)
     if desc.delay > 0 then
       ma_sound_set_start_time_in_pcm_frames(asound, start_time)
     end
     -- fade in
     if desc.fade_in > 0 then
-      local fade_in_time: uint64 = math.ifloor(desc.fade_in * global_sample_rate)
+      local fade_in_time: uint64 = math.ifloor(desc.fade_in * global_sample_rate * global_pitch)
       ma_sound_set_fade_in_pcm_frames(asound, 0.0, desc.volume, desc.fade_in)
     end
     -- duration
     if desc.duration > 0 then
       ma_sound_set_looping(asound, MA_TRUE)
-      local end_time: uint64 = start_time + math.ifloor(desc.duration * global_sample_rate)
+      local end_time: uint64 = start_time + math.ifloor(desc.duration * global_sample_rate * global_pitch)
       -- fade out
       if desc.fade_out > 0 then
-        local fade_out_time: uint64 = math.ifloor(desc.fade_out * global_sample_rate)
+        local fade_out_time: uint64 = math.ifloor(desc.fade_out * global_sample_rate * global_pitch)
         ma_sound_set_stop_time_with_fade_in_pcm_frames(asound, end_time, fade_out_time)
       else
         ma_sound_set_stop_time_in_pcm_frames(asound, end_time)
@@ -397,7 +457,8 @@ local function handle_sound(desc: riv_sound_desc): void
     -- release sound with same id
     local prev_sound: *Sound = sounds:peek(desc.id)
     if prev_sound then
-      ma_assert!(ma_sound_stop_with_fade_in_pcm_frames(prev_sound.asound, math.ifloor(0.05 * global_sample_rate)))
+      local fade_out_time: uint64 = math.ifloor(0.05 * global_sample_rate * global_pitch)
+      ma_assert!(ma_sound_stop_with_fade_in_pcm_frames(prev_sound.asound, fade_out_time))
       releasing_sounds:push($prev_sound)
       sounds:remove(desc.id)
     end
@@ -409,7 +470,7 @@ local function handle_sound(desc: riv_sound_desc): void
     if not sound then return end -- silently ignore
     if desc.seek == -1 then -- stop sound
       if desc.fade_out ~= 0 then
-        local fade_out_time: uint64 = math.ifloor(desc.fade_out * global_sample_rate)
+        local fade_out_time: uint64 = math.ifloor(desc.fade_out * global_sample_rate * global_pitch)
         ma_assert!(ma_sound_stop_with_fade_in_pcm_frames(sound.asound, fade_out_time))
       else
         ma_assert!(ma_sound_stop(sound.asound))
@@ -425,8 +486,15 @@ local function handle_sound(desc: riv_sound_desc): void
   end
 end
 
-local function handle_waveform(desc: riv_waveform_desc): void
+local function handle_waveform(desc: riv_waveform_desc, align_start: boolean): void
   local waveform: *WaveForm = new(@WaveForm)
+  local start_pcm_frame: uint64 = 0
+  if align_start then
+    -- we have to delay outside and inside the audio thread
+    -- to make sound behave perfectly
+    start_pcm_frame = global_pcm_frame - (global_pcm_frame % DEFAULT_PERIOD_SIZE) + (DEFAULT_PERIOD_SIZE // 60)
+    desc.delay = desc.delay + (global_pcm_frame % DEFAULT_PERIOD_SIZE) / DEFAULT_SAMPLE_RATE
+  end
   ma_assert!(WaveForm.init(waveform, global_sample_rate, desc))
   local flags: uint32 = MA_SOUND_FLAG_NO_SPATIALIZATION
   if global_pitch == 1.0 then
@@ -447,16 +515,24 @@ local function handle_waveform(desc: riv_waveform_desc): void
     if prev_sound.waveform then
       fade = math.clamp(prev_sound.waveform.waveform_desc.release, 0, 1.0)
     end
-    ma_assert!(ma_sound_stop_with_fade_in_pcm_frames(prev_sound.asound, math.ifloor(fade * global_sample_rate)))
+    local fade_out_time: uint64 = math.ifloor(fade * global_sample_rate * global_pitch)
+    if start_pcm_frame > 0 then
+      ma_sound_set_stop_time_with_fade_in_pcm_frames(prev_sound.asound, start_pcm_frame + fade_out_time, fade_out_time)
+    else
+      ma_sound_stop_with_fade_in_pcm_frames(prev_sound.asound, fade_out_time)
+    end
     releasing_sounds:push($prev_sound)
     sounds:remove(desc.id)
+  end
+  if start_pcm_frame > 0 then
+    ma_sound_set_start_time_in_pcm_frames(asound, start_pcm_frame)
   end
   ma_assert!(ma_sound_start(asound))
   sounds[desc.id] = Sound{=asound, =waveform}
 end
 
 function rivemu_audio.start_boot_sound()
-  handle_waveform{
+  handle_waveform({
     id = 1,
     type = RIV_WAVEFORM_TRIANGLE,
     delay = 0/8,
@@ -466,8 +542,8 @@ function rivemu_audio.start_boot_sound()
     start_frequency = 440.0,
     amplitude = 0.1,
     sustain_level = 1,
-  }
-  handle_waveform{
+  }, false)
+  handle_waveform({
     id = 2,
     type = RIV_WAVEFORM_TRIANGLE,
     delay = 1/8,
@@ -477,8 +553,8 @@ function rivemu_audio.start_boot_sound()
     start_frequency = 2*440.0,
     amplitude = 0.1,
     sustain_level = 1,
-  }
-  handle_waveform{
+  }, false)
+  handle_waveform({
     id = 3,
     type = RIV_WAVEFORM_TRIANGLE,
     delay = 2/8.0,
@@ -488,12 +564,11 @@ function rivemu_audio.start_boot_sound()
     start_frequency = 4*440.0,
     amplitude = 0.1,
     sustain_level = 1,
-  }
+  }, false)
 end
 
 -- Control audio subsystem.
 function rivemu_audio.poll_commands(): void
-  global_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine)
   for i: usize=0,<machine.mmio_driver.command_len do
     local command: riv_command = machine.mmio_driver.commands[i]
     switch command.type do
@@ -504,9 +579,44 @@ function rivemu_audio.poll_commands(): void
     case RIV_COMMAND_SOUND then
       handle_sound(command.desc.sound)
     case RIV_COMMAND_WAVEFORM then
-      handle_waveform(command.desc.waveform)
+      handle_waveform(command.desc.waveform, true)
     else
       -- ignore
+    end
+  end
+end
+
+function rivemu_audio.advance_pcm_frame(target_update_fps: float64)
+  local advance_pcm_frames: float64 = DEFAULT_SAMPLE_RATE / target_update_fps
+  local advance_pcm_frames_int: int64 = math.ifloor(advance_pcm_frames)
+  if DEFAULT_SAMPLE_RATE % advance_pcm_frames_int ~= 0 then
+    global_pcm_frame_rem = global_pcm_frame_rem + (advance_pcm_frames - advance_pcm_frames_int)
+    if math.abs(global_pcm_frame_rem - math.round(global_pcm_frame_rem)) <= 1e-4 then
+      advance_pcm_frames_int = advance_pcm_frames_int + math.iround(global_pcm_frame_rem)
+      global_pcm_frame_rem = 0
+    end
+  end
+  global_pcm_frame = global_pcm_frame + advance_pcm_frames_int
+end
+
+function rivemu_audio.sync_pcm_frame(target_update_fps: float64)
+  local engine_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine)
+  if global_sync_rem ~= 0 then
+    local sync_sign: int64 = math.sign(global_sync_rem)
+    local frame_delta: int64 = sync_sign*(DEFAULT_SAMPLE_RATE // 480)
+    global_pcm_frame = uint64(int64(global_pcm_frame) + frame_delta)
+    global_sync_rem = global_sync_rem - frame_delta
+    if sync_sign ~= math.sign(global_sync_rem) then
+      global_sync_rem = 0
+    end
+  elseif engine_pcm_frame > 0 and
+         engine_pcm_frame ~= last_engine_sync_pcm_frame and
+         (engine_pcm_frame % DEFAULT_SAMPLE_RATE == 0) then
+    last_engine_sync_pcm_frame = engine_pcm_frame
+    local delta: int64 = int64(engine_pcm_frame) - int64(global_pcm_frame)
+    local advance_pcm_frames: float64 = math.ifloor(DEFAULT_SAMPLE_RATE / target_update_fps)
+    if math.abs(delta) > math.max(DEFAULT_PERIOD_SIZE, DEFAULT_PERIOD_SIZE + advance_pcm_frames) then -- audio time is out of sync
+      global_sync_rem = delta
     end
   end
 end

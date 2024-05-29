@@ -7,6 +7,7 @@ require 'math'
 global rivemu_framelimiter: type = @record{
   target_update_fps: float64,
   last_frame_time: float64,
+  wait_time: float64,
 
   -- used by print_stats
   time_elapsed_sum: float64,
@@ -27,14 +28,21 @@ function rivemu_framelimiter:should_process_next_frame(now: float64): boolean
     self.last_frame_time = now
     return true
   else
-    local frame_delay: float64 = 1.0 / self.target_update_fps
-    local wait_time: float64 = self.last_frame_time + frame_delay - now
-    local wait_factor: float64 = wait_time / frame_delay
-    -- the following attempts to stabilize fps
-    -- while making wait time converge 0 between frames
-    if wait_factor > 0.05 then return false end
-    self.last_frame_time = now + math.min(wait_time, 0)*0.95
-    return true
+    -- the following attempts to stabilize fps while trying to keep time reliable
+    local target_frame_delay: float64 = 1.0 / self.target_update_fps
+    local frame_delay: float64 = now - self.last_frame_time
+    local wait_factor: float64 = (self.wait_time - frame_delay) / target_frame_delay
+    if wait_factor > 0.05 then
+      return false
+    else
+      self.last_frame_time = now
+      if self.target_update_fps >= 60 then
+        -- avoid accumulation too much time when we never skip
+        self.wait_time = self.wait_time * 0.99
+      end
+      self.wait_time = self.wait_time - frame_delay + target_frame_delay
+      return true
+    end
   end
 end
 
