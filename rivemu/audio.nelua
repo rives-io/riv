@@ -15,6 +15,7 @@ require 'miniaudio'
 require '.machine'
 require '.mathx'
 
+local engine: ma_engine
 --------------------------------------------------------------------------------
 
 -- Macro for quick error handling miniaudio errors.
@@ -39,7 +40,7 @@ function riv_waveform_desc:fill_defaults()
 end
 
 -- Compute a sample point for the wave.
-function riv_waveform_desc:sample(time: float32, sample_rate: float32): float32 <inline>
+function riv_waveform_desc:sample(time: float32, time_offset: float32, sample_rate: float32): float32 <inline>
   -- compute amplitude from ADSR
   local a_duration: float32 = self.attack
   local ad_duration: float32 = a_duration + self.decay
@@ -51,7 +52,7 @@ function riv_waveform_desc:sample(time: float32, sample_rate: float32): float32 
   local amplitude: float32 = self.amplitude * attack * decay * release
   -- compute frequency
   local freq: float32 = mathx.mix(self.start_frequency, self.end_frequency, time / (2*adsr_duration))
-  local x: float32 = time * freq
+  local x: float32 = time * freq + time_offset * self.start_frequency
   -- compute wave
   local wave: float32
   switch self.type do
@@ -65,6 +66,12 @@ function riv_waveform_desc:sample(time: float32, sample_rate: float32): float32 
     wave = math.abs(4*math.fract(x-0.25_f32)-2)-1 -- triangle
   case RIV_WAVEFORM_SAWTOOTH then
     wave = 2*math.fract(x-0.5_f32)-1 -- sawtooth
+  case RIV_WAVEFORM_TILTED_SAWTOOTH then
+    local K: float32 <comptime> = 8.0_f32
+    local y: float32 = (1/(2*K)) - x
+    local ascend: float32 = math.fract(y*K)*math.floor(math.fract(y+((K-1)/K)) + (1/K))
+    local descend: float32 = (K/(K-1))*math.fract(-y)*math.floor(math.fract(y) + ((K-1)/K))
+    wave = 2*(ascend+descend)-1
   case RIV_WAVEFORM_NOISE then
     if freq >= sample_rate then -- white noise
       wave = mathx.hash1(x)
@@ -77,6 +84,9 @@ function riv_waveform_desc:sample(time: float32, sample_rate: float32): float32 
     local t = math.mod(x*d, d) -- infinite repetition
     local p = 8*t*(1-2*t) -- parabola
     wave = 2*math.max(p, 0_f32) - 1
+  case RIV_WAVEFORM_ORGAN then
+    local xtau = x * mathx.TAU
+    wave = (mathx.qsin(xtau) + mathx.qsin(2*xtau) + mathx.qsin(3*xtau))*0.4
   else
     wave = 0
   end
@@ -89,6 +99,7 @@ end
 
 local WaveForm: type = @record{
   ds: ma_data_source_base,
+  start_pcm_frame: uint64,
   frame: uint64,
   length: uint64,
   sample_rate: uint32,
@@ -105,6 +116,9 @@ function WaveForm:_read(frames_out: *[0]float32, frame_count: uint64, frames_rea
     return MA_AT_END
   end
   if frames_out ~= nilptr and frames_read ~= nilptr then
+    if self.frame == 0then
+      self.start_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine) % self.sample_rate
+    end
     if (self.frame + frame_count) / self.sample_rate < self.waveform_desc.delay then
       -- skip calculation if not started yet (optimization)
       memory.zero(frames_out, frame_count*#@float32)
@@ -114,11 +128,12 @@ function WaveForm:_read(frames_out: *[0]float32, frame_count: uint64, frames_rea
       local sample_rate_inverse: float32 = 1.0_f32 / sample_rate
       local wave: riv_waveform_desc = self.waveform_desc
       local frame: uint64 = self.frame
+      local time_offset: float32 = self.start_pcm_frame / sample_rate + wave.delay
       -- fill the sample buffer
       for i: uint64=0,<frame_count do
         local time: float32 = (frame + i) * sample_rate_inverse
         time = math.max(time - wave.delay, 0_f32)
-        frames_out[i] = wave:sample(time, sample_rate)
+        frames_out[i] = wave:sample(time, time_offset, sample_rate)
       end
     end
     $frames_read = frame_count
@@ -265,7 +280,6 @@ local DEFAULT_VOLUME <comptime> = 0.8
 global rivemu_audio: type = @record{}
 
 -- Audio subsystem state.
-local engine: ma_engine
 local buffers: hashmap(uint64, riv_soundbuffer_desc)
 local sounds: hashmap(uint64, Sound)
 local releasing_sounds: vector(Sound)

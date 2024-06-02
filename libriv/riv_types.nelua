@@ -379,7 +379,10 @@ global riv_waveform_type: type <cimport,nodecl,using> = @enum(uint32){
   RIV_WAVEFORM_TRIANGLE = 3,
   RIV_WAVEFORM_SAWTOOTH = 4,
   RIV_WAVEFORM_NOISE = 5,
-  RIV_WAVEFORM_PULSE = 6
+  RIV_WAVEFORM_PULSE = 6,
+  RIV_WAVEFORM_ORGAN = 7,
+  RIV_WAVEFORM_TILTED_SAWTOOTH = 8,
+  RIV_NUM_WAVEFORM = 9
 }
 global riv_sound_format: type <cimport,nodecl,using> = @enum(uint32){
   RIV_SOUNDFORMAT_NONE = 0,

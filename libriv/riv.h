@@ -442,6 +442,9 @@ typedef enum riv_waveform_type {
   RIV_WAVEFORM_SAWTOOTH,
   RIV_WAVEFORM_NOISE,
   RIV_WAVEFORM_PULSE,
+  RIV_WAVEFORM_ORGAN,
+  RIV_WAVEFORM_TILTED_SAWTOOTH,
+  RIV_NUM_WAVEFORM,
 } riv_waveform_type;
 
 // Sound format for sound buffers
