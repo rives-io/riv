@@ -639,7 +639,7 @@ local function riv_draw_text_topleft(text: cstring <const>, sps_id: uint64, x0: 
 end
 
 global function riv_draw_text_ex(text: cstring <const>, sps_id: uint64, anchor: riv_align, x: int64, y: int64, mw: int64, mh: int64, sx: int64, sy: int64, col: int64): riv_recti  <cexport>
-  if anchor == RIV_TOPLEFT or col < 0 then
+  if anchor == RIV_TOPLEFT then
     local bbox_size: riv_vec2i = riv_draw_text_topleft(text, sps_id, x, y, mw, mh, sx, sy, col)
     return {x, y, bbox_size.x, bbox_size.y}
   else
@@ -658,7 +658,9 @@ global function riv_draw_text_ex(text: cstring <const>, sps_id: uint64, anchor: 
     elseif valign == 1 then -- vertical center
       y = y - bbox_size.y /// 2
     end
-    bbox_size = riv_draw_text_topleft(text, sps_id, x, y, mw, mh, sx, sy, col)
+    if col >= 0 then
+      bbox_size = riv_draw_text_topleft(text, sps_id, x, y, mw, mh, sx, sy, col)
+    end
     return {x, y, bbox_size.x, bbox_size.y}
   end
 end
