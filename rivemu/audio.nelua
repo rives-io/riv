@@ -40,7 +40,7 @@ function riv_waveform_desc:fill_defaults()
 end
 
 -- Compute a sample point for the wave.
-function riv_waveform_desc:sample(time: float32, time_offset: float32, sample_rate: float32): float32 <inline>
+function riv_waveform_desc:sample(time: float32, time_offset: float32): float32 <inline>
   -- compute amplitude from ADSR
   local a_duration: float32 = self.attack
   local ad_duration: float32 = a_duration + self.decay
@@ -53,6 +53,8 @@ function riv_waveform_desc:sample(time: float32, time_offset: float32, sample_ra
   -- compute frequency
   local freq: float32 = mathx.mix(self.start_frequency, self.end_frequency, time / (2*adsr_duration))
   local x: float32 = time * freq + time_offset * self.start_frequency
+  -- phase modulation
+  -- x = x + mathx.qsin((time + time_offset) * 10 * mathx.TAU)*0.5
   -- compute wave
   local wave: float32
   switch self.type do
@@ -73,7 +75,7 @@ function riv_waveform_desc:sample(time: float32, time_offset: float32, sample_ra
     local descend: float32 = (K/(K-1))*math.fract(-y)*math.floor(math.fract(y) + ((K-1)/K))
     wave = 2*(ascend+descend)-1
   case RIV_WAVEFORM_NOISE then
-    if freq >= sample_rate then -- white noise
+    if freq >= 48000 then -- white noise
       wave = mathx.hash1(x)
     else
       wave = mathx.valuenoise(x * 16) -- value noise
@@ -99,7 +101,8 @@ end
 
 local WaveForm: type = @record{
   ds: ma_data_source_base,
-  start_pcm_frame: uint64,
+  time_offset: float32,
+  sample_rate_inverse: float32,
   frame: uint64,
   length: uint64,
   sample_rate: uint32,
@@ -117,23 +120,23 @@ function WaveForm:_read(frames_out: *[0]float32, frame_count: uint64, frames_rea
   end
   if frames_out ~= nilptr and frames_read ~= nilptr then
     if self.frame == 0then
-      self.start_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine) % self.sample_rate
+      local start_pcm_frame: uint64 = ma_engine_get_time_in_pcm_frames(&engine)
+      self.time_offset = (start_pcm_frame % self.sample_rate) * self.sample_rate_inverse + self.waveform_desc.delay
     end
-    if (self.frame + frame_count) / self.sample_rate < self.waveform_desc.delay then
+    if self.frame + frame_count < self.waveform_desc.delay * self.sample_rate then
       -- skip calculation if not started yet (optimization)
       memory.zero(frames_out, frame_count*#@float32)
     else
       -- localize variables for hot loop
-      local sample_rate: float32 = self.sample_rate
-      local sample_rate_inverse: float32 = 1.0_f32 / sample_rate
+      local sample_rate_inverse: float32 = self.sample_rate_inverse
       local wave: riv_waveform_desc = self.waveform_desc
       local frame: uint64 = self.frame
-      local time_offset: float32 = self.start_pcm_frame / sample_rate + wave.delay
+      local time_offset: float32 = self.time_offset
       -- fill the sample buffer
       for i: uint64=0,<frame_count do
         local time: float32 = (frame + i) * sample_rate_inverse
         time = math.max(time - wave.delay, 0_f32)
-        frames_out[i] = wave:sample(time, time_offset, sample_rate)
+        frames_out[i] = wave:sample(time, time_offset)
       end
     end
     $frames_read = frame_count
@@ -178,6 +181,7 @@ function WaveForm:init(sample_rate: uint32, waveform_desc: riv_waveform_desc): m
   waveform_desc:fill_defaults()
   self.waveform_desc = waveform_desc
   self.sample_rate = sample_rate
+  self.sample_rate_inverse = 1.0_f32 / sample_rate
   local duration: float64 = self.waveform_desc.delay +
                             self.waveform_desc.attack +
                             self.waveform_desc.decay +
@@ -287,7 +291,6 @@ local global_pitch: float64
 local global_sample_rate: uint64
 local global_pcm_frame: uint64
 local global_pcm_frame_rem: float64
-local global_sync_rem: int64
 local last_engine_sync_pcm_frame: uint64
 local silence: Silence
 local silence_asound: ma_sound
@@ -323,7 +326,6 @@ function rivemu_audio.setup(): void
   rivemu_audio.start()
   global_pcm_frame = DEFAULT_PERIOD_SIZE
   last_engine_sync_pcm_frame = 0
-  global_sync_rem = 0
   global_pcm_frame_rem = 0
 end
 
@@ -352,7 +354,6 @@ function rivemu_audio.reset(): void
   -- rewind time
   global_pcm_frame = DEFAULT_PERIOD_SIZE
   last_engine_sync_pcm_frame = 0
-  global_sync_rem = 0
   global_pcm_frame_rem = 0
   ma_assert!(ma_engine_set_time_in_pcm_frames(&engine, 0))
   rivemu_audio.start()
@@ -615,22 +616,14 @@ end
 
 function rivemu_audio.sync_pcm_frame(target_update_fps: float64)
   local engine_pcm_frame = ma_engine_get_time_in_pcm_frames(&engine)
-  if global_sync_rem ~= 0 then
-    local sync_sign: int64 = math.sign(global_sync_rem)
-    local frame_delta: int64 = sync_sign*(DEFAULT_SAMPLE_RATE // 480)
-    global_pcm_frame = uint64(int64(global_pcm_frame) + frame_delta)
-    global_sync_rem = global_sync_rem - frame_delta
-    if sync_sign ~= math.sign(global_sync_rem) then
-      global_sync_rem = 0
-    end
-  elseif engine_pcm_frame > 0 and
+  if engine_pcm_frame > 0 and
          engine_pcm_frame ~= last_engine_sync_pcm_frame and
-         (engine_pcm_frame % DEFAULT_SAMPLE_RATE == 0) then
+         (engine_pcm_frame % DEFAULT_PERIOD_SIZE == 0) then
     last_engine_sync_pcm_frame = engine_pcm_frame
     local delta: int64 = int64(engine_pcm_frame) - int64(global_pcm_frame)
     local advance_pcm_frames: float64 = math.ifloor(DEFAULT_SAMPLE_RATE / target_update_fps)
     if math.abs(delta) > math.max(DEFAULT_PERIOD_SIZE, DEFAULT_PERIOD_SIZE + advance_pcm_frames) then -- audio time is out of sync
-      global_sync_rem = delta
+      global_pcm_frame = engine_pcm_frame
     end
   end
 end
