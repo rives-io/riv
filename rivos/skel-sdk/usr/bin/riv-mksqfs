@@ -6,7 +6,7 @@ if [ $# -lt 2 ]; then
   mksquashfs -help
   exit 0
 fi
-exec mksquashfs "$@" \
+exec mksquashfs /etc/.riv "$@" \
   -mkfs-time 0 \
   -all-time 0 \
   -all-root \

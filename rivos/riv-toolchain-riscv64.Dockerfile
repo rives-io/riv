@@ -261,6 +261,8 @@ RUN chmod 600 etc/shadow
 COPY --from=libriv-stage /root/riv/libriv /root/riv/libriv
 RUN make -C /root/riv/libriv install install-dev PREFIX=/usr && \
     make -C /root/riv/libriv install install-c-dev PREFIX=/usr DESTDIR=/rivos && \
+    /usr/lib/libriv.so version > /etc/.riv && \
+    /rivos/usr/lib/libriv.so version > /rivos/etc/.riv && \
     rm -rf /root/riv
 
 ################################
