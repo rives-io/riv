@@ -155,6 +155,7 @@ RUN apk add bash \
         jq \
         optipng pngquant oxipng \
         libffi libffi-dev \
+        zstd zstd-dev \
         quickjs quickjs-dev \
         micropython@testing
 
@@ -249,6 +250,10 @@ RUN cp -aL /usr/bin/micropython usr/bin/
 
 # Install xhalt
 RUN cp -aL /usr/sbin/xhalt usr/sbin/
+
+# Install zstd
+RUN cp -aL /usr/bin/zstd usr/bin/zstd && \
+    cp -a /usr/lib/libzstd.so* usr/lib/
 
 # Install skel files
 COPY rivos/skel/etc etc
