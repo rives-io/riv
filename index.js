@@ -260,7 +260,7 @@ function resetCanvasSize() {
   canvasElem.height = 768;
 }
 
-async function rivemuUpload(cartridgeUrl, tapeUrl, autoPlay) {
+async function rivemuUpload(cartridgeUrl, incardUrl, tapeUrl, autoPlay) {
   hideElem(cartridgesElem);
   hideElem(canvasDropElem);
   await rivemuStop();
@@ -270,6 +270,10 @@ async function rivemuUpload(cartridgeUrl, tapeUrl, autoPlay) {
   if (tapeUrl) {
     statusElem.textContent = "Downloading tape...";
     lastTape = tapeUrl ? await downloadFile(tapeUrl) : await uploadTapeDialog(".rivtape");
+  }
+  if (incardUrl) {
+    statusElem.textContent = "Downloading incard...";
+    lastIncard = incardUrl ? await downloadFile(incardUrl) : await uploadTapeDialog(".rivcard");
   }
   if (autoPlay) {
     rivemuStart();
@@ -301,16 +305,16 @@ function rivemuDownloadTape() {
 }
 
 async function rivemuUploadIncard(url) {
-  let file = url ? await downloadFile(url) : await uploadFileDialog(".rivincard");
+  let file = url ? await downloadFile(url) : await uploadFileDialog(".rivcard");
   await rivemuRecord(null, file);
 }
 
 function rivemuDownloadIncard() {
-  downloadFileDialog(lastIncard, "gameplay.rivincard");
+  downloadFileDialog(lastIncard, "gameplay.rivcard");
 }
 
 function rivemuDownloadOutcard() {
-  downloadFileDialog(lastOutcard, "gameplay.rivoutcard");
+  downloadFileDialog(lastOutcard, "gameplay.rivcard");
 }
 
 // Pause recording/replaying.
@@ -532,7 +536,7 @@ if (params.simple) {
 
 // Play external cartridge
 if (params.cartridge) {
-  rivemuUpload(params.cartridge, params.tape, params.autoplay);
+  rivemuUpload(params.cartridge, params.incard, params.tape, params.autoplay);
 }
 
 // Send event to parent window when the page is loaded
