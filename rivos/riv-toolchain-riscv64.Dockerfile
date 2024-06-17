@@ -10,7 +10,7 @@ FROM --platform=linux/riscv64 riscv64/busybox:1.36.1-musl AS busybox-stage
 
 ################################
 # Toolchain stage
-FROM --platform=linux/riscv64 riscv64/alpine:20240329 AS riv-toolchain-stage
+FROM --platform=linux/riscv64 riscv64/alpine:3.20.0 AS riv-toolchain-stage
 
 # Update and install development packages
 RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
@@ -52,7 +52,7 @@ RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/5dcba9
 ################################
 # Build nelua
 FROM --platform=linux/riscv64 riv-toolchain-stage AS nelua-stage
-RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarball/9f75e009db190feda0f90ae858b48fd82f51b8b1 && \
+RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarball/4b2c75f8fe5c1d11a966b2fe8974a256868749a6 && \
     tar -xzf edubart-nelua-lang.tar.gz && \
     mv edubart-nelua-lang-* edubart-nelua-lang && cd edubart-nelua-lang && \
     mkdir -p /pkg/usr && \

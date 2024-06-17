@@ -1,7 +1,8 @@
 FROM archlinux:base-devel
 
 # Install build tools
-RUN pacman -Syyu --noconfirm && \
+RUN echo 'Server = https://mirror.rackspace.com/archlinux/$repo/os/$arch' > /etc/pacman.d/mirrorlist && \
+    pacman -Syyu --noconfirm && \
     pacman -S --noconfirm git wget mingw-w64-toolchain
 
 # Install cartesi machine
