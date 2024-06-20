@@ -12,6 +12,7 @@ global function fsync(fd: cint): cint <cimport,cinclude'<unistd.h>'> end
 global function ioctl(fd: cint, request: usize, ...: cvarargs): cint <cimport,cinclude'<sys/ioctl.h>'> end
 global function getenv(name: cstring): cstring <cimport,cinclude'<stdlib.h>'> end
 global function chmod(pathname: cstring, mode: cint): cint <cimport,cinclude'<sys/stat.h>'> end
+global function remove(file: cstring): cint <cimport,cinclude'<stdio.h>'> end
 
 global PROT_READ: cint <cimport,cinclude'<sys/mman.h>'>
 global PROT_WRITE: cint <cimport,cinclude'<sys/mman.h>'>

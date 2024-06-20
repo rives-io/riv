@@ -125,3 +125,17 @@ button {
 .svg-button:hover {
   color: #fff;
 }
+#links a {
+  display: block;
+}
+#tags {
+  margin: 2px;
+}
+#tags span {
+  margin: 0 2px;
+  padding: 0 2px;
+  background-color: #333;
+}
+tr:nth-child(odd) {
+  background-color: #222;
+}

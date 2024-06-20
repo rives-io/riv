@@ -84,6 +84,7 @@ local rivemu_options: type = @record{
   print_final_hash: boolean,
   print_outcard: boolean,
   print_outhash: boolean,
+  extract_info: boolean,
   quiet: boolean,
   speed: float64,
   mem: int64,
@@ -486,6 +487,8 @@ function rivemu_options:get_init_entrypoint(): (string, string)
   end
   if #self.verify_filename > 0 then
     init_sb:write('export RIV_REPLAYLOG=/dev/pmem2\n')
+  elseif self.extract_info then
+    init_sb:write('export RIV_COPY_INFO=/dev/pmem2\n')
   end
   if #self.cartridge_filename > 0 then
     init_sb:write('export RIV_CARTRIDGE=/dev/pmem1\n')
@@ -870,6 +873,19 @@ local function advance_frame(): void
       local canvas_width: int32 <nodce> = (default_canvas_width // width) * width
       if canvas_width == 0 then canvas_width = width end
       local canvas_height: int32 <nodce> = math.ifloor((height / width) * canvas_width)
+      local info: span(byte)
+      defer delete(info) end
+      if options.extract_info then
+        local len: uint32 = 0
+        machine:read_memory(0xa0000000000000, (@span(byte)){data=(@*[0]byte)(&len), size=4})
+        if len <= 2*1024*1024 then
+          info = new(@byte, len)
+          machine:read_memory(0xa0000000000000+4, info)
+        end
+      end
+      local info_ptr: *[0]uint8 <nodce> = info.data
+      local info_len: int32 <nodce> = info.size
+
       cinclude![[
 static void _sapp_emsc_resize(int width, int height) {
     if (_sapp.desc.high_dpi) {
@@ -894,8 +910,9 @@ static void _sapp_emsc_resize(int width, int height) {
       cemit![[
         _sapp_emsc_resize(canvas_width, canvas_height);
         EM_ASM({
-          rivemu_on_begin($0, $1, $2, $3);
-        }, width, height, target_fps, num_frames);
+          let info = HEAPU8.subarray($4, $4 + $5);
+          rivemu_on_begin($0, $1, $2, $3, info);
+        }, width, height, target_fps, num_frames, info_ptr, info_len);
       ]]
     ## end
   end
@@ -1080,6 +1097,7 @@ local function rivemu_start_record(cartridge_ptr: *uint8, cartridge_len: int32,
   options.entropy = entropy
   options.args = args
   options.recording = true
+  options.extract_info = true
   run()
 end
 
@@ -1122,6 +1140,7 @@ local function rivemu_start_replay(cartridge_ptr: *uint8, cartridge_len: int32,
   options.entropy = entropy
   options.args = args
   options.replaying = true
+  options.extract_info = true
   run()
 end
 

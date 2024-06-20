@@ -24,6 +24,11 @@ if ! busybox mount -o ro,noatime,nosuid,nodev,exec "$RIV_CARTRIDGE" /cartridge; 
   return 1
 fi
 
+# frontend may way to extract info.json
+if [ -n "$RIV_COPY_INFO" ] && [ -f /cartridge/info.json ]; then
+  lua5.4 -e 'd=io.read[[a]] io.write(([[I4]]):pack(#d), d)' < /cartridge/info.json > $RIV_COPY_INFO
+fi
+
 # check RIV version
 RIV_MAJMIN=$(grep -Eo '^[0-9]{1,3}\.[0-9]{1,3}' /etc/.riv)
 if [ -f /cartridge/.riv ]; then

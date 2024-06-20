@@ -40,6 +40,7 @@ let cartsizeElem = document.getElementById("cartsize");
 let carthashElem = document.getElementById("carthash");
 let cartridgesElem = document.getElementById("cartridges");
 let analysisBoxElem = document.getElementById("analysis-box");
+let infoBoxElem = document.getElementById("info-box");
 let changeSpeedElem = document.getElementById("change-speed");
 let canvasDropElem = document.getElementById("canvas-drop");
 let canvasStartElem = document.getElementById("canvas-start");
@@ -253,6 +254,14 @@ async function rivemuBeforeStart(tape, cartridge, incard, entropy, args) {
   document.getElementById('record').disabled = false;
   document.getElementById('replay').disabled = false;
   document.getElementById('download_cartridge').disabled = false;
+
+  // Clear info
+  document.getElementById('name').textContent = 'N/A';
+  document.getElementById('summary').textContent = 'N/A';
+  document.getElementById('description').textContent = 'N/A';
+  document.getElementById('tags').innerHTML = 'N/A';
+  document.getElementById('links').innerHTML = 'N/A';
+  document.getElementById('authors').innerHTML = 'N/A';
 }
 
 function resetCanvasSize() {
@@ -443,8 +452,51 @@ function rivemuToggleAnalysis() {
   toggleElemVisibility(analysisBoxElem);
 }
 
+function rivemuToggleInfo() {
+  toggleElemVisibility(infoBoxElem);
+}
+
+async function updateInfo(info) {
+  document.getElementById('name').textContent = info.name;
+  document.getElementById('summary').textContent = info.summary;
+  document.getElementById('description').textContent = info.description;
+  document.getElementById('tags').textContent = '';
+  document.getElementById('links').textContent = '';
+  document.getElementById('authors').textContent = '';
+  // tags
+  if (info.tags) {
+    info.tags.forEach(function(tag) {
+      let e = document.createElement('span');
+      e.textContent = tag;
+      document.getElementById('tags').append(e);
+    });
+  }
+  // links
+  if (info.links) {
+    info.links.forEach(function(link) {
+      let e = document.createElement('a');
+      e.href = link;
+      e.textContent = link;
+      document.getElementById('links').append(e);
+    });
+  }
+  // authors
+  if (info.authors) {
+    info.authors.forEach(function(author) {
+      let e = document.createElement('a');
+      e.textContent = author.name;
+      e.href = author.link;
+      document.getElementById('authors').append(e);
+    });
+  }
+}
+
 // Called by RIVEMU before the first frame.
-function rivemu_on_begin(width, height, target_fps, total_frames) {
+function rivemu_on_begin(width, height, target_fps, total_frames, info_data) {
+  if (info_data.length > 0) {
+    let info = JSON.parse(textDecoder.decode(info_data));
+    updateInfo(info);
+  }
   lastFrame = 0;
   lastTotalFrames = total_frames;
   lastTargetFps = target_fps;
