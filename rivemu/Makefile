@@ -38,6 +38,9 @@ else # release
 	else ifeq ($(CC), gcc)
 		# linux
 		CFLAGS+=-O2 -DNDEBUG -g0 -s
+	else ifeq ($(CC), x86_64-w64-mingw32-gcc)
+		# windows
+		CFLAGS+=-O2 -DNDEBUG -g0 -s
 	else # posix
 		CFLAGS+=-O2 -DNDEBUG -g0
 	endif
