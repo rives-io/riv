@@ -21,7 +21,7 @@
 
     .button {
       width: 50px;
-      height: 50px;
+      height: 80px;
       color: white;
     }
 
@@ -78,13 +78,26 @@
   <div class="canvas-wrapper">
 
     <div id="gamepad" style="position: relative;">
-      <div id="joystickUp" class="joystick" style="left: 240px; top: 536px; width: 150px; height: 54px;"></div>
-      <div id="joystickDown" class="joystick" style="left: 240px; top: 630px; width: 150px; height: 54px;"></div>
-      <div id="joystickLeft" class="joystick" style="left: 240px; top: 536px; width: 54px; height: 150px;"></div>
-      <div id="joystickRight" class="joystick" style="left: 336px; top: 536px; width: 54px; height: 150px;"></div>
-      <div id="buttonA" class="button" style="left: 20px; top: 581px;"></div>
-      <div id="buttonS" class="button" style="left: 20px; top: 636px;"></div>
-      <div id="buttonD" class="button" style="left: 20px; top: 526px;"></div>
+      <div id="joystickUp" class="joystick" style="left: 20px; top: 536px; width: 150px; height: 54px;"></div>
+      <div id="joystickDown" class="joystick" style="left: 20px; top: 630px; width: 150px; height: 54px;"></div>
+      <div id="joystickLeft" class="joystick" style="left: 20px; top: 536px; width: 54px; height: 150px;"></div>
+      <div id="joystickRight" class="joystick" style="left: 116px; top: 536px; width: 54px; height: 150px;"></div>
+
+      <div id="buttonS" class="button" style="left: 20px; top: 346px;"></div>
+      <div id="buttonA" class="button" style="left: 20px; top: 391px;"></div>
+      <div id="buttonD" class="button" style="left: 320px; top: 346px;"></div>
+      <div id="buttonF" class="button" style="left: 320px; top: 391px;"></div>
+
+      <div id="buttonW" class="button" style="left: 130px; top: 361px; height: 50px;"></div>
+      <div id="buttonE" class="button" style="left: 220px; top: 361px; height: 50px;"></div>
+
+      <div id="buttonQ" class="button" style="left: 130px; top: 405px; height: 50px;"></div>
+      <div id="buttonR" class="button" style="left: 220px; top: 405px; height: 50px;"></div>
+
+      <div id="buttonV" class="joystick" style="left: 234px; top: 532px; width: 150px; height: 50px;"></div>
+      <div id="buttonZ" class="joystick" style="left: 234px; top: 630px; width: 150px; height: 50px;"></div>
+      <div id="buttonC" class="joystick" style="left: 234px; top: 532px; width: 50px; height: 150px;"></div>
+      <div id="buttonX" class="joystick" style="left: 336px; top: 532px; width: 50px; height: 150px;"></div>
     </div>
 
     <canvas id="canvas" tabindex="-1" width="768" height="768" onclick="window.focus()"
@@ -312,11 +325,21 @@
         "A": { key: 'a', code: 'KeyA', keyCode: 65, charCode: 97, which: 65, bubbles: true },
         "D": { key: 'd', code: 'KeyD', keyCode: 68, charCode: 100, which: 68, bubbles: true },
         "S": { key: 's', code: 'KeyS', keyCode: 83, charCode: 115, which: 83, bubbles: true },
+        "F": { key: 'f', code: 'KeyF', keyCode: 70, charCode: 102, which: 70, bubbles: true },
+        "V": { key: 'v', code: 'KeyV', keyCode: 86, charCode: 118, which: 86, bubbles: true },
+        "X": { key: 'x', code: 'KeyX', keyCode: 88, charCode: 120, which: 88, bubbles: true },
+        "Z": { key: 'z', code: 'KeyZ', keyCode: 90, charCode: 122, which: 90, bubbles: true },
+        "C": { key: 'c', code: 'KeyC', keyCode: 67, charCode: 99, which: 67, bubbles: true },
+        "E": { key: 'e', code: 'KeyE', keyCode: 69, charCode: 101, which: 69, bubbles: true },
+        "W": { key: 'w', code: 'KeyW', keyCode: 87, charCode: 119, which: 87, bubbles: true },
+        "Q": { key: 'q', code: 'KeyQ', keyCode: 81, charCode: 113, which: 81, bubbles: true },
+        "R": { key: 'r', code: 'KeyR', keyCode: 82, charCode: 114, which: 82, bubbles: true },
         "ArrowUp": { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38, charCode: 0, which: 38, bubbles: true },
         "ArrowDown": { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, charCode: 0, which: 40, bubbles: true },
         "ArrowLeft": { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, charCode: 0, which: 37, bubbles: true },
         "ArrowRight": { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, charCode: 0, which: 39, bubbles: true }
       };
+
 
       const handleButtonPressIn = (key) => {
         if (pressed[key]) return;
@@ -365,6 +388,13 @@
           S: false,
           A: false,
           D: false,
+          F: false,
+          V: false,
+          X: false,
+          Z: false,
+          C: false,
+          E: false,
+          W: false,
           ArrowRight: false,
           ArrowLeft: false,
           ArrowDown: false,
