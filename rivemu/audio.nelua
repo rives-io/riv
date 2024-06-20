@@ -356,7 +356,6 @@ function rivemu_audio.reset(): void
   last_engine_sync_pcm_frame = 0
   global_pcm_frame_rem = 0
   ma_assert!(ma_engine_set_time_in_pcm_frames(&engine, 0))
-  rivemu_audio.start()
 end
 
 -- Terminate audio subsystem.

@@ -778,6 +778,7 @@ local function machine_frame(): void
           -- reset audio in the first frame
           if machine.mmio_driver.frame == last_open_device_frame then
             rivemu_audio.reset()
+            rivemu_audio.start()
           else
             rivemu_audio.advance_pcm_frame(machine.mmio_driver.target_fps * options.speed)
           end
@@ -1134,9 +1135,13 @@ local function rivemu_set_speed(speed: float64) <cexport>
   end
   if resuming then
     framelimiter.last_frame_time = os.now() - 1.0/framelimiter.target_update_fps
-    rivemu_audio.start()
+    if not options.no_audio then
+      rivemu_audio.start()
+    end
   elseif pausing then
-    rivemu_audio.stop()
+    if not options.no_audio then
+      rivemu_audio.stop()
+    end
   end
 end
 
