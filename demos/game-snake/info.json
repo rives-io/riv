@@ -7,5 +7,7 @@
         "name": "Eduardo Bart",
         "link": "https://github.com/edubart"
     }],
-    "url": "https://github.com/edubart/riv"
+    "links": [
+        "https://github.com/rives-io/riv/tree/main/demos/game-snake"
+    ]
 }

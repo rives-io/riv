@@ -76,6 +76,9 @@
         <button id="analyze" title="Analyze" onclick="rivemuToggleAnalysis()" autocomplete="off">
           <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M21.71 7.29a1 1 0 0 0-1.42 0L14 13.59l-4.29-4.3a1 1 0 0 0-1.42 0l-6 6a1 1 0 0 0 0 1.42a1 1 0 0 0 1.42 0L9 11.41l4.29 4.3a1 1 0 0 0 1.42 0l7-7a1 1 0 0 0 0-1.42"/></svg>
         </button>
+        <button id="info" title="Info" onclick="rivemuToggleInfo()" autocomplete="off">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 16 16"><path fill="currentColor" d="m8.93 6.588l-2.29.287l-.082.38l.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319c.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246c-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0a1 1 0 0 1 2 0"/></svg>
+        </button>
       </div>
       <div id="analysis-box" style="display: none">
         <div class="row">
@@ -160,6 +163,34 @@
               <br/>
               <input type="text" id="args" autocomplete="off" style="width: 99%"/>
             </td>
+          </tr>
+        </table>
+      </div>
+      <div id="info-box" style="display: none">
+        <table>
+          <tr>
+            <th>Name</th>
+            <td><span id="name"></span></td>
+          </tr>
+          <tr>
+            <th>Summary</th>
+            <td><span id="summary"></span></td>
+          </tr>
+          <tr>
+            <th>Description</th>
+            <td><pre id="description"></pre></td>
+          </tr>
+          <tr>
+            <th>Tags</th>
+            <td id="tags"></td>
+          </tr>
+          <tr>
+            <th>Links</th>
+            <td id="links"></td>
+          </tr>
+          <tr>
+            <th>Authors</th>
+            <td id="authors"></td>
           </tr>
         </table>
       </div>
