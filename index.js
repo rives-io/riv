@@ -494,8 +494,12 @@ async function updateInfo(info) {
 // Called by RIVEMU before the first frame.
 function rivemu_on_begin(width, height, target_fps, total_frames, info_data) {
   if (info_data.length > 0) {
-    let info = JSON.parse(textDecoder.decode(info_data));
-    updateInfo(info);
+    try {
+      let info = JSON.parse(textDecoder.decode(info_data));
+      updateInfo(info);
+    } catch(e) {
+      console.error(e);
+    }
   }
   lastFrame = 0;
   lastTotalFrames = total_frames;
