@@ -1,0 +1,242 @@
+## pragma{nogc=true, noerrorloc=true, nochecks=true}
+
+require 'riv'
+require 'math'
+require 'iterators'
+
+local logo_image = riv_make_image("logo.png", 0)
+
+local tau: float32 <comptime> = math.pi*2
+
+local function spiral(time: number)
+  for i=1,60,2 do
+    local sx = 256//2 + math.ifloor(math.cos((-time+i/30)*tau)*8)
+    local sy = 256//2 + math.ifloor(-math.sin((-time+i/30)*tau)*8)
+    local r=2+i*3
+    riv_draw_circle_line(sx, sy, 4*r, math.ifloor(time*10) % 32)
+  end
+end
+
+local function wheel(time: number)
+  for i=math.ifloor(time*7),1,-1 do
+    riv_draw_circle_fill(
+      256//2 + math.ifloor(math.sin((time+i/5)*tau)*6),
+      256//2 - math.ifloor(math.cos((time+i/5)*tau)*6),
+      i*12, i)
+  end
+end
+
+local function lines(time: number)
+  local frame: int64 = riv.frame * 4
+  local fb: auto = (@*[256][256]uint8)(&riv.framebuffer[0])
+  for y: usize=0,<256,2 do
+    for x: usize=0,<256,2 do
+      fb[y][x] = ((frame + x + y) // 8) % RIV_NUM_COLORS
+    end
+  end
+end
+
+local function hexopus(time: number)
+  local da = math.cos(time/5*tau)/12
+  for j = 0,5 do
+    local x,y = 128.0, 128.0
+    local r   = 22.0
+    local a   = j/6 + time/8
+    for i = 1,20 do
+      local function draw_segment(x: number, y: number, r: number, a: number, c: uint32)
+        local lx, ly = 0, 0
+        for i=0,6 do
+          local x = math.ifloor(x + math.cos((a+i/6)*tau) * r)
+          local y = math.ifloor(y - math.sin((a+i/6)*tau) * r)
+          if i > 0 then
+            riv_draw_line(lx,ly,x,y,c)
+          end
+          lx = x
+          ly = y
+        end
+      end
+      draw_segment(x, y, r*.9, a, math.ifloor(8 + (i%9)))
+      x = x + math.cos(a*tau) * r
+      y = y - math.sin(a*tau) * r
+      a = a + da
+      r = r * (i < 10 and 0.8 or 0.9)
+      x = x + math.cos(a*tau) * r
+      y = y - math.sin(a*tau) * r
+    end
+  end
+end
+
+local function noise(time: number)
+  local fb: *[256][256]uint8 =(@*[256][256]uint8)(&riv.framebuffer[0])
+  local r: uint64 = riv_rand()
+  local wy = math.ifloor(math.clamp(128-time*120,64,128))
+  for y=128-wy,<128+wy,2 do
+    for x=0,<256,3 do
+      fb[y][x]=((r >> 16) & 1) * RIV_COLOR_GREY
+      r=r*1103515245 + 12345
+    end
+  end
+end
+
+local function cartridges(time: number)
+  for x=-256,<256,24 do
+    for y=64,<192,24 do
+      local col = ((x + y + math.ifloor(time * 10)) % 32) + 2
+      riv_draw_rect_line(x + math.ifloor(time*40), y, 16, 16, col)
+    end
+  end
+end
+
+local function tapes(time: number)
+  for x=-256,<256,24 do
+    for y=64,<192,24 do
+      local col = ((x + y + math.ifloor(time * 10)) % 32) + 2
+      riv_draw_rect_fill(x + math.ifloor(time*40), y, 16, 16, col)
+    end
+  end
+end
+
+---
+
+local function slide_cartridges(t: number): number
+  local slide_time: number = 4
+  if t >= slide_time then return t - slide_time end
+
+  cartridges(t)
+
+  local n = math.ifloor(15*t)
+  local s = riv_tprintf("%.*s", n, "CREATE \nCOLLECT\nPLAY")
+  riv_draw_text(s, RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, 16, 16, 2, RIV_COLOR_WHITE)
+
+  if t >= 1.5 then
+    t = t - 1.5
+    local n = math.ifloor(30*t)
+    local s = riv_tprintf("%.*s", n, "CARTRIDGES!")
+    riv_draw_text(s, RIV_SPRITESHEET_FONT_5X7, RIV_BOTTOM, 128, 256-16, 3, RIV_COLOR_WHITE)
+  end
+  return -1
+end
+
+local function slide_tapes(t: number): number
+  local slide_time: number = 4
+  if t >= slide_time then return t - slide_time end
+
+  tapes(t)
+  local n = math.ifloor(15*t)
+  local s = riv_tprintf("%.*s", n, "CREATE \nCOLLECT\nWATCH")
+  riv_draw_text(s, RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, 128+32, 16, 2, RIV_COLOR_WHITE)
+
+  if t >= 2 then
+    t = t - 2
+    local n = math.ifloor(30*t)
+    local s = riv_tprintf("%.*s", n, "TAPES!")
+    riv_draw_text(s, RIV_SPRITESHEET_FONT_5X7, RIV_BOTTOM, 128, 256-16, 3, RIV_COLOR_WHITE)
+  end
+  return -1
+end
+
+local function slide_welcome(t: number): number
+  local slide_time: number = 1.5
+  if t >= slide_time then return t - slide_time end
+
+  if t < 0.75 then
+    local n = math.ifloor(15*t)
+    local s = riv_tprintf("%.*s", n, "WELCOME")
+    riv_draw_text(s, RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 128, 128, 2, RIV_COLOR_WHITE)
+  else
+    t = t - 0.75
+    local n = math.ifloor(15*t)
+    local s = riv_tprintf("%.*s", n, "TO...")
+    riv_draw_text(s, RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 128, 128, 2, RIV_COLOR_WHITE)
+  end
+
+  return -1
+end
+
+local function slide_rives(t: number): number
+  local slide_time: number = 6
+  if t >= slide_time then return t - slide_time end
+  noise(t)
+
+  riv_draw_image_rect(logo_image, (256-(20*6))//2, (256-(7*6))//2, 20, 7, 0, 0, 6, 6)
+
+  if t >= 1 then
+    t = t - 1
+    local n = math.ifloor(30*t)
+    local s = riv_tprintf("%.*s", n, "YOUR ONCHAIN FANTASY CONSOLE")
+    riv_draw_text(s, RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 128, 128+32, 1, RIV_COLOR_LIGHTGREY)
+  end
+  return -1
+end
+
+local function slide_creative1(t: number): number
+  local slide_time: number = 4
+  if t >= slide_time then return t - slide_time end
+
+  spiral(t)
+  local n = math.ifloor(15*t)
+  local s = riv_tprintf("%.*s", n, "BE CREATIVE")
+  local xoff = 0
+  if t >= 0.5 then
+    xoff = (t - 0.5) * 10
+  end
+  riv_draw_text(s, RIV_SPRITESHEET_FONT_5X7, RIV_BOTTOMLEFT, 256 - 144 - xoff, 256-16, 2, RIV_COLOR_WHITE)
+  return -1
+end
+
+local function slide_creative2(t: number): number
+  local slide_time: number = 4
+  if t >= slide_time then return t - slide_time end
+
+  wheel(t)
+  local n = math.ifloor(30*t)
+  local s = riv_tprintf("%.*s", n, "EXPRESS YOURSELF")
+  local xoff = 0
+  if t >= 0.5 then
+    xoff = (t - 0.5) * 10
+  end
+  riv_draw_text(s, RIV_SPRITESHEET_FONT_5X7, RIV_TOPLEFT, 16 + xoff, 16, 2, RIV_COLOR_WHITE)
+  return -1
+end
+
+local function slide_creative3(t: number): number
+  local slide_time: number = 4
+  if t >= slide_time then return t - slide_time end
+
+  hexopus(t)
+  local n = math.ifloor(30*t)
+  local s = riv_tprintf("%.*s", n, "HAVE FUN")
+  local xoff = 0
+  if t >= 0.5 then
+    xoff = (t - 0.5) * 10
+  end
+  riv_draw_text(s, RIV_SPRITESHEET_FONT_5X7, RIV_CENTER, 96 + xoff, 224, 2, RIV_COLOR_WHITE)
+  return -1
+end
+
+local slides: []function(number):number = {
+  slide_cartridges,
+  slide_tapes,
+  slide_creative1,
+  slide_creative2,
+  slide_creative3,
+  slide_welcome,
+  slide_rives,
+}
+
+local start = 0
+repeat -- main loop
+  -- clear screen
+  riv_clear(RIV_COLOR_BLACK)
+
+  local t = riv.time - start
+
+  local drawn = false
+  for i,slide_func in ipairs(slides) do
+    t = slide_func(t)
+    if t < 0 then drawn = true break end
+  end
+  if not drawn then
+    start = riv.time
+  end
+until not riv_present()
