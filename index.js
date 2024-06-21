@@ -588,6 +588,7 @@ if (params.simple) {
   hideElem(document.getElementById('pause'));
   hideElem(document.getElementById('change-speed'));
   hideElem(document.getElementById('analyze'));
+  hideElem(document.getElementById('info'));
 }
 
 // Play external cartridge
