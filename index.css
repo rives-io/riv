@@ -106,13 +106,24 @@ td {
 }
 button {
   outline: none;
+  border: none;
+  background: none;
+  font-size: 18px;
+  color: white;
+  opacity: 0.5;
+}
+button:disabled {
+  opacity: 0.125;
+}
+button:hover:enabled {
+  opacity: 1.0;
   cursor: pointer;
 }
 #button-box {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 2px;
+  margin-top: 6px;
 }
 #button-box button {
   margin: 0 2px;
@@ -121,13 +132,13 @@ button {
   display: block;
 }
 #change-speed {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: bold;
+  caret-color: transparent;
 }
 .svg-button {
-  cursor: pointer;
   margin-top: 24px;
-  font-size: 96px;
+  font-size: 128px;
   background: none;
   border: none;
   color: #ddd;
