@@ -11,6 +11,7 @@ body {
 .canvas-wrapper {
   text-align: center;
   position: relative;
+  caret-color: transparent;
 }
 .content-wrapper {
   max-width: 768px;

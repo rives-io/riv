@@ -284,6 +284,7 @@ async function rivemuUpload(cartridgeUrl, incardUrl, tapeUrl, autoPlay) {
     statusElem.textContent = "Downloading incard...";
     lastIncard = incardUrl ? await downloadFile(incardUrl) : await uploadTapeDialog(".rivcard");
   }
+  statusElem.textContent = "Idle";
   if (autoPlay) {
     rivemuStart();
   } else {
@@ -498,7 +499,7 @@ function rivemu_on_begin(width, height, target_fps, total_frames, info_data) {
       let info = JSON.parse(textDecoder.decode(info_data));
       updateInfo(info);
     } catch(e) {
-      console.error(e);
+      console.warn("Failed to parse cartridge info.json:", e);
     }
   }
   lastFrame = 0;
@@ -521,11 +522,11 @@ async function rivemu_on_finish(tape, outcard, outhash) {
   lastTape = new Uint8Array(tape);
   lastOutcard = new Uint8Array(outcard);
   // Show outcard
-  let outcard_str = textDecoder.decode(outcard);
-  if (outcard_str.substring(0, 4) == 'JSON') {
-    let scores = JSON.parse(outcard_str.substring(4));
-    console.log(scores);
-  }
+  // let outcard_str = textDecoder.decode(outcard);
+  // if (outcard_str.substring(0, 4) == 'JSON') {
+  //   let scores = JSON.parse(outcard_str.substring(4));
+  //   console.log(scores);
+  // }
   // Update buttons
   paused = false;
   document.getElementById('pause').disabled = true;
@@ -566,35 +567,72 @@ function rivemu_on_frame(outcard, frame, cycles, fps, cpu_cost, cpu_speed, cpu_u
   }
 }
 
-// Parse params
-let hash = window.location.hash.substr(1);
-let params = hash.split('&').reduce(function (res, item) {
-    var parts = item.split('=');
-    res[parts[0]] = parts[1];
-    return res;
-}, {});
-
-// Show or hide elements based on params
-if (params.editor) {
-  showFlexElem(canvasLoadElem);
-} else {
-  showBlockElem(cartridgesElem);
-  showFlexElem(canvasDropElem);
-}
-if (params.nocontrols) {
-  hideElem(document.getElementById('button-box'));
-}
-if (params.simple) {
-  hideElem(document.getElementById('pause'));
-  hideElem(document.getElementById('change-speed'));
-  hideElem(document.getElementById('analyze'));
-  hideElem(document.getElementById('info'));
+async function rivemuReset() {
+  await rivemuStop();
+  lastEntropy = '';
+  lastArgs = '';
+  lastIncard = new Uint8Array([]);
+  lastOutcard = null;
+  lastTape = null;
+  lastCartridge = null;
+  lastFrame = null;
+  lastTotalFrames = null;
+  lastTargetFps = null;
+  statusBeforePause = null;
+  paused = false;
+  speed = 1;
 }
 
-// Play external cartridge
-if (params.cartridge) {
-  rivemuUpload(params.cartridge, params.incard, params.tape, params.autoplay);
+function rivemuGo() {
+  // Parse params
+  let hash = window.location.hash.substr(1);
+  let params = hash.split('&').reduce(function (res, item) {
+      var parts = item.split('=');
+      res[parts[0]] = parts[1];
+      return res;
+  }, {});
+
+  // Show or hide elements based on params
+  hideElem(canvasStartElem);
+  if (params.editor) {
+    showFlexElem(canvasLoadElem);
+    hideElem(cartridgesElem);
+    hideElem(canvasDropElem);
+  } else {
+    hideElem(canvasLoadElem);
+    showBlockElem(cartridgesElem);
+    showFlexElem(canvasDropElem);
+  }
+  if (params.nocontrols) {
+    hideElem(document.getElementById('button-box'));
+  } else {
+    showFlexElem(document.getElementById('button-box'));
+  }
+  if (params.simple) {
+    hideElem(document.getElementById('pause'));
+    hideElem(document.getElementById('change-speed'));
+    hideElem(document.getElementById('analyze'));
+    hideElem(document.getElementById('info'));
+  } else {
+    showFlexElem(document.getElementById('pause'));
+    showFlexElem(document.getElementById('change-speed'));
+    showFlexElem(document.getElementById('analyze'));
+    showFlexElem(document.getElementById('info'));
+  }
+
+  // Play external cartridge
+  if (params.cartridge) {
+    rivemuUpload(params.cartridge, params.incard, params.tape, params.autoplay);
+  }
+
 }
+
+window.onhashchange = async function() {
+  await rivemuReset();
+  rivemuGo();
+}
+
+rivemuGo();
 
 // Send event to parent window when the page is loaded
 window.parent.postMessage({ rivemuLoaded: true }, '*');
