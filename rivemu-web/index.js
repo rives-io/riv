@@ -566,35 +566,40 @@ function rivemu_on_frame(outcard, frame, cycles, fps, cpu_cost, cpu_speed, cpu_u
   }
 }
 
-// Parse params
-let hash = window.location.hash.substr(1);
-let params = hash.split('&').reduce(function (res, item) {
-    var parts = item.split('=');
-    res[parts[0]] = parts[1];
-    return res;
-}, {});
+function go() {
+  // Parse params
+  let hash = window.location.hash.substr(1);
+  let params = hash.split('&').reduce(function (res, item) {
+      var parts = item.split('=');
+      res[parts[0]] = parts[1];
+      return res;
+  }, {});
 
-// Show or hide elements based on params
-if (params.editor) {
-  showFlexElem(canvasLoadElem);
-} else {
-  showBlockElem(cartridgesElem);
-  showFlexElem(canvasDropElem);
-}
-if (params.nocontrols) {
-  hideElem(document.getElementById('button-box'));
-}
-if (params.simple) {
-  hideElem(document.getElementById('pause'));
-  hideElem(document.getElementById('change-speed'));
-  hideElem(document.getElementById('analyze'));
-  hideElem(document.getElementById('info'));
+  // Show or hide elements based on params
+  if (params.editor) {
+    showFlexElem(canvasLoadElem);
+  } else {
+    showBlockElem(cartridgesElem);
+    showFlexElem(canvasDropElem);
+  }
+  if (params.nocontrols) {
+    hideElem(document.getElementById('button-box'));
+  }
+  if (params.simple) {
+    hideElem(document.getElementById('pause'));
+    hideElem(document.getElementById('change-speed'));
+    hideElem(document.getElementById('analyze'));
+    hideElem(document.getElementById('info'));
+  }
+
+  // Play external cartridge
+  if (params.cartridge) {
+    rivemuUpload(params.cartridge, params.incard, params.tape, params.autoplay);
+  }
+
+  // Send event to parent window when the page is loaded
+  window.parent.postMessage({ rivemuLoaded: true }, '*');
 }
 
-// Play external cartridge
-if (params.cartridge) {
-  rivemuUpload(params.cartridge, params.incard, params.tape, params.autoplay);
-}
-
-// Send event to parent window when the page is loaded
-window.parent.postMessage({ rivemuLoaded: true }, '*');
+go()
+window.onhashchange = go
