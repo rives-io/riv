@@ -1,5 +1,6 @@
 ## pragmas.unitname = ''
 
+require 'math'
 require 'C.stdio'
 require 'C.stdarg'
 require '.riv_types'
@@ -50,4 +51,16 @@ global function riv_tprintf(format: cstring <const>, ...: cvarargs): cstring <ce
   end
   riv.temp_str_off = riv.temp_str_off + (@usize)(ret + 1)
   return buf
+end
+
+-- Check if a key was pressed or continues to be pressed at repeat rate.
+global function riv_is_key_repeat_press(key: uint8, repeat_delay: uint64, repeat_rate: uint64): boolean <cexport>
+  if key >= RIV_NUM_KEYCODE then return false end
+  if riv.keys[key].press then return true end
+  if not riv.keys[key].down then return false end
+  if repeat_delay == 0 then repeat_delay = math.max(riv.target_fps // 3, 1) end
+  if repeat_rate == 0 then repeat_rate = 20 end
+  local repeat_interval: uint64 = math.max(riv.target_fps // repeat_rate, 1)
+  local down_frame: uint64 = riv.keys[key].down_frame
+  return riv.frame >= down_frame + repeat_delay and (riv.frame - down_frame) % repeat_interval == 0
 end

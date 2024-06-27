@@ -9,6 +9,7 @@ global argv: *[0]cstring <cimport,nodecl>
 -- Basic
 global function riv_get_context(): *riv_context <cimport,nodecl> end
 global function riv_present(): boolean <cimport,nodecl> end
+global function riv_is_key_repeat_press(key: uint8, repeat_delay: uint64, repeat_rate: uint64): boolean <cimport,nodecl> end
 
 -- Resources
 global function riv_load_palette(filename: cstring <const>, start_col: uint8): uint32 <cimport,nodecl> end

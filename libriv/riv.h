@@ -837,6 +837,8 @@ static riv_context *const riv = (riv_context*)RIV_VADDR_CONTEXT;
 RIV_API riv_context* riv_get_context(void);
 // Present current frame, returns true until quit is requested.
 RIV_API bool riv_present(void);
+// Check if a key was pressed or continues to be pressed at repeat rate.
+RIV_API bool riv_is_key_repeat_press(uint8_t key, uint64_t repeat_delay, uint64_t repeat_rate);
 
 ////////////////////////////////////////
 // Resources
