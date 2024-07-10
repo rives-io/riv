@@ -11,39 +11,45 @@ else
 	CC=riscv64-buildroot-linux-musl-gcc
 	TOOLCHAIN_PREFIX=$(shell $(CC) -dumpmachine)-
 endif
+STRIP=$(TOOLCHAIN_PREFIX)strip
 
 # basic flags
-CFLAGS+=-Wall
+CFLAGS+=-Wall -fPIC
 LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--hash-style=gnu
-LDFLAGS+=-Wl,-z,relro,-z,now -rdynamic -Wl,--defsym=riv=riv_ctx
-NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
+LDFLAGS+=-Wl,-z,relro,-z,now -rdynamic
+LDFLAGS+=-Wl,--defsym=riv=riv_ctx -Wl,--defsym=_start=libriv_start
+NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert -Pnoentrypoint --verbose
 NELUA_CACHEDIR=.
 
 ifeq ($(debug), yes)
-	CFLAGS+=-Og -march=rv64g
+	CFLAGS+=-Og -march=rv64g -g
 else # release flags
-	CFLAGS+=-Ofast -march=rv64g -DNDEBUG -fno-stack-protector
-	STRIPFLAGS+=--strip-unneeded --remove-section=.comment
-	NELUA_FLAGS+=--strip-bin --stripflags="$(STRIPFLAGS)"
+	CFLAGS+=-Ofast -march=rv64g -DNDEBUG -fno-stack-protector -g0
+	STRIP_SHARED_FLAGS+=--strip-unneeded --remove-section=.comment
+	STRIP_STATIC_FLAGS+=--strip-debug --remove-section=.comment
 endif
 
-all: libriv.so
+all: libriv.a libriv.so
 
-libriv.so: libriv.nelua *.nelua
+libriv.a: libriv.nelua *.nelua
 	nelua $(NELUA_FLAGS) \
-		--shared-lib \
+		--static-lib \
 		--cc=$(CC) \
 		--cflags="$(CFLAGS)" \
-		--ldflags="$(LDFLAGS)" \
 		--cache-dir="$(NELUA_CACHEDIR)" \
 		--output $@ $<
+	$(STRIP) $(STRIP_STATIC_FLAGS) $@
 	touch $@
+
+libriv.so: libriv.a
+	$(CC) -o $@ -Wl,--whole-archive $< -Wl,--no-whole-archive -shared $(LDFLAGS)
+	$(STRIP) $(STRIP_SHARED_FLAGS) $@
 
 update-bindings:
 	nelua-lua genbindings.lua
 
 clean:
-	rm -f libriv.so libriv.c
+	rm -f libriv.a libriv.so libriv.c
 
 install: libriv.so
 	mkdir -p $(DESTDIR)$(PREFIX)/lib $(DESTDIR)$(PREFIX)/share/riv
@@ -56,6 +62,7 @@ install: libriv.so
 install-c-dev:
 	mkdir -p $(DESTDIR)$(PREFIX)/include
 	install -m644 riv.h $(DESTDIR)$(PREFIX)/include/riv.h
+	install -m644 libriv.a $(DESTDIR)$(PREFIX)/lib/libriv.a
 
 install-nelua-dev:
 	mkdir -p $(DESTDIR)$(PREFIX)/include

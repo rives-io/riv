@@ -10,7 +10,7 @@ FROM --platform=linux/riscv64 riscv64/busybox:1.36.1-musl AS busybox-stage
 
 ################################
 # Toolchain stage
-FROM --platform=linux/riscv64 riscv64/alpine:3.20.0 AS riv-toolchain-stage
+FROM --platform=linux/riscv64 riscv64/alpine:3.20.1 AS riv-toolchain-stage
 
 # Update and install development packages
 RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
@@ -37,7 +37,7 @@ RUN wget -O BR903-ELFkickers.tar.gz https://github.com/BR903/ELFkickers/tarball/
 ################################
 # Build mir jit
 FROM --platform=linux/riscv64 riv-toolchain-stage AS mirjit-stage
-RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/5dcba9a5e500f821dafbbf1db729742038bc5a80 && \
+RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/2719bf5d8290eb258938fee5a9b14134ca1e2eb2 && \
     tar -xzf vnmakarov-mir.tar.gz && \
     mv vnmakarov-mir-* vnmakarov-mir && cd vnmakarov-mir && \
     echo "echo fail" > check-threads.sh && \

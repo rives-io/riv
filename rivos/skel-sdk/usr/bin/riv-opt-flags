@@ -3,11 +3,12 @@
 usage() {
  echo "Usage: $0 -Ospeed|-Osize|-Odebug [--cflags] [--ldflags]"
  echo "Options:"
- echo "  -Ospeed      Optimize for performance, while retaining good code size."
- echo "  -Osize       Optimize for code size, while retaining good performance."
- echo "  -Odebug      Optimize for debug, while retaining fair performance and large code size."
- echo "  --cflags     Show C flags"
- echo "  --ldflags    Show linker flags"
+ echo "  -Ospeed          Optimize for code speed, while retaining good code size."
+ echo "  -Osize           Optimize for code size, while retaining good code speed."
+ echo "  -Odebug          Optimize for debug, while retaining fair code speed and size."
+ echo "  --cflags         Show C flags"
+ echo "  --ldflags        Show linker flags"
+ echo "  --static-libriv  Link libriv statically"
  echo ""
  echo "If neither --cflags or --ldflags is supplied, then both are shown."
 }
@@ -33,6 +34,9 @@ handle_options() {
         ;;
       --ldflags)
         show_ldflags=y
+        ;;
+      --static-libriv)
+        static_libriv=y
         ;;
       *)
         echo "Invalid option: $1" >&2
@@ -90,8 +94,8 @@ CFLAGS="$CFLAGS -fno-strict-overflow -fno-strict-aliasing"
 # force exporting symbols for backtraces
 [ "$mode" == "debug" ] && LDFLAGS="$LDFLAGS -rdynamic"
 
-# link libraries
-LDFLAGS="$LDFLAGS -lriv"
+# link RIV library
+[ "$static_libriv" == "y" ] && LDFLAGS="$LDFLAGS -l:libriv.a" || LDFLAGS="$LDFLAGS -lriv"
 
 # print
 if [ "$show_cflags$show_ldflags" = "yy" ] || [ "$show_cflags$show_ldflags" = "" ]; then

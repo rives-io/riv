@@ -21,7 +21,7 @@ local function exec_riv_tool_main(argc: int64, argv: *[0]cstring): void <noinlin
 end
 
 -- Make libriv.so library also an executable
-local function _start(): void <cexport'_start',cattribute'externally_visible,naked,noreturn'>
+global function libriv_start(): void <cexport'libriv_start',cattribute'externally_visible,naked,noreturn'>
   ##[=[
   cemitdecl [[const char interp_section[] __attribute__((section(".interp"))) = "/lib/ld-musl-riscv64.so.1";]]
   cemit[[
