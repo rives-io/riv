@@ -99,10 +99,11 @@ end
 
 -- Update the framebuffer into host RAM memory.
 local function update_framebuffer_mem(): void
-  if fb_pixel_count == 0 then return end
-  local fb_machine_mem: span(byte) = {data=&framebuffer,size=fb_pixel_count}
+  local pixel_count: int64 = machine.mmio_driver.width * machine.mmio_driver.height
+  if pixel_count == 0 then return end
+  local fb_machine_mem: span(byte) = {data=&framebuffer,size=pixel_count}
   machine:translate_and_read_virtual_memory(RIV_VADDR_FRAMEBUFFER, fb_machine_mem)
-  for i: int64=0,<fb_pixel_count do
+  for i: int64=0,<pixel_count do
     framebuffer_rgba[i] = machine.mmio_driver.palette[framebuffer[i]]
   end
 end
@@ -264,6 +265,14 @@ end
 
 -- Encodes a screenshot from the current framebuffer to a PNG binary string.
 local function riv_encode_png_screenshot(): string
+  local width: uint32 = fb_width
+  local height: uint32 = fb_height
+  if fb_pixel_count == 0 then -- video was probably not initialized
+    update_framebuffer_mem()
+    width = machine.mmio_driver.width
+    height = machine.mmio_driver.height
+  end
+
   local ret: cint
   -- Creating an encoder context requires a flag
   local enc: *spng_ctx = spng_ctx_new(SPNG_CTX_ENCODER)
@@ -276,8 +285,8 @@ local function riv_encode_png_screenshot(): string
 
   -- Specify image dimensions, PNG format
   local ihdr: spng_ihdr = {
-    width = fb_width,
-    height = fb_height,
+    width = width,
+    height = height,
     bit_depth = 8,
     color_type = SPNG_COLOR_TYPE_INDEXED
   }
@@ -287,7 +296,7 @@ local function riv_encode_png_screenshot(): string
   if ret ~= 0 then error('spng_set_ihdr failed: '..spng_strerror(ret)) end
 
   -- Detect palette size
-  local num_pixels: usize = fb_width * fb_height
+  local num_pixels: usize = width * height
   local num_colors: usize = 0
   for i: usize=0,<num_pixels do
     if framebuffer[i] > num_colors then num_colors = framebuffer[i] end
