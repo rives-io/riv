@@ -5,7 +5,7 @@ RUN apt-get update && \
     apt-get install -y clang lld libc6-dev build-essential git wget
 COPY --from=osxcross /osxcross /osxcross
 ENV PATH="/osxcross/bin:$PATH"
-ENV LD_LIBRARY_PATH="/osxcross/lib:$LD_LIBRARY_PATH"
+ENV LD_LIBRARY_PATH="/osxcross/lib"
 
 # Install nelua
 RUN <<EOF
