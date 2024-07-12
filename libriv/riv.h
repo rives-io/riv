@@ -931,6 +931,8 @@ RIV_API uint64_t riv_printf(const char* format, ...);
 RIV_API char *riv_tprintf(const char* format, ...);
 // Format a string
 RIV_API uint64_t riv_snprintf(char* buf, uint64_t n, const char* format, ...);
+// Abort immediately with an optional fatal error message
+RIV_API void riv_panic(const char* msg);
 // Get the RIV version at runtime
 RIV_API uint64_t riv_version(void);
 // Get the current machine cycle, THIS IS NON REPRODUCIBLE, use for bench-marking only

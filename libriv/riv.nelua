@@ -56,6 +56,7 @@ global function riv_rand_float(): float64 <cimport,nodecl> end
 global function riv_printf(format: cstring <const>, ...: cvarargs): usize <cimport,nodecl> end
 global function riv_tprintf(format: cstring <const>, ...: cvarargs): cstring <cimport,nodecl> end
 global function riv_snprintf(buf: cstring, n: usize, format: cstring <const>, ...: cvarargs): usize <cimport,nodecl> end
+global function riv_panic(msg: cstring <const>): void <cimport,nodecl> end
 global function riv_version(): uint64 <cimport,nodecl> end
 global function riv_rdcycle(): uint64 <cimport,nodecl> end
 

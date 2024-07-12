@@ -2,8 +2,18 @@
 
 require 'math'
 require 'C.stdio'
+require 'C.stdlib'
 require 'C.stdarg'
 require '.riv_types'
+
+global function riv_panic(msg: cstring <const>): void <cexport,noreturn>
+  if msg then
+    C.fprintf(C.stderr, "PANIC: %s", msg)
+  else
+    C.fprintf(C.stderr, "PANIC!\n")
+  end
+  C.abort()
+end
 
 -- Returns RIV version as an integer.
 global function riv_version(): uint64 <cexport>
