@@ -603,7 +603,7 @@ end
 function rivemu_audio.advance_pcm_frame(target_update_fps: float64)
   local advance_pcm_frames: float64 = DEFAULT_SAMPLE_RATE / target_update_fps
   local advance_pcm_frames_int: int64 = math.ifloor(advance_pcm_frames)
-  if DEFAULT_SAMPLE_RATE % advance_pcm_frames_int ~= 0 then
+  if advance_pcm_frames_int > 0 and DEFAULT_SAMPLE_RATE % advance_pcm_frames_int ~= 0 then
     global_pcm_frame_rem = global_pcm_frame_rem + (advance_pcm_frames - advance_pcm_frames_int)
     if math.abs(global_pcm_frame_rem - math.round(global_pcm_frame_rem)) <= 1e-4 then
       advance_pcm_frames_int = advance_pcm_frames_int + math.iround(global_pcm_frame_rem)
