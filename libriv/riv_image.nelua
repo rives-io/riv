@@ -142,7 +142,7 @@ global function riv_make_image(filename: cstring <const>, color_key: int64): uin
 end
 
 global function riv_destroy_image(img_id: uint64): void <cexport>
-  if img_id <= 0 or img_id >= RIV_MAX_IMAGES then return end
+  if img_id == 0 or img_id >= RIV_MAX_IMAGES then return end
   local img: *riv_image = &riv.images[img_id]
   if img.owned and img.pixels ~= nilptr then
     C.free(img.pixels)
@@ -194,4 +194,31 @@ global function riv_load_palette(filename: cstring <const>, start_col: uint8): u
     end
   end
   return col - start_col
+end
+
+global function riv_get_image_bbox(img_id: uint64, sx0: int64, sy0: int64, w: int64, h: int64): riv_recti <cexport>
+  if img_id == 0 or img_id >= RIV_MAX_IMAGES or w <= 0 or h <= 0 then return (@riv_recti){sx0, sy0, 0, 0} end
+  local img: *riv_image = &riv.images[img_id]
+  if img.width == 0 or img.height == 0 or not img.pixels then return (@riv_recti){sx0, sy0, 0, 0} end
+  local pitch: int64 = img.width
+  local color_key: int64 = img.color_key
+  local minx: int64 = sx0+w-1
+  local miny: int64 = sy0+h-1
+  local maxx: int64 = sx0-1
+  local maxy: int64 = sy0-1
+  local pixels: *[0]uint8 = &img.pixels[0]
+  for y: int64=math.max(sy0,0),<math.min(sy0+h,img.height) do
+    for x: int64=math.max(sx0,0),<math.min(sx0+w,img.width) do
+      if pixels[y*pitch + x] ~= color_key then
+        if x < minx then minx = x end
+        if y < miny then miny = y end
+        if x > maxx then maxx = x end
+        if y > maxy then maxy = y end
+      end
+    end
+  end
+  local bw: int64 = math.max(maxx - minx + 1, 0)
+  local bh: int64 = math.max(maxy - miny + 1, 0)
+  if bw <= 0 or bh <= 0 then return (@riv_recti){sx0, sy0, 0, 0} end
+  return (@riv_recti){minx, miny, bw, bh}
 end

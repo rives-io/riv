@@ -17,6 +17,8 @@ global function riv_make_image(filename: cstring <const>, color_key: int64): uin
 global function riv_destroy_image(img_id: uint64): void <cimport,nodecl> end
 global function riv_make_spritesheet(img_id: uint64, w: uint32, h: uint32): uint64 <cimport,nodecl> end
 global function riv_destroy_spritesheet(sps_id: uint64): void <cimport,nodecl> end
+global function riv_get_image_bbox(img_id: uint64, sx0: int64, sy0: int64, w: int64, h: int64): riv_recti <cimport,nodecl> end
+global function riv_get_sprite_bbox(n: uint32, sps_id: uint64, nx: int64, ny: int64): riv_recti <cimport,nodecl> end
 
 -- Drawing
 global function riv_clear(col: uint32): void <cimport,nodecl> end

@@ -17,8 +17,7 @@
 *.txt
 *.deb
 *.rivtape
-*.rivincard
-*.rivoutcard
+*.rivcard
 *.ttf
 CNAME
 

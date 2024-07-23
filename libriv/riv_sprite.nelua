@@ -2,6 +2,7 @@
 
 require 'io'
 require '.riv_types'
+require '.riv_image'
 
 local function generate_sprite_id(): uint64
   local spr_id: uint64 = riv.sprite_gen
@@ -45,4 +46,23 @@ global function riv_destroy_spritesheet(spr_id: uint64): void <cexport>
   if spr_id <= 0 or spr_id >= RIV_MAX_SPRITESHEETS then return end
   local spr: *riv_spritesheet = &riv.spritesheets[spr_id]
   $spr = {}
+end
+
+global function riv_get_sprite_bbox(n: uint32, sps_id: uint64, nx: int64, ny: int64): riv_recti <cexport>
+  if sps_id == 0 or sps_id >= RIV_MAX_SPRITESHEETS or nx < 0 or ny < 0 then return (@riv_recti){} end
+  local sps: *riv_spritesheet = &riv.spritesheets[sps_id]
+  if sps.cell_width == 0 then return (@riv_recti){} end
+  local img_id: uint64 = sps.image_id
+  if img_id == 0 or img_id >= RIV_MAX_IMAGES then return (@riv_recti){} end
+  local img: *riv_image = &riv.images[sps.image_id]
+  local ncols: int64 = img.width /// sps.cell_width
+  if ncols <= 0 then return (@riv_recti){} end
+  local sx0: int64 = (n %%% ncols)*sps.cell_width
+  local sy0: int64 = (n /// ncols)*sps.cell_height
+  local w: int64 = sps.cell_width * nx
+  local h: int64 = sps.cell_height * ny
+  local bbox: riv_recti = riv_get_image_bbox(img_id, sx0, sy0, w, h)
+  bbox.x = bbox.x - sx0
+  bbox.y = bbox.y - sy0
+  return bbox
 end
