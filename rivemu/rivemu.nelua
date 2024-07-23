@@ -1149,6 +1149,7 @@ local function rivemu_set_speed(speed: float64) <cexport>
   local resuming = options.speed <= 0 and speed > 0
   local pausing = options.speed > 0 and speed <= 0
   options.speed = speed
+  if not started then return end
   if speed > 0 then
     rivemu_audio.set_pitch(speed)
   end

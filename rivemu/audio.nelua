@@ -294,17 +294,22 @@ local global_pcm_frame_rem: float64
 local last_engine_sync_pcm_frame: uint64
 local silence: Silence
 local silence_asound: ma_sound
+local audio_started: boolean
 
 -- Start audio thread.
 function rivemu_audio.start(): void
+  if audio_started then return end
   ma_assert!(ma_engine_start(&engine))
   ma_assert!(ma_sound_start(silence_asound))
+  audio_started = true
 end
 
 -- Stop audio thread.
 function rivemu_audio.stop(): void
+  if not audio_started then return end
   ma_assert!(ma_sound_stop(silence_asound))
   ma_assert!(ma_engine_stop(&engine))
+  audio_started = false
 end
 
 -- Initialize audio subsystem.
