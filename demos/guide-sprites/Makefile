@@ -1,4 +1,4 @@
-DATA_FILES=info.json sprites.png
+DATA_FILES=simple_dungeon_crawler_16x16.png
 CARTS=$(patsubst %.c, %.sqfs, $(wildcard *.c))
 RIVEMU=rivemu
 RIVEMU_RUN=rivemu -quiet -workspace -exec
