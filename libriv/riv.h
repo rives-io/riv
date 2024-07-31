@@ -942,4 +942,26 @@ RIV_API uint64_t riv_version(void);
 // Get the current machine cycle, THIS IS NON REPRODUCIBLE, use for bench-marking only
 RIV_API uint64_t riv_rdcycle(void);
 
+////////////////////////////////////////
+// Low level memory management (used by high level language bindings)
+
+// Read up to 8 bytes from memory address
+RIV_API uint64_t riv_mempeek(uint64_t addr, uint64_t size);
+// Write up to 8 bytes to memory address
+RIV_API void riv_mempoke(uint64_t addr, uint64_t value, uint64_t size);
+// Fill memory region with a constant byte
+RIV_API void riv_memset(uint64_t addr, uint8_t value, uint64_t size);
+// Copy bytes from memory a region source to another memory region, the region may overlap
+RIV_API void riv_memmove(uint64_t dest_addr, uint64_t src_addr, uint64_t size);
+// Scan memory region for a byte and return the address for the matching byte
+RIV_API uint64_t riv_memscan(uint64_t addr, uint8_t value, uint64_t size);
+// Compare memory areas, returns zero if they are equal
+RIV_API int32_t riv_memcmp(uint64_t addr1, uint64_t addr2, uint64_t size);
+// Allocate memory region and return its starting address
+RIV_API uint64_t riv_memalloc(uint64_t size);
+// Reallocate memory region to a new size
+RIV_API uint64_t riv_memrealloc(uint64_t addr, uint64_t new_size, uint64_t old_size);
+// Deallocate memory from starting address
+RIV_API void riv_memdealloc(uint64_t addr);
+
 #endif

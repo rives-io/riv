@@ -62,6 +62,17 @@ global function riv_panic(msg: cstring <const>): void <cimport,nodecl> end
 global function riv_version(): uint64 <cimport,nodecl> end
 global function riv_rdcycle(): uint64 <cimport,nodecl> end
 
+-- Low level memory management
+global function riv_mempeek(addr: uint64, size: uint64): uint64 <cimport,nodecl> end
+global function riv_mempoke(addr: uint64, value: uint64, size: uint64): void <cimport,nodecl> end
+global function riv_memset(addr: uint64, value: uint8, size: uint64): void <cimport,nodecl> end
+global function riv_memmove(dest_addr: uint64, src_addr: uint64, size: uint64): void <cimport,nodecl> end
+global function riv_memscan(addr: uint64, value: uint8, size: uint64): uint64 <cimport,nodecl> end
+global function riv_memcmp(addr1: uint64, addr2: uint64, size: uint64): int32 <cimport,nodecl> end
+global function riv_memalloc(size: uint64): uint64 <cimport,nodecl> end
+global function riv_memrealloc(addr: uint64, new_size: uint64, old_size: uint64): uint64 <cimport,nodecl> end
+global function riv_memdealloc(addr: uint64): void <cimport,nodecl> end
+
 -- Macro for generating tiny binaries.
 ## function nostartfiles() cflags '-nostartfiles'
   local function _start(): void <entrypoint,noreturn,cattribute'externally_visible,naked'>

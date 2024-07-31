@@ -3,7 +3,7 @@
 require 'math'
 require '.riv_types'
 require '.riv_fonts'
-require '.riv_memset'
+require '.riv_mem'
 
 global function riv_init_draw(): void
   -- set initial clip big enough for all screen sizes

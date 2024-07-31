@@ -13,6 +13,7 @@ require '.riv_video'
 require '.riv_image'
 require '.riv_sprite'
 require '.riv_draw'
+require '.riv_mem'
 
 local riv_ctx: *riv_context <cexport>
 
