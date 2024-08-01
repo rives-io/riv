@@ -11,9 +11,15 @@ typedef enum riv_spritesheet_id {
 typedef enum riv_align {
   RIV_CENTER = 4,
 } riv_align;
+typedef struct riv_recti {
+  int64_t x;
+  int64_t y;
+  int64_t width;
+  int64_t height;
+} riv_recti;
 bool riv_present();
 void riv_clear(uint32_t col);
-void riv_draw_text(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t size, int64_t col);
+riv_recti riv_draw_text(const char* text, uint64_t sps_id, riv_align anchor, int64_t x, int64_t y, int64_t size, int64_t col);
 ]]
 local L = ffi.load("riv")
 
