@@ -59,16 +59,18 @@ global function riv_init(): void <cattribute'constructor',cexport>
   riv_init_draw()
   -- signal the we are about to start, the host may fill input card
   riv_yield(RIV_CONTROL_OPEN)
-  -- check if device is connected
+  --[[
+  -- check if device is connected (this check cannot be present in the validator)
   if riv.yielding then
     assert(riv.mmio_device_header.canary == RIV_CANARY_DEVICE, 'RIV driver: unable to connect device MMIO')
     assert(riv.mmio_device_header.version == RIV_VERSION, 'RIV driver: unsupported RIV version')
     assert(riv.mmio_device_header.features == 0, 'RIV driver: unsupported features')
-  else -- act as connected
-    riv.mmio_device_header.canary = RIV_CANARY_DEVICE
-    riv.mmio_device_header.version = RIV_VERSION
-    riv.mmio_device_header.features = 0
   end
+  ]]
+  -- act as connected
+  riv.mmio_device_header.canary = RIV_CANARY_DEVICE
+  riv.mmio_device_header.version = RIV_VERSION
+  riv.mmio_device_header.features = 0
   -- retrieve input card from host
   riv_sync_incard()
   -- initialize prng
