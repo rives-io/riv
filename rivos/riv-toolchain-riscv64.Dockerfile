@@ -52,7 +52,7 @@ RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/2719bf
 ################################
 # Build nelua
 FROM --platform=linux/riscv64 riv-toolchain-stage AS nelua-stage
-RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarball/4b2c75f8fe5c1d11a966b2fe8974a256868749a6 && \
+RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarball/38c2d9ca14c992ddcd73f4067af8c6f37c550979 && \
     tar -xzf edubart-nelua-lang.tar.gz && \
     mv edubart-nelua-lang-* edubart-nelua-lang && cd edubart-nelua-lang && \
     mkdir -p /pkg/usr && \
