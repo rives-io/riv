@@ -82,6 +82,8 @@ local rivemu_options: type = @record{
   wait_halt: boolean,
   print_frame_hash: boolean,
   print_final_hash: boolean,
+  print_frame_outcard: boolean,
+  print_frame_outhash: boolean,
   print_outcard: boolean,
   print_outhash: boolean,
   extract_info: boolean,
@@ -235,6 +237,10 @@ local function parse_options(): rivemu_options
       opts.print_frame_hash = true
     elseif argk == '-print-final-hash' then
       opts.print_final_hash = true
+    elseif argk == '-print-frame-outhash' then
+      opts.print_frame_outhash = true
+    elseif argk == '-print-frame-outcard' then
+      opts.print_frame_outcard = true
     elseif argk == '-print-outhash' then
       opts.print_outhash = true
     elseif argk == '-print-outcard' then
@@ -428,7 +434,10 @@ OPTIONS
   -print-final-hash
     Print final machine root hash.
 
-  -print-frame-hash
+  -print-frame-outhash
+    Print machine root hash for every frame.
+
+  -print-frame-outcard
     Print machine root hash for every frame.
 
   -print-outhash
@@ -853,6 +862,13 @@ local function advance_frame(): void
   if not loading and options.print_frame_hash then
     local root_hash: string <close> = hexhash(machine:get_root_hash())
     io.printf('[RIVEMU] frame=%d hash=%s\n', frame, root_hash)
+  end
+
+  if not loading and options.print_frame_outcard then
+    rivemu_iocard.print_outcard()
+  end
+  if not loading and options.print_frame_outhash then
+    rivemu_iocard.print_outcard_checksum()
   end
 
   -- print fps

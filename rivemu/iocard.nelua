@@ -99,7 +99,11 @@ end
 
 function rivemu_iocard.print_outcard(): void
   local contents: string = {data=outcard_data.data, size=outcard_data.size}
-  io.printf("[RIVEMU] Outcard:\n%s\n", contents)
+  if outcard_data.size >= 64 then
+    io.printf("[RIVEMU] Outcard:\n%s\n", contents)
+  else
+    io.printf("[RIVEMU] Outcard: %s\n", contents)
+  end
 end
 
 function rivemu_iocard.print_outcard_checksum(): void
