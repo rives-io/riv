@@ -23,10 +23,9 @@ RUN <<EOF
 set -e
 git clone --branch feature/optim-fetch --depth 1 https://github.com/cartesi/machine-emulator.git
 cd machine-emulator
-make dep
 make bundle-boost
-wget -O uarch/uarch-pristine-hash.c https://github.com/cartesi/machine-emulator/releases/download/v0.16.1/uarch-pristine-hash.c
-wget -O uarch/uarch-pristine-ram.c https://github.com/cartesi/machine-emulator/releases/download/v0.16.1/uarch-pristine-ram.c
+wget -O add-generated-files.diff https://github.com/cartesi/machine-emulator/releases/download/v0.18.0/add-generated-files.diff
+patch -Np0 < add-generated-files.diff
 EOF
 
 ARG CC_PREFIX

@@ -10,7 +10,7 @@ FROM --platform=linux/riscv64 riscv64/busybox:1.36.1-musl AS busybox-stage
 
 ################################
 # Toolchain stage
-FROM --platform=linux/riscv64 riscv64/alpine:3.20.1 AS riv-toolchain-stage
+FROM --platform=linux/riscv64 riscv64/alpine:3.20.2 AS riv-toolchain-stage
 
 # Update and install development packages
 RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \

@@ -2,7 +2,7 @@ PREFIX=/usr/local
 
 # Release flags
 CC=gcc
-CFLAGS+=-Wall
+CFLAGS+=-Wall -Wextra -Wno-misleading-indentation
 NELUA_FLAGS+=-Pnochecks -Pnoerrorloc -Pnocstaticassert --verbose
 NELUA_CACHEDIR=.
 ifeq ($(CC), tcc)
