@@ -36,15 +36,26 @@ run: $(NAME).sqfs
 	$(RIVEMU_RUN) $<
 
 clean:
-	rm -f *.sqfs *.elf *.o libriv.so riv.h
+	rm -f *.sqfs *.elf *.o libriv.so riv.h riv.rs
+
+libriv.so:
+	$(RIVEMU_EXEC) cp /usr/lib/libriv.so .
+
+riv.rs:
+	$(RIVEMU_EXEC) cp /usr/include/riv.h .
+	rustup run nightly bindgen riv.h -o riv.rs \
+		--rustified-enum ".*" \
+		--no-layout-tests \
+		--merge-extern-blocks \
+		--allowlist-file riv.h
+	rm -f riv.h
 
 $(NAME).sqfs: $(EXE)
 	$(RIVEMU_EXEC) riv-mksqfs $(DATA_FILES_PATH) $^ $@
 
-$(EXE): $(SOURCES)
-	$(RIVEMU_EXEC) cp  /usr/include/riv.h /usr/lib/libriv.so .
-	rustup run nightly bindgen riv.h -o riv.rs --rustified-enum ".*" --no-layout-tests --allowlist-file riv.h
-	rustc +nightly -o $@ $^ \
+$(EXE): $(SOURCES) riv.rs libriv.so
+	rustc +nightly -o $@ $(SOURCES) \
+		--edition 2021 \
 		-C opt-level=z \
 		-C lto=true \
 		-C panic=abort \
@@ -54,4 +65,3 @@ $(EXE): $(SOURCES)
 		-lriv \
 		--target=riscv64gc-unknown-linux-musl
 	$(RIVEMU_EXEC) riv-strip $@
-	rm -f libriv.so riv.h
