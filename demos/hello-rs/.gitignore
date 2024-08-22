@@ -1,0 +1,6 @@
+*.sqfs
+*.elf
+*.so
+hello-rs
+riv.rs
+riv.h
