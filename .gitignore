@@ -38,3 +38,5 @@ rivemu.wasm
 
 # external demos
 /demos/external-*
+
+.DS_Store
