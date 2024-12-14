@@ -100,13 +100,13 @@ RUN wget -O edubart-LuaJIT.tar.gz https://github.com/edubart/LuaJIT/tarball/73a9
 
 ################################
 # Build Zig
-FROM --platform=linux/riscv64 riv-toolchain-stage AS zig-stage
-RUN wget -O zig-linux-riscv64.tar.xz https://ziglang.org/builds/zig-linux-riscv64-0.14.0-dev.2457+82f35c518.tar.xz && \
-    tar -xf zig-linux-riscv64.tar.xz && \
-    cd zig-linux-riscv64-* && \
-    mkdir -p /pkg/usr/bin /pkg/usr/lib && \
-    mv zig /pkg/usr/bin/ && \
-    mv lib /pkg/usr/lib/zig
+# FROM --platform=linux/riscv64 riv-toolchain-stage AS zig-stage
+# RUN wget -O zig-linux-riscv64.tar.xz https://ziglang.org/builds/zig-linux-riscv64-0.14.0-dev.2457+82f35c518.tar.xz && \
+#     tar -xf zig-linux-riscv64.tar.xz && \
+#     cd zig-linux-riscv64-* && \
+#     mkdir -p /pkg/usr/bin /pkg/usr/lib && \
+#     mv zig /pkg/usr/bin/ && \
+#     mv lib /pkg/usr/lib/zig
 
 ################################
 # Build quickjs-ffi
@@ -182,12 +182,9 @@ RUN apk add bash \
         libffi libffi-dev \
         zstd zstd-dev \
         quickjs quickjs-dev \
-        rust rust-bindgen \
-        nim \
         llvm19 clang19 clang19-analyzer clang19-extra-tools clang19-bash-completion \
         mold \
         compiler-rt \
-        cppcheck \
         micropython@testing
 
 # Make vim an alias to nvim
@@ -215,7 +212,7 @@ COPY --from=bwrapbox-stage /pkg/usr /usr
 COPY --from=bubblewrap-stage /pkg/usr /usr
 COPY --from=cffi-lua-stage /pkg/usr /usr
 COPY --from=luajit-stage /pkg/usr /usr
-COPY --from=zig-stage /pkg/usr /usr
+# COPY --from=zig-stage /pkg/usr /usr
 COPY --from=quickjs-ffi-stage /pkg/usr /usr
 COPY --from=xhalt-stage /pkg/usr /usr
 
