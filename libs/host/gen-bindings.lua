@@ -99,7 +99,7 @@ elseif ccinfo.is_windows then
 elseif ccinfo.is_macos then
   cdefine 'SOKOL_METAL'
 else
-  cdefine 'SOKOL_GLCORE33'
+  cdefine 'SOKOL_GLCORE'
   linklib 'GL'
 end
 -- sokol_gfx

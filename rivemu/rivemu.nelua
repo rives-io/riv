@@ -1064,7 +1064,7 @@ local function run()
       event_cb = rivemu_input.append_event,
       width = default_canvas_width,
       height = default_canvas_width,
-      html5_canvas_name = "canvas",
+      html5_canvas_selector = "canvas",
       html5_preserve_drawing_buffer = true,
       html5_canvas_resize = true,
       window_title = "RIVEMU",
