@@ -94,8 +94,8 @@ local rivemu_options: type = @record{
 }
 
 local function parse_options(): rivemu_options
+  local default_mem: int64 = 256*1024*1024
   local opts: rivemu_options = {
-    mem = 256*1024*1024,
     speed = 1.0,
     stop_frame = -1,
   }
@@ -160,6 +160,7 @@ local function parse_options(): rivemu_options
     elseif argk == '-bootargs' then
       opts.bootargs = argv
     elseif argk == '-sdk' or argk == '-rootfs' then
+      default_mem = 512 * 1024 * 1024
       opts.rootfs_filename = argv
       if #argv == 0 then
         local rivemu_sdk_env: string = C.getenv('RIVEMU_SDK')
@@ -390,7 +391,7 @@ OPTIONS
 
   -mem=<number>
     Set the machine RAM memory size, the value is in megabytes.
-    The default is 256.
+    The default is 256MB with not SDK, and 512MB when -sdk is set.
 
   -speed=<speed>
     Set replay speed.
@@ -478,6 +479,9 @@ OPTIONS
       ## end
     end
     argi = argi + 1
+  end
+  if opts.mem == 0 then
+    opts.mem = default_mem
   end
   return opts
 end
