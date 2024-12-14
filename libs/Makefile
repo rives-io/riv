@@ -1,5 +1,5 @@
 MINIZ_VERSION=3.0.2
-CARTESI_VERSION=v0.18.0
+CARTESI_VERSION=main
 SOKOL_TAG=master
 SHA3_BRANCH=master
 MINIAUDIO_BRANCH=master
@@ -40,7 +40,6 @@ update-miniaudio:
 
 update-cartesi:
 	wget -O host/machine-c-api.h https://raw.githubusercontent.com/cartesi/machine-emulator/$(CARTESI_VERSION)/src/machine-c-api.h
-	wget -O host/machine-c-defines.h https://raw.githubusercontent.com/cartesi/machine-emulator/$(CARTESI_VERSION)/src/machine-c-defines.h
 	wget -O host/machine-c-version.h https://raw.githubusercontent.com/cartesi/machine-emulator/$(CARTESI_VERSION)/tools/template/machine-c-version.h.template
 
 clean:

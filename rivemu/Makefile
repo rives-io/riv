@@ -24,6 +24,7 @@ else ifeq ($(CC), gcc)
 	RIVEMU=rivemu
 	LDFLAGS+=-Wl,--gc-sections
 	LDFLAGS+=-Wl,-O1,--sort-common,--build-id=none,--as-needed -z relro -z now
+	LDFLAGS+=-L/home/bart/projects/cartesi/machine-emulator-sdk/emulator/src
 else
 	# MacOs or some other POSIX
 	RIVEMU=rivemu

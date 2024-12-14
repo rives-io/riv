@@ -26,15 +26,10 @@ global RIV_SIZE_REPLAYLOG: uint64 <comptime> = 2*1024*1024
 -- Macro to check if a cm_* call was a success.
 ## function cm_assert(callnode)
   do
-    local errmsg: cstring
-    -- appends `errmsg` to the call arguments of `a`
-    ## local callargs, callname = callnode[1], callnode[2][1]
-    ## table.insert(callargs, aster.UnaryOp{"ref", aster.Id{"errmsg"}})
+    ## local callname = callnode[2][1]
     local result: auto = #[callnode]#
-    if errmsg then
-      error(#[callname..': ']#..errmsg)
-    elseif result ~= 0 then
-      error(#[callname..': failed']#)
+    if result ~= 0 then
+      error(#[callname..': ']#..cm_get_last_error_message())
     end
   end
 ## end
@@ -64,122 +59,106 @@ function rivemu_machine:uncompress_memory(paddr: uint64, compressed_bytes: strin
   assert(tinfl_decompress_mem_to_callback(buf, &buf_size, (@tinfl_put_buf_func_ptr)(uncompress_cb), &env, TINFL_FLAG_PARSE_ZLIB_HEADER) == 1, 'failed to uncompress')
 end
 
+local function escape_json(s: string): string
+  local t: string
+  s = s:copy()
+  t = s:gsub([[\]], [[\\]]); s:destroy(); s = t
+  t = s:gsub([["]], [[\"]]); s:destroy(); s = t
+  t = s:gsub("\b", [[\b]]); s:destroy(); s = t
+  t = s:gsub("\f", [[\f]]); s:destroy(); s = t
+  t = s:gsub("\n", [[\n]]); s:destroy(); s = t
+  t = s:gsub("\r", [[\r]]); s:destroy(); s = t
+  t = s:gsub("\t", [[\t]]); s:destroy(); s = t
+  -- TODO: fix leak when returning this string
+  return s
+end
+
 -- Creates a new machine.
 function rivemu_machine.create(init: string, entrypoint: string, append_bootargs: string,
                                kernel_filename: string, rootfs_filename: string,
                                cartridge_filename: string, replaylog_filename: string,
                                interactive: boolean, network: boolean, persist: boolean,
                                workspace: string, ram_length: uint64): rivemu_machine
-  -- get default config
-  local defconfig: *cm_machine_config
-  cm_assert!(cm_get_default_config(&defconfig))
-  defer cm_delete_machine_config(defconfig) end
-
-  -- rivos flash drive
-  local flash_drive_entries: [8]cm_memory_range_config
-  local flash_drive_count: cint = 0
-  do
-    flash_drive_entries[flash_drive_count] = {
-      start = RIV_PADDR_ROOTFS,
-      length = #[require'nelua.utils.fs'.getsize("../rivos/rivos.ext2")]#,
-    }
-    if #rootfs_filename > 0 then
-      flash_drive_entries[flash_drive_count].image_filename = rootfs_filename
-      flash_drive_entries[flash_drive_count].length = (@uint64)(-1)
-      flash_drive_entries[flash_drive_count].shared = persist
-    end
-    flash_drive_count = flash_drive_count + 1
-
-    -- cartridge flash drive
-    flash_drive_entries[flash_drive_count] = {
-      start = RIV_PADDR_CARTRIDGE,
-      length = 4096,
-    }
-    if #cartridge_filename > 0 then
-      flash_drive_entries[flash_drive_count].image_filename = cartridge_filename
-      flash_drive_entries[flash_drive_count].length = (@uint64)(-1)
-    end
-    flash_drive_count = flash_drive_count + 1
-
-    -- event log flash drive
-    flash_drive_entries[flash_drive_count] = {
-      start = RIV_PADDR_REPLAYLOG,
-      length = RIV_SIZE_REPLAYLOG,
-    }
-    flash_drive_count = flash_drive_count + 1
-  end
-
-  -- virtio devices
-  local virtio_entries: [8]cm_virtio_device_config
-  local virtio_count: cint = 0
-  local console_hvc: cint = 0
-  do
-    -- console
-    if interactive then
-      virtio_entries[virtio_count] = {
-        type = CM_VIRTIO_DEVICE_CONSOLE
-      }
-      virtio_count = virtio_count + 1
-      console_hvc = 1
-    end
-    -- network
-    if network then
-      virtio_entries[virtio_count] = {
-        type = CM_VIRTIO_DEVICE_NET_USER
-      }
-      virtio_count = virtio_count + 1
-    end
-    -- workspace
-    if #workspace > 0 then
-      virtio_entries[virtio_count] = {
-        type = CM_VIRTIO_DEVICE_P9FS,
-        device = {
-          p9fs = {
-            tag = "workspace",
-            host_directory = workspace,
-          }
-        }
-      }
-      virtio_count = virtio_count + 1
-    end
-  end
-
-  -- bootargs
-  local bootargs: string <close> = string.format("\z
-    no4lvl quiet \z
-    earlycon=sbi console=hvc%d \z
-    rootfstype=ext2 root=/dev/pmem0 rw \z
-    init=/usr/sbin/cartesi-init %s", console_hvc, append_bootargs)
-
   -- set config
-  local config: cm_machine_config = $defconfig
-  config.processor.iunrep = (virtio_count > 0) and 1 or 0
-  config.ram = {
-    image_filename = kernel_filename,
-    length = ram_length
-  }
-  config.dtb = {
-    bootargs = bootargs,
-    init = init,
-    entrypoint = entrypoint
-  }
-  config.virtio = {
-    count = virtio_count,
-    entry = &virtio_entries,
-  }
-  config.flash_drive = {
-    count = flash_drive_count,
-    entry = &flash_drive_entries,
-  }
+  local config: stringbuilder <close>
+  config:writef('{')
+  do
+    -- rivos flash drive
+    config:writef('"flash_drive":[')
+    do
+      config:writef('{"start":%d,', RIV_PADDR_ROOTFS)
+      if #rootfs_filename > 0 then
+        config:writef('"image_filename":"%s",', escape_json(rootfs_filename))
+        config:writef('"shared":%s', persist)
+      else
+        config:writef('"length":%s', #[require'nelua.utils.fs'.getsize("../rivos/rivos.ext2")]#)
+      end
+      config:writef('},')
+
+      -- cartridge flash drive
+      config:writef('{"start":%d,', RIV_PADDR_CARTRIDGE)
+      if #cartridge_filename > 0 then
+        config:writef('"image_filename":"%s"', escape_json(cartridge_filename))
+      else
+        config:writef('"length":%d', 4096)
+      end
+      config:writef('},')
+
+      -- event log flash drive
+      config:writef('{"start":%d,"length":%d}', RIV_PADDR_REPLAYLOG, RIV_SIZE_REPLAYLOG)
+    end
+    config:writef('],')
+
+    -- virtio devices
+    config:writef('"virtio":[')
+    local console_hvc: cint  = 0
+    local has_virtio: boolean = false
+    do
+      -- console
+      if interactive then
+        config:writef('{"type":"console"}')
+        console_hvc = 1
+        has_virtio = true
+      end
+      -- network
+      if network then
+        if has_virtio then config:writef(',') end
+        config:writef('{"type":"net-user"}')
+        has_virtio = true
+      end
+      -- workspace
+      if #workspace > 0 then
+        if has_virtio then config:writef(',') end
+        config:writef('{"type":"p9fs","tag":"workspace","host_directory":"%s"}', escape_json(workspace))
+        has_virtio = true
+      end
+    end
+    config:writef('],')
+
+    -- bootargs
+    local bootargs: string <close> = string.format("\z
+      no4lvl quiet \z
+      earlycon=sbi console=hvc%d \z
+      rootfstype=ext2 root=/dev/pmem0 rw \z
+      init=/usr/sbin/cartesi-init %s", console_hvc, escape_json(append_bootargs))
+
+    -- dtb
+    config:writef([["dtb":{"bootargs":"%s","init":"%s","entrypoint":"%s"},]],
+      escape_json(bootargs), escape_json(init), escape_json(entrypoint))
+    -- processor
+    config:writef([["processor":{"iunrep":%d},]], has_virtio and 1 or 0)
+    -- ram
+    config:writef([["ram":{"image_filename":"%s","length":%d}]],
+      escape_json(kernel_filename), ram_length)
+  end
+  config:writef('}')
 
   -- set runtime config
-  local runtime_config: cm_machine_runtime_config = {
-    soft_yield = true,
-  }
+  local runtime_config: string = [[{"soft_yield":true}]]
 
   -- create the machine
   local self: rivemu_machine
-  cm_assert!(cm_create_machine(config, runtime_config, &self.machine))
+  cm_assert!(cm_create_new(config:view(), runtime_config, &self.machine))
 
   -- write event log
   if #replaylog_filename > 0 then
@@ -203,7 +182,7 @@ end
 
 -- Destroy the machine.
 function rivemu_machine:destroy(): void
-  cm_delete_machine(self.machine)
+  cm_delete(self.machine)
   $self = {}
 end
 
@@ -224,22 +203,22 @@ end
 -- Read machine X register.
 function rivemu_machine:read_x(i: int64): uint64
   local val: uint64
-  cm_assert!(cm_read_x(self.machine, (@int32)(i), &val))
+  cm_assert!(cm_read_reg(self.machine, CM_REG_X0 + (@int32)(i), &val))
   return val
 end
 
 -- Get machine mcycle.
 function rivemu_machine:read_mcycle(): uint64
   local mcycle: uint64
-  cm_assert!(cm_read_mcycle(self.machine, &mcycle))
+  cm_assert!(cm_read_reg(self.machine, CM_REG_MCYCLE, &mcycle))
   return mcycle
 end
 
 -- Get machine halt status code.
 function rivemu_machine:read_halt_exit_code(): uint64
-  local tohost_data: uint64
-  cm_assert!(cm_read_htif_tohost_data(self.machine, &tohost_data))
-  return tohost_data >> 1
+  local htif_tohost: uint64
+  cm_assert!(cm_read_reg(self.machine, CM_REG_HTIF_TOHOST, &htif_tohost))
+  return (htif_tohost >> 1) & 0xff
 end
 
 -- Read machine memory.
@@ -339,14 +318,14 @@ function rivemu_machine:_setup_mmio(): boolean
 end
 
 -- Run the machine.
-function rivemu_machine:run(mcycle_end: uint64): CM_BREAK_REASON
+function rivemu_machine:run(mcycle_end: uint64): cm_break_reason
   -- store MMIO from host device into guest driver
   if self.in_softyield then
     self:_store_device_mmio()
   end
   -- run the machine
-  local break_reason: CM_BREAK_REASON
-  cm_assert!(cm_machine_run(self.machine, mcycle_end, &break_reason))
+  local break_reason: cm_break_reason
+  cm_assert!(cm_run(self.machine, mcycle_end, &break_reason))
   -- load driver MMIO
   if break_reason == CM_BREAK_REASON_YIELDED_SOFTLY then
     self.in_softyield = true

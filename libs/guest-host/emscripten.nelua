@@ -43,16 +43,16 @@ global em_run_preload_plugins_data_onload_func: type <cimport,nodecl> = @functio
 global em_worker_callback_func: type <cimport,nodecl> = @function(a1: cstring, a2: cint, a3: pointer): void
 global FILE: type <cimport,nodecl,forwarddecl> = @record{}
 global em_scan_func: type <cimport,nodecl> = @function(a1: pointer, a2: pointer): void
-global em_dlopen_callback: type <cimport,nodecl> = @function(handle: pointer, user_data: pointer): void
+global em_dlopen_callback: type <cimport,nodecl> = @function(user_data: pointer, handle: pointer): void
 global __pthread: type <cimport,nodecl,ctypedef'__pthread',forwarddecl> = @record{}
 global EmscriptenKeyboardEvent: type <cimport,nodecl> = @record{
   timestamp: float64,
   location: cuint,
-  ctrlKey: cint,
-  shiftKey: cint,
-  altKey: cint,
-  metaKey: cint,
-  repeat_: cint,
+  ctrlKey: boolean,
+  shiftKey: boolean,
+  altKey: boolean,
+  metaKey: boolean,
+  repeat_: boolean,
   charCode: cuint,
   keyCode: cuint,
   which: cuint,
@@ -61,17 +61,17 @@ global EmscriptenKeyboardEvent: type <cimport,nodecl> = @record{
   charValue: [32]cchar,
   locale: [32]cchar
 }
-global em_key_callback_func: type <cimport,nodecl> = @function(eventType: cint, keyEvent: *EmscriptenKeyboardEvent, userData: pointer): cint
+global em_key_callback_func: type <cimport,nodecl> = @function(eventType: cint, keyEvent: *EmscriptenKeyboardEvent, userData: pointer): boolean
 global EmscriptenMouseEvent: type <cimport,nodecl> = @record{
   timestamp: float64,
   screenX: cint,
   screenY: cint,
   clientX: cint,
   clientY: cint,
-  ctrlKey: cint,
-  shiftKey: cint,
-  altKey: cint,
-  metaKey: cint,
+  ctrlKey: boolean,
+  shiftKey: boolean,
+  altKey: boolean,
+  metaKey: boolean,
   button: cushort,
   buttons: cushort,
   movementX: cint,
@@ -82,7 +82,7 @@ global EmscriptenMouseEvent: type <cimport,nodecl> = @record{
   canvasY: cint,
   padding: cint
 }
-global em_mouse_callback_func: type <cimport,nodecl> = @function(eventType: cint, mouseEvent: *EmscriptenMouseEvent, userData: pointer): cint
+global em_mouse_callback_func: type <cimport,nodecl> = @function(eventType: cint, mouseEvent: *EmscriptenMouseEvent, userData: pointer): boolean
 global EmscriptenWheelEvent: type <cimport,nodecl> = @record{
   mouse: EmscriptenMouseEvent,
   deltaX: float64,
@@ -90,7 +90,7 @@ global EmscriptenWheelEvent: type <cimport,nodecl> = @record{
   deltaZ: float64,
   deltaMode: cuint
 }
-global em_wheel_callback_func: type <cimport,nodecl> = @function(eventType: cint, wheelEvent: *EmscriptenWheelEvent, userData: pointer): cint
+global em_wheel_callback_func: type <cimport,nodecl> = @function(eventType: cint, wheelEvent: *EmscriptenWheelEvent, userData: pointer): boolean
 global EmscriptenUiEvent: type <cimport,nodecl> = @record{
   detail: cint,
   documentBodyClientWidth: cint,
@@ -102,19 +102,19 @@ global EmscriptenUiEvent: type <cimport,nodecl> = @record{
   scrollTop: cint,
   scrollLeft: cint
 }
-global em_ui_callback_func: type <cimport,nodecl> = @function(eventType: cint, uiEvent: *EmscriptenUiEvent, userData: pointer): cint
+global em_ui_callback_func: type <cimport,nodecl> = @function(eventType: cint, uiEvent: *EmscriptenUiEvent, userData: pointer): boolean
 global EmscriptenFocusEvent: type <cimport,nodecl> = @record{
   nodeName: [128]cchar,
   id: [128]cchar
 }
-global em_focus_callback_func: type <cimport,nodecl> = @function(eventType: cint, focusEvent: *EmscriptenFocusEvent, userData: pointer): cint
+global em_focus_callback_func: type <cimport,nodecl> = @function(eventType: cint, focusEvent: *EmscriptenFocusEvent, userData: pointer): boolean
 global EmscriptenDeviceOrientationEvent: type <cimport,nodecl> = @record{
   alpha: float64,
   beta: float64,
   gamma: float64,
-  absolute: cint
+  absolute: boolean
 }
-global em_deviceorientation_callback_func: type <cimport,nodecl> = @function(eventType: cint, deviceOrientationEvent: *EmscriptenDeviceOrientationEvent, userData: pointer): cint
+global em_deviceorientation_callback_func: type <cimport,nodecl> = @function(eventType: cint, deviceOrientationEvent: *EmscriptenDeviceOrientationEvent, userData: pointer): boolean
 global EmscriptenDeviceMotionEvent: type <cimport,nodecl> = @record{
   accelerationX: float64,
   accelerationY: float64,
@@ -127,15 +127,15 @@ global EmscriptenDeviceMotionEvent: type <cimport,nodecl> = @record{
   rotationRateGamma: float64,
   supportedFields: cint
 }
-global em_devicemotion_callback_func: type <cimport,nodecl> = @function(eventType: cint, deviceMotionEvent: *EmscriptenDeviceMotionEvent, userData: pointer): cint
+global em_devicemotion_callback_func: type <cimport,nodecl> = @function(eventType: cint, deviceMotionEvent: *EmscriptenDeviceMotionEvent, userData: pointer): boolean
 global EmscriptenOrientationChangeEvent: type <cimport,nodecl> = @record{
   orientationIndex: cint,
   orientationAngle: cint
 }
-global em_orientationchange_callback_func: type <cimport,nodecl> = @function(eventType: cint, orientationChangeEvent: *EmscriptenOrientationChangeEvent, userData: pointer): cint
+global em_orientationchange_callback_func: type <cimport,nodecl> = @function(eventType: cint, orientationChangeEvent: *EmscriptenOrientationChangeEvent, userData: pointer): boolean
 global EmscriptenFullscreenChangeEvent: type <cimport,nodecl> = @record{
-  isFullscreen: cint,
-  fullscreenEnabled: cint,
+  isFullscreen: boolean,
+  fullscreenEnabled: boolean,
   nodeName: [128]cchar,
   id: [128]cchar,
   elementWidth: cint,
@@ -143,8 +143,8 @@ global EmscriptenFullscreenChangeEvent: type <cimport,nodecl> = @record{
   screenWidth: cint,
   screenHeight: cint
 }
-global em_fullscreenchange_callback_func: type <cimport,nodecl> = @function(eventType: cint, fullscreenChangeEvent: *EmscriptenFullscreenChangeEvent, userData: pointer): cint
-global em_canvasresized_callback_func: type <cimport,nodecl> = @function(eventType: cint, reserved: pointer, userData: pointer): cint
+global em_fullscreenchange_callback_func: type <cimport,nodecl> = @function(eventType: cint, fullscreenChangeEvent: *EmscriptenFullscreenChangeEvent, userData: pointer): boolean
+global em_canvasresized_callback_func: type <cimport,nodecl> = @function(eventType: cint, reserved: pointer, userData: pointer): boolean
 global EmscriptenFullscreenStrategy: type <cimport,nodecl> = @record{
   scaleMode: cint,
   canvasResolutionScaleMode: cint,
@@ -154,17 +154,17 @@ global EmscriptenFullscreenStrategy: type <cimport,nodecl> = @record{
   canvasResizedCallbackTargetThread: *__pthread
 }
 global EmscriptenPointerlockChangeEvent: type <cimport,nodecl> = @record{
-  isActive: cint,
+  isActive: boolean,
   nodeName: [128]cchar,
   id: [128]cchar
 }
-global em_pointerlockchange_callback_func: type <cimport,nodecl> = @function(eventType: cint, pointerlockChangeEvent: *EmscriptenPointerlockChangeEvent, userData: pointer): cint
-global em_pointerlockerror_callback_func: type <cimport,nodecl> = @function(eventType: cint, reserved: pointer, userData: pointer): cint
+global em_pointerlockchange_callback_func: type <cimport,nodecl> = @function(eventType: cint, pointerlockChangeEvent: *EmscriptenPointerlockChangeEvent, userData: pointer): boolean
+global em_pointerlockerror_callback_func: type <cimport,nodecl> = @function(eventType: cint, reserved: pointer, userData: pointer): boolean
 global EmscriptenVisibilityChangeEvent: type <cimport,nodecl> = @record{
-  hidden: cint,
+  hidden: boolean,
   visibilityState: cint
 }
-global em_visibilitychange_callback_func: type <cimport,nodecl> = @function(eventType: cint, visibilityChangeEvent: *EmscriptenVisibilityChangeEvent, userData: pointer): cint
+global em_visibilitychange_callback_func: type <cimport,nodecl> = @function(eventType: cint, visibilityChangeEvent: *EmscriptenVisibilityChangeEvent, userData: pointer): boolean
 global EmscriptenTouchPoint: type <cimport,nodecl> = @record{
   identifier: cint,
   screenX: cint,
@@ -173,8 +173,8 @@ global EmscriptenTouchPoint: type <cimport,nodecl> = @record{
   clientY: cint,
   pageX: cint,
   pageY: cint,
-  isChanged: cint,
-  onTarget: cint,
+  isChanged: boolean,
+  onTarget: boolean,
   targetX: cint,
   targetY: cint,
   canvasX: cint,
@@ -183,54 +183,54 @@ global EmscriptenTouchPoint: type <cimport,nodecl> = @record{
 global EmscriptenTouchEvent: type <cimport,nodecl> = @record{
   timestamp: float64,
   numTouches: cint,
-  ctrlKey: cint,
-  shiftKey: cint,
-  altKey: cint,
-  metaKey: cint,
+  ctrlKey: boolean,
+  shiftKey: boolean,
+  altKey: boolean,
+  metaKey: boolean,
   touches: [32]EmscriptenTouchPoint
 }
-global em_touch_callback_func: type <cimport,nodecl> = @function(eventType: cint, touchEvent: *EmscriptenTouchEvent, userData: pointer): cint
+global em_touch_callback_func: type <cimport,nodecl> = @function(eventType: cint, touchEvent: *EmscriptenTouchEvent, userData: pointer): boolean
 global EmscriptenGamepadEvent: type <cimport,nodecl> = @record{
   timestamp: float64,
   numAxes: cint,
   numButtons: cint,
   axis: [64]float64,
   analogButton: [64]float64,
-  digitalButton: [64]cint,
-  connected: cint,
+  digitalButton: [64]boolean,
+  connected: boolean,
   index: cint,
   id: [64]cchar,
   mapping: [64]cchar
 }
-global em_gamepad_callback_func: type <cimport,nodecl> = @function(eventType: cint, gamepadEvent: *EmscriptenGamepadEvent, userData: pointer): cint
+global em_gamepad_callback_func: type <cimport,nodecl> = @function(eventType: cint, gamepadEvent: *EmscriptenGamepadEvent, userData: pointer): boolean
 global EmscriptenBatteryEvent: type <cimport,nodecl> = @record{
   chargingTime: float64,
   dischargingTime: float64,
   level: float64,
-  charging: cint
+  charging: boolean
 }
-global em_battery_callback_func: type <cimport,nodecl> = @function(eventType: cint, batteryEvent: *EmscriptenBatteryEvent, userData: pointer): cint
+global em_battery_callback_func: type <cimport,nodecl> = @function(eventType: cint, batteryEvent: *EmscriptenBatteryEvent, userData: pointer): boolean
 global em_beforeunload_callback: type <cimport,nodecl> = @function(eventType: cint, reserved: pointer, userData: pointer): cstring
 global EMSCRIPTEN_WEBGL_CONTEXT_HANDLE: type <cimport,nodecl> = @usize
 global EMSCRIPTEN_WEBGL_CONTEXT_PROXY_MODE: type <cimport,nodecl> = @cint
 global EM_WEBGL_POWER_PREFERENCE: type <cimport,nodecl> = @cint
 global EmscriptenWebGLContextAttributes: type <cimport,nodecl> = @record{
-  alpha: cint,
-  depth: cint,
-  stencil: cint,
-  antialias: cint,
-  premultipliedAlpha: cint,
-  preserveDrawingBuffer: cint,
+  alpha: boolean,
+  depth: boolean,
+  stencil: boolean,
+  antialias: boolean,
+  premultipliedAlpha: boolean,
+  preserveDrawingBuffer: boolean,
   powerPreference: EM_WEBGL_POWER_PREFERENCE,
-  failIfMajorPerformanceCaveat: cint,
+  failIfMajorPerformanceCaveat: boolean,
   majorVersion: cint,
   minorVersion: cint,
-  enableExtensionsByDefault: cint,
-  explicitSwapControl: cint,
+  enableExtensionsByDefault: boolean,
+  explicitSwapControl: boolean,
   proxyContextToMainThread: EMSCRIPTEN_WEBGL_CONTEXT_PROXY_MODE,
-  renderViaOffscreenBackBuffer: cint
+  renderViaOffscreenBackBuffer: boolean
 }
-global em_webgl_context_callback: type <cimport,nodecl> = @function(eventType: cint, reserved: pointer, userData: pointer): cint
+global em_webgl_context_callback: type <cimport,nodecl> = @function(eventType: cint, reserved: pointer, userData: pointer): boolean
 global function emscripten_asm_const_int(code: cstring, arg_sigs: cstring, ...: cvarargs): cint <cimport,nodecl> end
 global function emscripten_asm_const_ptr(code: cstring, arg_sigs: cstring, ...: cvarargs): pointer <cimport,nodecl> end
 global function emscripten_asm_const_double(code: cstring, arg_sigs: cstring, ...: cvarargs): float64 <cimport,nodecl> end
@@ -259,10 +259,10 @@ global function emscripten_run_script_int(script: cstring): cint <cimport,nodecl
 global function emscripten_run_script_string(script: cstring): cstring <cimport,nodecl> end
 global function emscripten_async_run_script(script: cstring, millis: cint): void <cimport,nodecl> end
 global function emscripten_async_load_script(script: cstring, onload: em_callback_func, onerror: em_callback_func): void <cimport,nodecl> end
-global function emscripten_set_main_loop(func: em_callback_func, fps: cint, simulate_infinite_loop: cint): void <cimport,nodecl> end
+global function emscripten_set_main_loop(func: em_callback_func, fps: cint, simulate_infinite_loop: boolean): void <cimport,nodecl> end
 global function emscripten_set_main_loop_timing(mode: cint, value: cint): cint <cimport,nodecl> end
 global function emscripten_get_main_loop_timing(mode: *cint, value: *cint): void <cimport,nodecl> end
-global function emscripten_set_main_loop_arg(func: em_arg_callback_func, arg: pointer, fps: cint, simulate_infinite_loop: cint): void <cimport,nodecl> end
+global function emscripten_set_main_loop_arg(func: em_arg_callback_func, arg: pointer, fps: cint, simulate_infinite_loop: boolean): void <cimport,nodecl> end
 global function emscripten_pause_main_loop(): void <cimport,nodecl> end
 global function emscripten_resume_main_loop(): void <cimport,nodecl> end
 global function emscripten_cancel_main_loop(): void <cimport,nodecl> end
@@ -326,78 +326,82 @@ global function emscripten_sleep(ms: cuint): void <cimport,nodecl> end
 global function emscripten_unwind_to_js_event_loop(): void <cimport,nodecl> end
 global function emscripten_set_timeout(cb: function(user_data: pointer): void, msecs: float64, user_data: pointer): cint <cimport,nodecl> end
 global function emscripten_clear_timeout(id: cint): void <cimport,nodecl> end
-global function emscripten_set_timeout_loop(cb: function(time: float64, user_data: pointer): cint, interval_ms: float64, user_data: pointer): void <cimport,nodecl> end
+global function emscripten_set_timeout_loop(cb: function(time: float64, user_data: pointer): boolean, interval_ms: float64, user_data: pointer): void <cimport,nodecl> end
 global function emscripten_set_immediate(cb: function(user_data: pointer): void, user_data: pointer): cint <cimport,nodecl> end
 global function emscripten_clear_immediate(id: cint): void <cimport,nodecl> end
-global function emscripten_set_immediate_loop(cb: function(user_data: pointer): cint, user_data: pointer): void <cimport,nodecl> end
+global function emscripten_set_immediate_loop(cb: function(user_data: pointer): boolean, user_data: pointer): void <cimport,nodecl> end
 global function emscripten_set_interval(cb: function(user_data: pointer): void, interval_ms: float64, user_data: pointer): cint <cimport,nodecl> end
 global function emscripten_clear_interval(id: cint): void <cimport,nodecl> end
 global function emscripten_runtime_keepalive_push(): void <cimport,nodecl> end
 global function emscripten_runtime_keepalive_pop(): void <cimport,nodecl> end
-global function emscripten_runtime_keepalive_check(): cint <cimport,nodecl> end
+global function emscripten_runtime_keepalive_check(): boolean <cimport,nodecl> end
 global function emscripten_console_log(utf8String: cstring): void <cimport,nodecl> end
 global function emscripten_console_warn(utf8String: cstring): void <cimport,nodecl> end
 global function emscripten_console_error(utf8String: cstring): void <cimport,nodecl> end
+global function emscripten_console_trace(utf8String: cstring): void <cimport,nodecl> end
 global function emscripten_out(utf8String: cstring): void <cimport,nodecl> end
 global function emscripten_err(utf8String: cstring): void <cimport,nodecl> end
 global function emscripten_dbg(utf8String: cstring): void <cimport,nodecl> end
+global function emscripten_dbg_backtrace(utf8String: cstring): void <cimport,nodecl> end
 global function emscripten_outn(utf8String: cstring, len: csize): void <cimport,nodecl> end
 global function emscripten_errn(utf8String: cstring, len: csize): void <cimport,nodecl> end
 global function emscripten_dbgn(utf8String: cstring, len: csize): void <cimport,nodecl> end
 global function emscripten_console_logf(format: cstring, ...: cvarargs): void <cimport,nodecl> end
 global function emscripten_console_warnf(format: cstring, ...: cvarargs): void <cimport,nodecl> end
 global function emscripten_console_errorf(format: cstring, ...: cvarargs): void <cimport,nodecl> end
+global function emscripten_console_tracef(format: cstring, ...: cvarargs): void <cimport,nodecl> end
 global function emscripten_outf(format: cstring, ...: cvarargs): void <cimport,nodecl> end
 global function emscripten_errf(format: cstring, ...: cvarargs): void <cimport,nodecl> end
 global function emscripten_dbgf(format: cstring, ...: cvarargs): void <cimport,nodecl> end
-global function emscripten_set_keypress_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_key_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_keydown_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_key_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_keyup_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_key_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_click_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_mousedown_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_mouseup_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_dblclick_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_mousemove_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_mouseenter_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_mouseleave_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_mouseover_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_mouseout_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_dbg_backtracef(format: cstring, ...: cvarargs): void <cimport,nodecl> end
+global function emscripten_set_keypress_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_key_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_keydown_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_key_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_keyup_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_key_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_click_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_mousedown_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_mouseup_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_dblclick_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_mousemove_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_mouseenter_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_mouseleave_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_mouseover_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_mouseout_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_mouse_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
 global function emscripten_get_mouse_status(mouseState: *EmscriptenMouseEvent): cint <cimport,nodecl> end
-global function emscripten_set_wheel_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_wheel_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_resize_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_ui_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_scroll_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_ui_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_blur_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_focus_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_focus_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_focus_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_focusin_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_focus_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_focusout_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_focus_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_deviceorientation_callback_on_thread(userData: pointer, useCapture: cint, callback: em_deviceorientation_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_wheel_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_wheel_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_resize_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_ui_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_scroll_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_ui_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_blur_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_focus_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_focus_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_focus_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_focusin_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_focus_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_focusout_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_focus_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_deviceorientation_callback_on_thread(userData: pointer, useCapture: boolean, callback: em_deviceorientation_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
 global function emscripten_get_deviceorientation_status(orientationState: *EmscriptenDeviceOrientationEvent): cint <cimport,nodecl> end
-global function emscripten_set_devicemotion_callback_on_thread(userData: pointer, useCapture: cint, callback: em_devicemotion_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_devicemotion_callback_on_thread(userData: pointer, useCapture: boolean, callback: em_devicemotion_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
 global function emscripten_get_devicemotion_status(motionState: *EmscriptenDeviceMotionEvent): cint <cimport,nodecl> end
-global function emscripten_set_orientationchange_callback_on_thread(userData: pointer, useCapture: cint, callback: em_orientationchange_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_orientationchange_callback_on_thread(userData: pointer, useCapture: boolean, callback: em_orientationchange_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
 global function emscripten_get_orientation_status(orientationStatus: *EmscriptenOrientationChangeEvent): cint <cimport,nodecl> end
 global function emscripten_lock_orientation(allowedOrientations: cint): cint <cimport,nodecl> end
 global function emscripten_unlock_orientation(): cint <cimport,nodecl> end
-global function emscripten_set_fullscreenchange_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_fullscreenchange_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_fullscreenchange_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_fullscreenchange_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
 global function emscripten_get_fullscreen_status(fullscreenStatus: *EmscriptenFullscreenChangeEvent): cint <cimport,nodecl> end
-global function emscripten_request_fullscreen(target: cstring, deferUntilInEventHandler: cint): cint <cimport,nodecl> end
-global function emscripten_request_fullscreen_strategy(target: cstring, deferUntilInEventHandler: cint, fullscreenStrategy: *EmscriptenFullscreenStrategy): cint <cimport,nodecl> end
+global function emscripten_request_fullscreen(target: cstring, deferUntilInEventHandler: boolean): cint <cimport,nodecl> end
+global function emscripten_request_fullscreen_strategy(target: cstring, deferUntilInEventHandler: boolean, fullscreenStrategy: *EmscriptenFullscreenStrategy): cint <cimport,nodecl> end
 global function emscripten_exit_fullscreen(): cint <cimport,nodecl> end
 global function emscripten_enter_soft_fullscreen(target: cstring, fullscreenStrategy: *EmscriptenFullscreenStrategy): cint <cimport,nodecl> end
 global function emscripten_exit_soft_fullscreen(): cint <cimport,nodecl> end
-global function emscripten_set_pointerlockchange_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_pointerlockchange_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_pointerlockerror_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_pointerlockerror_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_pointerlockchange_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_pointerlockchange_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_pointerlockerror_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_pointerlockerror_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
 global function emscripten_get_pointerlock_status(pointerlockStatus: *EmscriptenPointerlockChangeEvent): cint <cimport,nodecl> end
-global function emscripten_request_pointerlock(target: cstring, deferUntilInEventHandler: cint): cint <cimport,nodecl> end
+global function emscripten_request_pointerlock(target: cstring, deferUntilInEventHandler: boolean): cint <cimport,nodecl> end
 global function emscripten_exit_pointerlock(): cint <cimport,nodecl> end
-global function emscripten_set_visibilitychange_callback_on_thread(userData: pointer, useCapture: cint, callback: em_visibilitychange_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_visibilitychange_callback_on_thread(userData: pointer, useCapture: boolean, callback: em_visibilitychange_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
 global function emscripten_get_visibility_status(visibilityStatus: *EmscriptenVisibilityChangeEvent): cint <cimport,nodecl> end
-global function emscripten_set_touchstart_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_touch_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_touchend_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_touch_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_touchmove_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_touch_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_touchcancel_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_touch_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_gamepadconnected_callback_on_thread(userData: pointer, useCapture: cint, callback: em_gamepad_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_gamepaddisconnected_callback_on_thread(userData: pointer, useCapture: cint, callback: em_gamepad_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_touchstart_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_touch_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_touchend_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_touch_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_touchmove_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_touch_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_touchcancel_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_touch_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_gamepadconnected_callback_on_thread(userData: pointer, useCapture: boolean, callback: em_gamepad_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_gamepaddisconnected_callback_on_thread(userData: pointer, useCapture: boolean, callback: em_gamepad_callback_func, targetThread: *__pthread): cint <cimport,nodecl> end
 global function emscripten_sample_gamepad_data(): cint <cimport,nodecl> end
 global function emscripten_get_num_gamepads(): cint <cimport,nodecl> end
 global function emscripten_get_gamepad_status(index: cint, gamepadState: *EmscriptenGamepadEvent): cint <cimport,nodecl> end
@@ -412,9 +416,9 @@ global function emscripten_get_canvas_element_size(target: cstring, width: *cint
 global function emscripten_set_element_css_size(target: cstring, width: float64, height: float64): cint <cimport,nodecl> end
 global function emscripten_get_element_css_size(target: cstring, width: *float64, height: *float64): cint <cimport,nodecl> end
 global function emscripten_html5_remove_all_event_listeners(): void <cimport,nodecl> end
-global function emscripten_request_animation_frame(cb: function(time: float64, userData: pointer): cint, userData: pointer): cint <cimport,nodecl> end
+global function emscripten_request_animation_frame(cb: function(time: float64, userData: pointer): boolean, userData: pointer): cint <cimport,nodecl> end
 global function emscripten_cancel_animation_frame(requestAnimationFrameId: cint): void <cimport,nodecl> end
-global function emscripten_request_animation_frame_loop(cb: function(time: float64, userData: pointer): cint, userData: pointer): void <cimport,nodecl> end
+global function emscripten_request_animation_frame_loop(cb: function(time: float64, userData: pointer): boolean, userData: pointer): void <cimport,nodecl> end
 global function emscripten_date_now(): float64 <cimport,nodecl> end
 global function emscripten_performance_now(): float64 <cimport,nodecl> end
 global function emscripten_webgl_init_context_attributes(attributes: *EmscriptenWebGLContextAttributes): void <cimport,nodecl> end
@@ -424,18 +428,21 @@ global function emscripten_webgl_get_current_context(): EMSCRIPTEN_WEBGL_CONTEXT
 global function emscripten_webgl_get_drawing_buffer_size(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE, width: *cint, height: *cint): cint <cimport,nodecl> end
 global function emscripten_webgl_get_context_attributes(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE, outAttributes: *EmscriptenWebGLContextAttributes): cint <cimport,nodecl> end
 global function emscripten_webgl_destroy_context(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): cint <cimport,nodecl> end
-global function emscripten_webgl_enable_extension(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE, extension: cstring): cint <cimport,nodecl> end
-global function emscripten_webgl_enable_ANGLE_instanced_arrays(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): cint <cimport,nodecl> end
-global function emscripten_webgl_enable_OES_vertex_array_object(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): cint <cimport,nodecl> end
-global function emscripten_webgl_enable_WEBGL_draw_buffers(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): cint <cimport,nodecl> end
-global function emscripten_webgl_enable_WEBGL_draw_instanced_base_vertex_base_instance(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): cint <cimport,nodecl> end
-global function emscripten_webgl_enable_WEBGL_multi_draw(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): cint <cimport,nodecl> end
-global function emscripten_webgl_enable_WEBGL_multi_draw_instanced_base_vertex_base_instance(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): cint <cimport,nodecl> end
-global function emscripten_set_webglcontextlost_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_webgl_context_callback, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_set_webglcontextrestored_callback_on_thread(target: cstring, userData: pointer, useCapture: cint, callback: em_webgl_context_callback, targetThread: *__pthread): cint <cimport,nodecl> end
-global function emscripten_is_webgl_context_lost(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): cint <cimport,nodecl> end
+global function emscripten_webgl_enable_extension(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE, extension: cstring): boolean <cimport,nodecl> end
+global function emscripten_webgl_enable_ANGLE_instanced_arrays(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): boolean <cimport,nodecl> end
+global function emscripten_webgl_enable_OES_vertex_array_object(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): boolean <cimport,nodecl> end
+global function emscripten_webgl_enable_WEBGL_draw_buffers(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): boolean <cimport,nodecl> end
+global function emscripten_webgl_enable_WEBGL_draw_instanced_base_vertex_base_instance(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): boolean <cimport,nodecl> end
+global function emscripten_webgl_enable_WEBGL_multi_draw(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): boolean <cimport,nodecl> end
+global function emscripten_webgl_enable_WEBGL_multi_draw_instanced_base_vertex_base_instance(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): boolean <cimport,nodecl> end
+global function emscripten_webgl_enable_EXT_polygon_offset_clamp(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): boolean <cimport,nodecl> end
+global function emscripten_webgl_enable_EXT_clip_control(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): boolean <cimport,nodecl> end
+global function emscripten_webgl_enable_WEBGL_polygon_mode(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): boolean <cimport,nodecl> end
+global function emscripten_set_webglcontextlost_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_webgl_context_callback, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_set_webglcontextrestored_callback_on_thread(target: cstring, userData: pointer, useCapture: boolean, callback: em_webgl_context_callback, targetThread: *__pthread): cint <cimport,nodecl> end
+global function emscripten_is_webgl_context_lost(context: EMSCRIPTEN_WEBGL_CONTEXT_HANDLE): boolean <cimport,nodecl> end
 global function emscripten_webgl_commit_frame(): cint <cimport,nodecl> end
-global function emscripten_supports_offscreencanvas(): cint <cimport,nodecl> end
+global function emscripten_supports_offscreencanvas(): boolean <cimport,nodecl> end
 global function emscripten_webgl1_get_proc_address(name: cstring): pointer <cimport,nodecl> end
 global function emscripten_webgl2_get_proc_address(name: cstring): pointer <cimport,nodecl> end
 global function emscripten_webgl_get_proc_address(name: cstring): pointer <cimport,nodecl> end
@@ -455,7 +462,7 @@ global function emscripten_webgl_get_parameter_d(param: cint): float64 <cimport,
 global function emscripten_webgl_get_parameter_o(param: cint): cint <cimport,nodecl> end
 global function emscripten_webgl_get_parameter_utf8(param: cint): cstring <cimport,nodecl> end
 global function emscripten_webgl_get_parameter_i64v(param: cint, dst: *clonglong): void <cimport,nodecl> end
-global EM_BOOL: type = cint
+global EM_BOOL: type = boolean
 global EM_TRUE: cint <comptime> = 1
 global EM_FALSE: cint <comptime> = 0
 global EM_UTF8: type = cchar
