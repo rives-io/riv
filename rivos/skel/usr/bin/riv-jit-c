@@ -1,8 +1,23 @@
 #!/bin/sh
 if [ $# -lt 1 ]; then
-  echo "Usage: $0 <.c file> [args...]"
+  echo "Usage: $0 [.c files...] [-- args...]"
   exit 0
 fi
-CFILE=$1
-shift 1
-exec c2m -L/usr/lib -lriv -O3 $CFILE -eb "$@"
+
+c2m_args=(-L/usr/lib -w -lriv -O3)
+prog_args=()
+
+# Split c2m and prog arguments
+for arg in "$@"; do
+  if [ "$arg" = "--" ]; then
+    found_separator=true
+    continue
+  fi
+  if [ "$found_separator" = true ]; then
+    prog_args+=("$arg")
+  else
+    c2m_args+=("$arg")
+  fi
+done
+
+exec c2m "${c2m_args[*]}" -eb "${prog_args[*]}"
