@@ -184,7 +184,8 @@ RUN apk add bash \
         quickjs quickjs-dev \
         rust rust-bindgen \
         nim \
-        clang19 clang19-analyzer clang19-extra-tools clang19-bash-completion \
+        llvm19 clang19 clang19-analyzer clang19-extra-tools clang19-bash-completion \
+        mold \
         compiler-rt \
         cppcheck \
         micropython@testing

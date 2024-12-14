@@ -1,11 +1,12 @@
 #!/bin/sh
 
 usage() {
- echo "Usage: $0 -Ospeed|-Osize|-Odebug [--cflags] [--ldflags]"
+ echo "Usage: $0 -Ospeed|-Osize|-Odebug|-Osanitize [--cflags] [--ldflags]"
  echo "Options:"
  echo "  -Ospeed          Optimize for code speed, while retaining good code size."
  echo "  -Osize           Optimize for code size, while retaining good code speed."
  echo "  -Odebug          Optimize for debug, while retaining fair code speed and size."
+ echo "  -Osanitize       Optimize for debug and enable sanitizer."
  echo "  --cflags         Show C flags"
  echo "  --ldflags        Show linker flags"
  echo "  --static-libriv  Link libriv statically"
@@ -28,6 +29,10 @@ handle_options() {
         ;;
       -Odebug)
         mode=debug
+        ;;
+      -Osanitize)
+        mode=debug
+        sanitize=true
         ;;
       --cflags)
         show_cflags=y
@@ -55,10 +60,6 @@ if [ -z "$mode" ]; then
     exit 1
 fi
 
-[ $1 = "-Ospeed" ] && mode=speed
-[ $1 = "-Osize" ] && mode=size
-[ $1 = "-Odebug" ] && mode=debug
-
 # make build more reproducible
 LDFLAGS="-Wl,--build-id=none -Wl,--sort-common"
 
@@ -67,32 +68,32 @@ LDFLAGS="-Wl,--build-id=none -Wl,--sort-common"
 [ "$mode" = "debug" ] && CFLAGS="-Og -g -fno-omit-frame-pointer"
 [ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,-O1"
 
-# architecture
-[ "$mode" != "size" ] && CFLAGS="$CFLAGS -march=rv64g"
-
 # fast floating point
-[ "$mode" != "debug" ] && CFLAGS="$CFLAGS -ffast-math -fallow-store-data-races"
+[ "$mode" != "debug" ] && CFLAGS="$CFLAGS -ffast-math"
 
-# some options from -O3 that optimizes while not impacting much code size
-[ "$mode" = "speed" ] && CFLAGS="$CFLAGS -fgcse-after-reload -fpredictive-commoning -fsplit-paths -ftree-partial-pre"
+# warn the user about possible errors
+CFLAGS="$CFLAGS -Wall -Wextra -Wshadow"
 
 # minimize undefined behavior
-CFLAGS="$CFLAGS -fno-strict-overflow -fno-strict-aliasing"
+CFLAGS="$CFLAGS -fno-strict-overflow -fno-strict-aliasing -ftrivial-auto-var-init=zero"
+
+# try to detect stack overflow
+[ "$mode" == "debug" ] && CFLAGS="$CFLAGS -fstack-protector-strong -fstack-clash-protection"
+
+# sanitizer flags
+[ "$sanitize" == "true" ] && CFLAGS="$CFLAGS -fsanitize=undefined,address,float-divide-by-zero,float-cast-overflow -fno-sanitize-recover=all"
 
 # remove stack guards
 [ "$mode" != "debug" ] && CFLAGS="$CFLAGS -fno-stack-protector"
 
-# discard unused functions and data
-[ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,--gc-sections"
-
 # make final binary smaller
-[ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,--as-needed -Wl,--hash-style=gnu"
+[ "$mode" != "debug" ] && LDFLAGS="$LDFLAGS -Wl,--gc-sections -Wl,--as-needed -Wl,--hash-style=gnu"
 
 # link optimization
-[ "$mode" = "speed" ] && LDFLAGS="$LDFLAGS -Wl,-z,now"
+[ "$mode" != "size" ] && LDFLAGS="$LDFLAGS -Wl,-z,now"
 
 # force exporting symbols for backtraces
-[ "$mode" == "debug" ] && LDFLAGS="$LDFLAGS -rdynamic"
+[ "$mode" == "debug" ] && LDFLAGS="$LDFLAGS -Wl,-z,relro -rdynamic"
 
 # link RIV library
 [ "$static_libriv" == "y" ] && LDFLAGS="$LDFLAGS -l:libriv.a" || LDFLAGS="$LDFLAGS -lriv"

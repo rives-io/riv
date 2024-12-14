@@ -19,3 +19,7 @@ busybox mount -o noatime,nosuid,remount /
 busybox mount -o nosuid,remount /dev
 
 export PATH="/usr/local/usr/sbin:/usr/local/usr/bin:$PATH"
+
+# show backtraces sanitizing with the SDK
+export UBSAN_OPTIONS=print_stacktrace=1
+export ASAN_OPTIONS=abort_on_error=1
