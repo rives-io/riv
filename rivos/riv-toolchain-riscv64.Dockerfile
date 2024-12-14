@@ -6,11 +6,11 @@ RUN apt-get update && \
 
 ################################
 # Busybox stage
-FROM --platform=linux/riscv64 riscv64/busybox:1.36.1-musl AS busybox-stage
+FROM --platform=linux/riscv64 riscv64/busybox:1.37.0-musl AS busybox-stage
 
 ################################
 # Toolchain stage
-FROM --platform=linux/riscv64 riscv64/alpine:3.20.2 AS riv-toolchain-stage
+FROM --platform=linux/riscv64 riscv64/alpine:3.21.0 AS riv-toolchain-stage
 
 # Update and install development packages
 RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
@@ -52,7 +52,7 @@ RUN wget -O vnmakarov-mir.tar.gz https://github.com/vnmakarov/mir/tarball/2719bf
 ################################
 # Build nelua
 FROM --platform=linux/riscv64 riv-toolchain-stage AS nelua-stage
-RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarball/38c2d9ca14c992ddcd73f4067af8c6f37c550979 && \
+RUN wget -O edubart-nelua-lang.tar.gz https://github.com/edubart/nelua-lang/tarball/a69a12d1e1e5ee0bfab299350e5d707ff7b2e744 && \
     tar -xzf edubart-nelua-lang.tar.gz && \
     mv edubart-nelua-lang-* edubart-nelua-lang && cd edubart-nelua-lang && \
     mkdir -p /pkg/usr && \
@@ -82,6 +82,31 @@ RUN wget -O q66-cffi-lua.tar.gz https://github.com/q66/cffi-lua/tarball/2e0c577c
     strip -S -x /pkg/usr/lib/*.so && \
     strip -S -x /pkg/usr/lib/lua/5.4/*.so && \
     tree /pkg/usr && cp -a /pkg/usr/* /usr/
+
+################################
+# Build luajit
+FROM --platform=linux/riscv64 riv-toolchain-stage AS luajit-stage
+RUN wget -O edubart-LuaJIT.tar.gz https://github.com/edubart/LuaJIT/tarball/73a97651fa04ace32e2c31495cb1334821ba720c && \
+    tar -xzf edubart-LuaJIT.tar.gz && \
+    mv edubart-LuaJIT-* edubart-LuaJIT && cd edubart-LuaJIT && \
+    mkdir -p /pkg/usr && \
+    make amalg PREFIX=/usr && \
+    make install PREFIX=/usr DESTDIR=/pkg && \
+    rm -rf /pkg/usr/share/man /pkg/usr/bin/luajit && \
+    mv /pkg/usr/bin/luajit-* /pkg/usr/bin/luajit && \
+    strip /pkg/usr/bin/luajit && \
+    strip -S -x /pkg/usr/lib/*.so.* && \
+    tree /pkg/usr && cp -a /pkg/usr/* /usr/
+
+################################
+# Build Zig
+FROM --platform=linux/riscv64 riv-toolchain-stage AS zig-stage
+RUN wget -O zig-linux-riscv64.tar.xz https://ziglang.org/builds/zig-linux-riscv64-0.14.0-dev.2457+82f35c518.tar.xz && \
+    tar -xf zig-linux-riscv64.tar.xz && \
+    cd zig-linux-riscv64-* && \
+    mkdir -p /pkg/usr/bin /pkg/usr/lib && \
+    mv zig /pkg/usr/bin/ && \
+    mv lib /pkg/usr/lib/zig
 
 ################################
 # Build quickjs-ffi
@@ -157,6 +182,11 @@ RUN apk add bash \
         libffi libffi-dev \
         zstd zstd-dev \
         quickjs quickjs-dev \
+        rust rust-bindgen \
+        nim \
+        clang19 clang19-analyzer clang19-extra-tools clang19-bash-completion \
+        compiler-rt \
+        cppcheck \
         micropython@testing
 
 # Make vim an alias to nvim
@@ -183,6 +213,8 @@ COPY --from=nelua-stage /pkg/usr /usr
 COPY --from=bwrapbox-stage /pkg/usr /usr
 COPY --from=bubblewrap-stage /pkg/usr /usr
 COPY --from=cffi-lua-stage /pkg/usr /usr
+COPY --from=luajit-stage /pkg/usr /usr
+COPY --from=zig-stage /pkg/usr /usr
 COPY --from=quickjs-ffi-stage /pkg/usr /usr
 COPY --from=xhalt-stage /pkg/usr /usr
 
@@ -240,6 +272,11 @@ RUN cp -aL /usr/bin/lua5.4 usr/bin/lua5.4 && \
     cp -aL /usr/lib/liblua5.4.so usr/lib/liblua5.4.so && \
     cp -aL /usr/include/lua5.4 usr/include/lua5.4 && \
     cp -a /usr/lib/lua usr/lib/lua
+
+# Install luajit
+RUN cp -a /usr/bin/luajit usr/bin/ && \
+    cp -a /usr/lib/libluajit-5.1.so* usr/lib/ && \
+    cp -a /usr/include/luajit-2.1 usr/include/
 
 # Install quickjs + quickjs-ffi
 RUN cp -aL /usr/bin/qjs usr/bin/ && \
