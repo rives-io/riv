@@ -3,21 +3,18 @@ if [ $# -lt 1 ]; then
   echo "Usage: $0 [.c files...] [-- args...]"
   exit 0
 fi
-
-c2m_args=(-L/usr/lib -w -lriv -O3)
-prog_args=()
-
-# Split c2m and prog arguments
+replaced=false
 for arg in "$@"; do
   if [ "$arg" = "--" ]; then
-    found_separator=true
-    continue
-  fi
-  if [ "$found_separator" = true ]; then
-    prog_args+=("$arg")
+    set -- "$@" "-eb"
+    replaced=true
   else
-    c2m_args+=("$arg")
+    set -- "$@" "$arg"
   fi
+  shift
 done
-
-exec c2m "${c2m_args[*]}" -eb "${prog_args[*]}"
+set -- -L/usr/lib -w -lriv -O3 "$@"
+if [ "$replaced" = false ]; then
+  set -- "$@" "-eb"
+fi
+exec c2m "$@"

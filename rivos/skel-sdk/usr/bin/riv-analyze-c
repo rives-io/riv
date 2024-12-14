@@ -1,0 +1,28 @@
+#!/bin/bash
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 [.c files...] [-- cflags...]"
+  exit 0
+fi
+
+files_args=()
+cflags_args=()
+
+# Split arguments
+for arg in "$@"; do
+  if [ "$arg" = "--" ]; then
+    found_separator=true
+    continue
+  fi
+  if [ "$found_separator" = true ]; then
+    cflags_args+=("$arg")
+  else
+    files_args+=("$arg")
+  fi
+done
+
+files="${files_args[*]}"
+cflags="-Wall -Wextra -Wshadow -Werror ${cflags_args[*]}"
+
+set -ex
+gcc $files -c -o /dev/null -fanalyzer $cflags
+clang-tidy $files -- $cflags
