@@ -269,12 +269,18 @@ function resetCanvasSize() {
   canvasElem.height = 768;
 }
 
-async function rivemuUpload(cartridgeUrl, incardUrl, tapeUrl, autoPlay) {
+async function rivemuUpload(cartridgeUrl, incardUrl, tapeUrl, autoPlay, argsParam, entropyParam, fullTapeUrl) {
   hideElem(cartridgesElem);
   hideElem(canvasDropElem);
   await rivemuStop();
   resetCanvasSize();
   statusElem.textContent = "Downloading cartridge...";
+  if (argsParam) {
+    argsElem.value = argsParam;
+  }
+  if (entropyParam) {
+    entropyElem.value = entropyParam;
+  }
   lastCartridge = cartridgeUrl ? await downloadFile(cartridgeUrl) : await uploadFileDialog(".sqfs");
   if (tapeUrl) {
     statusElem.textContent = "Downloading tape...";
@@ -283,6 +289,16 @@ async function rivemuUpload(cartridgeUrl, incardUrl, tapeUrl, autoPlay) {
   if (incardUrl) {
     statusElem.textContent = "Downloading incard...";
     lastIncard = incardUrl ? await downloadFile(incardUrl) : await uploadTapeDialog(".rivcard");
+  }
+  if (fullTapeUrl) {
+    statusElem.textContent = "Downloading full tape...";
+    var fullTapeBytes = await downloadFile(fullTapeUrl);
+    const jsonString = textDecoder.decode(fullTapeBytes);
+    const fullTape = JSON.parse(jsonString);
+    if (fullTape.tape) lastTape = Uint8Array.from(atob(fullTape.tape), c => c.charCodeAt(0))
+    if (fullTape.incard) lastIncard = Uint8Array.from(atob(fullTape.incard), c => c.charCodeAt(0));
+    if (fullTape.args) argsElem.value = fullTape.args;
+    if (fullTape.entropy) entropyElem.value = fullTape.entropy;
   }
   statusElem.textContent = "Idle";
   if (autoPlay) {
@@ -542,6 +558,7 @@ async function rivemu_on_finish(tape, outcard, outhash) {
   outsizeElem.textContent = outcard.length + " B";
   tapesizeElem.textContent = tape.length + " B";
   tapehashElem.textContent = await sha256sum(tape);
+  window.parent.postMessage({ rivemuOnFinish: true, tape:lastTape, outcard:lastOutcard, outhash:outhash }, '*');
 }
 
 // Called by RIVEMU on every frame.
@@ -622,7 +639,7 @@ function rivemuGo() {
 
   // Play external cartridge
   if (params.cartridge) {
-    rivemuUpload(params.cartridge, params.incard, params.tape, params.autoplay);
+    rivemuUpload(params.cartridge, params.incard, params.tape, params.autoplay, params.args, params.entropy, params.fullTape);
   }
 
 }
