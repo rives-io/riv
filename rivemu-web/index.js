@@ -178,7 +178,9 @@ async function uploadFileDialog(ext) {
 async function downloadFile(url) {
   // Retrieve cartridge
   showFlexElem(canvasLoadElem);
-  const response = await fetch(url, {method: "GET", mode: "cors", cache: "no-cache"});
+  const fetchParams = {method: "GET", mode: "cors"};
+  if (url.endsWith(".sqfs")) fetchParams.cache = "no-cache"
+  const response = await fetch(url, fetchParams);
   if (!response.ok) {
     hideElem(canvasLoadElem);
     return null;
