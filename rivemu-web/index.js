@@ -175,10 +175,13 @@ async function uploadFileDialog(ext) {
 }
 
 // Fetch a file from a URL.
-async function downloadFile(url) {
+async function downloadFile(encodedUrl) {
+  const url = decodeURIComponent(encodedUrl);
   // Retrieve cartridge
   showFlexElem(canvasLoadElem);
-  const response = await fetch(url, {method: "GET", mode: "cors", cache: "no-cache"});
+  const fetchParams = {method: "GET", mode: "cors"};
+  if (url.endsWith(".sqfs")) fetchParams.cache = "no-cache"
+  const response = await fetch(url, fetchParams);
   if (!response.ok) {
     hideElem(canvasLoadElem);
     return null;
@@ -293,12 +296,14 @@ async function rivemuUpload(cartridgeUrl, incardUrl, tapeUrl, autoPlay, argsPara
   if (fullTapeUrl) {
     statusElem.textContent = "Downloading full tape...";
     var fullTapeBytes = await downloadFile(fullTapeUrl);
-    const jsonString = textDecoder.decode(fullTapeBytes);
-    const fullTape = JSON.parse(jsonString);
-    if (fullTape.tape) lastTape = Uint8Array.from(atob(fullTape.tape), c => c.charCodeAt(0))
-    if (fullTape.incard) lastIncard = Uint8Array.from(atob(fullTape.incard), c => c.charCodeAt(0));
-    if (fullTape.args) argsElem.value = fullTape.args;
-    if (fullTape.entropy) entropyElem.value = fullTape.entropy;
+    if (fullTapeBytes && fullTapeBytes.length > 0) {
+      const jsonString = textDecoder.decode(fullTapeBytes);
+      const fullTape = JSON.parse(jsonString);
+      if (fullTape.tape) lastTape = Uint8Array.from(atob(fullTape.tape), c => c.charCodeAt(0))
+      if (fullTape.incard) lastIncard = Uint8Array.from(atob(fullTape.incard), c => c.charCodeAt(0));
+      if (fullTape.args) argsElem.value = fullTape.args;
+      if (fullTape.entropy) entropyElem.value = fullTape.entropy;
+    }
   }
   statusElem.textContent = "Idle";
   if (autoPlay) {
