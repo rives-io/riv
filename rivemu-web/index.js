@@ -125,6 +125,13 @@ function toggleElemVisibility(el) {
   } else {
     el.style.display = "none";
   }
+
+  window.parent.postMessage(
+    {
+      height: document.body.clientHeight,
+    },
+    "*"
+  );
 }
 
 // Open an user file dialog for saving a file.
@@ -279,7 +286,7 @@ async function rivemuUpload(cartridgeUrl, incardUrl, tapeUrl, autoPlay, argsPara
   resetCanvasSize();
   statusElem.textContent = "Downloading cartridge...";
   if (argsParam) {
-    argsElem.value = argsParam;
+    argsElem.value = decodeURIComponent(argsParam);
   }
   if (entropyParam) {
     entropyElem.value = entropyParam;
@@ -641,12 +648,22 @@ function rivemuGo() {
     showFlexElem(document.getElementById('analyze'));
     showFlexElem(document.getElementById('info'));
   }
+  console.log("param",params)
+  setStyle(params.hue, params.sat, params.light, params.alpha);
 
   // Play external cartridge
   if (params.cartridge) {
     rivemuUpload(params.cartridge, params.incard, params.tape, params.autoplay, params.args, params.entropy, params.fullTape);
   }
 
+}
+
+function setStyle(hue,sat,light,alpha) {
+  const r = document.querySelector(':root');
+  if (hue) r.style.setProperty('--hue', hue);
+  if (sat) r.style.setProperty('--sat', sat);
+  if (light) r.style.setProperty('--light', light);
+  if (alpha) r.style.setProperty('--alpha', alpha);
 }
 
 window.onhashchange = async function() {
@@ -657,4 +674,20 @@ window.onhashchange = async function() {
 rivemuGo();
 
 // Send event to parent window when the page is loaded
-window.parent.postMessage({ rivemuLoaded: true }, '*');
+window.parent.postMessage(
+  {
+    rivemuLoaded: true,
+    height: document.body.clientHeight,
+  },
+  "*"
+);
+
+// post message on resize
+window.addEventListener("resize", function () {
+  window.parent.postMessage(
+    {
+      height: document.body.clientHeight,
+    },
+    "*"
+  );
+});
