@@ -1,0 +1,47 @@
+.button,
+.joystick {
+  position: absolute;
+  background-color: rgba(255, 100, 100, 0.4);
+  z-index: 30;
+  touch-action: none;
+}
+.button {
+  width: 100px;
+  height: 160px;
+  touch-action: none;
+}
+#gamepad {
+  display: none;
+  touch-action: none;
+}
+.pannel {
+  position: absolute;
+  top: 10px;
+  width: 320px;
+  height: 620px;
+  z-index: 30;
+  touch-action: none;
+}
+
+#joystickUp {left: 20px; top: 340px; width: 300px; height: 100px;}
+#joystickDown { left: 20px; top: 540px; width: 300px; height: 100px; }
+#joystickLeft { left: 20px; top: 340px; width: 100px; height: 300px; }
+#joystickRight { left: 220px; top: 340px; width: 100px; height: 300px; }
+
+#buttonV { right: 20px; top: 340px; width: 300px; height: 100px; }
+#buttonZ { right: 20px; top: 540px; width: 300px; height: 100px; }
+#buttonC { right: 220px; top: 340px; width: 100px; height: 300px; }
+#buttonX { right: 20px; top: 340px; width: 100px; height: 300px; }
+
+#buttonS { left: 20px; top: 115px; }
+#buttonA { left: 20px; top: 20px; }
+#buttonD { right: 20px; top: 115px; }
+#buttonF { right: 20px; top: 20px; }
+
+#buttonW { left: 220px; top: 20px }
+#buttonQ { left: 220px; top: 115px }
+#buttonE { right: 220px; top: 20px }
+#buttonR { right: 220px; top: 115px }
+
+#pannelLeft { left: 10px; }
+#pannelRight { right: 10px; }

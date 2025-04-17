@@ -51,7 +51,7 @@ var Module = {};
 
 // Prevent space bar from clicking buttons
 window.addEventListener("keydown", function(e) {
-  if (e.keyCode === 32) {
+  if (e.key === " ") { //(e.keyCode === 32)
     e.preventDefault();
   }
 });
@@ -97,6 +97,7 @@ Module.onRuntimeInitialized = function(status) {
 
 // Return SHA256 hexadecimal string from a chunk of data.
 async function sha256sum(data) {
+  if (!crypto.subtle) return '-';
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -125,6 +126,13 @@ function toggleElemVisibility(el) {
   } else {
     el.style.display = "none";
   }
+
+  window.parent.postMessage(
+    {
+      height: document.body.clientHeight,
+    },
+    "*"
+  );
 }
 
 // Open an user file dialog for saving a file.
@@ -279,7 +287,7 @@ async function rivemuUpload(cartridgeUrl, incardUrl, tapeUrl, autoPlay, argsPara
   resetCanvasSize();
   statusElem.textContent = "Downloading cartridge...";
   if (argsParam) {
-    argsElem.value = argsParam;
+    argsElem.value = decodeURIComponent(argsParam);
   }
   if (entropyParam) {
     entropyElem.value = entropyParam;
@@ -287,11 +295,11 @@ async function rivemuUpload(cartridgeUrl, incardUrl, tapeUrl, autoPlay, argsPara
   lastCartridge = cartridgeUrl ? await downloadFile(cartridgeUrl) : await uploadFileDialog(".sqfs");
   if (tapeUrl) {
     statusElem.textContent = "Downloading tape...";
-    lastTape = tapeUrl ? await downloadFile(tapeUrl) : await uploadTapeDialog(".rivtape");
+    lastTape = tapeUrl ? await downloadFile(tapeUrl) : await uploadFileDialog(".rivtape");
   }
   if (incardUrl) {
     statusElem.textContent = "Downloading incard...";
-    lastIncard = incardUrl ? await downloadFile(incardUrl) : await uploadTapeDialog(".rivcard");
+    lastIncard = incardUrl ? await downloadFile(incardUrl) : await uploadFileDialog(".rivcard");
   }
   if (fullTapeUrl) {
     statusElem.textContent = "Downloading full tape...";
@@ -607,7 +615,7 @@ async function rivemuReset() {
 
 function rivemuGo() {
   // Parse params
-  let hash = window.location.hash.substr(1);
+  let hash = window.location.hash.substring(1);
   let params = hash.split('&').reduce(function (res, item) {
       var parts = item.split('=');
       res[parts[0]] = parts[1];
@@ -641,12 +649,21 @@ function rivemuGo() {
     showFlexElem(document.getElementById('analyze'));
     showFlexElem(document.getElementById('info'));
   }
+  setStyle(params.hue, params.sat, params.light, params.alpha);
 
   // Play external cartridge
   if (params.cartridge) {
     rivemuUpload(params.cartridge, params.incard, params.tape, params.autoplay, params.args, params.entropy, params.fullTape);
   }
 
+}
+
+function setStyle(hue,sat,light,alpha) {
+  const r = document.querySelector(':root');
+  if (hue) r.style.setProperty('--hue', hue);
+  if (sat) r.style.setProperty('--sat', sat);
+  if (light) r.style.setProperty('--light', light);
+  if (alpha) r.style.setProperty('--alpha', alpha);
 }
 
 window.onhashchange = async function() {
@@ -657,4 +674,20 @@ window.onhashchange = async function() {
 rivemuGo();
 
 // Send event to parent window when the page is loaded
-window.parent.postMessage({ rivemuLoaded: true }, '*');
+window.parent.postMessage(
+  {
+    rivemuLoaded: true,
+    height: document.body.clientHeight,
+  },
+  "*"
+);
+
+// post message on resize
+window.addEventListener("resize", function () {
+  window.parent.postMessage(
+    {
+      height: document.body.clientHeight,
+    },
+    "*"
+  );
+});
