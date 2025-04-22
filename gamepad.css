@@ -1,7 +1,6 @@
 .button,
 .joystick {
   position: absolute;
-  background-color: rgba(255, 100, 100, 0.4);
   z-index: 30;
   touch-action: none;
 }
@@ -12,13 +11,15 @@
 }
 #gamepad {
   display: none;
-  touch-action: none;
+}
+.gamepad-area {
+    touch-action: none;
 }
 .pannel {
   position: absolute;
-  top: 10px;
-  width: 320px;
-  height: 620px;
+  top: 0px;
+  width: 380px;
+  height: 640px;
   z-index: 30;
   touch-action: none;
 }
@@ -43,5 +44,30 @@
 #buttonE { right: 220px; top: 20px }
 #buttonR { right: 220px; top: 115px }
 
-#pannelLeft { left: 10px; }
-#pannelRight { right: 10px; }
+#pannelLeft { left: 0px; }
+#pannelRight { right: 0px; }
+
+.inner-btn {
+    background-color: rgba(255, 153, 153, 0.8);
+    width: 100%;
+    height: 100%;
+}
+.hor {
+    -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0) 75px, rgba(0, 0, 0, 1) 150px, rgba(0, 0, 0, 0) 225px);
+    mask-image: linear-gradient(to right, rgba(0, 0, 0, 0) 75px, rgba(0, 0, 0, 1) 150px, rgba(0, 0, 0, 0) 225px);
+}
+
+.vert {
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0) 75px, rgba(0, 0, 0, 1) 150px, rgba(0, 0, 0, 0) 225px);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0) 75 px, rgba(0, 0, 0, 1) 150px, rgba(0, 0, 0, 0) 225px);
+}
+
+.vert-top {
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 50px, rgba(0, 0, 0, 0) 130px);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 50px, rgba(0, 0, 0, 0) 130px);
+}
+
+.vert-bot {
+    -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 50px, rgba(0, 0, 0, 0) 130px);
+    mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 50px, rgba(0, 0, 0, 0) 130px);
+}
