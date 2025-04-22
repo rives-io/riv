@@ -15,46 +15,6 @@ function moveGamepadToBottom(options) {
     });
 }
 
-// function openSettings() {
-//     window.ReactNativeWebView.postMessage('openSettings');
-// }
-
-// (async () => {
-//     let canvas = document.getElementById('canvas');
-//     canvas.width = window.innerWidth;
-//     canvas.height = window.innerWidth;
-//     let loader = document.getElementById('canvas-load');
-//     loader.style.height = window.innerWidth + 'px';
-//     loader.style.width = window.innerWidth + 'px';
-// })();
-
-// function resizeCanvas() {
-//     const canvas = document.getElementById('canvas');
-//     canvas.style.height = '100vh';
-//     canvas.style.width = `${(canvas.width / canvas.height) * 100}vh`;
-//     const canvasWidth = canvas.getBoundingClientRect().width;
-//     const left = (window.innerWidth / 2) - (canvasWidth / 2);
-//     canvas.style.position = 'absolute';
-//     canvas.style.top = '0';
-//     canvas.style.imageRendering = 'pixelated';
-//     canvas.style.left = `${left}px`;
-//     canvas.style.transformOrigin = 'top left';
-// }
-
-// setInterval(() => resizeCanvas(), 3000);
-
-// function resizeCanvas() {
-//   const canvas = document.getElementById('canvas');
-//   console.log(`canvas.width=${canvas.width}`)
-//   console.log(`canvas.height=${canvas.height}`)
-//   canvas.style.position = 'absolute';
-//   canvas.style.top = '0';
-//   canvas.style.imageRendering = 'pixelated';
-//   canvas.style.left = '0';
-//   canvas.style.transformOrigin = 'top left';
-//   canvas.style.width = '100vw';
-// }
-
 function getGamepadButtons() {
   const gamepadButtons = [];
   document.querySelectorAll('.button, .joystick').forEach(el => {
@@ -107,6 +67,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const handleButtonPressIn = (key) => {
     if (pressed[key]) return;
     pressed[key] = true;
+    if (params.vibrate) window.navigator.vibrate(10);
     setPressed(key, true);
   };
 
@@ -120,9 +81,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const k = KEY_MAP[key];
     const event = new KeyboardEvent(isPressed ? 'keydown' : 'keyup', k);
     document.dispatchEvent(event);
-    let el = document.getElementById(k.elemId);
-    console.log("set pressed",k.elemId, isPressed)
-    el.style.backgroundColor = isPressed ? 'rgba(255, 100, 100, 0.6)' : 'rgba(255, 100, 100, 0.4)';
+    let els = document.getElementById(k.elemId).getElementsByClassName('inner-btn');
+    if (!els || els.length == 0) return;
+    let el = els[0];
+    el.style.backgroundColor = isPressed ? 'rgba(255, 153, 153, 1)' : 'rgba(255, 153, 153, 0.8)';
+    // el.style.backgroundColor = isPressed ? 'rgba(255, 100, 100, 0.6)' : 'rgba(255, 100, 100, 0.4)';
     // document.body.style.backgroundColor = isPressed ? `rgb(100,100,${Math.floor(Math.random() * 255)})` : 'rgb(100,100,100)';
   };
 
