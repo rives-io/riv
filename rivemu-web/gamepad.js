@@ -29,7 +29,6 @@ function getGamepadButtons() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  // resizeCanvas();
   // Parse params
   let hash = window.location.hash.substring(1);
   let params = hash.split('&').reduce(function (res, item) {

@@ -1,10 +1,8 @@
 .button,
 .joystick {
   position: absolute;
-  /* background-color: rgba(255, 100, 100, 0.4); */
   z-index: 30;
   touch-action: none;
-  /* mix-blend-mode: luminosity; */
 }
 .button {
   width: 100px;
@@ -15,7 +13,6 @@
   display: none;
 }
 .gamepad-area {
-    /* isolation: isolate; */
     touch-action: none;
 }
 .pannel {
