@@ -69,6 +69,9 @@ window.addEventListener("message", async function(e) {
       showFlexElem(canvasStartElem);
     }
   }
+  if (params.rivemuUpload && (params.tape || params.cartridge || params.incard || params.args)) {
+    rivemuHotUpload(params.cartridge, params.incard, params.tape, params.autoPlay, params.args, params.entropy);
+  }
 }, false);
 
 // Alert when WebGL context is lost.
@@ -188,7 +191,7 @@ async function downloadFile(encodedUrl) {
   // Retrieve cartridge
   showFlexElem(canvasLoadElem);
   const fetchParams = {method: "GET", mode: "cors"};
-  if (url.endsWith(".sqfs")) fetchParams.cache = "no-cache"
+  // if (url.endsWith(".sqfs")) fetchParams.cache = "no-cache"
   const response = await fetch(url, fetchParams);
   if (!response.ok) {
     hideElem(canvasLoadElem);
@@ -319,6 +322,47 @@ async function rivemuUpload(cartridgeUrl, incardUrl, tapeUrl, autoPlay, argsPara
   } else {
     showFlexElem(canvasStartElem);
   }
+  window.parent.postMessage(
+    {
+      rivemuUploaded: true,
+    },
+    "*"
+  );
+}
+
+async function rivemuHotUpload(cartridge, incard, tape, autoPlay, argsParam, entropyParam) {
+  hideElem(cartridgesElem);
+  hideElem(canvasDropElem);
+  await rivemuStop();
+  resetCanvasSize();
+  statusElem.textContent = "Setting up...";
+  if (argsParam) {
+    argsElem.value = decodeURIComponent(argsParam);
+  }
+  if (entropyParam) {
+    entropyElem.value = entropyParam;
+  }
+  if (cartridge) {
+    lastCartridge = cartridge;
+  }
+  if (tape) {
+    lastTape = tape;
+  }
+  if (incard) {
+    lastIncard = incard;
+  }
+  statusElem.textContent = "Idle";
+  if (autoPlay && lastCartridge) {
+    rivemuStart();
+  } else {
+    showFlexElem(canvasStartElem);
+  }
+  window.parent.postMessage(
+    {
+      rivemuUploaded: true,
+    },
+    "*"
+  );
 }
 
 async function rivemuUploadCartridge(url) {
@@ -550,12 +594,7 @@ async function rivemu_on_finish(tape, outcard, outhash) {
   // We need to make a deep copy of a Uint8Array here, otherwise
   lastTape = new Uint8Array(tape);
   lastOutcard = new Uint8Array(outcard);
-  // Show outcard
-  // let outcard_str = textDecoder.decode(outcard);
-  // if (outcard_str.substring(0, 4) == 'JSON') {
-  //   let scores = JSON.parse(outcard_str.substring(4));
-  //   console.log(scores);
-  // }
+  
   // Update buttons
   paused = false;
   document.getElementById('pause').disabled = true;
