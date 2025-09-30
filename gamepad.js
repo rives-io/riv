@@ -36,7 +36,6 @@ document.addEventListener("DOMContentLoaded", function () {
       res[parts[0]] = parts[1];
       return res;
   }, {});
-  console.log("DOMContentLoaded",window.location.hash,params,!params.gamepad)
   if (!params.gamepad) return;
   moveGamepadToBottom({ paddingBottom: 40 });
   const gamepadButtons = getGamepadButtons();
