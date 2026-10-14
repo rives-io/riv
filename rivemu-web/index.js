@@ -587,6 +587,8 @@ function rivemu_on_begin(width, height, target_fps, total_frames, info_data) {
   } else {
     statusElem.textContent = "Recording...";
   }
+  document.getElementById('fullscreen').disabled = false;
+  window.parent.postMessage({ rivemuOnBegin: true, replaying: total_frames > 0 }, '*');
 }
 
 // Called by RIVEMU after the last frame.
@@ -594,7 +596,7 @@ async function rivemu_on_finish(tape, outcard, outhash) {
   // We need to make a deep copy of a Uint8Array here, otherwise
   lastTape = new Uint8Array(tape);
   lastOutcard = new Uint8Array(outcard);
-  
+
   // Update buttons
   paused = false;
   document.getElementById('pause').disabled = true;
@@ -604,6 +606,8 @@ async function rivemu_on_finish(tape, outcard, outhash) {
   document.getElementById('download_outcard').disabled = false;
   document.getElementById('download_incard').disabled = false;
   document.getElementById('download_tape').disabled = false;
+  document.getElementById('fullscreen').disabled = true;
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   // Update labels
   statusElem.textContent = "Stopped";
   outhashElem.textContent = outhash;
@@ -689,6 +693,7 @@ function rivemuGo() {
     showFlexElem(document.getElementById('info'));
   }
   setStyle(params.hue, params.sat, params.light, params.alpha);
+  document.getElementById('fullscreen').disabled = true;
 
   // Play external cartridge
   if (params.cartridge) {
